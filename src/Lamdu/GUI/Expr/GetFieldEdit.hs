@@ -4,10 +4,11 @@ module Lamdu.GUI.Expr.GetFieldEdit
 
 import qualified Control.Lens as Lens
 import qualified GUI.Momentu.EventMap as E
+import           GUI.Momentu.Glue ((/|/))
 import qualified GUI.Momentu.I18N as MomentuTexts
 import           GUI.Momentu.Responsive (Responsive)
 import qualified GUI.Momentu.Responsive as Responsive
-import qualified GUI.Momentu.Responsive.Options as Options
+import qualified GUI.Momentu.Responsive.Expression as ResponsiveExpr
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Grid as Grid
 import qualified GUI.Momentu.Widgets.Label as Label
@@ -47,7 +48,6 @@ make ::
 make (Sugar.GetField recExpr tag) pl =
     do
         recExprEdit <- GuiM.makeSubexpression recExpr
-        dotLabel <- Label.make "." & Styled.grammar
         env <- Lens.view id
         let mkDelEventMap del =
                 del <&> WidgetIds.fromEntityId
@@ -58,10 +58,10 @@ make (Sugar.GetField recExpr tag) pl =
                 recExpr ^. annotation . Sugar.plActions . Sugar.mReplaceParent
                 & foldMap mkDelEventMap
         tagEdit <-
-            TagEdit.makeRecordTag tag
-            <&> Lens.mapped %~ Widget.weakerEvents delEventMap
-        Options.box ?? Options.disambiguationNone ??
+            Styled.grammar (Label.make ".")
+            /|/
+            (TagEdit.makeRecordTag tag <&> Lens.mapped %~ Widget.weakerEvents delEventMap)
+        (ResponsiveExpr.boxSpacedMDisamb ?? ExprGui.mParensId pl) ??
             [ recExprEdit
-            , Responsive.fromTextView dotLabel
             , Responsive.fromWithTextPos tagEdit
             ] & stdWrapParentExpr pl

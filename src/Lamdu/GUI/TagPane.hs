@@ -50,7 +50,7 @@ tagRenameId :: Widget.Id -> Widget.Id
 tagRenameId = (`Widget.joinId` ["rename"])
 
 disallowedNameChars :: Set Char
-disallowedNameChars = Set.fromList ",[]\\`()."
+disallowedNameChars = Set.fromList ",[]\\`()"
 
 makeTagNameEdit ::
     ( MonadReader env m, Applicative f

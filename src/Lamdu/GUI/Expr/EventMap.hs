@@ -176,7 +176,8 @@ transformSearchTerm ::
     ) =>
     m (ExprInfo name i o -> EventContext -> EventMap Text)
 transformSearchTerm =
-    Lens.view id <&> \env exprInfo eventCtx ->
+    Lens.view id <&>
+    \env exprInfo eventCtx ->
     let maybeTransformEventMap
             | exprInfoIsSelected exprInfo =
                 E.charEventMap "Letter"
@@ -189,19 +190,22 @@ transformSearchTerm =
                 guard (allowedFragmentSearchTerm (Text.singleton c))
                 pure (Text.singleton c)
         searchStrRemainder = eventCtx ^. Widget.ePrevTextRemainder
-        ops =
-            case Text.uncons searchStrRemainder of
-            Nothing -> filter acceptOp Chars.operator
-            Just (firstOp, _)
-                | acceptOp firstOp -> Chars.operator
-                | otherwise -> mempty
         acceptOp = (>= exprInfoMinOpPrec exprInfo) . precedence
-    in  E.charGroup Nothing
-        (E.toDoc env
-            [has . MomentuTexts.edit, has . Texts.applyOperator]) ops
-        Text.singleton
-        <> maybeTransformEventMap
-        <&> (searchStrRemainder <>)
+        opDoc = E.toDoc env [has . MomentuTexts.edit, has . Texts.applyOperator]
+        mkOpsGroup ops = E.charGroup Nothing opDoc ops Text.singleton
+        afterDot c =
+            Text.singleton c <$
+            guard (allowedFragmentSearchTerm ("." <> Text.singleton c))
+    in
+    case Text.uncons searchStrRemainder of
+    Nothing -> mkOpsGroup (filter acceptOp Chars.operator) <> maybeTransformEventMap
+    Just ('.', "")
+        | acceptOp '.' -> E.charEventMap "Letter or Operator" opDoc afterDot
+        | otherwise -> mempty
+    Just (firstOp, _)
+        | acceptOp firstOp -> mkOpsGroup Chars.operator <> maybeTransformEventMap
+        | otherwise -> maybeTransformEventMap
+    <&> (searchStrRemainder <>)
 
 transformEventMap ::
     ( MonadReader env m, Applicative o

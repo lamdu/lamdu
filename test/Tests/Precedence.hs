@@ -3,6 +3,7 @@ module Tests.Precedence where
 
 import qualified Control.Lens as Lens
 import           Control.Lens.Tuple
+import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Sugar.Parens as Parens
 import qualified Lamdu.Sugar.Types as Sugar
 import           Test.Lamdu.SugarStubs (($$), ($.))
@@ -50,12 +51,12 @@ testPunnedArgOp =
 testGetFieldOfApply :: Test
 testGetFieldOfApply =
     expr ^?!
-    hVal . Sugar._BodyGetField . Sugar.gfRecord . annotation . _2
+    hVal . Sugar._BodySimpleApply . V.appArg . annotation . _2
     & assertEqual "get field should disambiguate compound expression"
         Parens.NeedsParens
     & testCase "get-field-of-apply"
     where
-        expr = (Stub.identity $$ Stub.hole) $. "a" & Parens.addToExprWith 0
+        expr = Stub.identity $$ (Stub.hole $. "a") & Parens.addToExprWith 0
 
 testMinOpPrecOperator :: Test
 testMinOpPrecOperator =
