@@ -326,8 +326,8 @@ mkResultValFragment inferred x =
     x & hflipped %~ hmap (const onPl)
     & Hole.detachValIfNeeded (Const IsFragment :*: WriteNew) inferred
     where
-        onPl (WriteNew :*: i) = (Const IsFragment :*: WriteNew) :*: i
-        onPl i = i & _1 %~ (Const NotFragment :*:)
+        onPl (WriteNew :*: i) = (Const NotFragment :*: WriteNew) :*: i
+        onPl i = i & _1 %~ (Const IsFragment :*:)
 
 mkOptionFromFragment ::
     Monad m =>
