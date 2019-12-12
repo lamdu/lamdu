@@ -218,14 +218,12 @@ transformEventMap =
     in  case exprInfoActions exprInfo ^. Sugar.detach of
         Sugar.DetachAction detach ->
             addOperatorSetHoleState options & maybe detachAndOpen widgetId
-            <&> HoleWidgetIds.makeFrom <&> HoleWidgetIds.hidOpen
             where
                 detachAndOpen =
                     detach <&> WidgetIds.fromEntityId <&> WidgetIds.fragmentHoleId
-        Sugar.FragmentAlready holeId -> widgetId holeId
-        Sugar.FragmentExprAlready holeId ->
-            widgetId holeId
-            <&> WidgetIds.fragmentHoleId <&> HoleWidgetIds.makeFrom <&> HoleWidgetIds.hidOpen
+        Sugar.FragmentAlready holeId -> widgetId holeId <&> WidgetIds.fragmentHoleId
+        Sugar.FragmentExprAlready holeId -> widgetId holeId <&> WidgetIds.fragmentHoleId
+        <&> HoleWidgetIds.makeFrom <&> HoleWidgetIds.hidOpen
         & action
     where
         widgetId = pure . WidgetIds.fromEntityId
