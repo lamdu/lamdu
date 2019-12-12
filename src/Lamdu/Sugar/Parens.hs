@@ -91,11 +91,11 @@ bareInfix ::
     , Expression name i o a
     )
 bareInfix =
-    Lens.prism toLabeledApply fromLabeledApply
+    Lens.prism' toLabeledApply fromLabeledApply
     where
         toLabeledApply (l, f, r) = LabeledApply f (Operator l r) [] []
-        fromLabeledApply (LabeledApply f (Operator l r) [] []) = Right (l, f, r)
-        fromLabeledApply a = Left a
+        fromLabeledApply (LabeledApply f (Operator l r) [] []) = Just (l, f, r)
+        fromLabeledApply _ = Nothing
 
 type AnnotateAST a body =
     MinOpPrec -> Precedence Prec ->
