@@ -154,6 +154,7 @@ actionsEventMap options exprInfo =
                 ]
         , actions ^. Sugar.mSetToHole & foldMap replaceEventMap
         , actions ^. Sugar.mNewLet & foldMap addLetEventMap
+        , makeLiteralEventMap ?? actions ^. Sugar.setToLiteral
         ] <&> const -- throw away EventContext here
     ) <> (transformEventMap ?? options ?? exprInfo)
     where
