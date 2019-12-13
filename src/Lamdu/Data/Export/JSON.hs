@@ -173,7 +173,7 @@ exportRepl =
         traverse_ exportVal repl
         repl
             <&> hflipped %~ hmap (const (Const . toUUID . (^. ExprIRef.iref)))
-            & EntityRepl & tell
+            & Codec.ReplEntity & EntityRepl & tell
 
 jsonExportRepl :: T ViewM Aeson.Value
 jsonExportRepl = runExport exportRepl <&> snd
@@ -245,8 +245,8 @@ importDef (Definition defBody defScheme (presentationMode, tag, globalId)) =
     where
         defI = ExprIRef.defI globalId
 
-importRepl :: Definition.Expr (Val UUID) -> T ViewM ()
-importRepl defExpr =
+importRepl :: Codec.ReplEntity -> T ViewM ()
+importRepl (Codec.ReplEntity defExpr) =
     traverse writeValAtUUID defExpr >>=
     Transaction.writeIRef (DbLayout.repl DbLayout.codeIRefs)
 

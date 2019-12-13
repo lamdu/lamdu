@@ -4,6 +4,7 @@
 module Lamdu.Data.Export.JSON.Codec
     ( TagOrder
     , SchemaVersion(..)
+    , ReplEntity(..)
     , NominalEntity(..), nominalTag, nominalEntityId, nominalDecl
     , TagEntity(..), tagId, tagData
     , LamVarEntity(..), lamVarId, lamVarVar
@@ -93,9 +94,11 @@ instance ToJSON SchemaVersion where
 decodeSchemaVersion :: Aeson.Object -> AesonTypes.Parser SchemaVersion
 decodeSchemaVersion = (.: "schemaVersion") <&> fmap SchemaVersion
 
+newtype ReplEntity = ReplEntity (Definition.Expr (Val UUID))
+
 data Entity
     = EntitySchemaVersion SchemaVersion
-    | EntityRepl (Definition.Expr (Val UUID))
+    | EntityRepl ReplEntity
     | EntityDef (Definition (Val UUID) (Meta.PresentationMode, T.Tag, V.Var))
     | EntityTag TagEntity
     | EntityNominal NominalEntity
@@ -103,8 +106,8 @@ data Entity
 Lens.makePrisms ''Entity
 
 instance ToJSON Entity where
-    toJSON (EntitySchemaVersion ver) = toJSON ver
-    toJSON (EntityRepl x) = encodeRepl x
+    toJSON (EntitySchemaVersion x) = toJSON x
+    toJSON (EntityRepl x) = toJSON x
     toJSON (EntityDef x) = toJSON x
     toJSON (EntityTag x) = encodeNamedTag x
     toJSON (EntityNominal x) = encodeTaggedNominal x
@@ -113,11 +116,11 @@ instance ToJSON Entity where
 instance FromJSON Entity where
     parseJSON =
         decodeVariant "entity"
-        [ ("repl"          , fmap EntityRepl . decodeRepl)
-        , ("def"           , fmap EntityDef . decodeDef)
-        , ("tagOrder"      , fmap EntityTag . decodeNamedTag)
-        , ("nom"           , fmap EntityNominal . decodeTaggedNominal)
-        , ("lamVar"        , fmap EntityLamVar . decodeTaggedLamVar)
+        [ ("repl"          , fmap EntityRepl          . decodeRepl)
+        , ("def"           , fmap EntityDef           . decodeDef)
+        , ("tagOrder"      , fmap EntityTag           . decodeNamedTag)
+        , ("nom"           , fmap EntityNominal       . decodeTaggedNominal)
+        , ("lamVar"        , fmap EntityLamVar        . decodeTaggedLamVar)
         , ("schemaVersion" , fmap EntitySchemaVersion . decodeSchemaVersion)
         ]
 
@@ -542,12 +545,13 @@ decodeDefBody obj =
     , decodeDefExpr obj <&> Definition.BodyExpr
     ]
 
-encodeRepl :: Encoder (Definition.Expr (Val UUID))
-encodeRepl defExpr = "repl" ==> Aeson.Object (encodeDefExpr defExpr) & Aeson.Object
+instance ToJSON ReplEntity where
+    toJSON (ReplEntity defExpr) =
+        "repl" ==> Aeson.Object (encodeDefExpr defExpr) & Aeson.Object
 
-decodeRepl :: Aeson.Object -> AesonTypes.Parser (Definition.Expr (Val UUID))
+decodeRepl :: Aeson.Object -> AesonTypes.Parser ReplEntity
 decodeRepl obj =
-    obj .: "repl" >>= Aeson.withObject "defExpr" decodeDefExpr
+    obj .: "repl" >>= Aeson.withObject "defExpr" decodeDefExpr <&> ReplEntity
 
 insertField :: ToJSON a => Text -> a -> Aeson.Object -> Aeson.Object
 insertField k v = HashMap.insert k (toJSON v)
