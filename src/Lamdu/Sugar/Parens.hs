@@ -108,14 +108,6 @@ loopExpr minOpPrec parentPrec (Ann (Const pl) body_) =
     where
         (parens, newBody) = loopExprBody parentPrec body_
 
-type SideSymbol =
-    forall s t res pl body.
-    AnnotateAST pl body ->
-    Lens.ASetter' (Precedence Prec) MinOpPrec ->
-    Lens.Getting MinOpPrec (Precedence Prec) MinOpPrec ->
-    Lens.ASetter s t (Annotated pl body) (Annotated (MinOpPrec, NeedsParens, pl) body) ->
-    MinOpPrec -> (t -> res) -> s -> (NeedsParens, res)
-
 loopExprBody ::
     HasPrecedence name =>
     Precedence Prec -> Body name i o # Ann (Const a) ->
@@ -141,9 +133,18 @@ loopExprBody parentPrec body_ =
         p = Proxy @AddParens
         result True = (,) NeedsParens
         result False = (,) NoNeedForParens
+        leftSymbol ::
+            AddParens body =>
+            Lens.ASetter s t (Annotated pl body) (Annotated (MinOpPrec, NeedsParens, pl) body) ->
+            MinOpPrec -> (t -> res) -> s -> (NeedsParens, res)
         leftSymbol = sideSymbol (\_ _ -> addToNode) before after
         rightSymbol = sideSymbol loopExpr after before
-        sideSymbol :: SideSymbol
+        sideSymbol ::
+            AnnotateAST pl body ->
+            Lens.ASetter' (Precedence Prec) MinOpPrec ->
+            Lens.Getting MinOpPrec (Precedence Prec) MinOpPrec ->
+            Lens.ASetter s t (Annotated pl body) (Annotated (MinOpPrec, NeedsParens, pl) body) ->
+            MinOpPrec -> (t -> res) -> s -> (NeedsParens, res)
         sideSymbol loop overrideSide checkSide lens prec cons x =
             x & lens %~ loop prec childPrec & cons
             & result needParens
