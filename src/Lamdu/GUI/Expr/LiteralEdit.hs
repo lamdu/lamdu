@@ -291,21 +291,32 @@ make lit pl =
     Sugar.LiteralText x -> textEdit x pl <&> Responsive.fromWithTextPos
     & stdWrap pl
 
+goToLiteral :: Sugar.EntityId -> GuiState.Update
+goToLiteral = GuiState.updateCursor . WidgetIds.literalEditOf . WidgetIds.fromEntityId
+
+makeLiteralNumberEventMap ::
+    ( MonadReader env m, Monad o
+    , Has (MomentuTexts.Texts Text) env, Has (Texts.CodeUI Text) env
+    ) =>
+    m ((Sugar.Literal Identity -> o Sugar.EntityId) -> EventMap (o GuiState.Update))
+makeLiteralNumberEventMap =
+    Lens.view id <&> E.toDoc
+    <&> \toDoc makeLiteral ->
+    E.charGroup (Just "Digit")
+    (toDoc [has . MomentuTexts.edit, has . Texts.literalNumber])
+    Chars.digit
+    (fmap goToLiteral . makeLiteral . Sugar.LiteralNum . Identity . read . (: []))
+
 makeLiteralEventMap ::
     ( MonadReader env m, Monad o
     , Has (MomentuTexts.Texts Text) env, Has (Texts.CodeUI Text) env
     ) =>
     m ((Sugar.Literal Identity -> o Sugar.EntityId) -> EventMap (o GuiState.Update))
 makeLiteralEventMap =
-    Lens.view id <&> E.toDoc
-    <&> \toDoc makeLiteral ->
+    (,) <$> (Lens.view id <&> E.toDoc) <*> makeLiteralNumberEventMap
+    <&>
+    \(toDoc, lit) makeLiteral ->
     E.charGroup Nothing
     (toDoc [has . MomentuTexts.edit, has . Texts.literalText]) "'\""
-    (const (makeLiteral (Sugar.LiteralText (Identity "")) <&> r))
-    <>
-    E.charGroup (Just "Digit")
-    (toDoc [has . MomentuTexts.edit, has . Texts.literalNumber])
-    Chars.digit
-    (fmap r . makeLiteral . Sugar.LiteralNum . Identity . read . (: []))
-    where
-        r = GuiState.updateCursor . WidgetIds.literalEditOf . WidgetIds.fromEntityId
+    (const (makeLiteral (Sugar.LiteralText (Identity "")) <&> goToLiteral))
+    <> lit makeLiteral
