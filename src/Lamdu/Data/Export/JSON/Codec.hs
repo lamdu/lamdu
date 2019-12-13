@@ -13,14 +13,15 @@ module Lamdu.Data.Export.JSON.Codec
 import qualified Control.Lens as Lens
 import           Control.Lens.Extended ((==>))
 import           Data.Aeson ((.:), ToJSON(..), FromJSON(..))
-import           Data.Aeson.Lens (_Object)
 import qualified Data.Aeson as Aeson
+import           Data.Aeson.Lens (_Object)
 import qualified Data.Aeson.Types as AesonTypes
 import qualified Data.ByteString.Base16 as Hex
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.HashMap.Strict as HashMap
 import qualified Data.Map as Map
 import qualified Data.Set as Set
+import qualified Data.Text as Text
 import           Data.UUID.Types (UUID)
 import qualified Data.Vector as Vector
 import           Hyper
@@ -81,7 +82,6 @@ data LamVarEntity = LamVarEntity
 Lens.makeLenses ''LamVarEntity
 
 type Encoder a = a -> Aeson.Value
-type Decoder a = Aeson.Value -> AesonTypes.Parser a
 
 type TagOrder = Int
 
@@ -162,20 +162,6 @@ instance FromJSON Identifier where
         <&> identFromHex
         >>= fromEither
 
-decodeIdentMap ::
-    (FromJSON j, Ord k) =>
-    (Identifier -> k) -> (j -> AesonTypes.Parser a) -> Decoder (Map k a)
-decodeIdentMap fromIdent decode json =
-    parseJSON json
-    <&> Map.toList
-    >>= Lens.traverse %%~ decodePair
-    <&> Map.fromList
-    where
-        decodePair (k, v) =
-            (,)
-            <$> (identFromHex k & fromEither <&> fromIdent)
-            <*> decode v
-
 encodeSquash :: (Eq a, Monoid a, ToJSON a) => Text -> a -> Aeson.Object
 encodeSquash name x
     | x == mempty = mempty
@@ -244,13 +230,20 @@ instance FromJSON (Pure # T.Row) where
                 <&> Pure . T.RExtend
     parseJSON x = fail ("malformed row" <> show x)
 
-instance AesonTypes.ToJSONKey Identifier where
-    toJSONKey = AesonTypes.toJSONKey & Lens.contramap identHex
+instance Aeson.FromJSONKey Identifier where
+    fromJSONKey = Aeson.FromJSONKeyTextParser (fromEither . identFromHex . Text.unpack)
 
-deriving newtype instance AesonTypes.ToJSON (T.Var a)
-deriving newtype instance AesonTypes.ToJSONKey (T.Var a)
-deriving newtype instance AesonTypes.ToJSONKey V.Var
-deriving newtype instance AesonTypes.ToJSONKey T.NominalId
+instance Aeson.ToJSONKey Identifier where
+    toJSONKey = Aeson.toJSONKey & Lens.contramap identHex
+
+deriving newtype instance Aeson.ToJSON (T.Var a)
+deriving newtype instance Aeson.FromJSON (T.Var a)
+deriving newtype instance Aeson.ToJSONKey (T.Var a)
+deriving newtype instance Aeson.FromJSONKey (T.Var a)
+deriving newtype instance Aeson.ToJSONKey V.Var
+deriving newtype instance Aeson.FromJSONKey V.Var
+deriving newtype instance Aeson.ToJSONKey T.NominalId
+deriving newtype instance Aeson.FromJSONKey T.NominalId
 
 instance ToJSON (Pure # T.Type) where
     toJSON t =
@@ -279,8 +272,8 @@ instance FromJSON (Pure # T.Type) where
         , NominalInst
             <$> (o .: "nomId" >>= parseJSON <&> T.NominalId)
             <*> (T.Types
-                <$> (decodeSquashed "nomTypeArgs" (decodeIdentMap T.Var parseJSON) o <&> QVarInstances)
-                <*> (decodeSquashed "nomRowArgs" (decodeIdentMap T.Var parseJSON) o <&> QVarInstances)
+                <$> (decodeSquashed "nomTypeArgs" parseJSON o <&> QVarInstances)
+                <*> (decodeSquashed "nomRowArgs" parseJSON o <&> QVarInstances)
                 )
             <&> T.TInst
         ]
@@ -296,11 +289,11 @@ instance ToJSON T.RConstraints where
             -- We only encode top-level types, no skolem escape considerations...
             error "toJSON does not support inner-scoped types"
 
-decodeCompositeConstraints ::
-    [Aeson.Value] -> AesonTypes.Parser T.RConstraints
-decodeCompositeConstraints json =
-    traverse parseJSON json <&> map T.Tag <&> Set.fromList
-    <&> (`T.RowConstraints` mempty)
+instance FromJSON T.RConstraints where
+    parseJSON =
+        Aeson.withArray "Composite Constraints" $ \arr ->
+        traverse parseJSON arr <&> Vector.toList <&> Set.fromList
+        <&> (`T.RowConstraints` mempty)
 
 encodeTypeVars :: T.Types # QVars -> Aeson.Object
 encodeTypeVars (T.Types (QVars tvs) (QVars rvs)) =
@@ -317,11 +310,9 @@ decodeTypeVars obj =
             >>= traverse parseJSON
             <&> map (\name -> (T.Var name, mempty))
             <&> Map.fromList
-        ) obj
-        <&> QVars
+        ) obj <&> QVars
         )
-    <*> (decodeSquashed "rowVars" (decodeIdentMap T.Var decodeCompositeConstraints) obj
-        <&> QVars)
+    <*> (decodeSquashed "rowVars" parseJSON obj <&> QVars)
 
 instance ToJSON (Pure # T.Scheme) where
     toJSON (Pure (Scheme tvs typ)) =
@@ -541,9 +532,8 @@ decodeDefExpr obj =
     where
         decodeDeps o =
             Deps
-            <$> decodeSquashed "defTypes" (decodeIdentMap V.Var parseJSON) o
-            <*> decodeSquashed "nominals"
-                (decodeIdentMap T.NominalId decodeNominal) o
+            <$> decodeSquashed "defTypes" parseJSON o
+            <*> decodeSquashed "nominals" parseJSON o
 
 decodeDefBody :: Aeson.Object -> AesonTypes.Parser (Definition.Body (Val UUID))
 decodeDefBody obj =
@@ -563,6 +553,8 @@ insertField :: ToJSON a => Text -> a -> Aeson.Object -> Aeson.Object
 insertField k v = HashMap.insert k (toJSON v)
 
 instance ToJSON (Pure # NominalDecl T.Type) where toJSON = toJSON . encodeNominal
+instance FromJSON (Pure # NominalDecl T.Type) where
+    parseJSON = Aeson.withObject "Pure NominalDecl" decodeNominal
 
 encodeNominal :: Pure # NominalDecl T.Type -> Aeson.Object
 encodeNominal (Pure (NominalDecl params nominalType)) =
