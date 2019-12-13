@@ -1,6 +1,6 @@
 -- | JSON encoder/decoder for Lamdu types
 {-# OPTIONS_GHC -fno-warn-orphans #-}
-{-# LANGUAGE TemplateHaskell, TypeFamilies, TypeOperators, PolyKinds, TypeApplications, FlexibleInstances, StandaloneDeriving, GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE TemplateHaskell, TypeFamilies, TypeOperators, PolyKinds, TypeApplications, FlexibleInstances, StandaloneDeriving, GeneralizedNewtypeDeriving, ScopedTypeVariables, DefaultSignatures #-}
 module Lamdu.Data.Export.JSON.Codec
     ( TagOrder
     , SchemaVersion(..), _SchemaVersion
@@ -335,20 +335,20 @@ instance FromJSON (Pure # T.Scheme) where
             typ <- obj .: "schemeType" >>= parseJSON
             _Pure # Scheme tvs typ & pure
 
-encodeLeaf :: V.Leaf -> Aeson.Object
-encodeLeaf =
-    \case
-    V.LHole -> l "hole"
-    V.LRecEmpty -> l "recEmpty"
-    V.LAbsurd -> l "absurd"
-    V.LVar (V.Var var) -> "var" ==> toJSON var
-    V.LLiteral (V.PrimVal (T.NominalId primId) primBytes) ->
-        "primId" ==> toJSON primId <>
-        "primBytes" ==> toJSON (BS.unpack (Hex.encode primBytes))
-    V.LFromNom (T.NominalId nomId) ->
-        "fromNomId" ==> toJSON nomId
-    where
-        l x = x ==> Aeson.object []
+instance ToObject V.Leaf where
+    toObject =
+        \case
+        V.LHole -> l "hole"
+        V.LRecEmpty -> l "recEmpty"
+        V.LAbsurd -> l "absurd"
+        V.LVar (V.Var var) -> "var" ==> toJSON var
+        V.LLiteral (V.PrimVal (T.NominalId primId) primBytes) ->
+            "primId" ==> toJSON primId <>
+            "primBytes" ==> toJSON (BS.unpack (Hex.encode primBytes))
+        V.LFromNom (T.NominalId nomId) ->
+            "fromNomId" ==> toJSON nomId
+        where
+            l x = x ==> Aeson.object []
 
 instance FromObject V.Leaf where
     parseObject =
@@ -380,24 +380,35 @@ instance FromObject V.Leaf where
                 )
 
 class Codec h where
-    decodeBody :: Aeson.Object -> AesonTypes.Parser (h # Ann (Const UUID))
-    encodeBody :: h # Ann (Const UUID) -> Aeson.Object
+    toObjectDict :: Proxy h -> Dict (ToObject (h # Ann (Const UUID)))
+    default toObjectDict ::
+        ToObject (h # Ann (Const UUID)) =>
+        Proxy h -> Dict (ToObject (h # Ann (Const UUID)))
+    toObjectDict _ = Dict
+    fromObjectDict :: Proxy h -> Dict (FromObject (h # Ann (Const UUID)))
+    default fromObjectDict ::
+        FromObject (h # Ann (Const UUID)) =>
+        Proxy h -> Dict (FromObject (h # Ann (Const UUID)))
+    fromObjectDict _ = Dict
 
 instance Codec h => ToJSON (Ann (Const UUID) # h) where toJSON = toJSONObj
 instance Codec h => ToObject (Ann (Const UUID) # h) where
     toObject (Ann uuid body) =
-        encodeBody body
-        <> "id" ==> toJSON uuid
+        withDict
+        (toObjectDict (Proxy @h))
+        (toObject body <> "id" ==> toJSON uuid)
 
 instance Codec h => FromJSON (Ann (Const UUID) # h) where
     parseJSON =
+        withDict (fromObjectDict (Proxy @h)) $
         Aeson.withObject "val" $ \obj ->
         Ann
         <$> (obj .: "id")
-        <*> decodeBody obj
+        <*> parseObject obj
 
-instance Codec V.Term where
-    encodeBody body =
+instance Codec V.Term
+instance ToObject (V.Term # Ann (Const UUID)) where
+    toObject body =
         case encBody of
         V.BApp (V.App func arg) ->
             "applyFunc" ==> c func <>
@@ -423,12 +434,14 @@ instance Codec V.Term where
         V.BToNom (ToNom (T.NominalId nomId) x) ->
             "toNomId" ==> toJSON nomId <>
             "toNomVal" ==> c x
-        V.BLeaf x -> encodeLeaf x
+        V.BLeaf x -> toObject x
         where
             encBody :: V.Term # Const Aeson.Value
             encBody = hmap (Proxy @Codec #> Lens.Const . toJSON) body
             c x = x ^. Lens._Wrapped
-    decodeBody obj =
+
+instance FromObject (V.Term # Ann (Const UUID)) where
+    parseObject obj =
         jsum
         [ V.App
         <$> (obj .: "applyFunc" <&> c)
@@ -469,7 +482,9 @@ instance Codec V.Term where
             c = Lens.Const
 
 instance Codec (HCompose Prune T.Type) where
-    decodeBody obj
+
+instance FromObject (HCompose Prune T.Type # Ann (Const UUID)) where
+    parseObject obj
         | (obj & Lens.at "id" .~ Nothing) == mempty =
             _HCompose # Pruned & pure
         | otherwise =
@@ -495,8 +510,10 @@ instance Codec (HCompose Prune T.Type) where
                                 )
             _ -> fail "Malformed params record"
             <&> (hcomposed _Unpruned . T._TRecord . _HCompose #)
-    encodeBody (HCompose Pruned) = mempty
-    encodeBody (HCompose (Unpruned (HCompose (T.TRecord (HCompose row))))) =
+
+instance ToObject (HCompose Prune T.Type # Ann (Const UUID)) where
+    toObject (HCompose Pruned) = mempty
+    toObject (HCompose (Unpruned (HCompose (T.TRecord (HCompose row))))) =
         "record" ==> array (go row)
         where
             go (Ann uuid (HCompose b)) =
@@ -517,7 +534,7 @@ instance Codec (HCompose Prune T.Type) where
                             , go r
                             )
                         Unpruned _ -> error "TODO"
-    encodeBody (HCompose (Unpruned _)) = error "TODO"
+    toObject (HCompose (Unpruned _)) = error "TODO"
 
 instance ToObject (Definition.Expr (Val UUID)) where
     toObject (Definition.Expr x frozenDeps) =
