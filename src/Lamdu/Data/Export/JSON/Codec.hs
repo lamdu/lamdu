@@ -74,21 +74,21 @@ toJSONObj :: ToObject a => a -> Aeson.Value
 toJSONObj = Aeson.Object . toObject
 
 data NominalEntity = NominalEntity
-    { _nominalTag :: T.Tag
-    , _nominalEntityId :: T.NominalId
-    , _nominalDecl :: Maybe (Pure # NominalDecl T.Type)
+    { _nominalTag :: !T.Tag
+    , _nominalEntityId :: !T.NominalId
+    , _nominalDecl :: !(Maybe (Pure # NominalDecl T.Type))
     }
 Lens.makeLenses ''NominalEntity
 
 data TagEntity = TagEntity
-    { _tagId :: T.Tag
-    , _tagData :: Tag
+    { _tagId :: !T.Tag
+    , _tagData :: !Tag
     }
 Lens.makeLenses ''TagEntity
 
 data LamVarEntity = LamVarEntity
-    { _lamVarId :: T.Tag
-    , _lamVarVar :: V.Var
+    { _lamVarId :: !T.Tag
+    , _lamVarVar :: !V.Var
     }
 Lens.makeLenses ''LamVarEntity
 
@@ -112,12 +112,12 @@ newtype DefinitionEntity =
 Lens.makePrisms ''DefinitionEntity
 
 data Entity
-    = EntitySchemaVersion SchemaVersion
-    | EntityRepl ReplEntity
-    | EntityDef DefinitionEntity
-    | EntityTag TagEntity
-    | EntityNominal NominalEntity
-    | EntityLamVar LamVarEntity
+    = EntitySchemaVersion !SchemaVersion
+    | EntityRepl !ReplEntity
+    | EntityDef !DefinitionEntity
+    | EntityTag !TagEntity
+    | EntityNominal !NominalEntity
+    | EntityLamVar !LamVarEntity
 Lens.makePrisms ''Entity
 
 instance ToJSON Entity where
@@ -127,6 +127,16 @@ instance ToJSON Entity where
     toJSON (EntityTag x) = toJSON x
     toJSON (EntityNominal x) = toJSON x
     toJSON (EntityLamVar x) = toJSON x
+
+-- | Parse object based on field that should exist in it
+decodeVariantObj ::
+    String ->
+    [(Text, Aeson.Object -> AesonTypes.Parser r)] ->
+    Aeson.Object -> AesonTypes.Parser r
+decodeVariantObj msg [] _ = "parseVariantObj of " <> msg <> " failed!" & fail
+decodeVariantObj msg ((field, parser):rest) obj
+    | Lens.has (Lens.ix field) obj = parser obj
+    | otherwise = decodeVariantObj msg rest obj
 
 instance FromJSON Entity where parseJSON = parseJSONObj "Entity"
 instance FromObject Entity where
@@ -187,16 +197,6 @@ encodeSquash :: (Eq a, Monoid a, ToJSON a) => Text -> a -> Aeson.Object
 encodeSquash name x
     | x == mempty = mempty
     | otherwise = name ==> toJSON x
-
--- | Parse object based on containing some traversal
-decodeVariantObj ::
-    String ->
-    [(Text, Aeson.Object -> AesonTypes.Parser r)] ->
-    Aeson.Object -> AesonTypes.Parser r
-decodeVariantObj msg [] _ = "parseVariantObj of " <> msg <> " failed!" & fail
-decodeVariantObj msg ((field, parser):rest) obj
-    | Lens.has (Lens.ix field) obj = parser obj
-    | otherwise = decodeVariantObj msg rest obj
 
 decodeSquashed ::
     (FromJSON j, Monoid a) =>
