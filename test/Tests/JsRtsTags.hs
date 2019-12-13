@@ -18,7 +18,7 @@ test =
     do
         freshDbTags <-
             readFreshDb
-            <&> (^.. traverse . JsonCodec._EntityTag . Lens._2 . tagTexts
+            <&> (^.. traverse . JsonCodec._EntityTag . JsonCodec.tagData . tagTexts
                  . Lens.ix (LangId "english") . name)
             <&> Set.fromList
         rtsConfig <- readDataFile "js/export/rtsConfig.js"

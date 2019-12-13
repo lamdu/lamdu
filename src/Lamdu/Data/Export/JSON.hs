@@ -23,7 +23,6 @@ import qualified Data.Set as Set
 import           Data.UUID.Types (UUID)
 import           Hyper
 import           Hyper.Recurse (unwrapM, (##>>))
-import           Hyper.Type.AST.Nominal (NominalDecl)
 import           Hyper.Type.Functor (_F)
 import           Hyper.Type.Prune (Prune)
 import           Lamdu.Calc.Identifier (Identifier)
@@ -37,9 +36,9 @@ import qualified Lamdu.Data.Db.Layout as DbLayout
 import           Lamdu.Data.Definition (Definition(..))
 import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Data.Export.JSON.Codec as Codec
+import           Lamdu.Data.Export.JSON.Codec (Entity(..))
 import qualified Lamdu.Data.Export.JSON.Migration as Migration
 import qualified Lamdu.Data.Meta as Meta
-import           Lamdu.Data.Tag (Tag(..))
 import           Lamdu.Expr.IRef (ValI, HRef)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Load as Load
@@ -61,23 +60,23 @@ data Visited = Visited
     }
 Lens.makeLenses ''Visited
 
-type Export m = WriterT [Codec.Entity] (StateT Visited (T m))
+type Export m = WriterT [Entity] (StateT Visited (T m))
 
 type EntityOrdering = (Int, Identifier)
 
-entityOrdering :: Codec.Entity -> EntityOrdering
-entityOrdering (Codec.EntitySchemaVersion _)                          = (0, "")
-entityOrdering (Codec.EntityTag (T.Tag ident)_ )                      = (1, ident)
-entityOrdering (Codec.EntityNominal _ (T.NominalId nomId) _)          = (2, nomId)
-entityOrdering (Codec.EntityLamVar _ (V.Var ident))                   = (3, ident)
-entityOrdering (Codec.EntityDef (Definition _ _ (_, _, V.Var ident))) = (4, ident)
-entityOrdering (Codec.EntityRepl _)                                   = (5, "")
+entityOrdering :: Entity -> EntityOrdering
+entityOrdering (EntitySchemaVersion _)                          = (0, "")
+entityOrdering (EntityTag (Codec.TagEntity (T.Tag ident) _))    = (1, ident)
+entityOrdering (EntityNominal (Codec.NominalEntity _ (T.NominalId nomId) _)) = (2, nomId)
+entityOrdering (EntityLamVar (Codec.LamVarEntity _ (V.Var ident))) = (3, ident)
+entityOrdering (EntityDef (Definition _ _ (_, _, V.Var ident))) = (4, ident)
+entityOrdering (EntityRepl _)                                   = (5, "")
 
 currentVersion :: Codec.SchemaVersion
 currentVersion = Codec.SchemaVersion Migration.currentVersion
 
-entityVersion :: Codec.Entity
-entityVersion = Codec.EntitySchemaVersion currentVersion
+entityVersion :: Entity
+entityVersion = EntitySchemaVersion currentVersion
 
 runExport :: Monad m => Export m a -> T m (a, Aeson.Value)
 runExport act =
@@ -103,7 +102,7 @@ withVisited l x act =
 readAssocTag :: Monad m => ToUUID a => a -> T m T.Tag
 readAssocTag = Property.getP . Anchors.assocTag
 
-tell :: Monad m => Codec.Entity -> Export m ()
+tell :: Monad m => Entity -> Export m ()
 tell = Writer.tell . (: [])
 
 exportTag :: Monad m => T.Tag -> Export m ()
@@ -111,7 +110,7 @@ exportTag tag
     | tag == Anchors.anonTag = pure ()
     | otherwise =
         ExprIRef.readTagData tag & trans
-        >>= tell . Codec.EntityTag tag
+        >>= tell . EntityTag . Codec.TagEntity tag
         & withVisited visitedTags tag
 
 exportNominal :: Monad m => T.NominalId -> Export m ()
@@ -119,7 +118,7 @@ exportNominal nomId =
     do
         nominal <- trans (Load.nominal nomId)
         tag <- readAssocTag nomId & trans
-        Codec.EntityNominal tag nomId nominal & tell
+        EntityNominal (Codec.NominalEntity tag nomId nominal) & tell
         & withVisited visitedNominals nomId
 
 class ExportSubexpr k where
@@ -131,7 +130,7 @@ instance ExportSubexpr V.Term where
         do
             tag <- readAssocTag lamVar & trans
             exportTag tag
-            Codec.EntityLamVar tag lamVar & tell
+            EntityLamVar (Codec.LamVarEntity tag lamVar) & tell
     exportSubexpr _ = pure ()
 
 instance ExportSubexpr (HCompose Prune T.Type)
@@ -162,7 +161,7 @@ exportDef globalId =
                 def
                 & Definition.defBody . Lens.mapped . hflipped %~
                     hmap (const (Const . toUUID . (^. ExprIRef.iref)))
-        (presentationMode, tag, globalId) <$ def' & Codec.EntityDef & tell
+        (presentationMode, tag, globalId) <$ def' & EntityDef & tell
     & withVisited visitedDefs globalId
     where
         defI = ExprIRef.defI globalId
@@ -174,7 +173,7 @@ exportRepl =
         traverse_ exportVal repl
         repl
             <&> hflipped %~ hmap (const (Const . toUUID . (^. ExprIRef.iref)))
-            & Codec.EntityRepl & tell
+            & EntityRepl & tell
 
 jsonExportRepl :: T ViewM Aeson.Value
 jsonExportRepl = runExport exportRepl <&> snd
@@ -251,34 +250,33 @@ importRepl defExpr =
     traverse writeValAtUUID defExpr >>=
     Transaction.writeIRef (DbLayout.repl DbLayout.codeIRefs)
 
-importTag :: T.Tag -> Tag -> T ViewM ()
-importTag tagId tagData =
+importTag :: Codec.TagEntity -> T ViewM ()
+importTag (Codec.TagEntity tagId tagData) =
     do
         Transaction.writeIRef (ExprIRef.tagI tagId) tagData
         tagId `insertTo` DbLayout.tags
 
-importLamVar :: Monad m => T.Tag -> V.Var -> T m ()
-importLamVar tag var =
-    Property.setP (Anchors.assocTag var) tag
-
-importNominal :: T.Tag -> T.NominalId -> Maybe (Pure # NominalDecl T.Type) -> T ViewM ()
-importNominal tag nomId nominal =
+importNominal :: Codec.NominalEntity -> T ViewM ()
+importNominal (Codec.NominalEntity tag nomId nominal) =
     do
         Property.setP (Anchors.assocTag nomId) tag
         traverse_ (Transaction.writeIRef (ExprIRef.nominalI nomId)) nominal
         nomId `insertTo` DbLayout.tids
 
-importOne :: Codec.Entity -> T ViewM ()
-importOne (Codec.EntityDef def) = importDef def
-importOne (Codec.EntityRepl x) = importRepl x
-importOne (Codec.EntityTag tagId tagData) = importTag tagId tagData
-importOne (Codec.EntityNominal mName nomId nom) = importNominal mName nomId nom
-importOne (Codec.EntityLamVar tag var) = importLamVar tag var
-importOne (Codec.EntitySchemaVersion _) =
+importLamVar :: Monad m => Codec.LamVarEntity -> T m ()
+importLamVar (Codec.LamVarEntity tag var) = Property.setP (Anchors.assocTag var) tag
+
+importOne :: Entity -> T ViewM ()
+importOne (EntityDef x) = importDef x
+importOne (EntityRepl x) = importRepl x
+importOne (EntityTag x) = importTag x
+importOne (EntityNominal x) = importNominal x
+importOne (EntityLamVar x) = importLamVar x
+importOne (EntitySchemaVersion _) =
     fail "Only one schemaVersion allowed in beginning of document"
 
-importEntities :: [Codec.Entity] -> T ViewM ()
-importEntities (Codec.EntitySchemaVersion ver : entities) =
+importEntities :: [Entity] -> T ViewM ()
+importEntities (EntitySchemaVersion ver : entities) =
     if ver == currentVersion
     then traverse_ importOne entities
     else "Unsupported schema version: " ++ show ver & fail

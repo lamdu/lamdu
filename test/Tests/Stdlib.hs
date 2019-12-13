@@ -42,7 +42,7 @@ verifyTagsTest =
     <&> concat
     >>= verifyTagNames . fmap (^. name)
     where
-        verifyHasName (tagId, tag)
+        verifyHasName (JsonCodec.TagEntity tagId tag)
             | Map.null (tag ^. tagTexts) && tag ^. tagSymbol == NoSymbol =
                 fail ("stdlib tag with no name:" <> show tagId)
             | "" `elem` tag ^.. tagTexts . traverse . name =
@@ -92,7 +92,7 @@ verifyNoBrokenDefsTest =
         let tags =
                 Map.fromList
                 [ (tag, tagRefTag ^. tagTexts . Lens.ix (LangId "english") . name)
-                | (tag, tagRefTag) <- db ^.. Lens.folded . JsonCodec._EntityTag
+                | (JsonCodec.TagEntity tag tagRefTag) <- db ^.. Lens.folded . JsonCodec._EntityTag
                 ]
         let defs = db ^.. Lens.folded . JsonCodec._EntityDef
         traverse_ verifyTag (defs <&> (^. Def.defPayload))
