@@ -1,6 +1,6 @@
 -- | JSON encoder/decoder for Lamdu types
 {-# OPTIONS_GHC -fno-warn-orphans #-}
-{-# LANGUAGE TemplateHaskell, TypeFamilies, TypeOperators, PolyKinds, TypeApplications, FlexibleInstances #-}
+{-# LANGUAGE TemplateHaskell, TypeFamilies, TypeOperators, PolyKinds, TypeApplications, FlexibleInstances, StandaloneDeriving, GeneralizedNewtypeDeriving #-}
 module Lamdu.Data.Export.JSON.Codec
     ( TagOrder
     , Entity(..), _EntitySchemaVersion, _EntityRepl, _EntityDef, _EntityTag, _EntityNominal, _EntityLamVar
@@ -131,12 +131,6 @@ instance FromJSON Identifier where
         <&> identFromHex
         >>= fromEither
 
-encodeIdentMap :: ToJSON a => (k -> Identifier) -> Encoder (Map k a)
-encodeIdentMap getIdent m =
-    m
-    & Map.mapKeys (identHex . getIdent)
-    & toJSON
-
 decodeIdentMap ::
     (FromJSON j, Ord k) =>
     (Identifier -> k) -> (j -> AesonTypes.Parser a) -> Decoder (Map k a)
@@ -221,6 +215,13 @@ instance FromJSON (Pure # T.Row) where
                 <&> Pure . T.RExtend
     parseJSON x = fail ("malformed row" <> show x)
 
+instance AesonTypes.ToJSONKey Identifier where
+    toJSONKey = AesonTypes.toJSONKey & Lens.contramap identHex
+
+deriving newtype instance AesonTypes.ToJSONKey (T.Var a)
+deriving newtype instance AesonTypes.ToJSONKey V.Var
+deriving newtype instance AesonTypes.ToJSONKey T.NominalId
+
 instance ToJSON (Pure # T.Type) where
     toJSON t =
         case t ^. _Pure of
@@ -230,8 +231,8 @@ instance ToJSON (Pure # T.Type) where
         T.TVar (T.Var name)   -> "typeVar" ==> toJSON name
         T.TInst (NominalInst tId params) ->
             "nomId" ==> toJSON (T.nomId tId) <>
-            encodeSquash "nomTypeArgs" (encodeIdentMap T.tvName) (params ^. T.tType . _QVarInstances) <>
-            encodeSquash "nomRowArgs" (encodeIdentMap T.tvName) (params ^. T.tRow . _QVarInstances)
+            encodeSquash "nomTypeArgs" toJSON (params ^. T.tType . _QVarInstances) <>
+            encodeSquash "nomRowArgs" toJSON (params ^. T.tRow . _QVarInstances)
         & Aeson.Object
 
 instance FromJSON (Pure # T.Type) where
@@ -277,9 +278,7 @@ encodeTypeVars (T.Types (QVars tvs) (QVars rvs)) =
     (toJSON . map (toJSON . T.tvName) . Set.toList)
     (Map.keysSet tvs)
     <>
-    encodeSquash "rowVars"
-    (encodeIdentMap T.tvName)
-    rvs
+    encodeSquash "rowVars" toJSON rvs
 
 decodeTypeVars :: Aeson.Object -> AesonTypes.Parser (T.Types # QVars)
 decodeTypeVars obj =
@@ -499,12 +498,8 @@ encodeDefExpr (Definition.Expr x frozenDeps) =
     encodeSquash "frozenDeps" id encodedDeps
     where
         encodedDeps =
-            encodeSquash "defTypes"
-                (encodeIdentMap V.vvName)
-                (frozenDeps ^. depsGlobalTypes) <>
-            encodeSquash "nominals"
-                (encodeIdentMap T.nomId)
-                (frozenDeps ^. depsNominals)
+            encodeSquash "defTypes" toJSON (frozenDeps ^. depsGlobalTypes) <>
+            encodeSquash "nominals" toJSON (frozenDeps ^. depsNominals)
 
 encodeDefBody :: Definition.Body (Val UUID) -> Aeson.Object
 encodeDefBody (Definition.BodyBuiltin name) = "builtin" ==> toJSON name
