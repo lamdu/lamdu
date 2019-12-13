@@ -79,8 +79,6 @@ make fragment pl =
 
         addAnnotation <- maybeAddAnnotationPlWith postProcessAnn pl
 
-        hbox <- ResponsiveExpr.boxSpacedMDisamb ?? ExprGui.mParensId pl
-
         rawSearchArea <-
             SearchArea.make SearchArea.WithoutAnnotation
             (fragment ^. Sugar.fOptions) pl allowedFragmentSearchTerm holeIds
@@ -98,8 +96,10 @@ make fragment pl =
                 Widget.weakerEvents (healEventMap (Config.delKeys env) env)
         let qmarkImage = qmarkView ^. Align.tValue . View.vAnimLayers
         let searchAreaQMark = searchArea <&> Element.setLayeredImage .~ qmarkImage
-
         let healKeys = env ^. has . Config.healKeys
+
+        hbox <- ResponsiveExpr.boxSpacedMDisamb ?? ExprGui.mParensId pl
+
         ExprEventMap.add ExprEventMap.defaultOptions pl
             <*>
             ( parentDelegator myId
