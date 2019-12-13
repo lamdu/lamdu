@@ -121,7 +121,7 @@ loopExprBody parentPrec body_ =
     BodyHole         x -> result False (BodyHole x)
     BodyFragment     x -> rightSymbol fExpr BodyFragment x
     BodyRecord       x -> hmap (p #> addToNode) x & BodyRecord & result False
-    BodyCase         x -> hmap (p #> addToNode) x & BodyCase & result False
+    BodyCase         x -> hmap (p #> addToNode) x & BodyCase & result (caseNeedsParens x)
     BodyLam          x -> leftSymbol (lamFunc . fBody) 0 BodyLam x
     BodyToNom        x -> leftSymbol Lens.mapped 0 BodyToNom x
     BodyInject       x -> inject x
@@ -143,9 +143,12 @@ loopExprBody parentPrec body_ =
             Lens.ASetter s t (Annotated pl (Body name i o)) (Annotated (MinOpPrec, NeedsParens, pl) (Body name i o)) ->
             (t -> res) -> s -> (NeedsParens, res)
         rightSymbol l =
-            sideSymbol loopExpr after needParens l 12
-            where
-                needParens = parentPrec ^. before >= 12 || parentPrec ^. after > 12
+            sideSymbol loopExpr after dotSomethingNeedParens l 12
+        dotSomethingNeedParens = parentPrec ^. before >= 12 || parentPrec ^. after > 12
+        caseNeedsParens x =
+            case x ^. cKind of
+            LambdaCase -> False
+            CaseWithArg{} -> dotSomethingNeedParens
         sideSymbol ::
             AnnotateAST pl body ->
             Lens.ASetter' (Precedence Prec) MinOpPrec ->

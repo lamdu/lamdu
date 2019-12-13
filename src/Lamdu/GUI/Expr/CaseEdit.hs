@@ -17,6 +17,7 @@ import qualified GUI.Momentu.Glue as Glue
 import qualified GUI.Momentu.I18N as MomentuTexts
 import           GUI.Momentu.Responsive (Responsive)
 import qualified GUI.Momentu.Responsive as Responsive
+import qualified GUI.Momentu.Responsive.Expression as ResponsiveExpr
 import qualified GUI.Momentu.Responsive.Options as Options
 import           GUI.Momentu.Responsive.TaggedList (TaggedItem(..), taggedList)
 import qualified GUI.Momentu.State as GuiState
@@ -24,6 +25,7 @@ import           GUI.Momentu.View (View)
 import qualified GUI.Momentu.View as View
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Grid as Grid
+import qualified GUI.Momentu.Widgets.Label as Label
 import qualified GUI.Momentu.Widgets.Menu as Menu
 import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
@@ -36,12 +38,13 @@ import qualified Lamdu.Config.Theme as Theme
 import           Lamdu.Config.Theme.TextColors (TextColors)
 import qualified Lamdu.Config.Theme.TextColors as TextColors
 import qualified Lamdu.GUI.Expr.GetVarEdit as GetVarEdit
+import qualified Lamdu.GUI.Expr.EventMap as ExprEventMap
 import qualified Lamdu.GUI.Expr.TagEdit as TagEdit
 import qualified Lamdu.GUI.ExpressionGui.Annotation as Annotation
 import           Lamdu.GUI.ExpressionGui.Monad (GuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as GuiM
 import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
-import           Lamdu.GUI.ExpressionGui.Wrap (stdWrapParentExpr)
+import qualified Lamdu.GUI.ExpressionGui.Wrap as Wrap
 import           Lamdu.GUI.Styled (label, grammar)
 import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
@@ -84,34 +87,13 @@ make ::
     GuiM env i o (Responsive o)
 make (Sugar.Case mArg (Sugar.Composite alts punned caseTail addAlt)) pl =
     do
-        caseLabel <-
-            (Widget.makeFocusableView ?? headerId <&> (Align.tValue %~))
-            <*> grammar (label Texts.case_)
-            <&> Responsive.fromWithTextPos
-        ofLabel <- grammar (label Texts.of_) <&> Responsive.fromTextView
         env <- Lens.view id
-        (mActiveTag, header) <-
+        mActiveTag <-
             case mArg of
-            Sugar.LambdaCase ->
-                do
-                    lambdaLabel <-
-                        grammar (label Texts.lam) <&> Responsive.fromTextView
-                    Options.boxSpaced
-                        ?? Options.disambiguationNone
-                        ?? [caseLabel, lambdaLabel, ofLabel]
-                        <&> (,) Nothing
-            Sugar.CaseWithArg (Sugar.CaseArg arg toLambdaCase) ->
-                do
-                    argEdit <-
-                        GuiM.makeSubexpression arg
-                        <&> Widget.weakerEvents (toLambdaCaseEventMap env toLambdaCase)
-                    mTag <-
-                        Annotation.evaluationResult (arg ^. annotation)
-                        <&> (>>= (^? Sugar.resBody . Sugar._RInject . Sugar.riTag))
-                    Options.boxSpaced
-                        ?? Options.disambiguationNone
-                        ?? [caseLabel, argEdit, ofLabel]
-                        <&> (,) mTag
+            Sugar.LambdaCase -> pure Nothing
+            Sugar.CaseWithArg arg ->
+                Annotation.evaluationResult (arg ^. Sugar.caVal . annotation)
+                <&> (>>= (^? Sugar.resBody . Sugar._RInject . Sugar.riTag))
         altsGui <-
             makeAltsWidget (mActiveTag <&> (^. Sugar.tagVal)) alts punned addAlt altsId
             >>= case caseTail of
@@ -124,13 +106,36 @@ make (Sugar.Case mArg (Sugar.Composite alts punned caseTail addAlt)) pl =
                 & pure
                 & E.keysEventMapMovesCursor (env ^. has . Config.caseAddAltKeys)
                     (doc env Texts.addAlt)
-        Styled.addValFrame <*> (Responsive.vboxSpaced ?? [header, altsGui])
+        case mArg of
+            Sugar.LambdaCase ->
+                do
+                    header <- grammar (label Texts.lam) /|/ makeCaseLabel
+                    (Annotation.maybeAddAnnotationPl pl <&> (Widget.widget %~)) <*>
+                        ( Styled.addValFrame <*>
+                            (Options.boxSpaced ?? Options.disambiguationNone ?? [header, altsGui]))
+            Sugar.CaseWithArg (Sugar.CaseArg arg toLambdaCase) ->
+                do
+                    header <- grammar (Label.make ".") /|/ makeCaseLabel
+                    (ResponsiveExpr.boxSpacedMDisamb ?? ExprGui.mParensId pl) <*>
+                        sequenceA
+                        [ GuiM.makeSubexpression arg
+                            <&> Widget.weakerEvents (toLambdaCaseEventMap env toLambdaCase)
+                        , (Annotation.maybeAddAnnotationPl pl <&> (Widget.widget %~)) <*>
+                            (Styled.addValFrame <*> (Responsive.vboxSpaced ?? [header, altsGui]))
+                        ]
             <&> Widget.weakerEvents addAltEventMap
-            & stdWrapParentExpr pl
+    & wrap
     where
+        wrap x =
+            ExprEventMap.add ExprEventMap.defaultOptions pl <*>
+            (Wrap.parentDelegator (WidgetIds.fromExprPayload pl) <*> x)
         myId = WidgetIds.fromExprPayload pl
         headerId = Widget.joinId myId ["header"]
         altsId = Widget.joinId myId ["alts"]
+        makeCaseLabel =
+            (Widget.makeFocusableView ?? headerId <&> (Align.tValue %~))
+            <*> grammar (label Texts.case_)
+            <&> Responsive.fromWithTextPos
 
 makeAltRow ::
     ( Monad i, Monad o
