@@ -145,12 +145,10 @@ decodeIdentMap fromIdent decode json =
             <$> (identFromHex k & fromEither <&> fromIdent)
             <*> decode v
 
-encodeSquash ::
-    (Eq a, Monoid a, ToJSON j) =>
-    Text -> (a -> j) -> a -> Aeson.Object
-encodeSquash name encode x
+encodeSquash :: (Eq a, Monoid a, ToJSON a) => Text -> a -> Aeson.Object
+encodeSquash name x
     | x == mempty = mempty
-    | otherwise = name ==> toJSON (encode x)
+    | otherwise = name ==> toJSON x
 
 -- | Parse object based on containing some traversal
 decodeVariantObj ::
@@ -218,6 +216,7 @@ instance FromJSON (Pure # T.Row) where
 instance AesonTypes.ToJSONKey Identifier where
     toJSONKey = AesonTypes.toJSONKey & Lens.contramap identHex
 
+deriving newtype instance AesonTypes.ToJSON (T.Var a)
 deriving newtype instance AesonTypes.ToJSONKey (T.Var a)
 deriving newtype instance AesonTypes.ToJSONKey V.Var
 deriving newtype instance AesonTypes.ToJSONKey T.NominalId
@@ -231,8 +230,8 @@ instance ToJSON (Pure # T.Type) where
         T.TVar (T.Var name)   -> "typeVar" ==> toJSON name
         T.TInst (NominalInst tId params) ->
             "nomId" ==> toJSON (T.nomId tId) <>
-            encodeSquash "nomTypeArgs" toJSON (params ^. T.tType . _QVarInstances) <>
-            encodeSquash "nomRowArgs" toJSON (params ^. T.tRow . _QVarInstances)
+            encodeSquash "nomTypeArgs" (params ^. T.tType . _QVarInstances) <>
+            encodeSquash "nomRowArgs" (params ^. T.tRow . _QVarInstances)
         & Aeson.Object
 
 instance FromJSON (Pure # T.Type) where
@@ -274,11 +273,9 @@ decodeCompositeConstraints json =
 
 encodeTypeVars :: T.Types # QVars -> Aeson.Object
 encodeTypeVars (T.Types (QVars tvs) (QVars rvs)) =
-    encodeSquash "typeVars"
-    (toJSON . map (toJSON . T.tvName) . Set.toList)
-    (Map.keysSet tvs)
+    encodeSquash "typeVars" (Map.keysSet tvs)
     <>
-    encodeSquash "rowVars" toJSON rvs
+    encodeSquash "rowVars" rvs
 
 decodeTypeVars :: Aeson.Object -> AesonTypes.Parser (T.Types # QVars)
 decodeTypeVars obj =
@@ -495,11 +492,11 @@ instance Codec (HCompose Prune T.Type) where
 encodeDefExpr :: Definition.Expr (Val UUID) -> Aeson.Object
 encodeDefExpr (Definition.Expr x frozenDeps) =
     "val" ==> toJSON x <>
-    encodeSquash "frozenDeps" id encodedDeps
+    encodeSquash "frozenDeps" encodedDeps
     where
         encodedDeps =
-            encodeSquash "defTypes" toJSON (frozenDeps ^. depsGlobalTypes) <>
-            encodeSquash "nominals" toJSON (frozenDeps ^. depsNominals)
+            encodeSquash "defTypes" (frozenDeps ^. depsGlobalTypes) <>
+            encodeSquash "nominals" (frozenDeps ^. depsNominals)
 
 encodeDefBody :: Definition.Body (Val UUID) -> Aeson.Object
 encodeDefBody (Definition.BodyBuiltin name) = "builtin" ==> toJSON name
@@ -596,7 +593,7 @@ encodeNamedTag :: Encoder (T.Tag, Tag)
 encodeNamedTag (T.Tag ident, Tag order op names) =
     (encodeTagOrder order
     & insertField "tag" (toJSON ident))
-    <> encodeSquash "names" id names <> encodeSymbol op
+    <> encodeSquash "names" names <> encodeSymbol op
     & Aeson.Object
 
 decodeSymbol :: Maybe Aeson.Value -> AesonTypes.Parser Tag.Symbol

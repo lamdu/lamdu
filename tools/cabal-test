@@ -1,5 +1,5 @@
 set -eu
-cabal v1-build Tests
+time cabal v1-build Tests
 cabal v1-build lamdu &
 execbuild=$!
 time dist/build/Tests/Tests "$@"
