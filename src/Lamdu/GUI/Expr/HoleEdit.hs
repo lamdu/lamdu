@@ -21,7 +21,7 @@ import qualified Lamdu.GUI.Expr.HoleEdit.SearchArea as SearchArea
 import           Lamdu.GUI.Expr.HoleEdit.ValTerms (allowedSearchTermCommon)
 import           Lamdu.GUI.Expr.HoleEdit.WidgetIds (WidgetIds(..))
 import qualified Lamdu.GUI.Expr.HoleEdit.WidgetIds as HoleWidgetIds
-import           Lamdu.GUI.Expr.LiteralEdit (makeLiteralEventMap)
+import           Lamdu.GUI.Expr.LiteralEdit (makeLiteralEventMap, makeLiteralNumberEventMap)
 import           Lamdu.GUI.ExpressionGui.Monad (GuiM)
 import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
@@ -82,6 +82,10 @@ make hole pl =
                                 [has . MomentuTexts.edit, has . MomentuTexts.delete])
                             . fmap WidgetIds.fromEntityId)
                         (hole ^. Sugar.holeMDelete)
+                    )
+                | searchTerm == "-" =
+                    ( makeLiteralNumberEventMap "-" ?? pl ^. Sugar.plActions . Sugar.setToLiteral
+                    , mempty
                     )
                 | otherwise = (mempty, mempty)
         litEventMap <- mkLitEventMap

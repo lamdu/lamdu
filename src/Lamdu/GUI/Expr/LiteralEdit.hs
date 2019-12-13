@@ -1,5 +1,5 @@
 module Lamdu.GUI.Expr.LiteralEdit
-    ( make, makeLiteralEventMap
+    ( make, makeLiteralEventMap, makeLiteralNumberEventMap
     ) where
 
 import           Control.Lens (LensLike')
@@ -298,14 +298,15 @@ makeLiteralNumberEventMap ::
     ( MonadReader env m, Monad o
     , Has (MomentuTexts.Texts Text) env, Has (Texts.CodeUI Text) env
     ) =>
+    String ->
     m ((Sugar.Literal Identity -> o Sugar.EntityId) -> EventMap (o GuiState.Update))
-makeLiteralNumberEventMap =
+makeLiteralNumberEventMap prefix =
     Lens.view id <&> E.toDoc
     <&> \toDoc makeLiteral ->
     E.charGroup (Just "Digit")
     (toDoc [has . MomentuTexts.edit, has . Texts.literalNumber])
     Chars.digit
-    (fmap goToLiteral . makeLiteral . Sugar.LiteralNum . Identity . read . (: []))
+    (fmap goToLiteral . makeLiteral . Sugar.LiteralNum . Identity . read . (prefix <>) . (: []))
 
 makeLiteralEventMap ::
     ( MonadReader env m, Monad o
@@ -313,7 +314,7 @@ makeLiteralEventMap ::
     ) =>
     m ((Sugar.Literal Identity -> o Sugar.EntityId) -> EventMap (o GuiState.Update))
 makeLiteralEventMap =
-    (,) <$> (Lens.view id <&> E.toDoc) <*> makeLiteralNumberEventMap
+    (,) <$> (Lens.view id <&> E.toDoc) <*> makeLiteralNumberEventMap ""
     <&>
     \(toDoc, lit) makeLiteral ->
     E.charGroup Nothing
