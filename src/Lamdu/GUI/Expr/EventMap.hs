@@ -4,6 +4,7 @@ module Lamdu.GUI.Expr.EventMap
     , ExprInfo(..), addWith
     , extractCursor
     , addLetEventMap
+    , makeLiteralEventMap, makeLiteralNumberEventMap
     ) where
 
 import qualified Control.Lens as Lens
@@ -268,3 +269,34 @@ replaceEventMap action =
     action <&> WidgetIds.fromEntityId
     & E.keysEventMapMovesCursor (Config.delKeys env)
     (E.toDoc env [has . MomentuTexts.edit, has . Texts.setToHole])
+
+goToLiteral :: Sugar.EntityId -> GuiState.Update
+goToLiteral = GuiState.updateCursor . WidgetIds.literalEditOf . WidgetIds.fromEntityId
+
+makeLiteralNumberEventMap ::
+    ( MonadReader env m, Monad o
+    , Has (MomentuTexts.Texts Text) env, Has (Texts.CodeUI Text) env
+    ) =>
+    String ->
+    m ((Sugar.Literal Identity -> o Sugar.EntityId) -> EventMap (o GuiState.Update))
+makeLiteralNumberEventMap prefix =
+    Lens.view id <&> E.toDoc
+    <&> \toDoc makeLiteral ->
+    E.charGroup (Just "Digit")
+    (toDoc [has . MomentuTexts.edit, has . Texts.literalNumber])
+    Chars.digit
+    (fmap goToLiteral . makeLiteral . Sugar.LiteralNum . Identity . read . (prefix <>) . (: []))
+
+makeLiteralEventMap ::
+    ( MonadReader env m, Monad o
+    , Has (MomentuTexts.Texts Text) env, Has (Texts.CodeUI Text) env
+    ) =>
+    m ((Sugar.Literal Identity -> o Sugar.EntityId) -> EventMap (o GuiState.Update))
+makeLiteralEventMap =
+    (,) <$> (Lens.view id <&> E.toDoc) <*> makeLiteralNumberEventMap ""
+    <&>
+    \(toDoc, lit) makeLiteral ->
+    E.charGroup Nothing
+    (toDoc [has . MomentuTexts.edit, has . Texts.literalText]) "'\""
+    (const (makeLiteral (Sugar.LiteralText (Identity "")) <&> goToLiteral))
+    <> lit makeLiteral

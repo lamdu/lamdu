@@ -21,7 +21,6 @@ import qualified Lamdu.GUI.Expr.HoleEdit.SearchArea as SearchArea
 import           Lamdu.GUI.Expr.HoleEdit.ValTerms (allowedSearchTermCommon)
 import           Lamdu.GUI.Expr.HoleEdit.WidgetIds (WidgetIds(..))
 import qualified Lamdu.GUI.Expr.HoleEdit.WidgetIds as HoleWidgetIds
-import           Lamdu.GUI.Expr.LiteralEdit (makeLiteralEventMap, makeLiteralNumberEventMap)
 import           Lamdu.GUI.ExpressionGui.Monad (GuiM)
 import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
@@ -75,7 +74,7 @@ make hole pl =
         env <- Lens.view id
         let (mkLitEventMap, delEventMap)
                 | searchTerm == "" =
-                    ( makeLiteralEventMap ?? pl ^. Sugar.plActions . Sugar.setToLiteral
+                    ( ExprEventMap.makeLiteralEventMap ?? pl ^. Sugar.plActions . Sugar.setToLiteral
                     , foldMap
                         (E.keysEventMapMovesCursor delKeys
                             (E.toDoc env
@@ -84,7 +83,7 @@ make hole pl =
                         (hole ^. Sugar.holeMDelete)
                     )
                 | searchTerm == "-" =
-                    ( makeLiteralNumberEventMap "-" ?? pl ^. Sugar.plActions . Sugar.setToLiteral
+                    ( ExprEventMap.makeLiteralNumberEventMap "-" ?? pl ^. Sugar.plActions . Sugar.setToLiteral
                     , mempty
                     )
                 | otherwise = (mempty, mempty)
