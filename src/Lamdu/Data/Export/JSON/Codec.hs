@@ -12,6 +12,7 @@ module Lamdu.Data.Export.JSON.Codec
     , Entity(..), _EntitySchemaVersion, _EntityRepl, _EntityDef, _EntityTag, _EntityNominal, _EntityLamVar
     ) where
 
+import           Control.Applicative (optional)
 import qualified Control.Lens as Lens
 import           Control.Lens.Extended ((==>))
 import           Data.Aeson ((.:), ToJSON(..), FromJSON(..))
@@ -662,11 +663,5 @@ instance ToObject NominalEntity where
 
 instance FromObject NominalEntity where
     parseObject json =
-        decodeTagged "nom" decodeMNom json
+        decodeTagged "nom" (optional . parseObject) json
         <&> \((tag, ident), nom) -> NominalEntity tag (T.NominalId ident) nom
-        where
-            decodeMNom x =
-                jsum
-                [ parseObject x <&> Just
-                , pure Nothing
-                ]
