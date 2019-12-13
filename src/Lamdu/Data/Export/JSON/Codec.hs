@@ -131,11 +131,9 @@ instance FromJSON Identifier where
         <&> identFromHex
         >>= fromEither
 
-encodeIdentMap ::
-    ToJSON b => (k -> Identifier) -> (a -> b) -> Encoder (Map k a)
-encodeIdentMap getIdent encode m =
+encodeIdentMap :: ToJSON a => (k -> Identifier) -> Encoder (Map k a)
+encodeIdentMap getIdent m =
     m
-    & Map.map encode
     & Map.mapKeys (identHex . getIdent)
     & toJSON
 
@@ -202,6 +200,7 @@ instance ToJSON (Pure # T.Row) where
             go (Pure (T.RVar (T.Var name))) =
                 ["rowVar" ==> toJSON name & Aeson.Object]
             go (Pure (T.RExtend (RowExtend t v r))) =
+                -- TODO: use toObject (or _Object is not guaranteed to do anything)
                 (toJSON v & _Object . Lens.at "rowTag" ?~ toJSON t) : go r
 
 instance FromJSON (Pure # T.Row) where
@@ -231,8 +230,8 @@ instance ToJSON (Pure # T.Type) where
         T.TVar (T.Var name)   -> "typeVar" ==> toJSON name
         T.TInst (NominalInst tId params) ->
             "nomId" ==> toJSON (T.nomId tId) <>
-            encodeSquash "nomTypeArgs" (encodeIdentMap T.tvName toJSON) (params ^. T.tType . _QVarInstances) <>
-            encodeSquash "nomRowArgs" (encodeIdentMap T.tvName toJSON) (params ^. T.tRow . _QVarInstances)
+            encodeSquash "nomTypeArgs" (encodeIdentMap T.tvName) (params ^. T.tType . _QVarInstances) <>
+            encodeSquash "nomRowArgs" (encodeIdentMap T.tvName) (params ^. T.tRow . _QVarInstances)
         & Aeson.Object
 
 instance FromJSON (Pure # T.Type) where
@@ -256,15 +255,15 @@ instance FromJSON (Pure # T.Type) where
         ]
         <&> (_Pure #)
 
-encodeCompositeVarConstraints :: T.RConstraints -> [Aeson.Value]
-encodeCompositeVarConstraints (T.RowConstraints forbidden scopeLevel)
-    | scopeLevel == mempty =
-        Set.toList forbidden
-        <&> T.tagName
-        <&> toJSON
-    | otherwise =
-        -- We only encode top-level types, no skolem escape considerations...
-        error "encodeCompositeVarConstraints does not support inner-scoped types"
+instance ToJSON T.RConstraints where
+    toJSON (T.RowConstraints forbidden scopeLevel)
+        | scopeLevel == mempty =
+            Set.toList forbidden
+            <&> T.tagName
+            & toJSON
+        | otherwise =
+            -- We only encode top-level types, no skolem escape considerations...
+            error "toJSON does not support inner-scoped types"
 
 decodeCompositeConstraints ::
     [Aeson.Value] -> AesonTypes.Parser T.RConstraints
@@ -279,7 +278,7 @@ encodeTypeVars (T.Types (QVars tvs) (QVars rvs)) =
     (Map.keysSet tvs)
     <>
     encodeSquash "rowVars"
-    (encodeIdentMap T.tvName encodeCompositeVarConstraints)
+    (encodeIdentMap T.tvName)
     rvs
 
 decodeTypeVars :: Aeson.Object -> AesonTypes.Parser (T.Types # QVars)
@@ -501,10 +500,10 @@ encodeDefExpr (Definition.Expr x frozenDeps) =
     where
         encodedDeps =
             encodeSquash "defTypes"
-                (encodeIdentMap V.vvName toJSON)
+                (encodeIdentMap V.vvName)
                 (frozenDeps ^. depsGlobalTypes) <>
             encodeSquash "nominals"
-                (encodeIdentMap T.nomId encodeNominal)
+                (encodeIdentMap T.nomId)
                 (frozenDeps ^. depsNominals)
 
 encodeDefBody :: Definition.Body (Val UUID) -> Aeson.Object
@@ -539,6 +538,8 @@ decodeRepl obj =
 
 insertField :: ToJSON a => Text -> a -> Aeson.Object -> Aeson.Object
 insertField k v = HashMap.insert k (toJSON v)
+
+instance ToJSON (Pure # NominalDecl T.Type) where toJSON = toJSON . encodeNominal
 
 encodeNominal :: Pure # NominalDecl T.Type -> Aeson.Object
 encodeNominal (Pure (NominalDecl params nominalType)) =
