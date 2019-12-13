@@ -94,7 +94,7 @@ verifyNoBrokenDefsTest =
                 [ (tag, tagRefTag ^. tagTexts . Lens.ix (LangId "english") . name)
                 | (JsonCodec.TagEntity tag tagRefTag) <- db ^.. Lens.folded . JsonCodec._EntityTag
                 ]
-        let defs = db ^.. Lens.folded . JsonCodec._EntityDef
+        let defs = db ^.. Lens.folded . JsonCodec._EntityDef . JsonCodec._DefinitionEntity
         traverse_ verifyTag (defs <&> (^. Def.defPayload))
         verifyDefs (tags !) defs
     where
@@ -125,7 +125,8 @@ verifySchemes :: IO ()
 verifySchemes =
     do
         db <- readFreshDb
-        db ^.. Lens.folded . JsonCodec._EntityDef & traverse_ verifyDef
+        db ^.. Lens.folded . JsonCodec._EntityDef . JsonCodec._DefinitionEntity
+            & traverse_ verifyDef
     where
         verifyDef def =
             do

@@ -38,7 +38,6 @@ import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Data.Export.JSON.Codec as Codec
 import           Lamdu.Data.Export.JSON.Codec (Entity(..))
 import qualified Lamdu.Data.Export.JSON.Migration as Migration
-import qualified Lamdu.Data.Meta as Meta
 import           Lamdu.Expr.IRef (ValI, HRef)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Load as Load
@@ -62,15 +61,29 @@ Lens.makeLenses ''Visited
 
 type Export m = WriterT [Entity] (StateT Visited (T m))
 
+class HasEntityId a where entityId :: a -> Identifier
+
+instance HasEntityId Codec.TagEntity where
+    entityId (Codec.TagEntity (T.Tag ident) _) = ident
+
+instance HasEntityId Codec.NominalEntity where
+    entityId (Codec.NominalEntity _ (T.NominalId nomId) _) = nomId
+
+instance HasEntityId Codec.LamVarEntity where
+    entityId (Codec.LamVarEntity _ (V.Var ident)) = ident
+
+instance HasEntityId Codec.DefinitionEntity where
+    entityId (Codec.DefinitionEntity (Definition _ _ (_, _, V.Var ident))) = ident
+
 type EntityOrdering = (Int, Identifier)
 
 entityOrdering :: Entity -> EntityOrdering
-entityOrdering (EntitySchemaVersion _)                          = (0, "")
-entityOrdering (EntityTag (Codec.TagEntity (T.Tag ident) _))    = (1, ident)
-entityOrdering (EntityNominal (Codec.NominalEntity _ (T.NominalId nomId) _)) = (2, nomId)
-entityOrdering (EntityLamVar (Codec.LamVarEntity _ (V.Var ident))) = (3, ident)
-entityOrdering (EntityDef (Definition _ _ (_, _, V.Var ident))) = (4, ident)
-entityOrdering (EntityRepl _)                                   = (5, "")
+entityOrdering (EntitySchemaVersion _) = (0, "")
+entityOrdering (EntityTag x)           = (1, entityId x)
+entityOrdering (EntityNominal x)       = (2, entityId x)
+entityOrdering (EntityLamVar x)        = (3, entityId x)
+entityOrdering (EntityDef x)           = (4, entityId x)
+entityOrdering (EntityRepl _)          = (5, "")
 
 currentVersion :: Codec.SchemaVersion
 currentVersion = Codec.SchemaVersion Migration.currentVersion
@@ -161,7 +174,8 @@ exportDef globalId =
                 def
                 & Definition.defBody . Lens.mapped . hflipped %~
                     hmap (const (Const . toUUID . (^. ExprIRef.iref)))
-        (presentationMode, tag, globalId) <$ def' & EntityDef & tell
+        (presentationMode, tag, globalId) <$ def' & Codec.DefinitionEntity
+            & EntityDef & tell
     & withVisited visitedDefs globalId
     where
         defI = ExprIRef.defI globalId
@@ -234,8 +248,8 @@ insertTo item setIRef =
     where
         iref = setIRef DbLayout.codeIRefs
 
-importDef :: Definition (Val UUID) (Meta.PresentationMode, T.Tag, V.Var) -> T ViewM ()
-importDef (Definition defBody defScheme (presentationMode, tag, globalId)) =
+importDef :: Codec.DefinitionEntity -> T ViewM ()
+importDef (Codec.DefinitionEntity def) =
     do
         Property.setP (Anchors.assocPresentationMode globalId) presentationMode
         Property.setP (Anchors.assocTag globalId) tag
@@ -243,6 +257,7 @@ importDef (Definition defBody defScheme (presentationMode, tag, globalId)) =
         Definition bodyValI defScheme () & Transaction.writeIRef defI
         defI `insertTo` DbLayout.globals
     where
+        Definition defBody defScheme (presentationMode, tag, globalId) = def
         defI = ExprIRef.defI globalId
 
 importRepl :: Codec.ReplEntity -> T ViewM ()

@@ -3,8 +3,9 @@
 {-# LANGUAGE TemplateHaskell, TypeFamilies, TypeOperators, PolyKinds, TypeApplications, FlexibleInstances, StandaloneDeriving, GeneralizedNewtypeDeriving #-}
 module Lamdu.Data.Export.JSON.Codec
     ( TagOrder
-    , SchemaVersion(..)
-    , ReplEntity(..)
+    , SchemaVersion(..), _SchemaVersion
+    , ReplEntity(..), _ReplEntity
+    , DefinitionEntity(..), _DefinitionEntity
     , NominalEntity(..), nominalTag, nominalEntityId, nominalDecl
     , TagEntity(..), tagId, tagData
     , LamVarEntity(..), lamVarId, lamVarVar
@@ -82,11 +83,10 @@ data LamVarEntity = LamVarEntity
     }
 Lens.makeLenses ''LamVarEntity
 
-type Encoder a = a -> Aeson.Value
-
 type TagOrder = Int
 
 newtype SchemaVersion = SchemaVersion Int deriving (Eq, Ord, Show)
+Lens.makePrisms ''SchemaVersion
 
 instance ToJSON SchemaVersion where
     toJSON (SchemaVersion ver) = "schemaVersion" ==> toJSON ver & Aeson.Object
@@ -95,11 +95,16 @@ decodeSchemaVersion :: Aeson.Object -> AesonTypes.Parser SchemaVersion
 decodeSchemaVersion = (.: "schemaVersion") <&> fmap SchemaVersion
 
 newtype ReplEntity = ReplEntity (Definition.Expr (Val UUID))
+Lens.makePrisms ''ReplEntity
+
+newtype DefinitionEntity =
+    DefinitionEntity (Definition (Val UUID) (Meta.PresentationMode, T.Tag, V.Var))
+Lens.makePrisms ''DefinitionEntity
 
 data Entity
     = EntitySchemaVersion SchemaVersion
     | EntityRepl ReplEntity
-    | EntityDef (Definition (Val UUID) (Meta.PresentationMode, T.Tag, V.Var))
+    | EntityDef DefinitionEntity
     | EntityTag TagEntity
     | EntityNominal NominalEntity
     | EntityLamVar LamVarEntity
@@ -109,9 +114,9 @@ instance ToJSON Entity where
     toJSON (EntitySchemaVersion x) = toJSON x
     toJSON (EntityRepl x) = toJSON x
     toJSON (EntityDef x) = toJSON x
-    toJSON (EntityTag x) = encodeNamedTag x
-    toJSON (EntityNominal x) = encodeTaggedNominal x
-    toJSON (EntityLamVar x) = encodeTaggedLamVar x
+    toJSON (EntityTag x) = toJSON x
+    toJSON (EntityNominal x) = toJSON x
+    toJSON (EntityLamVar x) = toJSON x
 
 instance FromJSON Entity where
     parseJSON =
@@ -590,22 +595,23 @@ decodeTagged idAttrName decoder obj =
         )
     <*> decoder obj
 
-instance ToJSON (Definition (Val UUID) (Meta.PresentationMode, T.Tag, V.Var)) where
-    toJSON (Definition body scheme (presentationMode, tag, V.Var globalId)) =
+instance ToJSON DefinitionEntity where
+    toJSON (DefinitionEntity
+               (Definition body scheme (presentationMode, tag, V.Var globalId))) =
         encodeTagged "def" encodeDefBody ((tag, globalId), body)
         & insertField "typ" (toJSON scheme)
         & insertField "defPresentationMode" (toJSON presentationMode)
         & Aeson.Object
 
-decodeDef ::
-    Aeson.Object ->
-    AesonTypes.Parser (Definition (Val UUID) (Meta.PresentationMode, T.Tag, V.Var))
+decodeDef :: Aeson.Object -> AesonTypes.Parser DefinitionEntity
 decodeDef obj =
     do
         ((tag, globalId), body) <- decodeTagged "def" decodeDefBody obj
         presentationMode <- obj .: "defPresentationMode" >>= parseJSON
         scheme <- obj .: "typ" >>= parseJSON
-        Definition body scheme (presentationMode, tag, V.Var globalId) & pure
+        Definition body scheme (presentationMode, tag, V.Var globalId)
+            & DefinitionEntity
+            & pure
 
 encodeTagOrder :: TagOrder -> Aeson.Object
 encodeTagOrder tagOrder = "tagOrder" ==> toJSON tagOrder
@@ -616,12 +622,12 @@ encodeSymbol (Tag.UniversalSymbol x) = "op" ==> Aeson.String x
 encodeSymbol (Tag.DirectionalSymbol (Tag.DirOp l r)) =
     "op" ==> array [Aeson.String l, Aeson.String r]
 
-encodeNamedTag :: Encoder TagEntity
-encodeNamedTag (TagEntity (T.Tag ident) (Tag order op names)) =
-    (encodeTagOrder order
-    & insertField "tag" (toJSON ident))
-    <> encodeSquash "names" names <> encodeSymbol op
-    & Aeson.Object
+instance ToJSON TagEntity where
+    toJSON (TagEntity (T.Tag ident) (Tag order op names)) =
+        (encodeTagOrder order
+        & insertField "tag" (toJSON ident))
+        <> encodeSquash "names" names <> encodeSymbol op
+        & Aeson.Object
 
 decodeSymbol :: Maybe Aeson.Value -> AesonTypes.Parser Tag.Symbol
 decodeSymbol Nothing = pure Tag.NoSymbol
@@ -644,9 +650,9 @@ decodeNamedTag obj =
         <*> decodeSquashed "names" parseJSON obj
     )
 
-encodeTaggedLamVar :: Encoder LamVarEntity
-encodeTaggedLamVar (LamVarEntity tag (V.Var ident)) =
-    encodeTagged "lamVar" (const mempty) ((tag, ident), ()) & Aeson.Object
+instance ToJSON LamVarEntity where
+    toJSON (LamVarEntity tag (V.Var ident)) =
+        encodeTagged "lamVar" (const mempty) ((tag, ident), ()) & Aeson.Object
 
 decodeTaggedLamVar :: Aeson.Object -> AesonTypes.Parser LamVarEntity
 decodeTaggedLamVar json =
@@ -654,12 +660,12 @@ decodeTaggedLamVar json =
     <&> \((tag, ident), ()) ->
     (LamVarEntity tag (V.Var ident))
 
-encodeTaggedNominal :: Encoder NominalEntity
-encodeTaggedNominal (NominalEntity tag (T.NominalId nomId) mNom) =
-    foldMap encodeNominal mNom
-    & Lens.at "nom" ?~ toJSON nomId
-    & Lens.at "tag" ?~ toJSON tag
-    & Aeson.Object
+instance ToJSON NominalEntity where
+    toJSON (NominalEntity tag (T.NominalId nomId) mNom) =
+        foldMap encodeNominal mNom
+        & Lens.at "nom" ?~ toJSON nomId
+        & Lens.at "tag" ?~ toJSON tag
+        & Aeson.Object
 
 decodeTaggedNominal :: Aeson.Object -> AesonTypes.Parser NominalEntity
 decodeTaggedNominal json =
