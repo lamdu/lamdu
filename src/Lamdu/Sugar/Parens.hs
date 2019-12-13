@@ -119,13 +119,13 @@ loopExprBody parentPrec body_ =
     BodyGetVar       x -> result False (BodyGetVar x)
     BodyFromNom      x -> result False (BodyFromNom x)
     BodyHole         x -> result False (BodyHole x)
-    BodyFragment     x -> rightSymbol fExpr 12 BodyFragment x
+    BodyFragment     x -> rightSymbol fExpr BodyFragment x
     BodyRecord       x -> hmap (p #> addToNode) x & BodyRecord & result False
     BodyCase         x -> hmap (p #> addToNode) x & BodyCase & result False
     BodyLam          x -> leftSymbol (lamFunc . fBody) 0 BodyLam x
     BodyToNom        x -> leftSymbol Lens.mapped 0 BodyToNom x
     BodyInject       x -> inject x
-    BodyGetField     x -> rightSymbol Lens.mapped 12 BodyGetField x
+    BodyGetField     x -> rightSymbol Lens.mapped BodyGetField x
     BodySimpleApply  x -> simpleApply x
     BodyLabeledApply x -> labeledApply x
     BodyIfElse       x -> ifElse x
@@ -137,26 +137,32 @@ loopExprBody parentPrec body_ =
             AddParens body =>
             Lens.ASetter s t (Annotated pl body) (Annotated (MinOpPrec, NeedsParens, pl) body) ->
             MinOpPrec -> (t -> res) -> s -> (NeedsParens, res)
-        leftSymbol = sideSymbol (\_ _ -> addToNode) before after
-        rightSymbol = sideSymbol loopExpr after before
+        leftSymbol l prec = sideSymbol (\_ _ -> addToNode) before (parentPrec ^. after > prec) l prec
+        rightSymbol ::
+            HasPrecedence name =>
+            Lens.ASetter s t (Annotated pl (Body name i o)) (Annotated (MinOpPrec, NeedsParens, pl) (Body name i o)) ->
+            (t -> res) -> s -> (NeedsParens, res)
+        rightSymbol l =
+            sideSymbol loopExpr after needParens l 12
+            where
+                needParens = parentPrec ^. before >= 12 || parentPrec ^. after > 12
         sideSymbol ::
             AnnotateAST pl body ->
             Lens.ASetter' (Precedence Prec) MinOpPrec ->
-            Lens.Getting MinOpPrec (Precedence Prec) MinOpPrec ->
+            Bool ->
             Lens.ASetter s t (Annotated pl body) (Annotated (MinOpPrec, NeedsParens, pl) body) ->
             MinOpPrec -> (t -> res) -> s -> (NeedsParens, res)
-        sideSymbol loop overrideSide checkSide lens prec cons x =
+        sideSymbol loop overrideSide needParens lens prec cons x =
             x & lens %~ loop prec childPrec & cons
             & result needParens
             where
-                needParens = parentPrec ^. checkSide > prec
                 childPrec
                     | needParens = pure 0
                     | otherwise = parentPrec & overrideSide .~ prec
         inject (Inject t v) =
             case v of
             InjectNullary x -> addToNode x & InjectNullary & cons & result False
-            InjectVal x -> sideSymbol loopExpr before after id 0 (cons . InjectVal) x
+            InjectVal x -> sideSymbol loopExpr before (parentPrec ^. after > 0) id 0 (cons . InjectVal) x
             where
                 cons = BodyInject . Inject t
         newParentPrec needParens
