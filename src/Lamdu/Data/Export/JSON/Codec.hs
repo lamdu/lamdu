@@ -288,10 +288,7 @@ instance FromJSON (Pure # T.Type) where
 
 instance ToJSON T.RConstraints where
     toJSON (T.RowConstraints forbidden scopeLevel)
-        | scopeLevel == mempty =
-            Set.toList forbidden
-            <&> T.tagName
-            & toJSON
+        | scopeLevel == mempty = toJSON forbidden
         | otherwise =
             -- We only encode top-level types, no skolem escape considerations...
             error "toJSON does not support inner-scoped types"
