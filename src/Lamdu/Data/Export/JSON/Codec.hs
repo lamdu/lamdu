@@ -20,7 +20,6 @@ import           Data.Aeson.Lens (_Object)
 import qualified Data.Aeson.Types as AesonTypes
 import qualified Data.ByteString.Base16 as Hex
 import qualified Data.ByteString.Char8 as BS
-import qualified Data.HashMap.Strict as HashMap
 import qualified Data.Map as Map
 import qualified Data.Set as Set
 import qualified Data.Text as Text
@@ -306,8 +305,7 @@ instance FromJSON T.RConstraints where
 encodeTypeVars :: T.Types # QVars -> Aeson.Object
 encodeTypeVars (T.Types (QVars tvs) (QVars rvs)) =
     encodeSquash "typeVars" (Map.keysSet tvs)
-    <>
-    encodeSquash "rowVars" rvs
+    <> encodeSquash "rowVars" rvs
 
 decodeTypeVars :: Aeson.Object -> AesonTypes.Parser (T.Types # QVars)
 decodeTypeVars obj =
@@ -375,7 +373,7 @@ decodeLeaf =
             , \obj ->
                 obj .: key >>=
                 \case
-                Aeson.Object x | HashMap.null x -> pure v
+                Aeson.Object x | x == mempty -> pure v
                 x -> fail ("bad val for leaf " ++ show x)
             )
 
@@ -386,7 +384,7 @@ class Codec h where
 instance Codec h => ToJSON (Ann (Const UUID) # h) where
     toJSON (Ann uuid body) =
         encodeBody body
-        & insertField "id" uuid
+        <> "id" ==> toJSON uuid
         & Aeson.Object
 
 instance Codec h => FromJSON (Ann (Const UUID) # h) where
@@ -500,7 +498,7 @@ instance Codec (HCompose Prune T.Type) where
         "record" ==> array (go row)
         where
             go (Ann uuid (HCompose b)) =
-                Aeson.Object (insertField "rowId" uuid x) : xs
+                Aeson.Object ("rowId" ==> toJSON uuid <> x) : xs
                 where
                     (x, xs) =
                         case b of
@@ -513,7 +511,7 @@ instance Codec (HCompose Prune T.Type) where
                                         (HCompose (Ann fId (HCompose Pruned)))
                                         (HCompose r)))) ->
                             ( "rowTag" ==> toJSON t
-                                & insertField "id" fId
+                                <> "id" ==> toJSON fId
                             , go r
                             )
                         Unpruned _ -> error "TODO"
@@ -558,9 +556,6 @@ decodeRepl :: Aeson.Object -> AesonTypes.Parser ReplEntity
 decodeRepl obj =
     obj .: "repl" >>= Aeson.withObject "defExpr" decodeDefExpr <&> ReplEntity
 
-insertField :: ToJSON a => Text -> a -> Aeson.Object -> Aeson.Object
-insertField k v = HashMap.insert k (toJSON v)
-
 instance ToJSON (Pure # NominalDecl T.Type) where toJSON = toJSON . encodeNominal
 instance FromJSON (Pure # NominalDecl T.Type) where
     parseJSON = Aeson.withObject "Pure NominalDecl" decodeNominal
@@ -580,8 +575,8 @@ decodeNominal obj =
 encodeTagged :: Text -> (a -> Aeson.Object) -> ((T.Tag, Identifier), a) -> Aeson.Object
 encodeTagged idAttrName encoder ((tag, ident), x) =
     encoder x
-    & insertField idAttrName (toJSON ident)
-    & insertField "tag" (toJSON tag)
+    <> idAttrName ==> toJSON ident
+    <> "tag" ==> toJSON tag
 
 decodeTagged ::
     Text ->
@@ -599,8 +594,8 @@ instance ToJSON DefinitionEntity where
     toJSON (DefinitionEntity
                (Definition body scheme (presentationMode, tag, V.Var globalId))) =
         encodeTagged "def" encodeDefBody ((tag, globalId), body)
-        & insertField "typ" (toJSON scheme)
-        & insertField "defPresentationMode" (toJSON presentationMode)
+        <> "typ" ==> toJSON scheme
+        <> "defPresentationMode" ==> toJSON presentationMode
         & Aeson.Object
 
 decodeDef :: Aeson.Object -> AesonTypes.Parser DefinitionEntity
@@ -624,8 +619,7 @@ encodeSymbol (Tag.DirectionalSymbol (Tag.DirOp l r)) =
 
 instance ToJSON TagEntity where
     toJSON (TagEntity (T.Tag ident) (Tag order op names)) =
-        (encodeTagOrder order
-        & insertField "tag" (toJSON ident))
+        (encodeTagOrder order <> "tag" ==> toJSON ident)
         <> encodeSquash "names" names <> encodeSymbol op
         & Aeson.Object
 
