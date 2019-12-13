@@ -73,8 +73,11 @@ entityOrdering (Codec.EntityLamVar _ (V.Var ident))                   = (3, iden
 entityOrdering (Codec.EntityDef (Definition _ _ (_, _, V.Var ident))) = (4, ident)
 entityOrdering (Codec.EntityRepl _)                                   = (5, "")
 
+currentVersion :: Codec.SchemaVersion
+currentVersion = Codec.SchemaVersion Migration.currentVersion
+
 entityVersion :: Codec.Entity
-entityVersion = Codec.EntitySchemaVersion Migration.currentVersion
+entityVersion = Codec.EntitySchemaVersion currentVersion
 
 runExport :: Monad m => Export m a -> T m (a, Aeson.Value)
 runExport act =
@@ -276,7 +279,7 @@ importOne (Codec.EntitySchemaVersion _) =
 
 importEntities :: [Codec.Entity] -> T ViewM ()
 importEntities (Codec.EntitySchemaVersion ver : entities) =
-    if ver == Migration.currentVersion
+    if ver == currentVersion
     then traverse_ importOne entities
     else "Unsupported schema version: " ++ show ver & fail
 importEntities _ = "Missing schema version"  & fail

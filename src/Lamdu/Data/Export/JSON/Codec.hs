@@ -3,6 +3,7 @@
 {-# LANGUAGE TemplateHaskell, TypeFamilies, TypeOperators, PolyKinds, TypeApplications, FlexibleInstances, StandaloneDeriving, GeneralizedNewtypeDeriving #-}
 module Lamdu.Data.Export.JSON.Codec
     ( TagOrder
+    , SchemaVersion(..)
     , Entity(..), _EntitySchemaVersion, _EntityRepl, _EntityDef, _EntityTag, _EntityNominal, _EntityLamVar
     ) where
 
@@ -62,8 +63,16 @@ type Decoder a = Aeson.Value -> AesonTypes.Parser a
 
 type TagOrder = Int
 
+newtype SchemaVersion = SchemaVersion Int deriving (Eq, Ord, Show)
+
+instance ToJSON SchemaVersion where
+    toJSON (SchemaVersion ver) = "schemaVersion" ==> toJSON ver & Aeson.Object
+
+decodeSchemaVersion :: Aeson.Object -> AesonTypes.Parser SchemaVersion
+decodeSchemaVersion = (.: "schemaVersion") <&> fmap SchemaVersion
+
 data Entity
-    = EntitySchemaVersion Int
+    = EntitySchemaVersion SchemaVersion
     | EntityRepl (Definition.Expr (Val UUID))
     | EntityDef (Definition (Val UUID) (Meta.PresentationMode, T.Tag, V.Var))
     | EntityTag T.Tag Tag
@@ -72,7 +81,7 @@ data Entity
 Lens.makePrisms ''Entity
 
 instance ToJSON Entity where
-    toJSON (EntitySchemaVersion ver) = encodeSchemaVersion ver
+    toJSON (EntitySchemaVersion ver) = toJSON ver
     toJSON (EntityRepl x) = encodeRepl x
     toJSON (EntityDef def) = toJSON def
     toJSON (EntityTag tid tdata) = encodeNamedTag (tid, tdata)
@@ -645,9 +654,3 @@ decodeTaggedNominal json =
             [ decodeNominal x <&> Just
             , pure Nothing
             ]
-
-encodeSchemaVersion :: Encoder Int
-encodeSchemaVersion ver = "schemaVersion" ==> toJSON ver & Aeson.Object
-
-decodeSchemaVersion :: Aeson.Object -> AesonTypes.Parser Int
-decodeSchemaVersion = (.: "schemaVersion")
