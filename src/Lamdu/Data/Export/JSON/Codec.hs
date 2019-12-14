@@ -389,6 +389,15 @@ decodeWithUUID ::
     Aeson.Object -> AesonTypes.Parser (WithUUID # h)
 decodeWithUUID obj = Ann <$> (obj .: "id") <*> parseObject obj
 
+decodePruned ::
+    FromObject (a # HCompose b Prune) =>
+    Aeson.Object -> AesonTypes.Parser (HCompose Prune a # b)
+decodePruned obj
+    | (obj & Lens.at "id" .~ Nothing) == mempty =
+        _HCompose # Pruned & pure
+    | otherwise =
+        parseObject obj <&> (hcomposed _Unpruned #)
+
 instance ToJSON (WithUUID # V.Term) where toJSON = toJSONObj
 instance ToObject (WithUUID # V.Term) where toObject = encodeWithUUID
 instance FromJSON (WithUUID # V.Term) where parseJSON = parseJSONObj "WithUUID Term"
@@ -481,33 +490,22 @@ instance FromObject (V.Term # WithUUID) where
         , parseObject obj <&> V.BLeaf
         ]
 
+instance FromJSON (HCompose WithUUID Prune # T.Row) where
+    parseJSON = undefined
+
+parseType ::
+    FromJSON (h # T.Row) =>
+    Aeson.Object -> AesonTypes.Parser (T.Type # h)
+parseType obj =
+    jsum
+    [ obj .: "record" >>= parseJSON <&> T.TRecord
+    ]
+
+instance FromObject (T.Type # HCompose WithUUID Prune) where
+    parseObject = parseType
+
 instance FromObject (PrunedType # WithUUID) where
-    parseObject obj
-        | (obj & Lens.at "id" .~ Nothing) == mempty =
-            _HCompose # Pruned & pure
-        | otherwise =
-            obj .: "record"
-            >>=
-            \case
-            Aeson.Array objs ->
-                case traverse (^? _Object) objs >>= (^? Lens._Snoc) of
-                Nothing -> fail "Malformed row fields"
-                Just (fields, rTail) ->
-                    foldr extend
-                    (rTail .: "rowId" <&> Const <&> (`Ann` (hcomposed _Unpruned # T.REmpty)))
-                    fields
-                    where
-                        extend field rest =
-                            Ann
-                            <$> (field .: "rowId" <&> Const)
-                            <*> ( RowExtend
-                                    <$> (field .: "rowTag" >>= parseJSON)
-                                    <*> (field .: "id" <&> Const <&> (`Ann` (_HCompose # Pruned)) <&> (_HCompose #))
-                                    <*> (rest <&> (_HCompose #))
-                                    <&> (hcomposed _Unpruned . T._RExtend #)
-                                )
-            _ -> fail "Malformed params record"
-            <&> (hcomposed _Unpruned . T._TRecord . _HCompose #)
+    parseObject = decodePruned
 
 instance ToObject (PrunedType # WithUUID) where
     toObject (HCompose Pruned) = mempty
