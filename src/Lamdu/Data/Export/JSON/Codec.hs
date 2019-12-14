@@ -64,13 +64,14 @@ jsum parsers =
         swapEither (Left x) = Right x
         swapEither (Right x) = Left x
 
-class FromObject a where parseObject :: Aeson.Object -> AesonTypes.Parser a
-class ToObject a where toObject :: a -> Aeson.Object
+class JsonObject a where
+    parseObject :: Aeson.Object -> AesonTypes.Parser a
+    toObject :: a -> Aeson.Object
 
-parseJSONObj :: FromObject a => String -> Aeson.Value -> AesonTypes.Parser a
+parseJSONObj :: JsonObject a => String -> Aeson.Value -> AesonTypes.Parser a
 parseJSONObj msg = Aeson.withObject msg parseObject
 
-toJSONObj :: ToObject a => a -> Aeson.Value
+toJSONObj :: JsonObject a => a -> Aeson.Value
 toJSONObj = Aeson.Object . toObject
 
 data NominalEntity = NominalEntity
@@ -98,10 +99,8 @@ newtype SchemaVersion = SchemaVersion Int deriving (Eq, Ord, Show)
 Lens.makePrisms ''SchemaVersion
 
 instance ToJSON SchemaVersion where toJSON = toJSONObj
-instance ToObject SchemaVersion where
+instance JsonObject SchemaVersion where
     toObject (SchemaVersion ver) = "schemaVersion" ==> toJSON ver
-
-instance FromObject SchemaVersion where
     parseObject = (.: "schemaVersion") <&> fmap SchemaVersion
 
 newtype ReplEntity = ReplEntity (Definition.Expr (Val UUID))
@@ -139,7 +138,7 @@ decodeVariantObj msg ((field, parser):rest) obj
     | otherwise = decodeVariantObj msg rest obj
 
 instance FromJSON Entity where parseJSON = parseJSONObj "Entity"
-instance FromObject Entity where
+instance JsonObject Entity where
     parseObject =
         decodeVariantObj "entity"
         [ ("repl"          , fmap EntityRepl          . parseObject)
@@ -259,7 +258,8 @@ deriving newtype instance Aeson.ToJSONKey T.NominalId
 deriving newtype instance Aeson.FromJSONKey T.NominalId
 
 instance ToJSON (Pure # T.Type) where toJSON = toJSONObj
-instance ToObject (Pure # T.Type) where
+instance FromJSON (Pure # T.Type) where parseJSON = parseJSONObj "Type"
+instance JsonObject (Pure # T.Type) where
     toObject t =
         case t ^. _Pure of
         T.TFun (FuncType a b) -> "funcParam" ==> toJSON a <> "funcResult" ==> toJSON b
@@ -270,9 +270,6 @@ instance ToObject (Pure # T.Type) where
             "nomId" ==> toJSON (T.nomId tId) <>
             encodeSquash "nomTypeArgs" (params ^. T.tType . _QVarInstances) <>
             encodeSquash "nomRowArgs" (params ^. T.tRow . _QVarInstances)
-
-instance FromJSON (Pure # T.Type) where parseJSON = parseJSONObj "Type"
-instance FromObject (Pure # T.Type) where
     parseObject o =
         jsum
         [ FuncType
@@ -305,12 +302,10 @@ instance FromJSON T.RConstraints where
         traverse parseJSON arr <&> Vector.toList <&> Set.fromList
         <&> (`T.RowConstraints` mempty)
 
-instance ToObject (T.Types # QVars) where
+instance JsonObject (T.Types # QVars) where
     toObject (T.Types (QVars tvs) (QVars rvs)) =
         encodeSquash "typeVars" (Map.keysSet tvs)
         <> encodeSquash "rowVars" rvs
-
-instance FromObject (T.Types # QVars) where
     parseObject obj =
         T.Types
         <$> ( decodeSquashed "typeVars"
@@ -324,7 +319,7 @@ instance FromObject (T.Types # QVars) where
         <*> (decodeSquashed "rowVars" parseJSON obj <&> QVars)
 
 instance ToJSON (Pure # T.Scheme) where toJSON = toJSONObj
-instance ToObject (Pure # T.Scheme) where
+instance JsonObject (Pure # T.Scheme) where
     toObject (Pure (Scheme tvs typ)) = "schemeType" ==> toJSON typ <> toObject tvs
 
 instance FromJSON (Pure # T.Scheme) where
@@ -335,7 +330,7 @@ instance FromJSON (Pure # T.Scheme) where
             typ <- obj .: "schemeType" >>= parseJSON
             _Pure # Scheme tvs typ & pure
 
-instance ToObject V.Leaf where
+instance JsonObject V.Leaf where
     toObject =
         \case
         V.LHole -> l "hole"
@@ -349,8 +344,6 @@ instance ToObject V.Leaf where
             "fromNomId" ==> toJSON nomId
         where
             l x = x ==> Aeson.object []
-
-instance FromObject V.Leaf where
     parseObject =
         decodeVariantObj "leaf"
         [ l "hole" V.LHole
@@ -381,16 +374,16 @@ instance FromObject V.Leaf where
 
 type WithUUID = Ann (Const UUID)
 
-encodeWithUUID :: ToObject (h # WithUUID) => WithUUID # h -> Aeson.Object
+encodeWithUUID :: JsonObject (h # WithUUID) => WithUUID # h -> Aeson.Object
 encodeWithUUID (Ann uuid body) = toObject body <> "id" ==> toJSON uuid
 
 decodeWithUUID ::
-    FromObject (h # WithUUID) =>
+    JsonObject (h # WithUUID) =>
     Aeson.Object -> AesonTypes.Parser (WithUUID # h)
 decodeWithUUID obj = Ann <$> (obj .: "id") <*> parseObject obj
 
 decodePruned ::
-    FromObject (a # HCompose b Prune) =>
+    JsonObject (a # HCompose b Prune) =>
     Aeson.Object -> AesonTypes.Parser (HCompose Prune a # b)
 decodePruned obj
     | (obj & Lens.at "id" .~ Nothing) == mempty =
@@ -399,18 +392,20 @@ decodePruned obj
         parseObject obj <&> (hcomposed _Unpruned #)
 
 instance ToJSON (WithUUID # V.Term) where toJSON = toJSONObj
-instance ToObject (WithUUID # V.Term) where toObject = encodeWithUUID
 instance FromJSON (WithUUID # V.Term) where parseJSON = parseJSONObj "WithUUID Term"
-instance FromObject (WithUUID # V.Term) where parseObject = decodeWithUUID
+instance JsonObject (WithUUID # V.Term) where
+    toObject = encodeWithUUID
+    parseObject = decodeWithUUID
 
 type PrunedType = HCompose Prune T.Type
 
 instance ToJSON (WithUUID # PrunedType) where toJSON = toJSONObj
-instance ToObject (WithUUID # PrunedType) where toObject = encodeWithUUID
 instance FromJSON (WithUUID # PrunedType) where parseJSON = parseJSONObj "WithUUID PrunedType"
-instance FromObject (WithUUID # PrunedType) where parseObject = decodeWithUUID
+instance JsonObject (WithUUID # PrunedType) where
+    toObject = encodeWithUUID
+    parseObject = decodeWithUUID
 
-instance ToObject (V.Term # WithUUID) where
+instance JsonObject (V.Term # WithUUID) where
     toObject =
         \case
         V.BApp (V.App func arg) ->
@@ -438,18 +433,29 @@ instance ToObject (V.Term # WithUUID) where
             "toNomId" ==> toJSON nomId <>
             "toNomVal" ==> toJSON x
         V.BLeaf x -> toObject x
+    parseObject obj =
+        jsum
+        [ parseObject obj <&> V.BApp
+        , parseObject obj <&> V.BLam
+        , parseObject obj <&> V.BGetField
+        , parseRecExtend "extendTag" "extendVal" "extendRest" obj <&> V.BRecExtend
+        , parseObject obj <&> V.BInject
+        , parseRecExtend "caseTag" "caseHandler" "caseRest" obj <&> V.BCase
+        , parseObject obj <&> V.BToNom
+        , parseObject obj <&> V.BLeaf
+        ]
 
-instance FromObject (V.App V.Term # WithUUID) where
+instance JsonObject (V.App V.Term # WithUUID) where
     parseObject obj = V.App <$> obj .: "applyFunc" <*> obj .: "applyArg"
 
-instance FromObject (V.TypedLam V.Var (PrunedType) V.Term # WithUUID) where
+instance JsonObject (V.TypedLam V.Var (PrunedType) V.Term # WithUUID) where
     parseObject obj =
         V.TypedLam
         <$> (obj .: "lamVar" >>= parseJSON <&> V.Var)
         <*> (obj .: "lamParamType")
         <*> (obj .: "lamBody")
 
-instance FromObject (V.GetField # WithUUID) where
+instance JsonObject (V.GetField # WithUUID) where
     parseObject obj =
         V.GetField
         <$> (obj .: "getFieldRec")
@@ -465,30 +471,17 @@ parseRecExtend tagStr valStr restStr obj =
     <*> obj .: valStr
     <*> obj .: restStr
 
-instance FromObject (V.Inject # WithUUID) where
+instance JsonObject (V.Inject # WithUUID) where
     parseObject obj =
         V.Inject
         <$> (obj .: "injectTag" >>= parseJSON)
         <*> (obj .: "injectVal")
 
-instance FromObject (ToNom T.NominalId V.Term # WithUUID) where
+instance JsonObject (ToNom T.NominalId V.Term # WithUUID) where
     parseObject obj =
         ToNom
         <$> (obj .: "toNomId" >>= parseJSON <&> T.NominalId)
         <*> (obj .: "toNomVal")
-
-instance FromObject (V.Term # WithUUID) where
-    parseObject obj =
-        jsum
-        [ parseObject obj <&> V.BApp
-        , parseObject obj <&> V.BLam
-        , parseObject obj <&> V.BGetField
-        , parseRecExtend "extendTag" "extendVal" "extendRest" obj <&> V.BRecExtend
-        , parseObject obj <&> V.BInject
-        , parseRecExtend "caseTag" "caseHandler" "caseRest" obj <&> V.BCase
-        , parseObject obj <&> V.BToNom
-        , parseObject obj <&> V.BLeaf
-        ]
 
 instance FromJSON (HCompose WithUUID Prune # T.Row) where
     parseJSON = undefined
@@ -501,13 +494,11 @@ parseType obj =
     [ obj .: "record" >>= parseJSON <&> T.TRecord
     ]
 
-instance FromObject (T.Type # HCompose WithUUID Prune) where
+instance JsonObject (T.Type # HCompose WithUUID Prune) where
     parseObject = parseType
 
-instance FromObject (PrunedType # WithUUID) where
+instance JsonObject (PrunedType # WithUUID) where
     parseObject = decodePruned
-
-instance ToObject (PrunedType # WithUUID) where
     toObject (HCompose Pruned) = mempty
     toObject (HCompose (Unpruned (HCompose (T.TRecord (HCompose row))))) =
         "record" ==> array (go row)
@@ -532,7 +523,7 @@ instance ToObject (PrunedType # WithUUID) where
                         Unpruned _ -> error "TODO"
     toObject (HCompose (Unpruned _)) = error "TODO"
 
-instance ToObject (Definition.Expr (Val UUID)) where
+instance JsonObject (Definition.Expr (Val UUID)) where
     toObject (Definition.Expr x frozenDeps) =
         "val" ==> toJSON x <>
         encodeSquash "frozenDeps" encodedDeps
@@ -540,12 +531,6 @@ instance ToObject (Definition.Expr (Val UUID)) where
             encodedDeps =
                 encodeSquash "defTypes" (frozenDeps ^. depsGlobalTypes) <>
                 encodeSquash "nominals" (frozenDeps ^. depsNominals)
-
-instance ToObject (Definition.Body (Val UUID)) where
-    toObject (Definition.BodyBuiltin name) = "builtin" ==> toJSON name
-    toObject (Definition.BodyExpr defExpr) = toObject defExpr
-
-instance FromObject (Definition.Expr (Val UUID)) where
     parseObject obj =
         Definition.Expr
         <$> (obj .: "val" >>= parseJSON)
@@ -556,7 +541,9 @@ instance FromObject (Definition.Expr (Val UUID)) where
                 <$> decodeSquashed "defTypes" parseJSON o
                 <*> decodeSquashed "nominals" parseJSON o
 
-instance FromObject (Definition.Body (Val UUID)) where
+instance JsonObject (Definition.Body (Val UUID)) where
+    toObject (Definition.BodyBuiltin name) = "builtin" ==> toJSON name
+    toObject (Definition.BodyExpr defExpr) = toObject defExpr
     parseObject obj =
         jsum
         [ obj .: "builtin" >>= parseJSON <&> Definition.BodyBuiltin
@@ -564,21 +551,17 @@ instance FromObject (Definition.Body (Val UUID)) where
         ]
 
 instance ToJSON ReplEntity where toJSON = toJSONObj
-instance ToObject ReplEntity where
+instance JsonObject ReplEntity where
     toObject (ReplEntity defExpr) = "repl" ==> Aeson.Object (toObject defExpr)
-
-instance FromObject ReplEntity where
     parseObject obj =
         obj .: "repl" >>= Aeson.withObject "defExpr" parseObject <&> ReplEntity
 
-instance ToJSON (Pure # NominalDecl T.Type) where toJSON = toJSONObj
-instance ToObject (Pure # NominalDecl T.Type) where
-    toObject (Pure (NominalDecl params nominalType)) =
-        "nomType" ==> toJSON (_Pure # nominalType) <> toObject params
-
 instance FromJSON (Pure # NominalDecl T.Type) where
     parseJSON = parseJSONObj "Pure NominalDecl"
-instance FromObject (Pure # NominalDecl T.Type) where
+instance ToJSON (Pure # NominalDecl T.Type) where toJSON = toJSONObj
+instance JsonObject (Pure # NominalDecl T.Type) where
+    toObject (Pure (NominalDecl params nominalType)) =
+        "nomType" ==> toJSON (_Pure # nominalType) <> toObject params
     parseObject obj =
         NominalDecl
         <$> parseObject obj
@@ -604,14 +587,12 @@ decodeTagged idAttrName decoder obj =
     <*> decoder obj
 
 instance ToJSON DefinitionEntity where toJSON = toJSONObj
-instance ToObject DefinitionEntity where
+instance JsonObject DefinitionEntity where
     toObject (DefinitionEntity
                (Definition body scheme (presentationMode, tag, V.Var globalId))) =
         encodeTagged "def" toObject ((tag, globalId), body)
         <> "typ" ==> toJSON scheme
         <> "defPresentationMode" ==> toJSON presentationMode
-
-instance FromObject DefinitionEntity where
     parseObject obj =
         do
             ((tag, globalId), body) <- decodeTagged "def" parseObject obj
@@ -641,12 +622,10 @@ decodeSymbol (Just (Aeson.Array x)) =
 decodeSymbol x = fail ("unexpected op name: " <> show x)
 
 instance ToJSON TagEntity where toJSON = toJSONObj
-instance ToObject TagEntity where
+instance JsonObject TagEntity where
     toObject (TagEntity (T.Tag ident) (Tag order op names)) =
         (encodeTagOrder order <> "tag" ==> toJSON ident)
         <> encodeSquash "names" names <> encodeSymbol op
-
-instance FromObject TagEntity where
     parseObject obj =
         TagEntity
         <$> (obj .: "tag" >>= parseJSON <&> T.Tag)
@@ -661,20 +640,18 @@ instance ToJSON LamVarEntity where
     toJSON (LamVarEntity tag (V.Var ident)) =
         encodeTagged "lamVar" (const mempty) ((tag, ident), ()) & Aeson.Object
 
-instance FromObject LamVarEntity where
+instance JsonObject LamVarEntity where
     parseObject json =
         decodeTagged "lamVar" (\_ -> pure ()) json
         <&> \((tag, ident), ()) ->
         (LamVarEntity tag (V.Var ident))
 
 instance ToJSON NominalEntity where toJSON = toJSONObj
-instance ToObject NominalEntity where
+instance JsonObject NominalEntity where
     toObject (NominalEntity tag (T.NominalId nomId) mNom) =
         foldMap toObject mNom
         & Lens.at "nom" ?~ toJSON nomId
         & Lens.at "tag" ?~ toJSON tag
-
-instance FromObject NominalEntity where
     parseObject json =
         decodeTagged "nom" (optional . parseObject) json
         <&> \((tag, ident), nom) -> NominalEntity tag (T.NominalId ident) nom
