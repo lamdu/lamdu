@@ -12,12 +12,12 @@ module Lamdu.Data.Export.JSON.Codec
     , Entity(..), _EntitySchemaVersion, _EntityRepl, _EntityDef, _EntityTag, _EntityNominal, _EntityLamVar
     ) where
 
-import           Control.Applicative (optional)
+import           Control.Applicative (optional, (<|>))
 import qualified Control.Lens as Lens
 import           Control.Lens.Extended ((==>))
 import           Data.Aeson ((.:), ToJSON(..), FromJSON(..))
 import qualified Data.Aeson as Aeson
-import           Data.Aeson.Lens (_Object)
+import           Data.Aeson.Lens (_Object, _Array)
 import qualified Data.Aeson.Types as AesonTypes
 import qualified Data.ByteString.Base16 as Hex
 import qualified Data.ByteString.Char8 as BS
@@ -213,16 +213,52 @@ instance FromJSON T.Tag where
     parseJSON Aeson.Null = pure Anchors.anonTag
     parseJSON json = parseJSON json <&> T.Tag
 
-instance ToJSON (Pure # T.Row) where
-    toJSON =
-        array . go
-        where
-            go (Pure T.REmpty) = []
-            go (Pure (T.RVar (T.Var name))) =
-                ["rowVar" ==> toJSON name & Aeson.Object]
-            go (Pure (T.RExtend (RowExtend t v r))) =
-                -- TODO: use toObject (or _Object is not guaranteed to do anything)
-                (toJSON v & _Object . Lens.at "rowTag" ?~ toJSON t) : go r
+encodeRow ::
+    ( ToJSON (h # T.Row)
+    , JsonObject (h # T.Type)
+    ) => T.Row # h -> Aeson.Array
+encodeRow T.REmpty = Aeson.object [] & Vector.singleton
+encodeRow (T.RVar var) = "tvar" ==> toJSON var & Aeson.Object & Vector.singleton
+encodeRow (T.RExtend (RowExtend t v r)) =
+    -- TODO: ToArray class instead of partiality?
+    Vector.cons field rest
+    where
+        rest = toJSON r ^?! _Array
+        field = toObject v <> "rowTag" ==> toJSON t & toJSON
+
+decodeRow ::
+    ( FromJSON (h # T.Row)
+    , JsonObject (h # T.Type)
+    ) =>
+    Aeson.Array -> AesonTypes.Parser (T.Row # h)
+decodeRow = decodeRowH (fail "Row with no tail element")
+
+decodeRowH ::
+    ( FromJSON (h # T.Row)
+    , JsonObject (h # T.Type)
+    ) =>
+    AesonTypes.Parser (T.Row # h) -> Aeson.Array -> AesonTypes.Parser (T.Row # h)
+decodeRowH missingFields arr =
+    case Lens.uncons arr of
+    Nothing -> missingFields
+    Just (x, xs) ->
+        case Lens.uncons xs of
+        Nothing -> parseTail x
+        Just {} ->
+            uncurry RowExtend
+            <$> parseField x
+            <*> parseJSON (Aeson.Array xs) -- <- parseArray?
+            <&> T.RExtend
+    where
+        parseTail =
+            Aeson.withObject "Row.tail" $ \obj ->
+            (obj .: "tvar" >>= parseJSON <&> T.RVar)
+            <|> pure T.REmpty
+        parseField =
+            Aeson.withObject "field" $ \obj ->
+            (,) <$> obj .: "rowTag" <*> parseObject obj
+
+instance ToJSON (Pure # T.Row) where toJSON (Pure x) = toJSON x
 
 instance FromJSON (Pure # T.Row) where
     parseJSON (Aeson.Array vec) =
@@ -382,25 +418,30 @@ decodeWithUUID ::
     Aeson.Object -> AesonTypes.Parser (WithUUID # h)
 decodeWithUUID obj = Ann <$> (obj .: "id") <*> parseObject obj
 
-decodePruned ::
-    JsonObject (a # HCompose b Prune) =>
-    Aeson.Object -> AesonTypes.Parser (HCompose Prune a # b)
-decodePruned obj
-    | (obj & Lens.at "id" .~ Nothing) == mempty =
-        _HCompose # Pruned & pure
-    | otherwise =
-        parseObject obj <&> (hcomposed _Unpruned #)
+encodeHComposeObj ::
+    JsonObject (f # HCompose g h) => HCompose f g # h -> Aeson.Object
+encodeHComposeObj (HCompose x) = toObject x
 
-instance ToJSON (WithUUID # V.Term) where toJSON = toJSONObj
-instance FromJSON (WithUUID # V.Term) where parseJSON = parseJSONObj "WithUUID Term"
+decodeHComposeObj ::
+    JsonObject (f # HCompose g h) =>
+    Aeson.Object -> AesonTypes.Parser (HCompose f g # h)
+decodeHComposeObj = fmap HCompose . parseObject
+
 instance JsonObject (WithUUID # V.Term) where
     toObject = encodeWithUUID
     parseObject = decodeWithUUID
 
-type PrunedType = HCompose Prune T.Type
+encodePruneObject :: JsonObject (h # Prune) => Prune # h -> Aeson.Object
+encodePruneObject Pruned = mempty
+encodePruneObject (Unpruned t) = toObject t
 
-instance ToJSON (WithUUID # PrunedType) where toJSON = toJSONObj
-instance FromJSON (WithUUID # PrunedType) where parseJSON = parseJSONObj "WithUUID PrunedType"
+decodePruneObject ::
+    JsonObject (a # Prune) =>
+    Aeson.Object -> AesonTypes.Parser (Prune # a)
+decodePruneObject obj
+    | (obj & Lens.at "id" .~ Nothing) == mempty = Pruned & pure
+    | otherwise = parseObject obj <&> Unpruned
+
 instance JsonObject (WithUUID # PrunedType) where
     toObject = encodeWithUUID
     parseObject = decodeWithUUID
@@ -448,7 +489,7 @@ instance JsonObject (V.Term # WithUUID) where
 instance JsonObject (V.App V.Term # WithUUID) where
     parseObject obj = V.App <$> obj .: "applyFunc" <*> obj .: "applyArg"
 
-instance JsonObject (V.TypedLam V.Var (PrunedType) V.Term # WithUUID) where
+instance JsonObject (V.TypedLam V.Var (HCompose Prune T.Type) V.Term # WithUUID) where
     parseObject obj =
         V.TypedLam
         <$> (obj .: "lamVar" >>= parseJSON <&> V.Var)
@@ -483,45 +524,16 @@ instance JsonObject (ToNom T.NominalId V.Term # WithUUID) where
         <$> (obj .: "toNomId" >>= parseJSON <&> T.NominalId)
         <*> (obj .: "toNomVal")
 
-instance FromJSON (HCompose WithUUID Prune # T.Row) where
-    parseJSON = undefined
-
-parseType ::
+decodeType ::
     FromJSON (h # T.Row) =>
     Aeson.Object -> AesonTypes.Parser (T.Type # h)
-parseType obj =
+decodeType obj =
     jsum
     [ obj .: "record" >>= parseJSON <&> T.TRecord
     ]
 
 instance JsonObject (T.Type # HCompose WithUUID Prune) where
-    parseObject = parseType
-
-instance JsonObject (PrunedType # WithUUID) where
-    parseObject = decodePruned
-    toObject (HCompose Pruned) = mempty
-    toObject (HCompose (Unpruned (HCompose (T.TRecord (HCompose row))))) =
-        "record" ==> array (go row)
-        where
-            go (Ann uuid (HCompose b)) =
-                Aeson.Object ("rowId" ==> toJSON uuid <> x) : xs
-                where
-                    (x, xs) =
-                        case b of
-                        Pruned -> (mempty, [])
-                        Unpruned (HCompose T.REmpty) -> (mempty, [])
-                        Unpruned
-                            (HCompose
-                                (T.RExtend
-                                    (RowExtend t
-                                        (HCompose (Ann fId (HCompose Pruned)))
-                                        (HCompose r)))) ->
-                            ( "rowTag" ==> toJSON t
-                                <> "id" ==> toJSON fId
-                            , go r
-                            )
-                        Unpruned _ -> error "TODO"
-    toObject (HCompose (Unpruned _)) = error "TODO"
+    toObject (T.TRecord row) = "record" ==> toJSON row
 
 instance JsonObject (Definition.Expr (Val UUID)) where
     toObject (Definition.Expr x frozenDeps) =
@@ -655,3 +667,37 @@ instance JsonObject NominalEntity where
     parseObject json =
         decodeTagged "nom" (optional . parseObject) json
         <&> \((tag, ident), nom) -> NominalEntity tag (T.NominalId ident) nom
+
+instance FromJSON (HCompose WithUUID Prune # T.Row) where parseJSON = parseJSONObj "HCompose WithUUID Prune Row"
+instance FromJSON (T.Row # HCompose WithUUID Prune) where parseJSON = Aeson.withArray "Row" decodeRow
+instance FromJSON (WithUUID # HCompose Prune T.Type) where parseJSON = parseJSONObj "WithUUID PrunedType"
+instance FromJSON (WithUUID # V.Term) where parseJSON = parseJSONObj "WithUUID Term"
+instance FromJSON (HCompose Prune T.Row # WithUUID) where parseJSON = parseJSON <&> fmap HCompose
+instance JsonObject (HCompose Prune T.Type # WithUUID) where parseObject = decodeHComposeObj
+instance JsonObject (HCompose WithUUID Prune # T.Row) where parseObject = decodeHComposeObj
+instance JsonObject (HCompose WithUUID Prune # T.Type) where parseObject = decodeHComposeObj
+instance JsonObject (HCompose T.Type WithUUID # Prune) where parseObject = decodeHComposeObj
+instance JsonObject (Prune # HCompose T.Type WithUUID) where parseObject = decodePruneObject
+instance FromJSON (Prune # HCompose T.Row WithUUID) where
+    parseJSON =
+        decodePruneRow -- Prune # T.Row
+instance JsonObject (T.Type # HCompose WithUUID Prune) where parseObject = decodeType
+instance JsonObject (WithUUID # HCompose Prune T.Row) where parseObject = decodeWithUUID
+instance JsonObject (WithUUID # HCompose Prune T.Type) where parseObject = decodeWithUUID
+instance JsonObject (WithUUID # V.Term) where parseObject = decodeWithUUID
+instance ToJSON (HCompose WithUUID Prune # T.Row) where toJSON = toJSONObj
+instance ToJSON (T.Row # HCompose WithUUID Prune) where toJSON = toJSON . encodeRow
+instance ToJSON (T.Row # Pure) where toJSON = toJSON . encodeRow
+instance ToJSON (WithUUID # HCompose Prune T.Type) where toJSON = toJSONObj
+instance ToJSON (WithUUID # V.Term) where toJSON = toJSONObj
+instance JsonObject (HCompose Prune T.Row # WithUUID) where toObject = encodeHComposeObj
+instance JsonObject (HCompose Prune T.Type # WithUUID) where toObject = encodeHComposeObj
+instance ToJSON (HCompose T.Row WithUUID # Prune) where toJSON (HCompose row) = encodeRow row & toJSON
+instance JsonObject (HCompose T.Type WithUUID # Prune) where toObject = encodeHComposeObj
+instance JsonObject (HCompose WithUUID Prune # T.Row) where toObject = encodeHComposeObj
+instance JsonObject (HCompose WithUUID Prune # T.Type) where toObject = encodeHComposeObj
+-- instance ToJSON (Prune # HCompose T.Row WithUUID) where toObject = toJSON . encodePruneRow
+instance JsonObject (Prune # HCompose T.Type WithUUID) where toObject = encodePruneObject
+instance JsonObject (WithUUID # HCompose Prune T.Row) where toObject = encodeWithUUID
+instance JsonObject (WithUUID # HCompose Prune T.Type) where toObject = encodeWithUUID
+instance JsonObject (WithUUID # V.Term) where toObject = encodeWithUUID
