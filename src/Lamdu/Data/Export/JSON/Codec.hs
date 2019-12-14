@@ -1,6 +1,6 @@
 -- | JSON encoder/decoder for Lamdu types
 {-# OPTIONS_GHC -fno-warn-orphans #-}
-{-# LANGUAGE TemplateHaskell, TypeFamilies, TypeOperators, PolyKinds, TypeApplications, FlexibleInstances, StandaloneDeriving, GeneralizedNewtypeDeriving, ScopedTypeVariables, DefaultSignatures #-}
+{-# LANGUAGE TemplateHaskell, TypeFamilies, TypeOperators, PolyKinds, TypeApplications, FlexibleInstances, StandaloneDeriving, GeneralizedNewtypeDeriving #-}
 module Lamdu.Data.Export.JSON.Codec
     ( TagOrder
     , SchemaVersion(..), _SchemaVersion
@@ -379,111 +379,109 @@ instance FromObject V.Leaf where
                     x -> fail ("bad val for leaf " ++ show x)
                 )
 
-class Codec h where
-    toObjectDict :: Proxy h -> Dict (ToObject (h # Ann (Const UUID)))
-    default toObjectDict ::
-        ToObject (h # Ann (Const UUID)) =>
-        Proxy h -> Dict (ToObject (h # Ann (Const UUID)))
-    toObjectDict _ = Dict
-    fromObjectDict :: Proxy h -> Dict (FromObject (h # Ann (Const UUID)))
-    default fromObjectDict ::
-        FromObject (h # Ann (Const UUID)) =>
-        Proxy h -> Dict (FromObject (h # Ann (Const UUID)))
-    fromObjectDict _ = Dict
+type WithUUID = Ann (Const UUID)
 
-instance Codec h => ToJSON (Ann (Const UUID) # h) where toJSON = toJSONObj
-instance Codec h => ToObject (Ann (Const UUID) # h) where
-    toObject (Ann uuid body) =
-        withDict
-        (toObjectDict (Proxy @h))
-        (toObject body <> "id" ==> toJSON uuid)
+encodeWithUUID :: ToObject (h # WithUUID) => WithUUID # h -> Aeson.Object
+encodeWithUUID (Ann uuid body) = toObject body <> "id" ==> toJSON uuid
 
-instance Codec h => FromJSON (Ann (Const UUID) # h) where
-    parseJSON =
-        withDict (fromObjectDict (Proxy @h)) $
-        Aeson.withObject "val" $ \obj ->
-        Ann
-        <$> (obj .: "id")
-        <*> parseObject obj
+decodeWithUUID ::
+    FromObject (h # WithUUID) =>
+    Aeson.Object -> AesonTypes.Parser (WithUUID # h)
+decodeWithUUID obj = Ann <$> (obj .: "id") <*> parseObject obj
 
-instance Codec V.Term
-instance ToObject (V.Term # Ann (Const UUID)) where
-    toObject body =
-        case encBody of
+instance ToJSON (WithUUID # V.Term) where toJSON = toJSONObj
+instance ToObject (WithUUID # V.Term) where toObject = encodeWithUUID
+instance FromJSON (WithUUID # V.Term) where parseJSON = parseJSONObj "WithUUID Term"
+instance FromObject (WithUUID # V.Term) where parseObject = decodeWithUUID
+
+type PrunedType = HCompose Prune T.Type
+
+instance ToJSON (WithUUID # PrunedType) where toJSON = toJSONObj
+instance ToObject (WithUUID # PrunedType) where toObject = encodeWithUUID
+instance FromJSON (WithUUID # PrunedType) where parseJSON = parseJSONObj "WithUUID PrunedType"
+instance FromObject (WithUUID # PrunedType) where parseObject = decodeWithUUID
+
+instance ToObject (V.Term # WithUUID) where
+    toObject =
+        \case
         V.BApp (V.App func arg) ->
-            "applyFunc" ==> c func <>
-            "applyArg" ==> c arg
+            "applyFunc" ==> toJSON func <>
+            "applyArg" ==> toJSON arg
         V.BLam (V.TypedLam (V.Var varId) paramType res) ->
             "lamVar" ==> toJSON varId <>
-            "lamParamType" ==> c paramType <>
-            "lamBody" ==> c res
+            "lamParamType" ==> toJSON paramType <>
+            "lamBody" ==> toJSON res
         V.BGetField (V.GetField reco tag) ->
-            "getFieldRec" ==> c reco <>
+            "getFieldRec" ==> toJSON reco <>
             "getFieldName" ==> toJSON tag
         V.BRecExtend (RowExtend tag x rest) ->
             "extendTag" ==> toJSON tag <>
-            "extendVal" ==> c x <>
-            "extendRest" ==> c rest
+            "extendVal" ==> toJSON x <>
+            "extendRest" ==> toJSON rest
         V.BInject (V.Inject tag x) ->
             "injectTag" ==> toJSON tag <>
-            "injectVal" ==> c x
+            "injectVal" ==> toJSON x
         V.BCase (RowExtend tag handler restHandler) ->
             "caseTag" ==> toJSON tag <>
-            "caseHandler" ==> c handler <>
-            "caseRest" ==> c restHandler
+            "caseHandler" ==> toJSON handler <>
+            "caseRest" ==> toJSON restHandler
         V.BToNom (ToNom (T.NominalId nomId) x) ->
             "toNomId" ==> toJSON nomId <>
-            "toNomVal" ==> c x
+            "toNomVal" ==> toJSON x
         V.BLeaf x -> toObject x
-        where
-            encBody :: V.Term # Const Aeson.Value
-            encBody = hmap (Proxy @Codec #> Lens.Const . toJSON) body
-            c x = x ^. Lens._Wrapped
 
-instance FromObject (V.Term # Ann (Const UUID)) where
+instance FromObject (V.App V.Term # WithUUID) where
+    parseObject obj = V.App <$> obj .: "applyFunc" <*> obj .: "applyArg"
+
+instance FromObject (V.TypedLam V.Var (PrunedType) V.Term # WithUUID) where
+    parseObject obj =
+        V.TypedLam
+        <$> (obj .: "lamVar" >>= parseJSON <&> V.Var)
+        <*> (obj .: "lamParamType")
+        <*> (obj .: "lamBody")
+
+instance FromObject (V.GetField # WithUUID) where
+    parseObject obj =
+        V.GetField
+        <$> (obj .: "getFieldRec")
+        <*> (obj .: "getFieldName" >>= parseJSON)
+
+parseRecExtend ::
+    (FromJSON key, FromJSON (h # val), FromJSON (h # rest)) =>
+    Text -> Text -> Text -> Aeson.Object ->
+    AesonTypes.Parser (RowExtend key val rest # h)
+parseRecExtend tagStr valStr restStr obj =
+    RowExtend
+    <$> (obj .: tagStr >>= parseJSON)
+    <*> obj .: valStr
+    <*> obj .: restStr
+
+instance FromObject (V.Inject # WithUUID) where
+    parseObject obj =
+        V.Inject
+        <$> (obj .: "injectTag" >>= parseJSON)
+        <*> (obj .: "injectVal")
+
+instance FromObject (ToNom T.NominalId V.Term # WithUUID) where
+    parseObject obj =
+        ToNom
+        <$> (obj .: "toNomId" >>= parseJSON <&> T.NominalId)
+        <*> (obj .: "toNomVal")
+
+instance FromObject (V.Term # WithUUID) where
     parseObject obj =
         jsum
-        [ V.App
-        <$> (obj .: "applyFunc" <&> c)
-        <*> (obj .: "applyArg" <&> c)
-        <&> V.BApp
-        , V.TypedLam
-        <$> (obj .: "lamVar" >>= parseJSON <&> V.Var)
-        <*> (obj .: "lamParamType" <&> c)
-        <*> (obj .: "lamBody" <&> c)
-        <&> V.BLam
-        , V.GetField
-        <$> (obj .: "getFieldRec" <&> c)
-        <*> (obj .: "getFieldName" >>= parseJSON)
-        <&> V.BGetField
-        , RowExtend
-        <$> (obj .: "extendTag" >>= parseJSON)
-        <*> (obj .: "extendVal" <&> c)
-        <*> (obj .: "extendRest" <&> c)
-        <&> V.BRecExtend
-        , V.Inject
-        <$> (obj .: "injectTag" >>= parseJSON)
-        <*> (obj .: "injectVal" <&> c)
-        <&> V.BInject
-        , RowExtend
-        <$> (obj .: "caseTag" >>= parseJSON)
-        <*> (obj .: "caseHandler" <&> c)
-        <*> (obj .: "caseRest" <&> c)
-        <&> V.BCase
-        , ToNom
-        <$> (obj .: "toNomId" >>= parseJSON <&> T.NominalId)
-        <*> (obj .: "toNomVal" <&> c)
-        <&> V.BToNom
+        [ parseObject obj <&> V.BApp
+        , parseObject obj <&> V.BLam
+        , parseObject obj <&> V.BGetField
+        , parseRecExtend "extendTag" "extendVal" "extendRest" obj <&> V.BRecExtend
+        , parseObject obj <&> V.BInject
+        , parseRecExtend "caseTag" "caseHandler" "caseRest" obj <&> V.BCase
+        , parseObject obj <&> V.BToNom
         , parseObject obj <&> V.BLeaf
-        ] >>=
-        htraverse (Proxy @Codec #> parseJSON . (^. Lens._Wrapped))
-        where
-            c :: Aeson.Value -> Const Aeson.Value # n
-            c = Lens.Const
+        ]
 
-instance Codec (HCompose Prune T.Type) where
-
-instance FromObject (HCompose Prune T.Type # Ann (Const UUID)) where
+instance FromObject (PrunedType # WithUUID) where
     parseObject obj
         | (obj & Lens.at "id" .~ Nothing) == mempty =
             _HCompose # Pruned & pure
@@ -511,7 +509,7 @@ instance FromObject (HCompose Prune T.Type # Ann (Const UUID)) where
             _ -> fail "Malformed params record"
             <&> (hcomposed _Unpruned . T._TRecord . _HCompose #)
 
-instance ToObject (HCompose Prune T.Type # Ann (Const UUID)) where
+instance ToObject (PrunedType # WithUUID) where
     toObject (HCompose Pruned) = mempty
     toObject (HCompose (Unpruned (HCompose (T.TRecord (HCompose row))))) =
         "record" ==> array (go row)
