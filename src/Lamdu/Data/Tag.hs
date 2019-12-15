@@ -8,10 +8,7 @@ module Lamdu.Data.Tag
     , getTagName
     ) where
 
-import           Control.Applicative (optional)
 import qualified Control.Lens as Lens
-import           Data.Aeson ((.=), (.:))
-import qualified Data.Aeson.Types as Aeson
 import           GUI.Momentu.Direction (Layout(..))
 import qualified GUI.Momentu.Direction as Dir
 import           Lamdu.I18N.LangId (LangId(..))
@@ -50,26 +47,6 @@ Lens.makeLenses ''TextsInLang
 
 data IsOperator = NotAnOperator | IsAnOperator
     deriving (Eq, Ord)
-
-instance Aeson.ToJSON TextsInLang where
-    toJSON (TextsInLang txt Nothing Nothing) = Aeson.toJSON txt
-    toJSON (TextsInLang txt mAbb mDis) =
-        concat
-        [ ["name" .= txt]
-        , ["abbreviation" .= abb | abb <- mAbb ^.. Lens._Just]
-        , ["disambiguationText" .= dis | dis <- mDis ^.. Lens._Just]
-        ] & Aeson.object
-
-instance Aeson.FromJSON TextsInLang where
-    parseJSON (Aeson.String txt) = pure (TextsInLang txt Nothing Nothing)
-    parseJSON json =
-        Aeson.withObject "TextsInLang" f json
-        where
-            f o =
-                TextsInLang
-                <$> (o .: "name")
-                <*> optional (o .: "abbreviation")
-                <*> optional (o .: "disambiguationText")
 
 data Tag = Tag
     { _tagOrder :: !Int
