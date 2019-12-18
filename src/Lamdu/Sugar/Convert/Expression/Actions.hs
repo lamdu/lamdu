@@ -2,7 +2,7 @@
 
 module Lamdu.Sugar.Convert.Expression.Actions
     ( subexprPayloads, addActionsWith, addActions, makeActions, convertPayload
-    , makeSetToLiteral
+    , makeSetToLiteral, makeTypeAnnotation
     ) where
 
 import qualified Control.Lens.Extended as Lens
@@ -227,7 +227,8 @@ typeMismatchPayloads ::
     (a -> Identity a) ->
     Body name i o # Ann (Const a) -> Identity (Body name i o # Ann (Const a))
 typeMismatchPayloads =
-    _BodyFragment . Lens.filtered (not . (^. fTypeMatch)) . fExpr . annotation
+    _BodyFragment . Lens.filteredBy (fTypeMismatch . Lens._Just) . fExpr .
+    annotation
 
 setChildReplaceParentActions ::
     Monad m =>
@@ -248,7 +249,7 @@ setChildReplaceParentActions =
                 <&> EntityId.ofValI)
     in
     bod
-    & Lens.filtered (Lens.allOf (_BodyFragment . fTypeMatch) id) %~
+    & Lens.filtered (not . Lens.has (_BodyFragment . fTypeMismatch . Lens._Just)) %~
         hmap (p #> annotation %~ join setToExpr)
     & hmap (p #> fixReplaceParent setToExpr)
     where
@@ -302,14 +303,16 @@ addActions subexprs exprPl bodyS =
     addActionsWith (mconcat (subexprPayloads subexprs (bodyS ^.. childPayloads)))
     exprPl bodyS
 
-makeTypeAnnotation ::
+makeTypeAnnotationPl ::
     Monad m =>
     Input.Payload m a # V.Term -> ConvertM m (Annotated EntityId (Type InternalName))
-makeTypeAnnotation payload =
-    convertType (EntityId.ofTypeOf entityId) typ
-    where
-        entityId = payload ^. Input.entityId
-        typ = payload ^. Input.inferredType
+makeTypeAnnotationPl payload =
+    makeTypeAnnotation (payload ^. Input.entityId) (payload ^. Input.inferredType)
+
+makeTypeAnnotation ::
+    Monad m =>
+    EntityId -> Pure # T.Type -> ConvertM m (Annotated EntityId (Type InternalName))
+makeTypeAnnotation = convertType . EntityId.ofTypeOf
 
 makeAnnotation ::
     Monad m =>
@@ -319,13 +322,13 @@ makeAnnotation showAnn pl =
     Lens.view ConvertM.scAnnotationsMode >>=
     \case
     Annotations.None
-        | showAnn ^. Ann.showExpanded -> makeTypeAnnotation pl <&> AnnotationType
+        | showAnn ^. Ann.showExpanded -> makeTypeAnnotationPl pl <&> AnnotationType
     Annotations.Types
-        | showAnn ^. Ann.showInTypeMode -> makeTypeAnnotation pl <&> AnnotationType
+        | showAnn ^. Ann.showInTypeMode -> makeTypeAnnotationPl pl <&> AnnotationType
     Annotations.Evaluation
         | showAnn ^. Ann.showInEvalMode ->
             guard (showAnn ^. Ann.showExpanded)
-            & Lens._Just (const (makeTypeAnnotation pl))
+            & Lens._Just (const (makeTypeAnnotationPl pl))
             <&>
             ValAnnotation
             ( pl ^. Input.evalResults <&> (^. Input.eResults)

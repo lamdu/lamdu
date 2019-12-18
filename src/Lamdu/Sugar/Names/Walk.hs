@@ -334,18 +334,20 @@ toFragment ::
     MonadNaming m =>
     Fragment (OldName m) (IM m) o # Ann (Const (Payload (OldName m) (IM m) o a)) ->
     m (Fragment (NewName m) (IM m) o # Ann (Const (Payload (NewName m) (IM m) o a)))
-toFragment Fragment{_fExpr, _fHeal, _fTypeMatch, _fOptions} =
+toFragment Fragment{_fExpr, _fHeal, _fTypeMismatch, _fOptions} =
     do
+        newTypeMismatch <- Lens._Just toType _fTypeMismatch
         run <- opRun
         newExpr <- toExpression _fExpr
         pure Fragment
             { _fExpr = newExpr
+            , _fTypeMismatch = newTypeMismatch
             , _fOptions =
                  _fOptions
                  <&> Lens.mapped %~
                      SugarLens.holeOptionTransformExprs
                      (run . toNode toBinder)
-            , _fHeal, _fTypeMatch
+            , _fHeal
             }
 
 toCompositeItem ::

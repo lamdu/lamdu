@@ -33,7 +33,7 @@ import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Data.Ops as DataOps
 import           Lamdu.Expr.IRef (iref)
 import qualified Lamdu.Sugar.Config as Config
-import           Lamdu.Sugar.Convert.Expression.Actions (addActions)
+import qualified Lamdu.Sugar.Convert.Expression.Actions as Actions
 import           Lamdu.Sugar.Convert.Fragment.Heal (healMismatch)
 import qualified Lamdu.Sugar.Convert.Hole as Hole
 import           Lamdu.Sugar.Convert.Hole.ResultScore (resultScore)
@@ -144,6 +144,14 @@ convertAppliedHole posInfo app@(V.App funcI argI) exprPl argS =
                 mkOptions posInfo sugarContext argI argS exprPl
                 & Reader.local (ConvertM.scAnnotationsMode .~ Annotations.None)
             healMis <- healMismatch
+            -- TODO: Check isTypeMatch once in convertAppliedHole
+            typeMismatch <-
+                if isTypeMatch
+                then pure Nothing
+                else
+                    Actions.makeTypeAnnotation
+                        (EntityId.ofFragmentArg (argPl ^. Input.entityId))
+                        (argPl ^. Input.inferredType) <&> Just
             BodyFragment Fragment
                 { _fExpr =
                     argS
@@ -156,13 +164,14 @@ convertAppliedHole posInfo app@(V.App funcI argI) exprPl argS =
                         else argIRef <$ healMis (stored ^. iref)
                     )
                     <&> EntityId.ofValI
-                , _fTypeMatch = isTypeMatch
+                , _fTypeMismatch = typeMismatch
                 , _fOptions = options
                 } & pure
-            >>= addActions app exprPl
+            >>= Actions.addActions app exprPl
             & lift
-    <&> annotation . pActions . detach .~ FragmentAlready storedEntityId
+        <&> annotation . pActions . detach .~ FragmentAlready storedEntityId
     where
+        argPl = argS ^. annotation . pInput
         argIRef = argI ^. hAnn . Input.stored . iref
         stored = exprPl ^. Input.stored
         storedEntityId = stored ^. iref & EntityId.ofValI

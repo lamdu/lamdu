@@ -14,7 +14,7 @@ module Lamdu.Sugar.Types.Expression
     , Expression
     , AnnotatedArg(..), aaTag, aaExpr
     , LabeledApply(..), aFunc, aSpecialArgs, aAnnotatedArgs, aPunnedArgs
-    , Fragment(..), fExpr, fHeal, fTypeMatch, fOptions
+    , Fragment(..), fExpr, fHeal, fTypeMismatch, fOptions
     , Lambda(..), lamFunc, lamMode, lamApplyLimit
     , InjectContent(..), _InjectVal, _InjectNullary
     , Inject(..), iTag, iContent
@@ -99,7 +99,7 @@ data Lambda name i o f = Lambda
 data Fragment name i o k = Fragment
     { _fExpr :: k :# Body name i o
     , _fHeal :: o EntityId
-    , _fTypeMatch :: Bool
+    , _fTypeMismatch :: Maybe (Annotated EntityId (Type name))
     , _fOptions :: i [HoleOption name i o]
     } deriving Generic
 

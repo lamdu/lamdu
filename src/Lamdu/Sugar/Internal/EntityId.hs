@@ -7,7 +7,7 @@ module Lamdu.Sugar.Internal.EntityId
     , ofTag, ofTagPane
     , ofTaggedEntity
     , ofTId
-    , ofFragmentUnder
+    , ofFragmentArg, ofFragmentUnder
     , randomizeExprAndParams
     , ofEvalOf, ofEvalField, ofEvalArrayIdx
     , ofTypeOf, ofRestOfComposite, ofFunParam, ofFunResult, ofTInstParam
@@ -97,6 +97,9 @@ ofFunParam = augment "TFunParam"
 
 ofFunResult :: EntityId -> EntityId
 ofFunResult = augment "TFunResult"
+
+ofFragmentArg :: EntityId -> EntityId
+ofFragmentArg = augment "FragmentArg"
 
 ofFragmentUnder :: Int -> EntityId -> EntityId
 ofFragmentUnder idx = augment (BS.pack [fromIntegral idx]) . augment "Fragment"

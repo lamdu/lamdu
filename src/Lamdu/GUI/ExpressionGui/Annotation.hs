@@ -4,12 +4,14 @@ module Lamdu.GUI.ExpressionGui.Annotation
     , NeighborVals(..)
     , EvalAnnotationOptions(..), maybeAddAnnotationWith
 
+    , addInferredType, keepWideTypeAnnotation
+
     , PostProcessAnnotation, WhichAnnotation(..), ShrinkRatio
     , postProcessAnnotationFromSelected
 
     , evaluationResult
     , addAnnotationBackground -- used for open holes
-    , maybeAddAnnotationPl, maybeAddAnnotationPlWith
+    , maybeAddAnnotationPl
     ) where
 
 import qualified Control.Lens as Lens
@@ -254,36 +256,23 @@ addEvaluationResult mNeigh resDisp postProcess =
     Sugar.RFunc _ -> pure (flip const)
     _ -> addAnnotationH (makeEvalView mNeigh resDisp) (postProcess ValAnnotation)
 
-maybeAddAnnotationPlWith ::
-    ( Monad i, Monad o, Glue.HasTexts env, Has (Texts.Code Text) env
-    , Has (Texts.Name Text) env
-    ) =>
-    (WhichAnnotation -> GuiM env i o (View -> View)) ->
-    Sugar.Payload Name i o1 ExprGui.Payload ->
-    GuiM env i o (Widget o -> Widget o)
-maybeAddAnnotationPlWith finalProcess pl =
-    do
-        postProcessAnnotation <-
-            if pl ^. Sugar.plNeverShrinkAnnotation
-            then pure keepWideTypeAnnotation
-            else isExprSelected <&> postProcessAnnotationFromSelected
-        maybeAddAnnotation
-            (\which ->
-                (.)
-                <$> (finalProcess which <&> fmap)
-                <*> postProcessAnnotation which)
-            (pl ^. Sugar.plAnnotation)
-            & Reader.local (Element.animIdPrefix .~ animId)
-    where
-        isExprSelected = GuiState.isSubCursor ?? WidgetIds.fromExprPayload pl
-        animId = WidgetIds.fromExprPayload pl & Widget.toAnimId
-
 maybeAddAnnotationPl ::
     ( Monad i, Monad o, Glue.HasTexts env, Has (Texts.Code Text) env
     , Has (Texts.Name Text) env
     ) =>
     Sugar.Payload Name i o1 ExprGui.Payload -> GuiM env i o (Widget o -> Widget o)
-maybeAddAnnotationPl = maybeAddAnnotationPlWith (const (pure id))
+maybeAddAnnotationPl pl =
+    do
+        postProcessAnnotation <-
+            if pl ^. Sugar.plNeverShrinkAnnotation
+            then pure keepWideTypeAnnotation
+            else isExprSelected <&> postProcessAnnotationFromSelected
+        maybeAddAnnotation postProcessAnnotation
+            (pl ^. Sugar.plAnnotation)
+            & Reader.local (Element.animIdPrefix .~ animId)
+    where
+        isExprSelected = GuiState.isSubCursor ?? WidgetIds.fromExprPayload pl
+        animId = WidgetIds.fromExprPayload pl & Widget.toAnimId
 
 evaluationResult ::
     Monad i =>

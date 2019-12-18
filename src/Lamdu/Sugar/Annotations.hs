@@ -47,6 +47,14 @@ dontShowEval =
     , _showInEvalMode = False
     }
 
+dontShowType :: ShowAnnotation
+dontShowType =
+    ShowAnnotation
+    { _showExpanded = False
+    , _showInTypeMode = False
+    , _showInEvalMode = True
+    }
+
 topLevelAnn ::
     Lens' (Expression name i o (ShowAnnotation, a))
     ShowAnnotation
@@ -145,8 +153,8 @@ markBodyAnnotations oldBody =
     BodyFragment fragment ->
         ( alwaysShowAnnotations
         , fragment
-            & (if not (fragment ^. fTypeMatch)
-                  then fExpr . nonHoleAnn .~ alwaysShowAnnotations
+            & (if Lens.has Lens._Just (fragment ^. fTypeMismatch)
+                  then fExpr . nonHoleAnn .~ dontShowType
                   else id)
             & BodyFragment
         )

@@ -75,7 +75,7 @@ testFragment =
                 ( Sugar.BodyFragment Sugar.Fragment
                     { Sugar._fExpr = Stub.litNum 5
                     , Sugar._fHeal = error "Not Implemented" -- not necessary for test!
-                    , Sugar._fTypeMatch = False
+                    , Sugar._fTypeMismatch = Nothing
                     , Sugar._fOptions = pure []
                     } & Stub.expr
                 )
