@@ -40,10 +40,12 @@ neverShowAnnotations :: ShowAnnotation
 neverShowAnnotations = ShowAnnotation False False False
 
 dontShowEval :: ShowAnnotation
-dontShowEval = showAnnotationWhenVerbose & showInEvalMode .~ False
-
-forceShowTypeOrEval :: ShowAnnotation
-forceShowTypeOrEval = showAnnotationWhenVerbose & showExpanded .~ True
+dontShowEval =
+    ShowAnnotation
+    { _showExpanded = False
+    , _showInTypeMode = True
+    , _showInEvalMode = False
+    }
 
 topLevelAnn ::
     Lens' (Expression name i o (ShowAnnotation, a))
@@ -139,12 +141,12 @@ markBodyAnnotations oldBody =
        ( showAnnotationWhenVerbose
        , onIfElse i & BodyIfElse
        )
-    BodyHole hole -> (forceShowTypeOrEval, BodyHole hole)
+    BodyHole hole -> (alwaysShowAnnotations, BodyHole hole)
     BodyFragment fragment ->
-        ( forceShowTypeOrEval
+        ( alwaysShowAnnotations
         , fragment
             & (if not (fragment ^. fTypeMatch)
-                  then fExpr . nonHoleAnn .~ forceShowTypeOrEval
+                  then fExpr . nonHoleAnn .~ alwaysShowAnnotations
                   else id)
             & BodyFragment
         )
