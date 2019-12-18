@@ -7,6 +7,7 @@ import qualified Data.ByteString.Lazy as LBS
 import qualified Data.ByteString.Lazy.Char8 as LBSChar
 import           Lamdu.Data.Db.Layout (runDbTransaction)
 import qualified Lamdu.Data.Export.JSON as JsonFormat
+import qualified Lamdu.Data.Export.JSON.Codec as Codec
 import           Lamdu.VersionControl (runAction)
 import           Test.Lamdu.Db (withDB)
 
@@ -21,7 +22,10 @@ test =
 
 migrationTest :: Test
 migrationTest =
-    JsonFormat.fileImportAll "test/programs/old-codec-factorial.json" & void
+    do
+        (origVersion, _importEntities) <-
+            JsonFormat.fileImportAll "test/programs/old-codec-factorial.json"
+        assertEqual "old-codec-factorial is supposed to be at version 0" origVersion (Codec.Version 0)
     & testCase "migration"
 
 reExportTest :: FilePath -> Test

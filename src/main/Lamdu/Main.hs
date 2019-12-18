@@ -79,7 +79,7 @@ undoN n db =
 importPath :: FilePath -> Transaction.Store DbM -> IO ()
 importPath path db =
     Export.fileImportAll path
-    <&> VersionControl.runAction
+    <&> VersionControl.runAction . snd
     >>= DbLayout.runDbTransaction db
 
 exportToPath :: FilePath -> Transaction.Store DbM -> IO ()

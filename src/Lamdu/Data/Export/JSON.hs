@@ -4,7 +4,7 @@ module Lamdu.Data.Export.JSON
     ( fileExportRepl, jsonExportRepl
     , fileExportAll, verifyAll
     , fileExportDef, fileExportTag
-    , fileImportAll
+    , fileImportAll, Version(..)
     ) where
 
 import qualified Control.Lens as Lens
@@ -36,6 +36,7 @@ import           Lamdu.Data.Db.Layout (ViewM)
 import qualified Lamdu.Data.Db.Layout as DbLayout
 import           Lamdu.Data.Definition (Definition(..))
 import qualified Lamdu.Data.Definition as Definition
+import           Lamdu.Data.Export.JSON.Codec (Version(..))
 import qualified Lamdu.Data.Export.JSON.Codec as Codec
 import qualified Lamdu.Data.Export.JSON.Migration as Migration
 import qualified Lamdu.Data.Meta as Meta
@@ -281,18 +282,18 @@ importEntities (Codec.EntitySchemaVersion ver : entities) =
     else "Unsupported schema version: " ++ show ver & fail
 importEntities _ = "Missing schema version"  & fail
 
-fileImportAll :: FilePath -> IO (T ViewM ())
+fileImportAll :: FilePath -> IO (Version, T ViewM ())
 fileImportAll importPath =
     do
         putStrLn $ "importing from: " ++ show importPath
-        migrated <-
+        (origVersion, migrated) <-
             LBS.readFile importPath <&> Aeson.eitherDecode
             >>= either fail pure
             >>= Migration.migrateAsNeeded
         case Aeson.fromJSON migrated of
             Aeson.Error str -> fail str
             Aeson.Success entities
-                | reencoded == migrated -> importEntities entities & pure
+                | reencoded == migrated -> pure (origVersion, importEntities entities)
                 | otherwise ->
                     "JSON codec ignored fields:\n" <>
                     LBSChar.unpack

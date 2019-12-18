@@ -29,4 +29,4 @@ exportActions config evalResults executeIOProcess =
     where
         exportPath = config ^. Config.export . Config.exportPath
         fileExport exporter = exporter exportPath & IOTrans.liftTIO
-        importAll path = Export.fileImportAll path & IOTrans.liftIOT
+        importAll path = Export.fileImportAll path <&> snd & IOTrans.liftIOT

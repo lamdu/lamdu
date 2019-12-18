@@ -77,6 +77,9 @@ applyMigrations doc ver@(Codec.Version verNum)
             newDoc <- applyMigration ver doc & toIO
             applyMigrations newDoc nextVer
 
-migrateAsNeeded :: Aeson.Value -> IO Aeson.Value
+migrateAsNeeded :: Aeson.Value -> IO (Codec.Version, Aeson.Value)
 migrateAsNeeded doc =
-    getVersion doc & toIO >>= applyMigrations doc
+    do
+        origVersion <- getVersion doc & toIO
+        newDoc <- applyMigrations doc origVersion
+        pure (origVersion, newDoc)

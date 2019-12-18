@@ -14,7 +14,7 @@ import           System.Random (randomIO)
 import           Test.Lamdu.Prelude
 
 initFreshDb :: FilePath -> Transaction.Store DbM -> IO ()
-initFreshDb path db = fileImportAll path >>= DbInit.initDb db
+initFreshDb path db = fileImportAll path <&> snd >>= DbInit.initDb db
 
 -- | Like Lamdu.Db.withDB but in RAM
 withDB :: FilePath -> (Transaction.Store DbM -> IO a) -> IO a
