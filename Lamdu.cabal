@@ -63,6 +63,7 @@ Flag dev
 Executable migrate
   main-is: tools/migrate.hs
   build-depends: Lamdu, base, directory, aeson, filepath, aeson-pretty, bytestring
+               , optparse-applicative >= 0.12
   default-extensions: NoImplicitPrelude, OverloadedStrings, LambdaCase
   default-language: Haskell2010
 

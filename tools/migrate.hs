@@ -4,15 +4,27 @@ import qualified Data.ByteString.Lazy as BSL
 import           Data.Foldable (for_)
 import           Lamdu.Data.Export.JSON.Migration (migrateAsNeeded)
 import           System.Directory (renameFile)
-import           System.Environment (getArgs)
 import           System.FilePath ((<.>))
+import qualified Options.Applicative as P
 
 import           Lamdu.Prelude hiding ((<.>))
+
+parsePath :: P.Parser FilePath
+parsePath =
+    P.metavar "JSONPATH" <> P.help "path to exported json file from older version"
+    & P.strArgument
+
+parseArgs :: IO [FilePath]
+parseArgs =
+    P.info
+    (P.helper <*> P.many parsePath)
+    (P.progDesc "Migrate - migrate old export files to newer versions")
+    & P.execParser
 
 main :: IO ()
 main =
     do
-        paths <- getArgs
+        paths <- parseArgs
         for_ paths $ \path ->
             eitherDecodeFileStrict' path
             >>= \case
