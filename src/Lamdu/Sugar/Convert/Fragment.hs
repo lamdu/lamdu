@@ -32,9 +32,8 @@ import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Data.Ops as DataOps
 import           Lamdu.Expr.IRef (iref)
-import           Lamdu.Sugar.Annotations (neverShowAnnotations, alwaysShowAnnotations)
 import qualified Lamdu.Sugar.Config as Config
-import           Lamdu.Sugar.Convert.Expression.Actions (addActions, convertPayload)
+import           Lamdu.Sugar.Convert.Expression.Actions (addActions)
 import           Lamdu.Sugar.Convert.Fragment.Heal (healMismatch)
 import qualified Lamdu.Sugar.Convert.Hole as Hole
 import           Lamdu.Sugar.Convert.Hole.ResultScore (resultScore)
@@ -67,7 +66,7 @@ mkOptions ::
     ConvertM.PositionInfo ->
     ConvertM.Context m ->
     Ann (Input.Payload m a) # V.Term ->
-    Expression name i o (Payload name i o a) ->
+    Expression name i o pl ->
     Input.Payload m a # V.Term ->
     ConvertM m (T m [HoleOption InternalName (T m) (T m)])
 mkOptions posInfo sugarContext argI argS exprPl =
@@ -141,14 +140,8 @@ convertAppliedHole posInfo app@(V.App funcI argI) exprPl argS =
                 (exprPl ^. Input.inferRes . inferResult . Lens._2)
             postProcess <- ConvertM.postProcessAssert
             sugarContext <- Lens.view id
-            let showAnn
-                    | sugarContext ^. ConvertM.scConfig . Config.showAllAnnotations = alwaysShowAnnotations
-                    | otherwise = neverShowAnnotations
             options <-
-                argS
-                & hflipped %~ hmap (const (Lens._Wrapped %~ (,) showAnn))
-                & htraverseFlipped (const (Lens._Wrapped convertPayload))
-                >>= (mkOptions posInfo sugarContext argI ?? exprPl)
+                mkOptions posInfo sugarContext argI argS exprPl
                 & Reader.local (ConvertM.scAnnotationsMode .~ Annotations.None)
             healMis <- healMismatch
             BodyFragment Fragment
