@@ -76,11 +76,11 @@ subcommands =
     , P.info
         (ImportOpts
             <$> implicitPrelude
-            <*> P.argument P.str (P.metavar "IMPORTPATH"))
+            <*> P.strArgument (P.metavar "IMPORTPATH"))
         (P.progDesc "Import from a given JSON file path into the database")
         <&> Import & P.command "import"
     , P.info
-        (P.argument P.str (P.metavar "EXPORTPATH"))
+        (P.strArgument (P.metavar "EXPORTPATH"))
         (P.progDesc "Export the database into a JSON file")
         <&> Export & P.command "export"
     ] & P.hsubparser
