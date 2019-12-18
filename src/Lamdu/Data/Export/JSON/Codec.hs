@@ -2,6 +2,7 @@
 {-# LANGUAGE TemplateHaskell, TypeFamilies, TypeOperators, PolyKinds, TypeApplications, FlexibleInstances #-}
 module Lamdu.Data.Export.JSON.Codec
     ( TagOrder
+    , Version(..)
     , Entity(..), _EntitySchemaVersion, _EntityRepl, _EntityDef, _EntityTag, _EntityNominal, _EntityLamVar
     ) where
 
@@ -43,8 +44,11 @@ type Decoder a = Aeson.Value -> AesonTypes.Parser a
 
 type TagOrder = Int
 
+newtype Version = Version Int
+    deriving (Eq, Ord, Show)
+
 data Entity
-    = EntitySchemaVersion Int
+    = EntitySchemaVersion Version
     | EntityRepl (Definition.Expr (Val UUID))
     | EntityDef (Definition (Val UUID) (Meta.PresentationMode, T.Tag, V.Var))
     | EntityTag T.Tag Tag
@@ -654,8 +658,9 @@ decodeTaggedNominal json =
             , pure Nothing
             ]
 
-encodeSchemaVersion :: Encoder Int
-encodeSchemaVersion ver = "schemaVersion" ==> Aeson.toJSON ver & Aeson.Object
+encodeSchemaVersion :: Encoder Version
+encodeSchemaVersion (Version ver) =
+    "schemaVersion" ==> Aeson.toJSON ver & Aeson.Object
 
-decodeSchemaVersion :: Aeson.Object -> AesonTypes.Parser Int
-decodeSchemaVersion = (.: "schemaVersion")
+decodeSchemaVersion :: Aeson.Object -> AesonTypes.Parser Version
+decodeSchemaVersion = (.: "schemaVersion") <&> fmap Version

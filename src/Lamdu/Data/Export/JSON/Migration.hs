@@ -7,6 +7,7 @@ module Lamdu.Data.Export.JSON.Migration
 import qualified Control.Lens as Lens
 import qualified Data.Aeson as Aeson
 import           Data.Text (unpack)
+import qualified Lamdu.Data.Export.JSON.Codec as Codec
 import qualified Lamdu.Data.Export.JSON.Migration.ToVersion1 as ToVersion1
 import qualified Lamdu.Data.Export.JSON.Migration.ToVersion10 as ToVersion10
 import qualified Lamdu.Data.Export.JSON.Migration.ToVersion11 as ToVersion11
@@ -23,13 +24,13 @@ import qualified Lamdu.Data.Export.JSON.Migration.ToVersion9 as ToVersion9
 
 import           Lamdu.Prelude
 
-getVersion :: Aeson.Value -> Either Text Int
+getVersion :: Aeson.Value -> Either Text Codec.Version
 getVersion (Aeson.Array values) =
     case values ^? Lens.ix 0 of
         Just (Aeson.Object obj) ->
             case obj ^. Lens.at "schemaVersion" of
-            Nothing -> Right 0
-            Just (Aeson.Number ver) -> truncate ver & Right
+            Nothing -> Right (Codec.Version 0)
+            Just (Aeson.Number ver) -> Codec.Version (truncate ver) & Right
             Just _ -> Left "schemaVersion must be a number"
         Just _ -> Left "Expecting top-level array items to be objects"
         Nothing -> Left "Empty document"
@@ -52,14 +53,17 @@ versionMigrations =
     , ToVersion13.migrate
     ]
 
-currentVersion :: Int
-currentVersion = length versionMigrations
+currentVersion :: Codec.Version
+currentVersion = Codec.Version (length versionMigrations)
 
 toIO :: Either Text a -> IO a
 toIO = either (fail . unpack) pure
 
-applyMigrations :: Aeson.Value -> Int -> IO Aeson.Value
-applyMigrations doc ver
+applyMigration :: Codec.Version -> Aeson.Value -> Either Text Aeson.Value
+applyMigration (Codec.Version ver) = (versionMigrations !! ver)
+
+applyMigrations :: Aeson.Value -> Codec.Version -> IO Aeson.Value
+applyMigrations doc ver@(Codec.Version verNum)
     | ver == currentVersion = pure doc
     | ver > currentVersion =
         unwords
@@ -68,9 +72,10 @@ applyMigrations doc ver
         & fail
     | otherwise =
         do
-            putStrLn $ "Migrating version " ++ show ver ++ " -> " ++ show (ver + 1)
-            newDoc <- (versionMigrations !! ver) doc & toIO
-            applyMigrations newDoc (ver + 1)
+            let nextVer = Codec.Version (verNum + 1)
+            putStrLn $ "Migrating version " ++ show ver ++ " -> " ++ show nextVer
+            newDoc <- applyMigration ver doc & toIO
+            applyMigrations newDoc nextVer
 
 migrateAsNeeded :: Aeson.Value -> IO Aeson.Value
 migrateAsNeeded doc =
