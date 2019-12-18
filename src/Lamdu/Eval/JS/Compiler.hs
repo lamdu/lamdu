@@ -654,6 +654,11 @@ compileAppliedFunc isTail valId func arg' =
                           JS.lambda [vId] lamStmts $$ arg'
                         }
                         & maybeLogSubexprResult valId
+            (_, V.BLeaf V.LHole) ->
+                throwErr valId ER.ReachedHole
+                <&> \holeExc ->
+                JS.expr arg' : codeGenLamStmts holeExc
+                & codeGenFromLamStmts
             (_, V.BLeaf V.LFromNom {}) -> codeGenFromExpr arg' & pure
             _ ->
                 compileVal NotTailCall func
