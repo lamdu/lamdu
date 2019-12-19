@@ -483,7 +483,7 @@ makeJumpToRhs ::
     , Has (MomentuTexts.Texts Text) env
     , Has (Texts.Navigation Text) env
     ) =>
-    Widget.Id -> GuiM env i o (EventMap (o (GuiState.Update)))
+    Widget.Id -> GuiM env i o (EventMap (o GuiState.Update))
 makeJumpToRhs rhsId =
     do
         env <- Lens.view id
