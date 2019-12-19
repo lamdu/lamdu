@@ -60,7 +60,7 @@ toIO :: Either Text a -> IO a
 toIO = either (fail . unpack) pure
 
 applyMigration :: Codec.Version -> Aeson.Value -> Either Text Aeson.Value
-applyMigration (Codec.Version ver) = (versionMigrations !! ver)
+applyMigration (Codec.Version ver) = versionMigrations !! ver
 
 applyMigrations :: Aeson.Value -> Codec.Version -> IO Aeson.Value
 applyMigrations doc ver@(Codec.Version verNum)

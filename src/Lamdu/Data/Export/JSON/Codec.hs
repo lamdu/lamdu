@@ -45,7 +45,7 @@ type Decoder a = Aeson.Value -> AesonTypes.Parser a
 type TagOrder = Int
 
 newtype Version = Version Int
-    deriving (Eq, Ord, Show)
+    deriving stock (Eq, Ord, Show)
 
 data Entity
     = EntitySchemaVersion Version
