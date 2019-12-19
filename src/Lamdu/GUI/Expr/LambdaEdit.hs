@@ -165,9 +165,10 @@ make ::
     GuiM env i o (Responsive o)
 make lam pl =
     do
-        AssignmentEdit.Parts mParamsEdit mScopeEdit bodyEdit eventMap _wrap _rhsId <-
+        AssignmentEdit.Parts mParamsEdit mScopeEdit bodyEdit eventMap _wrap rhsId <-
             AssignmentEdit.makeFunctionParts (lam ^. Sugar.lamApplyLimit)
             func pl (WidgetIds.fromEntityId bodyId)
+        rhsJumperEquals <- AssignmentEdit.makeJumpToRhs rhsId
         paramsAndLabelEdits <-
             case (lam ^. Sugar.lamMode, params) of
             (_, Sugar.NullParam{}) -> mkLhsEdits ?? mParamsEdit ?? mScopeEdit
@@ -175,7 +176,8 @@ make lam pl =
             _ -> mkExpanded ?? mParamsEdit ?? mScopeEdit
         (ResponsiveExpr.boxSpacedMDisamb ?? ExprGui.mParensId pl)
             <*> (Options.boxSpaced ?? Options.disambiguationNone ?? paramsAndLabelEdits
-                    <&> (: [bodyEdit]))
+                <&> Widget.strongerEvents rhsJumperEquals
+                <&> (: [bodyEdit]))
             & stdWrapParentExpr pl
             <&> Widget.weakerEvents eventMap
     where

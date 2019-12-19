@@ -3,6 +3,7 @@
 module Lamdu.GUI.Expr.AssignmentEdit
     ( make
     , Parts(..), makeFunctionParts
+    , makeJumpToRhs
     ) where
 
 import           Control.Applicative ((<|>), liftA2)
@@ -477,6 +478,25 @@ makeParts funcApplyLimit (Ann (Const pl) assignmentBody) =
     Sugar.BodyFunction x -> makeFunctionParts funcApplyLimit x pl
     Sugar.BodyPlain x -> makePlainParts x pl
 
+makeJumpToRhs ::
+    ( Monad i, Monad o
+    , Has (MomentuTexts.Texts Text) env
+    , Has (Texts.Navigation Text) env
+    ) =>
+    Widget.Id -> GuiM env i o (EventMap (o (GuiState.Update)))
+makeJumpToRhs rhsId =
+    do
+        env <- Lens.view id
+        GuiM.mkPrejumpPosSaver
+            <&> Lens.mapped .~ GuiState.updateCursor rhsId
+            <&> const
+            <&> E.charGroup Nothing
+            (E.toDoc env
+                [ has . MomentuTexts.navigation
+                , has . Texts.jumpToDefBody
+                ])
+            "="
+
 make ::
     ( Monad i, Monad o
     , Grid.HasTexts env
@@ -498,17 +518,7 @@ make pMode tag color assignment =
     makeParts Sugar.UnlimitedFuncApply assignment delParamDest
     >>= \(Parts mParamsEdit mScopeEdit bodyEdit eventMap mLamPl rhsId) ->
     do
-        env <- Lens.view id
-        rhsJumperEquals <-
-            GuiM.mkPrejumpPosSaver
-            <&> Lens.mapped .~ GuiState.updateCursor rhsId
-            <&> const
-            <&> E.charGroup Nothing
-            (E.toDoc env
-                [ has . MomentuTexts.navigation
-                , has . Texts.jumpToDefBody
-                ])
-            "="
+        rhsJumperEquals <- makeJumpToRhs rhsId
         mPresentationEdit <-
             case assignmentBody of
             Sugar.BodyPlain{} -> pure Nothing
