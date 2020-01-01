@@ -61,7 +61,7 @@ import qualified Lamdu.Expr.Load as Load
 import           Lamdu.Sugar.Annotations (neverShowAnnotations, alwaysShowAnnotations)
 import qualified Lamdu.Sugar.Config as Config
 import           Lamdu.Sugar.Convert.Binder (convertBinder)
-import           Lamdu.Sugar.Convert.Expression.Actions (addActions, convertPayload, makeSetToLiteral)
+import           Lamdu.Sugar.Convert.Expression.Actions (addActions, convertPayload)
 import           Lamdu.Sugar.Convert.Hole.ResultScore (resultScore)
 import qualified Lamdu.Sugar.Convert.Hole.Suggest as Suggest
 import qualified Lamdu.Sugar.Convert.Input as Input
@@ -94,11 +94,8 @@ convert ::
     ConvertM.PositionInfo -> Input.Payload m a # V.Term ->
     ConvertM m (ExpressionU m a)
 convert posInfo holePl =
-    Hole
-    <$> mkOptions posInfo holeResultProcessor holePl
-    <*> makeSetToLiteral holePl
-    <*> pure Nothing
-    <&> BodyHole
+    mkOptions posInfo holeResultProcessor holePl
+    <&> (`Hole` Nothing) <&> BodyHole
     >>= addActions (Const ()) holePl
     <&> annotation . pActions . mSetToHole .~ Nothing
 

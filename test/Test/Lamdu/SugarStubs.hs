@@ -82,7 +82,6 @@ hole :: Expr
 hole =
     Sugar.BodyHole Sugar.Hole
     { Sugar._holeOptions = mempty
-    , Sugar._holeOptionLiteral = error "TODO: option literal"
     , Sugar._holeMDelete = Nothing
     } & expr
 
