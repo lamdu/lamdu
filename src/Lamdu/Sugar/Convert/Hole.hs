@@ -95,6 +95,7 @@ convert ::
     ConvertM m (ExpressionU m a)
 convert posInfo holePl =
     mkOptions posInfo holeResultProcessor holePl
+    <&> Lens.mapped . Lens.mapped %~ snd
     <&> (`Hole` Nothing) <&> BodyHole
     >>= addActions (Const ()) holePl
     <&> annotation . pActions . mSetToHole .~ Nothing
@@ -122,7 +123,12 @@ mkOption ::
     HoleOption InternalName (T m) (T m)
 mkOption sugarContext resultProcessor holePl x =
     HoleOption
-    { _hoVal = x
+    { _hoEntityId =
+        x
+        & ExprLens.valLeafs . V._LLiteral . V.primData .~ mempty
+        & show
+        & Random.randFunc
+        & EntityId.EntityId
     , _hoSugaredBaseExpr = sugar sugarContext holePl x
     , _hoResults = mkResults resultProcessor sugarContext holePl x
     }
@@ -131,7 +137,7 @@ mkHoleSuggesteds ::
     Monad m =>
     ConvertM.Context m -> ResultProcessor m ->
     Input.Payload m a # V.Term ->
-    [HoleOption InternalName (T m) (T m)]
+    [(Val (), HoleOption InternalName (T m) (T m))]
 mkHoleSuggesteds sugarContext resultProcessor holePl =
     holePl ^. Input.inferRes . inferResult . Lens._2
     & Suggest.forType
@@ -143,7 +149,7 @@ mkHoleSuggesteds sugarContext resultProcessor holePl =
     & assertSuccessfulInfer
     & fst
     <&> hflipped %~ hmap (const (const (Const ()))) -- TODO: "Avoid re-inferring known type here"
-    <&> mkOption sugarContext resultProcessor holePl
+    <&> \x -> (x, mkOption sugarContext resultProcessor holePl x)
     where
         inferCtx = sugarContext ^. ConvertM.scInferContext
 
@@ -151,14 +157,16 @@ strip :: Recursively HFunctor h => Ann a # h -> Pure # h
 strip = unwrap (const (^. hVal))
 
 addWithoutDups ::
-    [HoleOption i o a] -> [HoleOption i o a] -> [HoleOption i o a]
+    [(Val (), HoleOption i o a)] ->
+    [(Val (), HoleOption i o a)] ->
+    [(Val (), HoleOption i o a)]
 addWithoutDups new old
     | null nonHoleNew = old
     | otherwise = nonHoleNew ++ filter (not . equivalentToNew) old
     where
         equivalentToNew x =
-            any (couldEq (strip (x ^. hoVal))) (nonHoleNew ^.. Lens.traverse . hoVal <&> strip)
-        nonHoleNew = filter (Lens.nullOf (hoVal . ExprLens.valHole)) new
+            any (couldEq (strip (x ^. _1))) (nonHoleNew ^.. Lens.traverse . _1 <&> strip)
+        nonHoleNew = filter (Lens.nullOf (_1 . ExprLens.valHole)) new
 
 isLiveGlobal :: Monad m => DefI m -> T m Bool
 isLiveGlobal defI =
@@ -208,7 +216,7 @@ mkOptions ::
     Monad m =>
     ConvertM.PositionInfo -> ResultProcessor m ->
     Input.Payload m a # V.Term ->
-    ConvertM m (T m [HoleOption InternalName (T m) (T m)])
+    ConvertM m (T m [(Val (), HoleOption InternalName (T m) (T m))])
 mkOptions posInfo resultProcessor holePl =
     Lens.view id
     <&>
@@ -231,7 +239,7 @@ mkOptions posInfo resultProcessor holePl =
               ]
             ]
             <&> wrap (const (Ann (Const ()))) . (^. hPlain)
-            <&> mkOption sugarContext resultProcessor holePl
+            <&> (\x -> (x, mkOption sugarContext resultProcessor holePl x))
             & addWithoutDups (mkHoleSuggesteds sugarContext resultProcessor holePl)
             & pure
 

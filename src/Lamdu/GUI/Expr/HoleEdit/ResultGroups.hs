@@ -16,9 +16,6 @@ import qualified Data.Text as Text
 import qualified GUI.Momentu.Widget.Id as WidgetId
 import qualified GUI.Momentu.Widgets.Menu as Menu
 import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
-import qualified Lamdu.Calc.Lens as ExprLens
-import           Lamdu.Calc.Term (Val)
-import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Config as Config
 import           Lamdu.Fuzzy (Fuzzy)
 import qualified Lamdu.Fuzzy as Fuzzy
@@ -177,12 +174,6 @@ makeAll options ctx =
     where
         searchTerm = ctx ^. SearchMenu.rSearchTerm
 
-mkGroupId :: Show a => Val a -> WidgetId.Id
-mkGroupId option =
-    option
-    & ExprLens.valLeafs . V._LLiteral . V.primData .~ mempty
-    & WidgetIds.hash
-
 mkGroup ::
     ( Monad i
     , Has (Texts.Code Text) env
@@ -198,7 +189,7 @@ mkGroup env option =
     Group
     { _groupSearchTerms = sugaredBaseExpr ^. hVal & ValTerms.binder env
     , _groupResults = option ^. Sugar.hoResults
-    , _groupId = mkGroupId (option ^. Sugar.hoVal)
+    , _groupId = option ^. Sugar.hoEntityId & WidgetIds.fromEntityId
     }
 
 unicodeAlts :: Text -> [Text]

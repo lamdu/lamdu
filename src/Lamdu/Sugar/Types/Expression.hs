@@ -32,7 +32,7 @@ module Lamdu.Sugar.Types.Expression
     , AssignPlain(..), apAddFirstParam, apBody
     , Assignment(..), _BodyFunction, _BodyPlain
     -- Holes
-    , HoleOption(..), hoVal, hoSugaredBaseExpr, hoResults
+    , HoleOption(..), hoEntityId, hoSugaredBaseExpr, hoResults
     , Hole(..), holeOptions, holeMDelete
     , HoleResult(..), holeResultConverted, holeResultPick
     -- If/else
@@ -49,7 +49,6 @@ import           Control.Monad.ListT (ListT)
 import           Data.Kind (Constraint)
 import           Data.Property (Property)
 import           Hyper
-import           Lamdu.Calc.Term (Val)
 import           Lamdu.Data.Anchors (BinderParamScopeId(..), bParamScopeId)
 import qualified Lamdu.Data.Meta as Meta
 import           Lamdu.Sugar.Internal.EntityId (EntityId)
@@ -109,7 +108,7 @@ data HoleResult name i o = HoleResult
     } deriving Generic
 
 data HoleOption name i o = HoleOption
-    { _hoVal :: Val ()
+    { _hoEntityId :: EntityId
     , _hoSugaredBaseExpr :: i (Annotated (Payload name i o ()) (Binder name i o))
     , -- A group in the hole results based on this option
       _hoResults :: ListT i (HoleResultScore, i (HoleResult name i o))

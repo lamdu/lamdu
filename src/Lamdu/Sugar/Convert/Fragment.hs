@@ -46,6 +46,7 @@ import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import           Lamdu.Sugar.Types
 import           Revision.Deltum.Hyper (Write(..))
 import           Revision.Deltum.Transaction (Transaction)
+import qualified System.Random.Extended as Random
 
 import           Lamdu.Prelude
 
@@ -73,12 +74,17 @@ mkOptions posInfo sugarContext argI argS exprPl =
     Hole.mkOptions posInfo (fragmentResultProcessor topEntityId argI) exprPl
     <&> (pure fragmentOptions <>)
     <&> Lens.mapped %~ Hole.addWithoutDups mkSuggested
+    <&> Lens.mapped . Lens.mapped %~ snd
     where
         mkSuggested = mkAppliedHoleSuggesteds sugarContext argI exprPl
         fragmentOptions =
             [ App hole hole & V.BApp & Ann (Const ()) | Lens.nullOf (hVal . _BodyLam) argS ]
-            <&> Hole.mkOption sugarContext
-                (fragmentResultProcessor topEntityId argI) exprPl
+            <&>
+            \x ->
+            ( x
+            , Hole.mkOption sugarContext
+                (fragmentResultProcessor topEntityId argI) exprPl x
+            )
         topEntityId = exprPl ^. Input.stored . iref & EntityId.ofValI
         hole = V.BLeaf V.LHole & Ann (Const ())
 
@@ -87,7 +93,7 @@ mkAppliedHoleSuggesteds ::
     ConvertM.Context m ->
     Ann (Input.Payload m a) # V.Term ->
     Input.Payload m a # V.Term ->
-    [HoleOption InternalName (T m) (T m)]
+    [(V.Val (), HoleOption InternalName (T m) (T m))]
 mkAppliedHoleSuggesteds sugarContext argI exprPl =
     runStateT
     ( Suggest.termTransforms (exprPl ^. Input.inferScope) (WriteNew :*:) (^. _2)
@@ -109,9 +115,11 @@ mkAppliedHoleSuggesteds sugarContext argI exprPl =
             ExistingRef (pl ^. Input.stored . iref) :*:
             (pl ^. Input.inferRes & hflipped %~ hmap (const (^. Lens._2)))
         onSuggestion (sugg, newInferCtx) =
-            mkOptionFromFragment
-            (sugarContext & ConvertM.scInferContext .~ newInferCtx)
-            exprPl sugg
+            ( sugg & hflipped %~ hmap (\_ _ -> Const ())
+            , mkOptionFromFragment
+                (sugarContext & ConvertM.scInferContext .~ newInferCtx)
+                exprPl sugg
+            )
 
 checkTypeMatch :: Monad m => UVar # T.Type -> UVar # T.Type -> ConvertM m Bool
 checkTypeMatch x y =
@@ -339,7 +347,10 @@ mkOptionFromFragment ::
     HoleOption InternalName (T m) (T m)
 mkOptionFromFragment sugarContext exprPl x =
     HoleOption
-    { _hoVal = baseExpr
+    { _hoEntityId =
+        x & hflipped %~ hmap (\_ _ -> Const ())
+        & show & Random.randFunc
+        & EntityId.EntityId
     , _hoSugaredBaseExpr = Hole.sugar sugarContext exprPl baseExpr
     , _hoResults =
         do
