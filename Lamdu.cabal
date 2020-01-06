@@ -147,7 +147,7 @@ Library
                   , filepath >= 1.1
                   , edit-distance
                   , generic-data >= 0.7
-                  , GLFW-b >= 3.2.1.0
+                  , GLFW-b >= 3.2.1.0 && < 3.3
                   , graphics-drawingcombinators >= 1.7.1
                   , hashable
                   , lamdu-calculus >= 0.2
