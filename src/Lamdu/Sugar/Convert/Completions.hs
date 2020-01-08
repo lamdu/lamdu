@@ -2,8 +2,8 @@
 
 {-# LANGUAGE TypeFamilies, TypeOperators #-}
 module Lamdu.Sugar.Convert.Completions
-    ( forType
-    , forTypeObvious, forTypeUTermWithoutSplit, suggestCaseWith
+    ( suggestForType
+    , suggestForTypeObvious, suggestForTypeUTermWithoutSplit, suggestCaseWith
     ) where
 
 import qualified Control.Lens as Lens
@@ -29,15 +29,15 @@ lookupBody x = semiPruneLookup x <&> (^? _2 . _UTerm . uBody)
 
 -- | Suggest values that fit a type, may "split" once, to suggest many
 -- injects for a sum type. These are offerred in holes (not fragments).
-forType ::
+suggestForType ::
     (UnifyGen m T.Type, UnifyGen m T.Row) =>
     UVarOf m # T.Type -> m [TypedTerm m]
-forType t =
+suggestForType t =
     -- TODO: DSL for matching/deref'ing UVar structure
     lookupBody t
     >>= \case
     Just (T.TVariant r) -> forVariant r
-    typ -> forTypeUTermWithoutSplit typ <&> (^.. Lens._Just)
+    typ -> suggestForTypeUTermWithoutSplit typ <&> (^.. Lens._Just)
     <&> Lens.mapped %~ Ann (inferResult # t)
 
 forVariant ::
@@ -48,35 +48,35 @@ forVariant r =
     \case
     Just (T.RExtend (RowExtend tag typ rest)) ->
         (:)
-        <$> (forTypeObvious typ <&> V.Inject tag <&> V.BInject)
+        <$> (suggestForTypeObvious typ <&> V.Inject tag <&> V.BInject)
         <*> forVariant rest
     _ -> pure []
 
-forTypeObvious ::
+suggestForTypeObvious ::
     (UnifyGen m T.Type, UnifyGen m T.Row) =>
     UVarOf m # T.Type -> m (TypedTerm m)
-forTypeObvious t =
+suggestForTypeObvious t =
     lookupBody t
-    >>= forTypeUTermObvious
+    >>= suggestForTypeUTermObvious
     <&> fromMaybe (V.BLeaf V.LHole)
     <&> Ann (inferResult # t)
 
-forTypeUTermWithoutSplit ::
+suggestForTypeUTermWithoutSplit ::
     (UnifyGen m T.Type, UnifyGen m T.Row) =>
     Maybe (T.Type # UVarOf m) -> m (Maybe (V.Term # Ann (InferResult (UVarOf m))))
-forTypeUTermWithoutSplit (Just (T.TRecord r)) = forRecord r
-forTypeUTermWithoutSplit t = forTypeUTermObvious t
+suggestForTypeUTermWithoutSplit (Just (T.TRecord r)) = forRecord r
+suggestForTypeUTermWithoutSplit t = suggestForTypeUTermObvious t
 
-forTypeUTermObvious ::
+suggestForTypeUTermObvious ::
     (UnifyGen m T.Type, UnifyGen m T.Row) =>
     Maybe (T.Type # UVarOf m) -> m (Maybe (V.Term # Ann (InferResult (UVarOf m))))
-forTypeUTermObvious (Just (T.TFun (FuncType param result))) =
+suggestForTypeUTermObvious (Just (T.TFun (FuncType param result))) =
     lookupBody param >>=
     \case
     Just (T.TVariant row) -> suggestCaseWith row result
     _ -> suggestLam result
     <&> Just
-forTypeUTermObvious _ = pure Nothing
+suggestForTypeUTermObvious _ = pure Nothing
 
 suggestLam ::
     (UnifyGen m T.Type, UnifyGen m T.Row) =>
@@ -85,7 +85,7 @@ suggestLam ::
 suggestLam result =
     V.TypedLam "var"
     <$> (newUnbound <&> (inferResult #) <&> (`Ann` (_HCompose # Pruned)))
-    <*> forTypeObvious result
+    <*> suggestForTypeObvious result
     <&> V.BLam
 
 forRecord ::
@@ -97,7 +97,7 @@ forRecord r =
     Just T.REmpty -> V.BLeaf V.LRecEmpty & Just & pure
     Just (T.RExtend (RowExtend tag typ rest)) ->
         RowExtend tag
-        <$> forTypeObvious typ
+        <$> suggestForTypeObvious typ
         <*> ( Ann
                 <$> (newTerm (T.TRecord rest) <&> (inferResult #))
                 <*> (forRecord rest <&> fromMaybe (V.BLeaf V.LHole))
@@ -120,7 +120,7 @@ suggestCaseWith variantType resultType =
                 <$> (mkCaseType fieldType <&> (inferResult #))
                 <*> (V.TypedLam "var"
                     <$> (newUnbound <&> (inferResult #) <&> (`Ann` (_HCompose # Pruned)))
-                    <*> forTypeObvious resultType
+                    <*> suggestForTypeObvious resultType
                     <&> V.BLam
                     )
             )

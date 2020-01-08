@@ -141,7 +141,7 @@ mkHoleSuggesteds ::
     [(Val (), HoleOption InternalName (T m) (T m))]
 mkHoleSuggesteds sugarContext resultProcessor holePl =
     holePl ^. Input.inferredTypeUVar
-    & Completions.forType
+    & Completions.suggestForType
     & runPureInfer (holePl ^. Input.inferScope) inferCtx
 
     -- TODO: Change ConvertM to be stateful rather than reader on the

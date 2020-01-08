@@ -22,7 +22,7 @@ import           Lamdu.Calc.Infer (PureInfer, InferState, runPureInfer)
 import qualified Lamdu.Calc.Lens as ExprLens
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
-import           Lamdu.Sugar.Convert.Completions (forTypeObvious, forTypeUTermWithoutSplit, suggestCaseWith)
+import           Lamdu.Sugar.Convert.Completions (suggestForTypeObvious, suggestForTypeUTermWithoutSplit, suggestCaseWith)
 
 import           Lamdu.Prelude
 
@@ -145,7 +145,7 @@ forTypeWithoutSplit ::
     UVarOf m # T.Type -> m (TypedTerm m)
 forTypeWithoutSplit t =
     lookupBody t
-    >>= forTypeUTermWithoutSplit
+    >>= suggestForTypeUTermWithoutSplit
     <&> fromMaybe (V.BLeaf V.LHole)
     <&> Ann (inferResult # t)
 
@@ -155,7 +155,7 @@ fillHoles ::
     Ann a # V.Term ->
     PureInfer (V.Scope # UVar) (Ann a # V.Term)
 fillHoles mkPl getInferred (Ann pl (V.BLeaf V.LHole)) =
-    forTypeObvious (getInferred pl ^. inferResult)
+    suggestForTypeObvious (getInferred pl ^. inferResult)
     <&> hflipped %~ hmap (const mkPl)
 fillHoles mkPl getInferred (Ann pl (V.BApp (V.App func arg))) =
     -- Dont fill in holes inside apply funcs. This may create redexes..
