@@ -117,7 +117,7 @@ termTransformsWithoutSplit srcScope mkPl getInferred src =
                         >>= unify s1
                         & liftInfer (V.emptyScope @UVar)
                     arg <-
-                        forTypeObvious argType & liftInfer (V.emptyScope @UVar)
+                        forTypeWithoutSplit argType & liftInfer (V.emptyScope @UVar)
                         <&> hflipped %~ hmap (const mkPl)
                     let applied = V.App src arg & V.BApp & mkResult resType
                     pure applied
@@ -171,6 +171,15 @@ forTypeObvious ::
     UVarOf m # T.Type -> m (TypedTerm m)
 forTypeObvious t =
     lookupBody t
+    >>= forTypeUTermObvious
+    <&> fromMaybe (V.BLeaf V.LHole)
+    <&> Ann (inferResult # t)
+
+forTypeWithoutSplit ::
+    (UnifyGen m T.Type, UnifyGen m T.Row) =>
+    UVarOf m # T.Type -> m (TypedTerm m)
+forTypeWithoutSplit t =
+    lookupBody t
     >>= forTypeUTermWithoutSplit
     <&> fromMaybe (V.BLeaf V.LHole)
     <&> Ann (inferResult # t)
@@ -178,35 +187,41 @@ forTypeObvious t =
 forTypeUTermWithoutSplit ::
     (UnifyGen m T.Type, UnifyGen m T.Row) =>
     Maybe (T.Type # UVarOf m) -> m (Maybe (V.Term # Ann (InferResult (UVarOf m))))
-forTypeUTermWithoutSplit t =
-    case t of
-    Just (T.TRecord row) -> suggestRecord row <&> Just
-    Just (T.TFun (FuncType param result)) ->
-        lookupBody param >>=
-        \case
-        Just (T.TVariant row) -> suggestCaseWith row result
-        _ ->
-            V.TypedLam "var"
-            <$> (newUnbound <&> (inferResult #) <&> (`Ann` (_HCompose # Pruned)))
-            <*> forTypeObvious result
-            <&> V.BLam
-        <&> Just
-    _ -> pure Nothing
+forTypeUTermWithoutSplit (Just (T.TRecord r)) = suggestRecord r
+forTypeUTermWithoutSplit t = forTypeUTermObvious t
+
+forTypeUTermObvious ::
+    (UnifyGen m T.Type, UnifyGen m T.Row) =>
+    Maybe (T.Type # UVarOf m) -> m (Maybe (V.Term # Ann (InferResult (UVarOf m))))
+forTypeUTermObvious (Just (T.TFun (FuncType param result))) =
+    lookupBody param >>=
+    \case
+    Just (T.TVariant row) -> suggestCaseWith row result
+    _ ->
+        V.TypedLam "var"
+        <$> (newUnbound <&> (inferResult #) <&> (`Ann` (_HCompose # Pruned)))
+        <*> forTypeObvious result
+        <&> V.BLam
+    <&> Just
+forTypeUTermObvious _ = pure Nothing
 
 suggestRecord ::
     (UnifyGen m T.Type, UnifyGen m T.Row) =>
-    UVarOf m # T.Row ->
-    m (V.Term # Ann (InferResult (UVarOf m)))
+    UVarOf m # T.Row -> m (Maybe (V.Term # Ann (InferResult (UVarOf m))))
 suggestRecord r =
     lookupBody r >>=
     \case
-    Just T.REmpty -> V.BLeaf V.LRecEmpty & pure
+    Just T.REmpty -> V.BLeaf V.LRecEmpty & Just & pure
     Just (T.RExtend (RowExtend tag typ rest)) ->
         RowExtend tag
         <$> autoLambdas typ
-        <*> (Ann <$> (newTerm (T.TRecord rest) <&> (inferResult #)) <*> suggestRecord rest)
+        <*> ( Ann
+                <$> (newTerm (T.TRecord rest) <&> (inferResult #))
+                <*> (suggestRecord rest <&> fromMaybe (V.BLeaf V.LHole))
+            )
         <&> V.BRecExtend
-    _ -> V.BLeaf V.LHole & pure
+        <&> Just
+    _ -> pure Nothing
 
 suggestCaseWith ::
     (UnifyGen m T.Type, UnifyGen m T.Row) =>
