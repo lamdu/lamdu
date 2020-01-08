@@ -214,7 +214,7 @@ forRecord r =
     Just T.REmpty -> V.BLeaf V.LRecEmpty & Just & pure
     Just (T.RExtend (RowExtend tag typ rest)) ->
         RowExtend tag
-        <$> autoLambdas typ
+        <$> forTypeObvious typ
         <*> ( Ann
                 <$> (newTerm (T.TRecord rest) <&> (inferResult #))
                 <*> (forRecord rest <&> fromMaybe (V.BLeaf V.LHole))
@@ -237,7 +237,7 @@ suggestCaseWith variantType resultType =
                 <$> (mkCaseType fieldType <&> (inferResult #))
                 <*> (V.TypedLam "var"
                     <$> (newUnbound <&> (inferResult #) <&> (`Ann` (_HCompose # Pruned)))
-                    <*> autoLambdas resultType
+                    <*> forTypeObvious resultType
                     <&> V.BLam
                     )
             )
@@ -250,17 +250,6 @@ suggestCaseWith variantType resultType =
     _ ->
         -- TODO: Maybe this should be a lambda, like a TFun from non-variant
         V.BLeaf V.LHole & pure
-
-autoLambdas :: Unify m T.Type => UVarOf m # T.Type -> m (TypedTerm m)
-autoLambdas typ =
-    lookupBody typ >>=
-    \case
-    Just (T.TFun result) ->
-        autoLambdas (result ^. funcOut)
-        <&> V.TypedLam "var" (Ann (inferResult # (result ^. funcIn)) (_HCompose # Pruned))
-        <&> V.BLam
-    _ -> V.BLeaf V.LHole & pure
-    <&> Ann (inferResult # typ)
 
 fillHoles ::
     (forall n. InferResult UVar # n -> a # n) ->
