@@ -74,13 +74,19 @@ forTypeUTermObvious (Just (T.TFun (FuncType param result))) =
     lookupBody param >>=
     \case
     Just (T.TVariant row) -> suggestCaseWith row result
-    _ ->
-        V.TypedLam "var"
-        <$> (newUnbound <&> (inferResult #) <&> (`Ann` (_HCompose # Pruned)))
-        <*> forTypeObvious result
-        <&> V.BLam
+    _ -> suggestLam result
     <&> Just
 forTypeUTermObvious _ = pure Nothing
+
+suggestLam ::
+    (UnifyGen m T.Type, UnifyGen m T.Row) =>
+    UVarOf m # T.Type ->
+    m (V.Term # Ann (InferResult (UVarOf m)))
+suggestLam result =
+    V.TypedLam "var"
+    <$> (newUnbound <&> (inferResult #) <&> (`Ann` (_HCompose # Pruned)))
+    <*> forTypeObvious result
+    <&> V.BLam
 
 forRecord ::
     (UnifyGen m T.Type, UnifyGen m T.Row) =>
