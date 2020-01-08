@@ -117,7 +117,7 @@ termTransformsWithoutSplit srcScope mkPl getInferred src =
                         >>= unify s1
                         & liftInfer (V.emptyScope @UVar)
                     arg <-
-                        forTypeWithoutSplit argType & liftInfer (V.emptyScope @UVar)
+                        forTypeObvious argType & liftInfer (V.emptyScope @UVar)
                         <&> hflipped %~ hmap (const mkPl)
                     let applied = V.App src arg & V.BApp & mkResult resType
                     pure applied
@@ -161,14 +161,14 @@ forVariant r =
     \case
     Just (T.RExtend (RowExtend tag typ rest)) ->
         (:)
-        <$> (forTypeWithoutSplit typ <&> V.Inject tag <&> V.BInject)
+        <$> (forTypeObvious typ <&> V.Inject tag <&> V.BInject)
         <*> forVariant rest
     _ -> pure []
 
-forTypeWithoutSplit ::
+forTypeObvious ::
     (UnifyGen m T.Type, UnifyGen m T.Row) =>
     UVarOf m # T.Type -> m (TypedTerm m)
-forTypeWithoutSplit t =
+forTypeObvious t =
     lookupBody t >>= forTypeUTermWithoutSplit <&> Ann (inferResult # t)
 
 forTypeUTermWithoutSplit ::
@@ -184,7 +184,7 @@ forTypeUTermWithoutSplit t =
         _ ->
             V.TypedLam "var"
             <$> (newUnbound <&> (inferResult #) <&> (`Ann` (_HCompose # Pruned)))
-            <*> forTypeWithoutSplit result
+            <*> forTypeObvious result
             <&> V.BLam
     _ -> V.BLeaf V.LHole & pure
 
@@ -248,7 +248,7 @@ fillHoles ::
     Ann a # V.Term ->
     PureInfer (V.Scope # UVar) (Ann a # V.Term)
 fillHoles mkPl getInferred (Ann pl (V.BLeaf V.LHole)) =
-    forTypeWithoutSplit (getInferred pl ^. inferResult)
+    forTypeObvious (getInferred pl ^. inferResult)
     <&> hflipped %~ hmap (const mkPl)
 fillHoles mkPl getInferred (Ann pl (V.BApp (V.App func arg))) =
     -- Dont fill in holes inside apply funcs. This may create redexes..
