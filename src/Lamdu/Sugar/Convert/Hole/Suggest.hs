@@ -30,6 +30,9 @@ import           Lamdu.Prelude
 -- | Term with unifiable type annotations
 type TypedTerm m = Ann (InferResult (UVarOf m)) # V.Term
 
+lookupBody :: Unify f t => UVarOf f # t -> f (Maybe (t # UVarOf f))
+lookupBody x = semiPruneLookup x <&> (^? _2 . _UTerm . uBody)
+
 -- | These are offered in fragments (not holes). They transform a term
 -- by wrapping it in a larger term where it appears once.
 termTransforms ::
@@ -39,8 +42,8 @@ termTransforms ::
     Ann a # V.Term ->
     StateT InferState [] (Ann a # V.Term)
 termTransforms srcScope mkPl getInferred src =
-    getInferred (src ^. hAnn) ^. inferResult & semiPruneLookup & liftInfer ()
-    <&> (^? _2 . _UTerm . uBody . T._TRecord)
+    getInferred (src ^. hAnn) ^. inferResult & lookupBody & liftInfer ()
+    <&> (^? Lens._Just . T._TRecord)
     >>=
     \case
     Just row | Lens.nullOf (hVal . V._BRecExtend) src ->
@@ -52,8 +55,8 @@ transformGetFields ::
     Ann a # V.Term -> UVar # T.Row ->
     StateT InferState [] (Ann a # V.Term)
 transformGetFields mkPl src row =
-    semiPruneLookup row & liftInfer ()
-    <&> (^? _2 . _UTerm . uBody . T._RExtend)
+    lookupBody row & liftInfer ()
+    <&> (^? Lens._Just . T._RExtend)
     >>=
     \case
     Nothing -> empty
@@ -144,12 +147,11 @@ forType ::
     (UnifyGen m T.Type, UnifyGen m T.Row) =>
     UVarOf m # T.Type -> m [TypedTerm m]
 forType t =
-    do
-        -- TODO: DSL for matching/deref'ing UVar structure
-        (_, typ) <- semiPruneLookup t
-        case typ ^? _UTerm . uBody . T._TVariant of
-            Nothing -> forTypeUTermWithoutSplit typ <&> Ann (inferResult # t) <&> (:[])
-            Just r -> forVariant r [V.BLeaf V.LHole] <&> Lens.mapped %~ Ann (inferResult # t)
+    -- TODO: DSL for matching/deref'ing UVar structure
+    lookupBody t
+    >>= \case
+    Just (T.TVariant r) -> forVariant r [V.BLeaf V.LHole] <&> Lens.mapped %~ Ann (inferResult # t)
+    typ -> forTypeUTermWithoutSplit typ <&> Ann (inferResult # t) <&> (:[])
 
 forVariant ::
     (UnifyGen m T.Type, UnifyGen m T.Row) =>
@@ -157,10 +159,10 @@ forVariant ::
     [V.Term # Ann (InferResult (UVarOf m))] ->
     m [V.Term # Ann (InferResult (UVarOf m))]
 forVariant r def =
-    semiPruneLookup r <&> (^? _2 . _UTerm . uBody . T._RExtend) >>=
+    lookupBody r >>=
     \case
-    Nothing -> pure def
-    Just extend -> forVariantExtend extend
+    Just (T.RExtend extend) -> forVariantExtend extend
+    _ -> pure def
 
 forVariantExtend ::
     (UnifyGen m T.Type, UnifyGen m T.Row) =>
@@ -175,19 +177,19 @@ forTypeWithoutSplit ::
     (UnifyGen m T.Type, UnifyGen m T.Row) =>
     UVarOf m # T.Type -> m (TypedTerm m)
 forTypeWithoutSplit t =
-    semiPruneLookup t <&> snd >>= forTypeUTermWithoutSplit <&> Ann (inferResult # t)
+    lookupBody t >>= forTypeUTermWithoutSplit <&> Ann (inferResult # t)
 
 forTypeUTermWithoutSplit ::
     (UnifyGen m T.Type, UnifyGen m T.Row) =>
-    UTerm (UVarOf m) # T.Type -> m (V.Term # Ann (InferResult (UVarOf m)))
+    Maybe (T.Type # UVarOf m) -> m (V.Term # Ann (InferResult (UVarOf m)))
 forTypeUTermWithoutSplit t =
-    case t ^? _UTerm . uBody of
+    case t of
     Just (T.TRecord row) -> suggestRecord row
     Just (T.TFun (FuncType param result)) ->
-        semiPruneLookup param <&> (^? _2 . _UTerm . uBody . T._TVariant) >>=
+        lookupBody param >>=
         \case
-        Just row -> suggestCaseWith row result
-        Nothing ->
+        Just (T.TVariant row) -> suggestCaseWith row result
+        _ ->
             V.TypedLam "var"
             <$> (newUnbound <&> (inferResult #) <&> (`Ann` (_HCompose # Pruned)))
             <*> forTypeWithoutSplit result
@@ -199,7 +201,7 @@ suggestRecord ::
     UVarOf m # T.Row ->
     m (V.Term # Ann (InferResult (UVarOf m)))
 suggestRecord r =
-    semiPruneLookup r <&> (^? _2 . _UTerm . uBody) >>=
+    lookupBody r >>=
     \case
     Just T.REmpty -> V.BLeaf V.LRecEmpty & pure
     Just (T.RExtend (RowExtend tag typ rest)) ->
@@ -214,7 +216,7 @@ suggestCaseWith ::
     UVarOf m # T.Row -> UVarOf m # T.Type ->
     m (V.Term # Ann (InferResult (UVarOf m)))
 suggestCaseWith variantType resultType =
-    semiPruneLookup variantType <&> (^? _2 . _UTerm . uBody) >>=
+    lookupBody variantType >>=
     \case
     Just T.REmpty -> V.BLeaf V.LAbsurd & pure
     Just (T.RExtend (RowExtend tag fieldType rest)) ->
@@ -239,13 +241,13 @@ suggestCaseWith variantType resultType =
 
 autoLambdas :: Unify m T.Type => UVarOf m # T.Type -> m (TypedTerm m)
 autoLambdas typ =
-    semiPruneLookup typ <&> (^? _2 . _UTerm . uBody . T._TFun) >>=
+    lookupBody typ >>=
     \case
-    Just result ->
+    Just (T.TFun result) ->
         autoLambdas (result ^. funcOut)
         <&> V.TypedLam "var" (Ann (inferResult # (result ^. funcIn)) (_HCompose # Pruned))
         <&> V.BLam
-    Nothing -> V.BLeaf V.LHole & pure
+    _ -> V.BLeaf V.LHole & pure
     <&> Ann (inferResult # typ)
 
 fillHoles ::
@@ -286,8 +288,7 @@ termTransformsWithModify _ _ _ v@(Ann pl0 (V.BInject (V.Inject tag (Ann pl1 (V.B
     pure (Ann pl0 (V.BInject (V.Inject tag (Ann pl1 (V.BLeaf V.LRecEmpty)))))
     <|> pure v
 termTransformsWithModify srcScope mkPl getInferred src =
-    getInferred (src ^. hAnn) ^. inferResult & semiPruneLookup & liftInfer ()
-    <&> (^? _2 . _UTerm . uBody)
+    getInferred (src ^. hAnn) ^. inferResult & lookupBody & liftInfer ()
     >>=
     \case
     Just T.TRecord{} | Lens.has ExprLens.valVar src ->
