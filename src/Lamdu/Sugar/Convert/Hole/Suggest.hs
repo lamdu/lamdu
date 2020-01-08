@@ -187,7 +187,7 @@ forTypeWithoutSplit t =
 forTypeUTermWithoutSplit ::
     (UnifyGen m T.Type, UnifyGen m T.Row) =>
     Maybe (T.Type # UVarOf m) -> m (Maybe (V.Term # Ann (InferResult (UVarOf m))))
-forTypeUTermWithoutSplit (Just (T.TRecord r)) = suggestRecord r
+forTypeUTermWithoutSplit (Just (T.TRecord r)) = forRecord r
 forTypeUTermWithoutSplit t = forTypeUTermObvious t
 
 forTypeUTermObvious ::
@@ -205,10 +205,10 @@ forTypeUTermObvious (Just (T.TFun (FuncType param result))) =
     <&> Just
 forTypeUTermObvious _ = pure Nothing
 
-suggestRecord ::
+forRecord ::
     (UnifyGen m T.Type, UnifyGen m T.Row) =>
     UVarOf m # T.Row -> m (Maybe (V.Term # Ann (InferResult (UVarOf m))))
-suggestRecord r =
+forRecord r =
     lookupBody r >>=
     \case
     Just T.REmpty -> V.BLeaf V.LRecEmpty & Just & pure
@@ -217,7 +217,7 @@ suggestRecord r =
         <$> autoLambdas typ
         <*> ( Ann
                 <$> (newTerm (T.TRecord rest) <&> (inferResult #))
-                <*> (suggestRecord rest <&> fromMaybe (V.BLeaf V.LHole))
+                <*> (forRecord rest <&> fromMaybe (V.BLeaf V.LHole))
             )
         <&> V.BRecExtend
         <&> Just
