@@ -151,7 +151,7 @@ forType t =
     lookupBody t
     >>= \case
     Just (T.TVariant r) -> forVariant r <&> Lens.mapped %~ Ann (inferResult # t)
-    typ -> forTypeUTermWithoutSplit typ <&> Ann (inferResult # t) <&> (:[])
+    typ -> forTypeUTermWithoutSplit typ <&> (^.. Lens._Just) <&> Lens.mapped %~ Ann (inferResult # t)
 
 forVariant ::
     (UnifyGen m T.Type, UnifyGen m T.Row) =>
@@ -169,14 +169,17 @@ forTypeObvious ::
     (UnifyGen m T.Type, UnifyGen m T.Row) =>
     UVarOf m # T.Type -> m (TypedTerm m)
 forTypeObvious t =
-    lookupBody t >>= forTypeUTermWithoutSplit <&> Ann (inferResult # t)
+    lookupBody t
+    >>= forTypeUTermWithoutSplit
+    <&> fromMaybe (V.BLeaf V.LHole)
+    <&> Ann (inferResult # t)
 
 forTypeUTermWithoutSplit ::
     (UnifyGen m T.Type, UnifyGen m T.Row) =>
-    Maybe (T.Type # UVarOf m) -> m (V.Term # Ann (InferResult (UVarOf m)))
+    Maybe (T.Type # UVarOf m) -> m (Maybe (V.Term # Ann (InferResult (UVarOf m))))
 forTypeUTermWithoutSplit t =
     case t of
-    Just (T.TRecord row) -> suggestRecord row
+    Just (T.TRecord row) -> suggestRecord row <&> Just
     Just (T.TFun (FuncType param result)) ->
         lookupBody param >>=
         \case
@@ -186,7 +189,8 @@ forTypeUTermWithoutSplit t =
             <$> (newUnbound <&> (inferResult #) <&> (`Ann` (_HCompose # Pruned)))
             <*> forTypeObvious result
             <&> V.BLam
-    _ -> V.BLeaf V.LHole & pure
+        <&> Just
+    _ -> pure Nothing
 
 suggestRecord ::
     (UnifyGen m T.Type, UnifyGen m T.Row) =>
