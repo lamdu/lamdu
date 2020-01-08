@@ -61,6 +61,7 @@ import qualified Lamdu.Expr.Load as Load
 import           Lamdu.Sugar.Annotations (neverShowAnnotations, alwaysShowAnnotations)
 import qualified Lamdu.Sugar.Config as Config
 import           Lamdu.Sugar.Convert.Binder (convertBinder)
+import qualified Lamdu.Sugar.Convert.Completions as Completions
 import           Lamdu.Sugar.Convert.Expression.Actions (addActions, convertPayload)
 import           Lamdu.Sugar.Convert.Hole.ResultScore (resultScore)
 import qualified Lamdu.Sugar.Convert.Hole.Suggest as Suggest
@@ -140,7 +141,7 @@ mkHoleSuggesteds ::
     [(Val (), HoleOption InternalName (T m) (T m))]
 mkHoleSuggesteds sugarContext resultProcessor holePl =
     holePl ^. Input.inferredTypeUVar
-    & Suggest.forType
+    & Completions.forType
     & runPureInfer (holePl ^. Input.inferScope) inferCtx
 
     -- TODO: Change ConvertM to be stateful rather than reader on the

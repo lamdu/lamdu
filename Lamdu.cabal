@@ -410,6 +410,7 @@ Library
                   , Lamdu.Sugar.Convert.Binder.Redex
                   , Lamdu.Sugar.Convert.Binder.Types
                   , Lamdu.Sugar.Convert.Case
+                  , Lamdu.Sugar.Convert.Completions
                   , Lamdu.Sugar.Convert.Composite
                   , Lamdu.Sugar.Convert.DefExpr
                   , Lamdu.Sugar.Convert.DefExpr.OutdatedDefs
