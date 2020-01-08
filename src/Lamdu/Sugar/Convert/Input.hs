@@ -5,7 +5,7 @@ module Lamdu.Sugar.Convert.Input
     ( Payload(..)
         , varRefsOfLambda, entityId, inferRes, stored
         , evalResults, userData, localsInScope, inferScope
-        , inferredType
+        , inferredType, inferredTypeUVar
     , EvalResultsForExpr(..), eResults, eAppliesOfLam, emptyEvalResults
     , PreparePayloadInput(..), preparePayloads
     , SugarInput(..)
@@ -50,6 +50,9 @@ makeHTraversableAndBases ''Payload
 
 inferredType :: Lens' (Payload m a # V.Term) (Pure # Type)
 inferredType = inferRes . inferResult . Lens._1
+
+inferredTypeUVar :: Lens' (Payload m a # V.Term) (UVar # Type)
+inferredTypeUVar = inferRes . inferResult . Lens._2
 
 emptyEvalResults :: EvalResultsForExpr
 emptyEvalResults = EvalResultsForExpr Map.empty Map.empty

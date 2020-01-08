@@ -139,7 +139,7 @@ mkHoleSuggesteds ::
     Input.Payload m a # V.Term ->
     [(Val (), HoleOption InternalName (T m) (T m))]
 mkHoleSuggesteds sugarContext resultProcessor holePl =
-    holePl ^. Input.inferRes . inferResult . Lens._2
+    holePl ^. Input.inferredTypeUVar
     & Suggest.forType
     & runPureInfer (holePl ^. Input.inferScope) inferCtx
 
@@ -540,7 +540,7 @@ toScoredResults emptyPl preConversion sugarContext holePl act =
         toStateT .
         detachValIfNeeded
             (Const emptyPl :*: WriteNew)
-            (holePl ^. Input.inferRes. inferResult . Lens._2)
+            (holePl ^. Input.inferredTypeUVar)
     & (`runStateT` (sugarContext ^. ConvertM.scInferContext))
     <&> \((newDeps, x), inferCtx) ->
     let newSugarContext =

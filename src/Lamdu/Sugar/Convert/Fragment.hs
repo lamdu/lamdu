@@ -18,8 +18,8 @@ import           Control.Monad.Trans.Maybe (MaybeT(..))
 import qualified Data.List.Class as ListClass
 import qualified Data.Property as Property
 import           Hyper
-import           Hyper.Class.Infer.InferOf (InferOfConstraint)
-import           Hyper.Infer
+import           Hyper.Class.Infer.InferOf (InferOfConstraint, inferOfConstraint)
+import           Hyper.Infer (InferResult(..), inferResult, inferUVarsApplyBindings)
 import           Hyper.Type.AST.FuncType (FuncType(..))
 import           Hyper.Unify (Unify(..), BindingDict(..), unify)
 import           Hyper.Unify.Apply (applyBindings)
@@ -144,8 +144,8 @@ convertAppliedHole posInfo app@(V.App funcI argI) exprPl argS =
         guard (Lens.has ExprLens.valHole funcI)
         do
             isTypeMatch <-
-                checkTypeMatch (argI ^. hAnn . Input.inferRes . inferResult . Lens._2)
-                (exprPl ^. Input.inferRes . inferResult . Lens._2)
+                checkTypeMatch (argI ^. hAnn . Input.inferredTypeUVar)
+                (exprPl ^. Input.inferredTypeUVar)
             postProcess <- ConvertM.postProcessAssert
             sugarContext <- Lens.view id
             options <-
@@ -252,7 +252,7 @@ holeResultsEmplaceFragment rawFragmentExpr x =
         onFragmentPayload pl =
             (Const IsFragment :*: ExistingRef (pl ^. Input.stored . iref))
             :*: (pl ^. Input.inferRes & hflipped %~ hmap (const (^. _2)))
-        fragmentType = rawFragmentExpr ^. hAnn . Input.inferRes . inferResult . _2
+        fragmentType = rawFragmentExpr ^. hAnn . Input.inferredTypeUVar
 
 data IsFragment = IsFragment | NotFragment
 
@@ -371,7 +371,7 @@ mkOptionFromFragment sugarContext exprPl x =
         depsProp = sugarContext ^. ConvertM.scFrozenDeps
         (result, inferCtx) =
             runState
-            (mkResultValFragment (exprPl ^. Input.inferRes . inferResult . _2) x)
+            (mkResultValFragment (exprPl ^. Input.inferredTypeUVar) x)
             (sugarContext ^. ConvertM.scInferContext)
         resolved =
             result & hflipped %~ hmap (const ((Const () :*:) . (^. _2)))
