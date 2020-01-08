@@ -150,28 +150,20 @@ forType t =
     -- TODO: DSL for matching/deref'ing UVar structure
     lookupBody t
     >>= \case
-    Just (T.TVariant r) -> forVariant r [V.BLeaf V.LHole] <&> Lens.mapped %~ Ann (inferResult # t)
+    Just (T.TVariant r) -> forVariant r <&> Lens.mapped %~ Ann (inferResult # t)
     typ -> forTypeUTermWithoutSplit typ <&> Ann (inferResult # t) <&> (:[])
 
 forVariant ::
     (UnifyGen m T.Type, UnifyGen m T.Row) =>
-    UVarOf m # T.Row ->
-    [V.Term # Ann (InferResult (UVarOf m))] ->
-    m [V.Term # Ann (InferResult (UVarOf m))]
-forVariant r def =
+    UVarOf m # T.Row -> m [V.Term # Ann (InferResult (UVarOf m))]
+forVariant r =
     lookupBody r >>=
     \case
-    Just (T.RExtend extend) -> forVariantExtend extend
-    _ -> pure def
-
-forVariantExtend ::
-    (UnifyGen m T.Type, UnifyGen m T.Row) =>
-    RowExtend T.Tag T.Type T.Row # UVarOf m ->
-    m [V.Term # Ann (InferResult (UVarOf m))]
-forVariantExtend (RowExtend tag typ rest) =
-    (:)
-    <$> (forTypeWithoutSplit typ <&> V.Inject tag <&> V.BInject)
-    <*> forVariant rest []
+    Just (T.RExtend (RowExtend tag typ rest)) ->
+        (:)
+        <$> (forTypeWithoutSplit typ <&> V.Inject tag <&> V.BInject)
+        <*> forVariant rest
+    _ -> pure []
 
 forTypeWithoutSplit ::
     (UnifyGen m T.Type, UnifyGen m T.Row) =>
