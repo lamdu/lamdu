@@ -115,6 +115,7 @@ Test-Suite Tests
                , Tests.Readme
                , Tests.Stdlib
                , Tests.Sugar
+               , Tests.Suggest
                , Tests.WidgetGlue
   build-depends:
       base, HUnit, test-framework, test-framework-hunit, test-framework-quickcheck2
