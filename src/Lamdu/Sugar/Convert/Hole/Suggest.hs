@@ -150,8 +150,9 @@ forType t =
     -- TODO: DSL for matching/deref'ing UVar structure
     lookupBody t
     >>= \case
-    Just (T.TVariant r) -> forVariant r <&> Lens.mapped %~ Ann (inferResult # t)
-    typ -> forTypeUTermWithoutSplit typ <&> (^.. Lens._Just) <&> Lens.mapped %~ Ann (inferResult # t)
+    Just (T.TVariant r) -> forVariant r
+    typ -> forTypeUTermWithoutSplit typ <&> (^.. Lens._Just)
+    <&> Lens.mapped %~ Ann (inferResult # t)
 
 forVariant ::
     (UnifyGen m T.Type, UnifyGen m T.Row) =>
