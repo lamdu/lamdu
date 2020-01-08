@@ -130,6 +130,4 @@ suggestCaseWith variantType resultType =
         <&> V.BCase
         where
             mkCaseType which = FuncType which resultType & T.TFun & newTerm
-    _ ->
-        -- TODO: Maybe this should be a lambda, like a TFun from non-variant
-        V.BLeaf V.LHole & pure
+    _ -> suggestLam resultType
