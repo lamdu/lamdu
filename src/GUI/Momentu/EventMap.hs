@@ -191,8 +191,7 @@ overrides
     where
         filteredYMap = filterByKey (not . isKeyConflict) yMap
         isKeyConflict (KeyEvent _ (ModKey mods key))
-            | isCharMods mods =
-                maybe False (isCharConflict x) $ GLFWUtils.charOfKey key
+            | isCharMods mods = any (isCharConflict x) (GLFWUtils.charOfKey key)
             | otherwise = False
         filteredYCharGroups =
             filterCharGroups (not . isCharConflict x) yCharGroups

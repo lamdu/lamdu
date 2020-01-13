@@ -170,7 +170,7 @@ makeOptions tagRefReplace mkPickResult ctx
                 & GuiM.im
             let nonFuzzyResults =
                     results ^? Lens.ix 0 . Lens._1 . Fuzzy.isFuzzy
-                    & maybe False not
+                    & any not
             env <- Lens.view id
             let maybeAddNewTagOption
                     | nonFuzzyResults || not (Name.isValidText searchTerm) = id
