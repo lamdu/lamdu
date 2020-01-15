@@ -32,7 +32,7 @@ import qualified Data.Set as Set
 import qualified Data.UUID as UUID
 import           Hyper
 import           Hyper.Infer
-import           Hyper.Recurse (wrap, unwrap)
+import           Hyper.Recurse (Recursive(..), wrap, unwrap)
 import           Hyper.Type.AST.FuncType (FuncType(..))
 import           Hyper.Type.AST.Nominal (NominalDecl, nScheme)
 import           Hyper.Type.AST.Row (freExtends)
@@ -598,19 +598,19 @@ randomizeNonStoredRefs ::
     ByteString ->
     Random.StdGen ->
     Ann (ExprIRef.Write m :*: a) # V.Term ->
-    Ann (ExprIRef.Write m :*: a) # V.Term
+    Ann (F (IRef m) :*: a) # V.Term
 randomizeNonStoredRefs uniqueIdent gen v =
     evalState (hflipped (htraverse (const (_1 f))) v) gen
     where
-        f :: Write m # h -> State Random.StdGen (Write m # h)
+        f :: Write m # h -> State Random.StdGen (F (IRef m) # h)
         f ExprIRef.WriteNew =
             state random
             <&> UUID.toByteString <&> BS.strictify
             <&> xorBS uniqueIdent
             <&> BS.lazify <&> UUID.fromByteString
             <&> fromMaybe (error "cant parse UUID")
-            <&> IRef.unsafeFromUUID <&> F <&> ExprIRef.ExistingRef
-        f (ExprIRef.ExistingRef x) = ExprIRef.ExistingRef x & pure
+            <&> IRef.unsafeFromUUID <&> F
+        f (ExprIRef.ExistingRef x) = pure x
 
 writeExprMStored ::
     Monad m =>
@@ -618,11 +618,20 @@ writeExprMStored ::
     Ann (ExprIRef.Write m :*: a) # V.Term ->
     T m (Ann (F (IRef m) :*: a) # V.Term)
 writeExprMStored exprIRef exprMStorePoint =
-    exprMStorePoint
-    & randomizeNonStoredParamIds genParamIds
-    & randomizeNonStoredRefs uniqueIdent genRefs
-    & ExprIRef.writeRecursively
+    result <$ writeAll result
     where
+        result =
+            randomizeNonStoredParamIds genParamIds exprMStorePoint
+            & randomizeNonStoredRefs uniqueIdent genRefs
+        writeAll ::
+            forall m t a.
+            ExprIRef.HStore m t =>
+            Ann (F (IRef m) :*: a) # t -> T m ()
+        writeAll (Ann (dst :*: _) body) =
+            withDict (recurse (Proxy @(ExprIRef.HStore m t))) $
+            do
+                ExprIRef.writeValI dst (hmap (const (^. hAnn . _1)) body)
+                htraverse_ (Proxy @(ExprIRef.HStore m) #> writeAll) body
         uniqueIdent =
             Binary.encode
             ( exprMStorePoint & hflipped %~ hmap (const (^. _1))
