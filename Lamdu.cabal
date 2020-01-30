@@ -187,6 +187,7 @@ Library
 
   exposed-modules:  Control.Concurrent.Extended
                   , Control.Lens.Extended
+                  , Control.Monad.Once
                   , Control.Monad.Trans.Except.Extended
                   , Control.Monad.Trans.FastRWS
                   , Control.Monad.Trans.FastWriter
