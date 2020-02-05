@@ -8,12 +8,12 @@ source-repository-package
 source-repository-package
     type: git
     location: https://github.com/lamdu/lamdu-calculus
-    tag: 012005ac54ee0ac462ff328db4a8c3cebc010d96
+    tag: d18945135657961614c58ac3a38028d54ab4ef1d
 
 source-repository-package
     type: git
     location: https://github.com/lamdu/hypertypes
-    tag: 473c92a2562a38926ac55b118d04f3bc4948a9dd
+    tag: 20e18791b67184da0e52c39ccb590610dfc7c377
 
 source-repository-package
     type: git
