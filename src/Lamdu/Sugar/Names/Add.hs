@@ -477,7 +477,7 @@ p2tagName tagsBelow aName texts isAutoGen isOp =
 p2globalAnon :: UUID -> Pass2MakeNames i o Name
 p2globalAnon uuid =
     Lens.view (p2TagSuffixes . Lens.at (TaggedVarId uuid anonTag))
-    <&> maybe (Unnamed 0) Unnamed
+    <&> Unnamed . fromMaybe 0
 
 p2nameConvertor :: Walk.NameType -> P1Name -> Pass2MakeNames i o Name
 p2nameConvertor nameType (P1Name (P1TagName aName isOp texts) tagsBelow isAutoGen) =
