@@ -108,11 +108,11 @@ testChangeParam =
     & testCase "change-param"
     where
         action workArea =
-            "new" &
             workArea ^?!
             replBody . _BodySimpleApply . V.appFunc .
             hVal . _BodySimpleApply . V.appArg .
             hVal . lamFirstParam . _2 . piTag . tagRefReplace . tsNewTag
+            >>= (^. toPick)
 
 -- | Test for issue #373
 -- https://trello.com/c/1kP4By8j/373-re-ordering-let-items-results-in-inference-error

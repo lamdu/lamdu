@@ -11,7 +11,6 @@ import           Data.List.Extended (insertAt, removeAt)
 import           Data.Property (Property(Property))
 import qualified Data.Property as Property
 import qualified Data.Set as Set
-import qualified GUI.Momentu.Direction as Dir
 import           Hyper
 import           Hyper.Class.Infer.InferOf
 import           Hyper.Class.Nodes
@@ -31,7 +30,6 @@ import           Lamdu.Eval.Results.Process (addTypes)
 import           Lamdu.Expr.IRef (DefI, HRef)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Load as ExprLoad
-import           Lamdu.I18N.LangId (LangId)
 import           Lamdu.Sugar.Annotations (ShowAnnotation, MarkAnnotations, markNodeAnnotations, alwaysShowAnnotations)
 import           Lamdu.Sugar.Config (Config, showAllAnnotations)
 import           Lamdu.Sugar.Convert.Binder (convertBinder)
@@ -99,7 +97,7 @@ assertInferSuccess =
     either (error . ("Type inference failed: " ++) . show . pPrint) id
 
 convertInferDefExpr ::
-    ( HasCallStack, Monad m, Has LangId env, Has Dir.Layout env
+    ( HasCallStack, Monad m
     , Has Debug.Monitors env
     , Has (CurAndPrev EvalResults) env
     , Has Config env, Has Cache.Functions env, Has Annotations.Mode env
@@ -136,8 +134,6 @@ convertInferDefExpr env cp defType defExpr defI =
                     Property (defExpr ^. Definition.exprFrozenDeps) setFrozenDeps
                 , _scAnnotationsMode = env ^. has
                 , scConvertSubexpression = ConvertExpr.convert
-                , _scLanguageIdentifier = env ^. has
-                , _scLanguageDir = env ^. has
                 }
         ConvertDefExpr.convert
             defType (defExpr & Definition.expr .~ valInferred) defI
@@ -159,7 +155,7 @@ convertInferDefExpr env cp defType defExpr defI =
             >>= Transaction.writeIRef defI
 
 convertDefBody ::
-    ( HasCallStack, Monad m, Has LangId env, Has Dir.Layout env
+    ( HasCallStack, Monad m
     , Has Debug.Monitors env
     , Has (CurAndPrev EvalResults) env
     , Has Config env, Has Cache.Functions env, Has Annotations.Mode env
@@ -186,8 +182,6 @@ markAnnotations config
 
 convertRepl ::
     ( HasCallStack, Monad m
-    , Has LangId env
-    , Has Dir.Layout env
     , Has Debug.Monitors env
     , Has (CurAndPrev EvalResults) env
     , Has Config env, Has Cache.Functions env, Has Annotations.Mode env
@@ -220,8 +214,6 @@ convertRepl env cp =
                     Property (defExpr ^. Definition.exprFrozenDeps) setFrozenDeps
                 , _scAnnotationsMode = env ^. has
                 , scConvertSubexpression = ConvertExpr.convert
-                , _scLanguageIdentifier = env ^. has
-                , _scLanguageDir = env ^. has
                 }
         let typ = valInferred ^. hAnn . Input.inferredType
         nomsMap <-
@@ -271,7 +263,7 @@ convertRepl env cp =
             >>= (`Property.pureModify` (Definition.exprFrozenDeps .~ deps))
 
 convertPaneBody ::
-    ( Monad m, Has LangId env, Has Dir.Layout env
+    ( Monad m
     , Has Debug.Monitors env
     , Has (CurAndPrev EvalResults) env
     , Has Config env, Has Cache.Functions env, Has Annotations.Mode env
@@ -302,7 +294,7 @@ convertPaneBody env cp (Anchors.PaneDefinition defI) =
         bodyS <-
             ExprLoad.def defI <&> Definition.defPayload .~ defI
             >>= convertDefBody env cp
-        tag <- Anchors.tags cp & ConvertTag.taggedEntityWith env cp defVar
+        tag <- Anchors.tags cp & ConvertTag.taggedEntityWith cp defVar
         defState <- Anchors.assocDefinitionState defI ^. Property.mkProperty
         OrderTags.orderDef Definition
             { _drEntityId = EntityId.ofIRef defI
@@ -319,7 +311,7 @@ paneEntityId (Anchors.PaneDefinition defI) = EntityId.ofIRef defI
 paneEntityId (Anchors.PaneTag tag) = EntityId.ofTagPane tag
 
 convertPane ::
-    ( Monad m, Has LangId env, Has Dir.Layout env
+    ( Monad m
     , Has Debug.Monitors env
     , Has (CurAndPrev EvalResults) env
     , Has Config env, Has Cache.Functions env, Has Annotations.Mode env
@@ -360,7 +352,7 @@ convertPane env cp replEntityId (Property panes setPanes) i pane =
             | otherwise = Nothing
 
 loadPanes ::
-    ( Monad m, Has LangId env, Has Dir.Layout env
+    ( Monad m
     , Has Debug.Monitors env
     , Has (CurAndPrev EvalResults) env
     , Has Config env, Has Cache.Functions env, Has Annotations.Mode env
@@ -376,7 +368,7 @@ loadPanes env cp replEntityId =
             & Lens.itraversed %%@~ convertPane env cp replEntityId prop
 
 loadWorkArea ::
-    ( HasCallStack, Monad m, Has LangId env, Has Dir.Layout env
+    ( HasCallStack, Monad m
     , Has Debug.Monitors env
     , Has (CurAndPrev EvalResults) env
     , Has Config env, Has Cache.Functions env, Has Annotations.Mode env

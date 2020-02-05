@@ -55,14 +55,14 @@ defRef var tag =
     }
 
 node ::
-    h # Ann (Const (Sugar.Payload name Identity Unit ())) ->
-    Annotated (Sugar.Payload name Identity Unit ()) h
+    h # Ann (Const (Sugar.Payload InternalName Identity Unit ())) ->
+    Annotated (Sugar.Payload InternalName Identity Unit ()) h
 node = Const payload & Ann
 
 labeledApplyFunc ::
-    Sugar.BinderVarRef name Unit ->
-    Annotated (Sugar.Payload name Identity Unit ())
-    (Const (Sugar.BinderVarRef name Unit))
+    Sugar.BinderVarRef InternalName Unit ->
+    Annotated (Sugar.Payload InternalName Identity Unit ())
+    (Const (Sugar.BinderVarRef InternalName Unit))
 labeledApplyFunc = node . Const
 
 type Infix2 = Expr -> Expr -> Expr
@@ -211,8 +211,8 @@ binderExpr ::
 binderExpr params body = funcExpr params body & Sugar.BodyFunction & node
 
 expr ::
-    Sugar.Body name Identity Unit # Ann (Const (Sugar.Payload name Identity Unit ())) ->
-    Sugar.Expression name Identity Unit (Sugar.Payload name Identity Unit ())
+    Sugar.Body InternalName Identity Unit # Ann (Const (Sugar.Payload InternalName Identity Unit ())) ->
+    Sugar.Expression InternalName Identity Unit (Sugar.Payload InternalName Identity Unit ())
 expr = node
 
 numType :: Annotated Sugar.EntityId (Sugar.Type InternalName)
@@ -220,7 +220,7 @@ numType =
     Sugar.TInst (Sugar.TId (taggedEntityName "numTid" "num") "num") mempty
     & Ann (Const "dummy")
 
-payload :: Sugar.Payload name Identity Unit ()
+payload :: Sugar.Payload InternalName Identity Unit ()
 payload =
     Sugar.Payload
     { Sugar._plAnnotation = Sugar.AnnotationNone
@@ -230,7 +230,7 @@ payload =
     , Sugar._plData = ()
     }
 
-nodeActions :: Sugar.NodeActions name Identity Unit
+nodeActions :: Sugar.NodeActions InternalName Identity Unit
 nodeActions =
     Sugar.NodeActions
     { Sugar._detach = Sugar.DetachAction Unit
@@ -249,11 +249,19 @@ taggedEntityName ctx tag =
     , _inTag = tag
     }
 
-tagRefReplace :: Sugar.TagReplace name Identity Unit ()
+tagRefReplace :: Sugar.TagReplace InternalName Identity Unit ()
 tagRefReplace =
     Sugar.TagReplace
     { Sugar._tsOptions = pure []
-    , Sugar._tsNewTag = const Unit
+    , Sugar._tsNewTag =
+        pure Sugar.TagOption
+        { Sugar._toInfo = Sugar.Tag
+            { Sugar._tagName = taggedEntityName "newTag" "newTag"
+            , Sugar._tagInstance = "newTag"
+            , Sugar._tagVal = "newTag"
+            }
+        , Sugar._toPick = Unit
+        }
     , Sugar._tsAnon = Nothing
     }
 

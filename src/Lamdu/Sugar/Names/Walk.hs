@@ -272,10 +272,15 @@ toTagReplace ::
     MonadNaming m =>
     TagReplace (OldName m) (IM m) o a ->
     m (TagReplace (NewName m) (IM m) o a)
-toTagReplace t =
-    opRun
+toTagReplace (TagReplace opts new anon) =
+    (,) <$> opRun <*> opRun
     <&>
-    \run -> t & tsOptions %~ (>>= run . (traverse . toInfo) (toTagOf Tag))
+    \(run0, run1) ->
+    TagReplace
+    { _tsOptions = opts >>= run0 . (traverse . toInfo) (toTagOf Tag)
+    , _tsNewTag = new >>= run1 . toInfo (toTagOf Tag)
+    , _tsAnon = anon
+    }
 
 toTagRefOf ::
     MonadNaming m =>

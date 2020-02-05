@@ -213,7 +213,7 @@ makeAltsWidget mActiveTag alts punned addAlt altsId =
             altWidgtes -> taggedList ?? altWidgtes
 
 makeAddAltRow ::
-    ( Monad i, Applicative o
+    ( Monad i, Monad o
     , Has (Texts.Name Text) env
     , Has (Texts.CodeUI Text) env
     , Glue.HasTexts env

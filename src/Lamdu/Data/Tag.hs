@@ -89,8 +89,9 @@ getTagName env tag =
     UniversalSymbol x -> (IsAnOperator, TextsInLang x Nothing Nothing)
     DirectionalSymbol (DirOp l r) ->
         case env ^. has of
-        LeftToRight -> opOrName l
-        RightToLeft -> opOrName r
+        LeftToRight -> l
+        RightToLeft -> r
+        & opOrName
     where
         opOrName x
             | x == mempty = (NotAnOperator, n) -- No op for this direction

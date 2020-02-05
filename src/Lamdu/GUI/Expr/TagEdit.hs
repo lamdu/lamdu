@@ -11,6 +11,7 @@ import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
 import qualified Data.Char as Char
 import           Data.MRUMemo (memo)
+import qualified Data.Property as Property
 import qualified Data.Text as Text
 import           GUI.Momentu.Align (WithTextPos, TextWidget)
 import qualified GUI.Momentu.Align as Align
@@ -28,7 +29,6 @@ import           GUI.Momentu.View (View)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Menu as Menu
 import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
-import           GUI.Momentu.Widgets.Spacer (HasStdSpacing)
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
 import qualified GUI.Momentu.Widgets.TextView as TextView
@@ -88,38 +88,44 @@ makePickEventMap action =
         )
 
 makeNewTag ::
-    Functor o =>
-    Text -> Sugar.TagReplace Name i o a ->
-    (EntityId -> a -> b) -> o b
-makeNewTag searchTerm tagRefReplace mkPickResult =
-    (tagRefReplace ^. Sugar.tsNewTag) searchTerm <&> uncurry mkPickResult
+    (Monad i, Monad o) =>
+    GuiM env i o
+    (Text -> Sugar.TagReplace Name i o a -> (EntityId -> a -> b) -> o b)
+makeNewTag =
+    (,) <$> GuiM.iom <*> GuiM.assocTagName
+    <&> \(GuiM.IOM iom, assocTagName) searchTerm tagRefReplace mkPickResult ->
+    do
+        tagOpt <- tagRefReplace ^. Sugar.tsNewTag & iom
+        let tag = tagOpt ^. Sugar.toInfo
+        Property.setP (assocTagName (tag ^. Sugar.tagVal)) searchTerm
+        tagOpt ^. Sugar.toPick <&> mkPickResult (tag ^. Sugar.tagInstance)
 
 makeNewTagPreEvent ::
-    (MonadReader env m, Has (Texts.CodeUI Text) env, Functor o) =>
-    m
+    (Has (Texts.CodeUI Text) env, Monad i, Monad o) =>
+    GuiM env i o
     ( Text -> Sugar.TagReplace Name i o a -> (EntityId -> a -> r) ->
         Maybe (Widget.PreEvent (o r))
     )
 makeNewTagPreEvent =
-    Lens.view (has . Texts.newName)
-    <&> \newNameText searchTerm tagRefReplace mkPickResult ->
+    (,) <$> Lens.view (has . Texts.newName) <*> makeNewTag
+    <&> \(newNameText, newTag) searchTerm tagRefReplace mkPickResult ->
     if Text.null searchTerm
     then Nothing
     else
         Just Widget.PreEvent
         { Widget._pDesc = newNameText
-        , Widget._pAction = makeNewTag searchTerm tagRefReplace mkPickResult
+        , Widget._pAction = newTag searchTerm tagRefReplace mkPickResult
         , Widget._pTextRemainder = ""
         }
 
 makeAddNewTag ::
-    ( MonadReader menv m, Applicative o, MonadReader env f
+    ( Monad i, Monad o, MonadReader env f
     , GuiState.HasCursor env, Has Theme env
     , Has TextView.Style env, Element.HasAnimIdPrefix env, Has Dir.Layout env
     , Has (Texts.CodeUI Text) env
     , Has (Texts.CodeUI Text) menv
     ) =>
-    m
+    GuiM menv i o
     ( Sugar.TagReplace Name i o a -> (EntityId -> a -> Menu.PickResult) ->
         SearchMenu.ResultsContext -> Maybe (Menu.Option f o)
     )
@@ -149,7 +155,7 @@ fuzzyMaker :: [(Text, Int)] -> Fuzzy (Set Int)
 fuzzyMaker = memo Fuzzy.make
 
 makeOptions ::
-    ( Monad i, Applicative o, MonadReader menv m
+    ( Monad i, Monad o, MonadReader menv m
     , GuiState.HasCursor menv, Has Theme menv, Has TextView.Style menv
     , Element.HasAnimIdPrefix menv, Glue.HasTexts menv
     , Has (Texts.Name Text) menv
@@ -224,22 +230,22 @@ allowedSearchTerm :: Text -> Bool
 allowedSearchTerm = Name.isValidText
 
 makeHoleSearchTerm ::
-    ( MonadReader env m, Applicative o
-    , Glue.HasTexts env, TextEdit.Deps env, SearchMenu.HasTexts env
-    , Has (Texts.CodeUI Text) env, Has Hover.Style env
-    , Has Theme env, Has Config env, GuiState.HasState env
-    , HasStdSpacing env, Element.HasAnimIdPrefix env
+    ( Monad i, Monad o
+    , TextEdit.HasTexts env
+    , SearchMenu.HasTexts env
+    , Has (Texts.CodeUI Text) env
     ) =>
     Sugar.TagReplace Name i o a ->
     (EntityId -> a -> Menu.PickResult) -> Widget.Id ->
-    m (SearchMenu.Term o)
+    GuiM env i o (SearchMenu.Term o)
 makeHoleSearchTerm tagRefReplace mkPickResult holeId =
     do
         searchTerm <- SearchMenu.readSearchTerm holeId
         let allowNewTag = Name.isValidText searchTerm
+        newTag <- makeNewTag
         newTagEventMap <-
             if allowNewTag
-            then makeNewTag searchTerm tagRefReplace mkPickResult & makePickEventMap
+            then newTag searchTerm tagRefReplace mkPickResult & makePickEventMap
             else pure mempty
         newTagPreEvent <- makeNewTagPreEvent
         let newTagPreEvents =
@@ -283,7 +289,7 @@ makeHoleSearchTerm tagRefReplace mkPickResult holeId =
             else pure term
 
 makeTagHoleEdit ::
-    ( Monad i, Applicative o
+    ( Monad i, Monad o
     , Has (Texts.Name Text) env
     , Has (Texts.CodeUI Text) env
     , Glue.HasTexts env
@@ -318,7 +324,7 @@ data TagRefEditType
     deriving (Eq)
 
 makeTagRefEditWith ::
-    ( Monad i, Applicative o, MonadReader nenv n
+    ( Monad i, Monad o, MonadReader nenv n
     , GuiState.HasCursor nenv, Has TextView.Style nenv, Has (Texts.Name Text) nenv
     , Element.HasAnimIdPrefix nenv, Has Theme nenv, Glue.HasTexts nenv
     , Glue.HasTexts env, TextEdit.HasTexts env, SearchMenu.HasTexts env
@@ -422,7 +428,7 @@ addParamId :: Widget.Id -> Widget.Id
 addParamId = (`Widget.joinId` ["add param"])
 
 makeLHSTag ::
-    ( Monad i, Applicative o
+    ( Monad i, Monad o
     , Glue.HasTexts env, TextEdit.HasTexts env, SearchMenu.HasTexts env
     , Has (Texts.CodeUI Text) env
     , Has (Texts.Name Text) env
@@ -490,7 +496,7 @@ makeArgTag name tagInstance =
         animId = WidgetIds.fromEntityId tagInstance & Widget.toAnimId
 
 makeBinderTagEdit ::
-    ( Monad i, Applicative o
+    ( Monad i, Monad o
     , Glue.HasTexts env
     , TextEdit.HasTexts env
     , SearchMenu.HasTexts env

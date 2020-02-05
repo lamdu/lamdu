@@ -22,6 +22,7 @@ import qualified GUI.Momentu.Widget.Id as WidgetId
 import qualified Graphics.UI.GLFW as GLFW
 import           Lamdu.Data.Db.Layout (ViewM)
 import qualified Lamdu.Data.Db.Layout as DbLayout
+import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.GUI.CodeEdit as CodeEdit
 import qualified Lamdu.GUI.Expr as ExpressionEdit
 import qualified Lamdu.GUI.Expr.BinderEdit as BinderEdit
@@ -75,6 +76,7 @@ makeGui afterDoc env =
         workArea <- convertWorkArea env
         let repl = workArea ^. Sugar.waRepl . Sugar.replExpr
         let replExprId = repl ^. SugarLens.binderResultExpr & WidgetIds.fromExprPayload
+        let assocTagName = DataOps.assocTagName env
         gui <-
             do
                 replGui <-
@@ -85,7 +87,7 @@ makeGui afterDoc env =
                     Sugar.waPanes . traverse
                     & traverse CodeEdit.makePaneBodyEdit
                 Responsive.vbox ?? (replGui : paneGuis)
-            & GuiM.run ExpressionEdit.make BinderEdit.make DbLayout.guiAnchors env id
+            & GuiM.run assocTagName ExpressionEdit.make BinderEdit.make DbLayout.guiAnchors env id
         if Lens.has wideFocused gui
             then pure gui
             else error ("Red cursor after " ++ afterDoc ++ ": " ++ show (env ^. cursor))

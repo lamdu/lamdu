@@ -17,6 +17,7 @@ module Lamdu.GUI.ExpressionGui.Monad
     , IOM(..), iom
 
     , makeSubexpression, makeBinder
+    , assocTagName
 
     , GuiM, run
     ) where
@@ -27,6 +28,7 @@ import qualified Control.Monad.Reader as Reader
 import           Control.Monad.Transaction (MonadTransaction(..))
 import           Data.CurAndPrev (CurAndPrev)
 import qualified Data.Monoid as Monoid
+import           Data.Property (MkProperty')
 import qualified Data.Property as Property
 import           Data.Vector.Vector2 (Vector2)
 import           GUI.Momentu.Align (WithTextPos)
@@ -48,6 +50,7 @@ import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
 import qualified GUI.Momentu.Widgets.TextView as TextView
 import           Hyper.Combinator.Ann (Annotated)
+import qualified Lamdu.Calc.Type as T
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
 import           Lamdu.Config.Theme (Theme)
@@ -75,6 +78,7 @@ data Askable env i o = Askable
     , _aSettings :: Settings
     , _aConfig :: Config
     , _aTheme :: Theme
+    , _aAssocTagName :: T.Tag -> MkProperty' o Text
     , _aMakeSubexpression :: ExprGui.SugarExpr i o -> GuiM env i o (Responsive o)
     , _aMakeBinder ::
         Annotated (Sugar.Payload Name i o ExprGui.Payload)
@@ -130,6 +134,9 @@ iom = Lens.view id <&> \askable -> IOM (aIom askable)
 
 readGuiAnchors :: MonadReader (Askable env i o) m => m (Anchors.GuiAnchors i o)
 readGuiAnchors = Lens.view aGuiAnchors
+
+assocTagName :: MonadReader (Askable env i o) m => m (T.Tag -> MkProperty' o Text)
+assocTagName = Lens.view aAssocTagName
 
 mkPrejumpPosSaver :: (Monad i, Monad o) => GuiM env i o (o ())
 mkPrejumpPosSaver =
@@ -200,16 +207,18 @@ run ::
     , Has Config env, Has Theme env
     , Has Settings env, HasStyle env
     ) =>
+    (T.Tag -> MkProperty' o Text) ->
     (ExprGui.SugarExpr i o -> GuiM env i o (Responsive o)) ->
     (Annotated (Sugar.Payload Name i o ExprGui.Payload)
         (Sugar.Binder Name i o)
         -> GuiM env i o (Responsive o)) ->
     Anchors.GuiAnchors i o ->
     env -> (forall x. i x -> o x) -> GuiM env i o a -> i a
-run makeSubexpr mkBinder theGuiAnchors env liftIom (GuiM action) =
+run assocTagName_ makeSubexpr mkBinder theGuiAnchors env liftIom (GuiM action) =
     runReaderT action
     Askable
-    { _aState = env ^. has
+    { _aAssocTagName = assocTagName_
+    , _aState = env ^. has
     , _aTextEditStyle = env ^. has
     , _aStdSpacing = env ^. Spacer.stdSpacing
     , _aAnimIdPrefix = ["outermost"]

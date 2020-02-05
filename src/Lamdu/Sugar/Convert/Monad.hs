@@ -27,7 +27,6 @@ import           Control.Monad.Trans.Reader (ReaderT, runReaderT)
 import qualified Control.Monad.Trans.Reader as Reader
 import           Control.Monad.Transaction (MonadTransaction(..))
 import           Data.Property (Property)
-import qualified GUI.Momentu.Direction as Dir
 import           Hyper.Unify.Binding (UVar)
 import qualified Lamdu.Annotations as Annotations
 import qualified Lamdu.Cache as Cache
@@ -39,7 +38,6 @@ import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Debug as Debug
 import qualified Lamdu.Expr.IRef as ExprIRef
-import           Lamdu.I18N.LangId (LangId)
 import           Lamdu.Sugar.Config (Config)
 import qualified Lamdu.Sugar.Convert.Input as Input
 import qualified Lamdu.Sugar.Convert.PostProcess as PostProcess
@@ -116,16 +114,11 @@ data Context m = Context
     , scConvertSubexpression ::
         forall a. Monoid a =>
         PositionInfo -> Ann (Input.Payload m a) # V.Term -> ConvertM m (ExpressionU m a)
-    , _scLanguageIdentifier :: LangId
-    , _scLanguageDir :: Dir.Layout
     }
 Lens.makeLenses ''Context
 Lens.makePrisms ''TagFieldParam
 
 instance Anchors.HasCodeAnchors (Context m) m where codeAnchors = scCodeAnchors
-
-instance Has LangId (Context m) where has = scLanguageIdentifier
-instance Has Dir.Layout (Context m) where has = scLanguageDir
 
 cachedFunc :: Monad m => (Cache.Functions -> a) -> ConvertM m a
 cachedFunc f = Lens.view scCacheFunctions <&> f

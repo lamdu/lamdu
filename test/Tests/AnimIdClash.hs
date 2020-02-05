@@ -2,6 +2,7 @@ module Tests.AnimIdClash (test) where
 
 import qualified Control.Lens as Lens
 import           Control.Monad.Unit (Unit(..))
+import           Data.Property (MkProperty(..))
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Responsive as Responsive
 import           GUI.Momentu.State (HasCursor(..))
@@ -82,9 +83,10 @@ testFragment =
                 & annotation . Sugar.plEntityId .~ fragEntityId
                 & Stub.addNamesToExpr (env ^. has)
                 & hflipped %~ hmap (const (Lens._Wrapped . Sugar.plData .~ adhocPayload))
+        let assocTagName _ = MkProperty Unit
         let gui =
                 ExpressionEdit.make expr
-                & GuiM.run ExpressionEdit.make BinderEdit.make
+                & GuiM.run assocTagName ExpressionEdit.make BinderEdit.make
                 Env.dummyAnchors env (const Unit)
                 & runIdentity
         let widget = gui ^. Responsive.rWide . Align.tValue

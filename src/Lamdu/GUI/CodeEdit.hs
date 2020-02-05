@@ -116,6 +116,7 @@ make cp gp width =
         gotoDefinition <-
             GotoDefinition.make (transaction (workArea ^. Sugar.waGlobals))
             <&> StatusBar.hoist IOTrans.liftTrans
+        assocTagName <- DataOps.assocTagName
         do
             replGui <-
                 ReplEdit.make (exportReplActions theExportActions)
@@ -133,7 +134,7 @@ make cp gp width =
             Responsive.vboxSpaced
                 ?? (replGui : panesEdits ++ [newDefinitionButton])
                 <&> Widget.widget . Widget.eventMapMaker . Lens.mapped %~ (<> eventMap)
-            & GuiM.run ExpressionEdit.make BinderEdit.make gp env id
+            & GuiM.run assocTagName ExpressionEdit.make BinderEdit.make gp env id
             & transaction
             <&> render
             <&> (^. Align.tValue)

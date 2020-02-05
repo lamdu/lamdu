@@ -25,11 +25,7 @@ data TagOption name o a = TagOption
 
 data TagReplace name i o a = TagReplace
     { _tsOptions :: i [TagOption name o a]
-    , -- Ideally tsNewTag would be an additional TagOption,
-      -- and this would also fix animation artifacts for picking new tags.
-      -- However that would require making a consistent new tag,
-      -- which would require either a new Revision.Deltum feature or a Sugar cache.
-      _tsNewTag :: Text -> o (EntityId, a)
+    , _tsNewTag :: i (TagOption name o a)
     , -- In some cases, like let-items, single params,
       -- the user does not have to choose a tag and can choose to have
       -- an auto-generated name instead.
