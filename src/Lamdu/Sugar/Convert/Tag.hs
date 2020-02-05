@@ -100,10 +100,10 @@ replaceWith name forbiddenTags allowAnon mkInstance setTag tagsProp =
         <&> Set.toList
         <&> map toOption
     , _tsNewTag =
-        do
-            newTag <- DataOps.genNewTag
-            Property.modP tagsProp (Lens.contains newTag .~ True)
-            toOption newTag & pure
+        DataOps.genNewTag <&>
+        \newTag ->
+        toOption newTag
+        & toPick %~ (Property.modP tagsProp (Lens.contains newTag .~ True) >>)
     , _tsAnon =
         case allowAnon of
         RequireTag -> Nothing
