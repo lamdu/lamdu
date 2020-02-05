@@ -123,14 +123,12 @@ case_ tag tailI =
             <&> CompositeExtendResult newValueI
 
 assocTagName ::
-    (Monad m, Has LangId env, Has Dir.Layout env) =>
-    env -> T.Tag -> MkProperty' (T m) Text
-assocTagName env tag =
-    ExprIRef.readTagData tag
-    <&> result
-    & Property.MkProperty
-    where
-        lang = env ^. has
+    (Monad f, MonadReader env m, Has LangId env, Has Dir.Layout env) =>
+    m (T.Tag -> MkProperty' (T f) Text)
+assocTagName =
+    Lens.view id <&>
+    \env tag ->
+    let lang = env ^. has
         result info =
             Property (getTagName env info ^. _2 . name)
             (Transaction.writeIRef (ExprIRef.tagI tag) . setName)
@@ -149,6 +147,9 @@ assocTagName env tag =
                         & tagSymbol .~ NoSymbol
                         & tagTexts . Lens.at lang ?~ TextsInLang x Nothing Nothing
         isOperator = Lens.allOf Lens.each (`elem` Chars.operator)
+    in  ExprIRef.readTagData tag
+        <&> result
+        & Property.MkProperty
 
 newPane :: Monad m => Anchors.CodeAnchors m -> Anchors.Pane m -> T m ()
 newPane codeAnchors pane =
