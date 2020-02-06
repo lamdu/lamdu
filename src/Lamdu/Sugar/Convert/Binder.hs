@@ -72,17 +72,17 @@ convertLet pl redex =
         float <- makeFloatLetToOuterScope (pl ^. Input.stored . ExprIRef.setIref) redex
         tag <- ConvertTag.taggedEntity param
         (value, letBody, actions) <-
-            do
-                (_pMode, value) <-
-                    convertAssignment binderKind param (redex ^. Redex.arg)
-                    <&> _2 . annotation . pInput . Input.entityId .~
+            (,,)
+            <$> ( convertAssignment binderKind param (redex ^. Redex.arg)
+                    <&> (^. _2)
+                    <&> annotation . pInput . Input.entityId .~
                         EntityId.ofValI (redex ^. Redex.arg . hAnn . Input.stored . ExprIRef.iref)
-                letBody <-
-                    convertBinder bod
+                )
+            <*> ( convertBinder bod
                     & ConvertM.local (scScopeInfo . siLetItems <>~
                         Map.singleton param (makeInline stored redex))
-                actions <- makeActions pl
-                pure (value, letBody, actions)
+                )
+            <*> makeActions pl
             & localNewExtractDestPos pl
         protectedSetToVal <- ConvertM.typeProtectedSetToVal
         let fixValueNodeActions nodeActions =
