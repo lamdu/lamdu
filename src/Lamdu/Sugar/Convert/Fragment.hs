@@ -362,8 +362,9 @@ mkOptionFromFragment sugarContext exprPl x =
             let updateDeps = (depsProp ^. Property.pSet) newDeps
             pure
                 ( resultScore resolved
-                , Hole.mkResult (replaceFragment topEntityId 0) newSugarContext
+                , Hole.mkResult (replaceFragment topEntityId 0)
                     updateDeps exprPl result
+                    & ConvertM.run newSugarContext & join
                 )
             <&> pure & ListClass.joinL
     }

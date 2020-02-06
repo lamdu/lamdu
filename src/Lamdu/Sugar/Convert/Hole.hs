@@ -491,38 +491,41 @@ mkResultVals sugarContext scope seed =
 
 mkResult ::
     Monad m =>
-    Preconversion m a -> ConvertM.Context m -> T m () ->
+    Preconversion m a -> T m () ->
     Input.Payload m b # V.Term ->
     Ann ((Const a :*: Write m) :*: InferResult UVar) # V.Term ->
-    T m (HoleResult InternalName (T m) (T m))
-mkResult preConversion sugarContext updateDeps holePl x =
+    ConvertM m (T m (HoleResult InternalName (T m) (T m)))
+mkResult preConversion updateDeps holePl x =
     do
-        updateDeps
-        writeResult preConversion (sugarContext ^. ConvertM.scInferContext)
-            (holePl ^. Input.stored) x
-        <&> Input.initScopes
-                (holePl ^. Input.inferScope)
-                    -- TODO: this is kind of wrong
-                    -- The scope for a proper term should be from after loading its infer deps
-                    -- But that's only necessary for suggesting hole results?
-                    -- And we are in a hole result here
-                (holePl ^. Input.localsInScope)
-        <&> (convertBinder >=> htraverseFlipped (const (Lens._Wrapped convertPayload)) . (hflipped %~ hmap (const (Lens._Wrapped %~ (,) showAnn))))
-        >>= ConvertM.run (sugarContext & ConvertM.scAnnotationsMode .~ Annotations.None)
-        & Transaction.fork
-        <&> \(fConverted, forkedChanges) ->
-        HoleResult
-        { _holeResultConverted = fConverted
-        , _holeResultPick =
-            do
-                Transaction.merge forkedChanges
-                -- TODO: Remove this 'run', mkResult to be wholly in ConvertM
-                ConvertM.run sugarContext ConvertM.postProcessAssert & join
-        }
-    where
-        showAnn
-            | sugarContext ^. ConvertM.scConfig . Config.showAllAnnotations = alwaysShowAnnotations
-            | otherwise = neverShowAnnotations
+        sugarContext <- Lens.view id
+        postProcess <- ConvertM.postProcessAssert
+        let showAnn
+                | sugarContext ^. ConvertM.scConfig . Config.showAllAnnotations = alwaysShowAnnotations
+                | otherwise = neverShowAnnotations
+        do
+            updateDeps
+            writeResult preConversion (sugarContext ^. ConvertM.scInferContext)
+                (holePl ^. Input.stored) x
+            <&> Input.initScopes
+                    (holePl ^. Input.inferScope)
+                        -- TODO: this is kind of wrong
+                        -- The scope for a proper term should be from after loading its infer deps
+                        -- But that's only necessary for suggesting hole results?
+                        -- And we are in a hole result here
+                    (holePl ^. Input.localsInScope)
+            <&> (convertBinder >=> htraverseFlipped (const (Lens._Wrapped convertPayload)) . (hflipped %~ hmap (const (Lens._Wrapped %~ (,) showAnn))))
+            >>= ConvertM.run (sugarContext & ConvertM.scAnnotationsMode .~ Annotations.None)
+            & Transaction.fork
+            <&>
+            ( \(fConverted, forkedChanges) ->
+                HoleResult
+                { _holeResultConverted = fConverted
+                , _holeResultPick =
+                    do
+                        Transaction.merge forkedChanges
+                        postProcess
+                }
+            ) & pure
 
 toStateT :: Applicative m => State s a -> StateT s m a
 toStateT = mapStateT $ \(Lens.Identity act) -> pure act
@@ -561,7 +564,7 @@ toScoredResults emptyPl preConversion sugarContext holePl act =
             & assertSuccessfulInfer
             & fst
             & resultScore
-        , mkResult preConversion newSugarContext updateDeps holePl x
+        , mkResult preConversion updateDeps holePl x & ConvertM.run newSugarContext & join
         )
     where
         p0 :: proxy h -> Proxy (InferOfConstraint HFunctor h)
