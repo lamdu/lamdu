@@ -1,1 +1,1 @@
--c "stack ghci --test --ghci-options=\"-fno-code -iautogen -DNO_CODE\""
+-c "stack ghci --test --ghci-options=\"-fno-code -iautogen -DNO_CODE -fmax-errors=1\""
