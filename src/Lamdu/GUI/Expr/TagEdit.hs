@@ -89,32 +89,29 @@ makePickEventMap action =
 
 makeNewTag ::
     (Monad i, Monad o) =>
-    GuiM env i o
-    (Text -> Sugar.TagReplace Name i o a -> (EntityId -> a -> b) -> o b)
-makeNewTag =
-    (,) <$> GuiM.iom <*> GuiM.assocTagName
-    <&> \(GuiM.IOM iom, assocTagName) searchTerm tagRefReplace mkPickResult ->
+    Sugar.TagReplace Name i o a ->
+    GuiM env i o (Text -> (EntityId -> a -> b) -> o b)
+makeNewTag tagRefReplace =
+    (,) <$> GuiM.im (tagRefReplace ^. Sugar.tsNewTag) <*> GuiM.assocTagName
+    <&> \(tagOpt, assocTagName) searchTerm mkPickResult ->
     do
-        tagOpt <- tagRefReplace ^. Sugar.tsNewTag & iom
-        let tag = tagOpt ^. Sugar.toInfo
-        Property.setP (assocTagName (tag ^. Sugar.tagVal)) searchTerm
-        tagOpt ^. Sugar.toPick <&> mkPickResult (tag ^. Sugar.tagInstance)
+        Property.setP (assocTagName (tagOpt ^. Sugar.toInfo . Sugar.tagVal)) searchTerm
+        tagOpt ^. Sugar.toPick <&> mkPickResult (tagOpt ^. Sugar.toInfo . Sugar.tagInstance)
 
 makeNewTagPreEvent ::
     (Has (Texts.CodeUI Text) env, Monad i, Monad o) =>
-    GuiM env i o
-    ( Text -> Sugar.TagReplace Name i o a -> (EntityId -> a -> r) ->
-        Maybe (Widget.PreEvent (o r))
-    )
-makeNewTagPreEvent =
-    (,) <$> Lens.view (has . Texts.newName) <*> makeNewTag
-    <&> \(newNameText, newTag) searchTerm tagRefReplace mkPickResult ->
+    Sugar.TagReplace Name i o a ->
+    GuiM env i o (Text -> (EntityId -> a -> r) -> Maybe (Widget.PreEvent (o r)))
+makeNewTagPreEvent tagRefReplace =
+    (,) <$> Lens.view (has . Texts.newName) <*> makeNewTag tagRefReplace
+    <&>
+    \(newNameText, newTag) searchTerm mkPickResult ->
     if Text.null searchTerm
     then Nothing
     else
         Just Widget.PreEvent
         { Widget._pDesc = newNameText
-        , Widget._pAction = newTag searchTerm tagRefReplace mkPickResult
+        , Widget._pAction = newTag searchTerm mkPickResult
         , Widget._pTextRemainder = ""
         }
 
@@ -125,17 +122,18 @@ makeAddNewTag ::
     , Has (Texts.CodeUI Text) env
     , Has (Texts.CodeUI Text) menv
     ) =>
+    Sugar.TagReplace Name i o a ->
     GuiM menv i o
-    ( Sugar.TagReplace Name i o a -> (EntityId -> a -> Menu.PickResult) ->
+    ( (EntityId -> a -> Menu.PickResult) ->
         SearchMenu.ResultsContext -> Maybe (Menu.Option f o)
     )
-makeAddNewTag =
-    makeNewTagPreEvent <&>
-    \newTagPreEvent tagRefReplace mkPickResult ctx ->
+makeAddNewTag tagRefReplace =
+    makeNewTagPreEvent tagRefReplace <&>
+    \newTagPreEvent mkPickResult ctx ->
     let optionId =
             (ctx ^. SearchMenu.rResultIdPrefix) `Widget.joinId` ["Create new"]
         searchTerm = ctx ^. SearchMenu.rSearchTerm
-    in  newTagPreEvent searchTerm tagRefReplace mkPickResult
+    in  newTagPreEvent searchTerm mkPickResult
         <&> \preEvent ->
         Menu.Option
         { Menu._oId = optionId
@@ -182,11 +180,11 @@ makeOptions tagRefReplace mkPickResult ctx
             let nonFuzzyResults =
                     results ^? Lens.ix 0 . Lens._1 . Fuzzy.isFuzzy
                     & any not
-            addNewTag <- makeAddNewTag
+            addNewTag <- makeAddNewTag tagRefReplace
             let maybeAddNewTagOption
                     | nonFuzzyResults || not (Name.isValidText searchTerm) = id
                     | otherwise =
-                        maybe id (:) (addNewTag tagRefReplace mkPickResult ctx)
+                        maybe id (:) (addNewTag mkPickResult ctx)
             chooseText <- Lens.view (has . MomentuTexts.choose)
             let makeOption opt =
                     Menu.Option
@@ -242,14 +240,14 @@ makeHoleSearchTerm tagRefReplace mkPickResult holeId =
     do
         searchTerm <- SearchMenu.readSearchTerm holeId
         let allowNewTag = Name.isValidText searchTerm
-        newTag <- makeNewTag
+        newTag <- makeNewTag tagRefReplace
         newTagEventMap <-
             if allowNewTag
-            then newTag searchTerm tagRefReplace mkPickResult & makePickEventMap
+            then newTag searchTerm mkPickResult & makePickEventMap
             else pure mempty
-        newTagPreEvent <- makeNewTagPreEvent
+        newTagPreEvent <- makeNewTagPreEvent tagRefReplace
         let newTagPreEvents =
-                newTagPreEvent searchTerm tagRefReplace mkPickResult
+                newTagPreEvent searchTerm mkPickResult
                 ^.. Lens._Just
                 <&> fmap (mempty <$)
         let addPreEvents =

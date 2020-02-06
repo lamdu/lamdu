@@ -86,8 +86,7 @@ testFragment =
         let assocTagName _ = MkProperty Unit
         let gui =
                 ExpressionEdit.make expr
-                & GuiM.run assocTagName ExpressionEdit.make BinderEdit.make
-                Env.dummyAnchors env (const Unit)
+                & GuiM.run assocTagName ExpressionEdit.make BinderEdit.make Env.dummyAnchors env
                 & runIdentity
         let widget = gui ^. Responsive.rWide . Align.tValue
         case widget ^. Widget.wState of

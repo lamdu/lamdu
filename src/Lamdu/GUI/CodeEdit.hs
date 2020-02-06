@@ -134,7 +134,7 @@ make cp gp width =
             Responsive.vboxSpaced
                 ?? (replGui : panesEdits ++ [newDefinitionButton])
                 <&> Widget.widget . Widget.eventMapMaker . Lens.mapped %~ (<> eventMap)
-            & GuiM.run assocTagName ExpressionEdit.make BinderEdit.make gp env id
+            & GuiM.run assocTagName ExpressionEdit.make BinderEdit.make gp env
             & transaction
             <&> render
             <&> (^. Align.tValue)

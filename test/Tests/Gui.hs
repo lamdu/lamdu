@@ -87,7 +87,7 @@ makeGui afterDoc env =
                     Sugar.waPanes . traverse
                     & traverse CodeEdit.makePaneBodyEdit
                 Responsive.vbox ?? (replGui : paneGuis)
-            & GuiM.run assocTagName ExpressionEdit.make BinderEdit.make DbLayout.guiAnchors env id
+            & GuiM.run assocTagName ExpressionEdit.make BinderEdit.make DbLayout.guiAnchors env
         if Lens.has wideFocused gui
             then pure gui
             else error ("Red cursor after " ++ afterDoc ++ ": " ++ show (env ^. cursor))
