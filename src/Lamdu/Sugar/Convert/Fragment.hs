@@ -11,6 +11,7 @@ module Lamdu.Sugar.Convert.Fragment
 import qualified Control.Lens as Lens
 import           Control.Monad.Except (MonadError(..))
 import           Control.Monad.ListT (ListT)
+import           Control.Monad.Once (OnceT)
 import qualified Control.Monad.Reader as Reader
 import           Control.Monad.State (State, runState, StateT(..), mapStateT)
 import qualified Control.Monad.State as State
@@ -69,7 +70,7 @@ mkOptions ::
     Ann (Input.Payload m a) # V.Term ->
     Ann pl # Term v name i o ->
     Input.Payload m a # V.Term ->
-    ConvertM m (T m [HoleOption EvalPrep InternalName (T m) (T m)])
+    ConvertM m (OnceT (T m) [HoleOption EvalPrep InternalName (OnceT (T m)) (T m)])
 mkOptions posInfo sugarContext argI argS exprPl =
     Hole.mkOptions posInfo (fragmentResultProcessor topEntityId argI) exprPl
     <&> (pure fragmentOptions <>)
@@ -93,7 +94,7 @@ mkAppliedHoleSuggesteds ::
     ConvertM.Context m ->
     Ann (Input.Payload m a) # V.Term ->
     Input.Payload m a # V.Term ->
-    [(V.Val (), HoleOption EvalPrep InternalName (T m) (T m))]
+    [(V.Val (), HoleOption EvalPrep InternalName (OnceT (T m)) (T m))]
 mkAppliedHoleSuggesteds sugarContext argI exprPl =
     runStateT
     ( Suggest.termTransforms (exprPl ^. Input.inferScope) (WriteNew :*:) (^. _2)
@@ -344,7 +345,7 @@ mkOptionFromFragment ::
     ConvertM.Context m ->
     Input.Payload m a # V.Term ->
     Ann (Write m :*: InferResult UVar) # V.Term ->
-    HoleOption EvalPrep InternalName (T m) (T m)
+    HoleOption EvalPrep InternalName (OnceT (T m)) (T m)
 mkOptionFromFragment sugarContext exprPl x =
     HoleOption
     { _hoEntityId =
@@ -366,6 +367,7 @@ mkOptionFromFragment sugarContext exprPl x =
                     updateDeps exprPl result
                     & ConvertM.run newSugarContext & join
                 )
+            & lift
             <&> pure & ListClass.joinL
     }
     where

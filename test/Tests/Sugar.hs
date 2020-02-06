@@ -5,6 +5,8 @@
 module Tests.Sugar where
 
 import qualified Control.Lens as Lens
+import           Control.Monad.Once (OnceT, _OnceT)
+import           Control.Monad.State (evalStateT)
 import qualified Data.List.Class as List
 import qualified Data.Property as Property
 import           Hyper.Combinator.Ann (Annotated)
@@ -57,22 +59,28 @@ test =
 testSugarActionsWith ::
     HasCallStack =>
     FilePath ->
-    [WorkArea (EvaluationScopes Name (T ViewM)) Name (T ViewM) (T ViewM)
-        (Sugar.Payload (EvaluationScopes Name (T ViewM)) Name (T ViewM) (T ViewM), (ParenInfo, [EntityId])) ->
-        T ViewM a] ->
+    [WorkArea (EvaluationScopes Name (OnceT (T ViewM))) Name (OnceT (T ViewM)) (T ViewM)
+        ( Sugar.Payload (EvaluationScopes Name (OnceT (T ViewM))) Name (OnceT (T ViewM)) (T ViewM)
+        , (ParenInfo, [EntityId])
+        ) ->
+        OnceT (T ViewM) a] ->
     Env ->
     IO ()
 testSugarActionsWith program actions env =
-    traverse_ (convertWorkArea env >>=) actions <* convertWorkArea env
+    (traverse_ (lift (convertWorkArea env) >>=) actions <* lift (convertWorkArea env))
+    ^. _OnceT
+    & (`evalStateT` mempty)
     & testProgram program
 
 -- | Verify that a sugar action does not result in a crash
 testSugarActions ::
     HasCallStack =>
     FilePath ->
-    [WorkArea (EvaluationScopes Name (T ViewM)) Name (T ViewM) (T ViewM)
-        (Sugar.Payload (EvaluationScopes Name (T ViewM)) Name (T ViewM) (T ViewM), (ParenInfo, [EntityId])) ->
-        T ViewM a] ->
+    [WorkArea (EvaluationScopes Name (OnceT (T ViewM))) Name (OnceT (T ViewM)) (T ViewM)
+        ( Sugar.Payload (EvaluationScopes Name (OnceT (T ViewM))) Name (OnceT (T ViewM)) (T ViewM)
+        , (ParenInfo, [EntityId])
+        ) ->
+        OnceT (T ViewM) a] ->
     IO ()
 testSugarActions program actions =
     Env.make >>= testSugarActionsWith program actions
@@ -119,7 +127,7 @@ testChangeParam =
             replBody . _BodySimpleApply . V.appFunc .
             hVal . _BodySimpleApply . V.appArg .
             hVal . lamFirstParam . _2 . piTag . tagRefReplace . tsNewTag
-            >>= (^. toPick)
+            >>= lift . (^. toPick)
 
 -- | Test for issue #373
 -- https://trello.com/c/1kP4By8j/373-re-ordering-let-items-results-in-inference-error
@@ -132,7 +140,7 @@ testReorderLets =
     ]
     where
         f program =
-            testSugarActions program [(^?! extractSecondLetItemInLambda)]
+            testSugarActions program [lift . (^?! extractSecondLetItemInLambda)]
             & testCase (takeWhile (/= '.') program)
         extractSecondLetItemInLambda =
             replBody . _BodyLam . lamFunc . fBody .
@@ -144,7 +152,7 @@ testReorderLets =
 -- https://trello.com/c/UvBdhzzl/395-extract-of-binder-body-with-let-items-may-cause-inference-failure
 testExtract :: Test
 testExtract =
-    testSugarActions "extract-lambda-with-let.json" [(^?! action)]
+    testSugarActions "extract-lambda-with-let.json" [lift . (^?! action)]
     & testCase "extract"
     where
         action =
@@ -174,10 +182,11 @@ testInline =
                     List.Cons (_, x) _ -> x
                     List.Nil -> error "expected Cons"
                 result <- mkResult
-                result ^. holeResultPick
+                result ^. holeResultPick & lift
                 _ <-
                     result ^?! holeResultConverted . hVal . _BinderTerm
                     . _BodyGetVar . _GetBinder . bvInline . _InlineVar
+                    & lift
                 pure ()
             where
                 isY option =
@@ -214,7 +223,7 @@ paramAnnotations =
 
 delParam :: Test
 delParam =
-    testSugarActions "const-five.json" [(^?! action), verify]
+    testSugarActions "const-five.json" [lift . (^?! action), verify]
     & testCase "del-param"
     where
         action = replBody . lamFirstParam . _2 . piActions . fpDelete
@@ -229,9 +238,11 @@ delInfixArg =
     & testCase "del-infix-arg"
     where
         argDel workArea =
-            workArea ^?! arg . annotation . _1 . plActions . mSetToHole . Lens._Just & void
+            workArea ^?! arg . annotation . _1 . plActions . mSetToHole . Lens._Just
+            & void & lift
         holeDel workArea =
-            workArea ^?! arg . hVal . _BodyHole . holeMDelete . Lens._Just & void
+            workArea ^?! arg . hVal . _BodyHole . holeMDelete . Lens._Just
+            & void & lift
         arg = replBody . _BodyLabeledApply . aSpecialArgs . _Operator . _2
         verify workArea
             | Lens.has afterDel workArea = pure ()
@@ -241,8 +252,8 @@ delInfixArg =
 testExtractForRecursion :: Test
 testExtractForRecursion =
     testSugarActions "fold.json"
-    [ void . (^?! openDef)
-    , void . (^?! extractDef)
+    [ lift . void . (^?! openDef)
+    , lift . void . (^?! extractDef)
     ]
     & testCase "no-extract-recursive"
     where
@@ -257,8 +268,8 @@ testExtractForRecursion =
 testInsistFactorial :: Test
 testInsistFactorial =
     testSugarActions "factorial-mismatch.json"
-    [ void . (^?! openDef)
-    , void . (^?! insist)
+    [ lift . void . (^?! openDef)
+    , lift . void . (^?! insist)
     , verify
     ]
     & testCase "insist-factorial"
@@ -287,7 +298,7 @@ testInsistFactorial =
 testInsistEq :: Test
 testInsistEq =
     testSugarActions "compare-int-and-text.json"
-    [ void . (^?! insist)
+    [ lift . void . (^?! insist)
     , verify
     ]
     & testCase "insist-eq"
@@ -305,7 +316,7 @@ testInsistEq =
 testInsistIf :: Test
 testInsistIf =
     testSugarActions "if-with-mismatch.json"
-    [ void . (^?! insist)
+    [ lift . void . (^?! insist)
     , verify
     ]
     & testCase "insist-if"
@@ -325,8 +336,8 @@ testInsistIf =
 testInsistSubsets :: Test
 testInsistSubsets =
     testSugarActions "subsets.json"
-    [ void . (^?! openDef)
-    , void . (^?! insist)
+    [ lift . void . (^?! openDef)
+    , lift . void . (^?! insist)
     , verify
     ]
     & testCase "insist-subsets"
@@ -376,7 +387,8 @@ testNotALightLambda =
 
 delDefParam :: Test
 delDefParam =
-    testSugarActions "def-with-params.json" [void . (^?! openDef), (^?! action)]
+    testSugarActions "def-with-params.json"
+    [lift . void . (^?! openDef), lift . (^?! action)]
     & testCase "del-def-param"
     where
         openDef = replBody . _BodyGetVar . _GetBinder . bvNameRef . nrGotoDefinition
@@ -389,7 +401,8 @@ delDefParam =
 
 updateDef :: Test
 updateDef =
-    testSugarActions "update-def-type.json" [void . (^?! openDef), void . (^?! action)]
+    testSugarActions "update-def-type.json"
+    [lift . void . (^?! openDef), lift . void . (^?! action)]
     & testCase "update-def-type"
     where
         openDef = replBody . _BodyGetVar . _GetBinder . bvNameRef . nrGotoDefinition
@@ -402,7 +415,7 @@ updateDef =
 
 testReplaceParent :: Test
 testReplaceParent =
-    testSugarActions "let-item-inline.json" [(^?! action)]
+    testSugarActions "let-item-inline.json" [lift . (^?! action)]
     & testCase "replace-parent"
     where
         action =
@@ -412,7 +425,7 @@ testReplaceParent =
 floatLetWithGlobalRef :: Test
 floatLetWithGlobalRef =
     testSugarActions "let-with-global-reference.json"
-    [ (^?! replLet . lBody . hVal . _BinderLet . lValue . annotation . _1 . plActions . extract)
+    [ lift . (^?! replLet . lBody . hVal . _BinderLet . lValue . annotation . _1 . plActions . extract)
     ]
     & testCase "float-let-with-global-ref"
 
@@ -421,7 +434,7 @@ setHoleToHole =
     testSugarActions "let-item-inline.json" [action, verify]
     & testCase "set-hole-to-hole"
     where
-        action workArea = workArea ^?! setToHole & void
+        action workArea = workArea ^?! setToHole & void & lift
         verify workArea
             | Lens.has setToHole workArea =
                 fail "hole has set to hole?"
@@ -518,7 +531,7 @@ testValidHoleResult =
         env <- Env.make
         testProgram "nom-list.json" $
             do
-                workArea <- convertWorkArea env
+                workArea <- convertWorkArea env & lift
                 opts <-
                     workArea ^?!
                     replBody . _BodyToNom . nVal .
@@ -527,4 +540,6 @@ testValidHoleResult =
                 -- The bug occured in the first suggested result
                 (_, mkHoleResult) <- opts ^?! Lens.ix 0 . hoResults & List.runList <&> List.headL
                 holeResult <- mkHoleResult
-                holeResult ^. holeResultPick
+                holeResult ^. holeResultPick & lift
+            ^. _OnceT
+            & (`evalStateT` mempty)

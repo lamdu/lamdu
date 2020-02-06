@@ -22,6 +22,7 @@ module Lamdu.Sugar.Convert.Monad
     ) where
 
 import qualified Control.Lens as Lens
+import           Control.Monad.Once (OnceT)
 import           Control.Monad.Trans.Reader (ReaderT, runReaderT)
 import qualified Control.Monad.Trans.Reader as Reader
 import           Control.Monad.Transaction (MonadTransaction(..))
@@ -87,11 +88,11 @@ data ScopeInfo m = ScopeInfo
     }
 Lens.makeLenses ''ScopeInfo
 
-newtype ConvertM m a = ConvertM (ReaderT (Context m) (T m) a)
+newtype ConvertM m a = ConvertM (ReaderT (Context m) (OnceT (T m)) a)
     deriving newtype (Functor, Applicative, Monad, MonadReader (Context m))
 
 instance Monad m => MonadTransaction m (ConvertM m) where
-    transaction = ConvertM . lift
+    transaction = ConvertM . lift . lift
 
 data PositionInfo = BinderPos | ExpressionPos deriving Eq
 
@@ -167,7 +168,7 @@ postProcessWith =
 postProcessAssert :: Monad m => ConvertM m (T m ())
 postProcessAssert = postProcessWith ?? (fail . prettyShow)
 
-run :: (HasCallStack, Monad m) => Context m -> ConvertM m a -> T m a
+run :: (HasCallStack, Monad m) => Context m -> ConvertM m a -> OnceT (T m) a
 run ctx (ConvertM action) =
     runReaderT action ctx & report
     where

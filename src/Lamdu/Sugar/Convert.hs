@@ -4,6 +4,7 @@ module Lamdu.Sugar.Convert
 
 import           Control.Applicative ((<|>))
 import qualified Control.Lens as Lens
+import           Control.Monad.Once (OnceT)
 import           Control.Monad.Transaction (MonadTransaction)
 import           Data.CurAndPrev (CurAndPrev(..))
 import           Data.List.Extended (insertAt, removeAt)
@@ -94,13 +95,14 @@ convertInferDefExpr ::
     ) =>
     env -> Anchors.CodeAnchors m ->
     Pure # T.Scheme -> Definition.Expr (Ann (HRef m) # V.Term) -> DefI m ->
-    T m
-    (DefinitionBody EvalPrep InternalName (T m) (T m)
-        (Payload EvalPrep InternalName (T m) (T m), [EntityId]))
+    OnceT (T m)
+    (DefinitionBody EvalPrep InternalName (OnceT (T m)) (T m)
+        (Payload EvalPrep InternalName (OnceT (T m)) (T m), [EntityId]))
 convertInferDefExpr env cp defType defExpr defI =
     do
         outdatedDefinitions <-
             OutdatedDefs.scan entityId defExpr setDefExpr postProcess
+            & lift
             <&> Lens.mapped . defTypeUseCurrent %~ (<* postProcess)
         let context =
                 Context
@@ -151,12 +153,12 @@ convertDefBody ::
     ) =>
     env -> Anchors.CodeAnchors m ->
     Definition.Definition (Ann (HRef m) # V.Term) (DefI m) ->
-    T m
-    (DefinitionBody EvalPrep InternalName (T m) (T m)
-        (Payload EvalPrep InternalName (T m) (T m), [EntityId]))
+    OnceT (T m)
+    (DefinitionBody EvalPrep InternalName (OnceT (T m)) (T m)
+        (Payload EvalPrep InternalName (OnceT (T m)) (T m), [EntityId]))
 convertDefBody env cp (Definition.Definition bod defType defI) =
     case bod of
-    Definition.BodyBuiltin builtin -> convertDefIBuiltin defType builtin defI
+    Definition.BodyBuiltin builtin -> convertDefIBuiltin defType builtin defI & lift
     Definition.BodyExpr defExpr ->
         convertInferDefExpr env cp defType defExpr defI
 
@@ -176,18 +178,18 @@ convertRepl ::
     , Has Config env, Has Cache.Functions env, Has Annotations.Mode env
     ) =>
     env -> Anchors.CodeAnchors m ->
-    T m
-    (Repl EvalPrep InternalName (T m) (T m)
-        (Payload EvalPrep InternalName (T m) (T m), [EntityId]))
+    OnceT (T m)
+    (Repl EvalPrep InternalName (OnceT (T m)) (T m)
+        (Payload EvalPrep InternalName (OnceT (T m)) (T m), [EntityId]))
 convertRepl env cp =
     do
-        defExpr <- ExprLoad.defExpr prop
-        entityId <- Property.getP prop <&> (^. Definition.expr) <&> EntityId.ofValI
+        defExpr <- ExprLoad.defExpr prop & lift
+        entityId <- Property.getP prop & lift <&> (^. Definition.expr) <&> EntityId.ofValI
         let Load.InferOut valInferred newInferContext =
                 Load.inferDefExpr cachedInfer (env ^. has) defExpr
                 & assertInferSuccess
         outdatedDefinitions <-
-            OutdatedDefs.scan entityId defExpr (Property.setP prop) postProcess
+            OutdatedDefs.scan entityId defExpr (Property.setP prop) postProcess & lift
         let context =
                 Context
                 { _scInferContext = newInferContext
@@ -232,11 +234,11 @@ convertPaneBody ::
     , Has Config env, Has Cache.Functions env, Has Annotations.Mode env
     ) =>
     env -> Anchors.CodeAnchors m -> Anchors.Pane m ->
-    T m
-    (PaneBody EvalPrep InternalName (T m) (T m)
-        (Payload EvalPrep InternalName (T m) (T m), [EntityId]))
+    OnceT (T m)
+    (PaneBody EvalPrep InternalName (OnceT (T m)) (T m)
+        (Payload EvalPrep InternalName (OnceT (T m)) (T m), [EntityId]))
 convertPaneBody _ _ (Anchors.PaneTag tagId) =
-    ExprIRef.readTagData tagId <&>
+    ExprIRef.readTagData tagId & lift <&>
     \tagData ->
     PaneTag TagPane
     { _tpTag =
@@ -255,10 +257,10 @@ convertPaneBody _ _ (Anchors.PaneTag tagId) =
 convertPaneBody env cp (Anchors.PaneDefinition defI) =
     do
         bodyS <-
-            ExprLoad.def defI <&> Definition.defPayload .~ defI
+            ExprLoad.def defI & lift <&> Definition.defPayload .~ defI
             >>= convertDefBody env cp
         tag <- Anchors.tags cp & ConvertTag.taggedEntityWith cp defVar
-        defState <- Anchors.assocDefinitionState defI ^. Property.mkProperty
+        defState <- Anchors.assocDefinitionState defI ^. Property.mkProperty & lift
         OrderTags.orderDef Definition
             { _drEntityId = EntityId.ofIRef defI
             , _drName = tag
@@ -281,9 +283,9 @@ convertPane ::
     env -> Anchors.CodeAnchors m -> EntityId ->
     Property (T m) [Anchors.Pane dummy] ->
     Int -> Anchors.Pane m ->
-    T m
-    (Pane EvalPrep InternalName (T m) (T m)
-        (Payload EvalPrep InternalName (T m) (T m), [EntityId]))
+    OnceT (T m)
+    (Pane EvalPrep InternalName (OnceT (T m)) (T m)
+        (Payload EvalPrep InternalName (OnceT (T m)) (T m), [EntityId]))
 convertPane env cp replEntityId (Property panes setPanes) i pane =
     convertPaneBody env cp pane
     <&> \body -> Pane
@@ -320,12 +322,12 @@ loadPanes ::
     , Has Config env, Has Cache.Functions env, Has Annotations.Mode env
     ) =>
     env -> Anchors.CodeAnchors m -> EntityId ->
-    T m
-    [Pane EvalPrep InternalName (T m) (T m)
-        (Payload EvalPrep InternalName (T m) (T m), [EntityId])]
+    OnceT (T m)
+    [Pane EvalPrep InternalName (OnceT (T m)) (T m)
+        (Payload EvalPrep InternalName (OnceT (T m)) (T m), [EntityId])]
 loadPanes env cp replEntityId =
     do
-        prop <- Anchors.panes cp ^. Property.mkProperty
+        prop <- Anchors.panes cp ^. Property.mkProperty & lift
         Property.value prop
             & Lens.itraversed %%@~ convertPane env cp replEntityId prop
 
@@ -335,9 +337,9 @@ loadWorkArea ::
     , Has Config env, Has Cache.Functions env, Has Annotations.Mode env
     ) =>
     env -> Anchors.CodeAnchors m ->
-    T m
-    (WorkArea EvalPrep InternalName (T m) (T m)
-        (Payload EvalPrep InternalName (T m) (T m), [EntityId]))
+    OnceT (T m)
+    (WorkArea EvalPrep InternalName (OnceT (T m)) (T m)
+        (Payload EvalPrep InternalName (OnceT (T m)) (T m), [EntityId]))
 loadWorkArea env cp =
     do
         repl <- convertRepl env cp
@@ -348,6 +350,6 @@ loadWorkArea env cp =
             { _waRepl = repl
             , _waPanes = panes
             , _waGlobals =
-                Anchors.globals cp & Property.getP <&> Set.toList
+                Anchors.globals cp & Property.getP & lift <&> Set.toList
                 >>= traverse (ConvertGetVar.globalNameRef cp)
             }

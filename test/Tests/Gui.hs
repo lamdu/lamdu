@@ -3,8 +3,11 @@
 module Tests.Gui where
 
 import qualified Control.Lens as Lens
+import           Control.Monad.Once (OnceT, _OnceT)
+import           Control.Monad.State (evalStateT)
 import           Control.Monad.Unit (Unit(..))
 import qualified Data.Map as Map
+import qualified Data.Property as Property
 import           Data.Vector.Vector2 (Vector2(..))
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Element as Element
@@ -20,6 +23,7 @@ import qualified GUI.Momentu.State as GuiState
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widget.Id as WidgetId
 import qualified Graphics.UI.GLFW as GLFW
+import qualified Lamdu.Data.Anchors as Anchors
 import           Lamdu.Data.Db.Layout (ViewM)
 import qualified Lamdu.Data.Db.Layout as DbLayout
 import qualified Lamdu.Data.Ops as DataOps
@@ -87,7 +91,11 @@ makeGui afterDoc env =
                     Sugar.waPanes . traverse
                     & traverse CodeEdit.makePaneBodyEdit
                 Responsive.vbox ?? (replGui : paneGuis)
-            & GuiM.run assocTagName ExpressionEdit.make BinderEdit.make DbLayout.guiAnchors env
+            & GuiM.run assocTagName ExpressionEdit.make BinderEdit.make
+                (Anchors.onGui (Property.mkProperty %~ lift) DbLayout.guiAnchors)
+                env
+            & (^. _OnceT)
+            & (`evalStateT` mempty)
         if Lens.has wideFocused gui
             then pure gui
             else error ("Red cursor after " ++ afterDoc ++ ": " ++ show (env ^. cursor))
@@ -128,9 +136,13 @@ applyEvent env virtCursor event =
     <&> (`GuiState.update` env)
 
 fromWorkArea ::
-    Env -> Lens.ATraversal'
-    (Sugar.WorkArea (Sugar.EvaluationScopes Name (T ViewM)) Name (T ViewM) (T ViewM)
-        (Sugar.Payload (Sugar.EvaluationScopes Name (T ViewM)) Name (T ViewM) (T ViewM), ExprGui.Payload)) a ->
+    Env ->
+    Lens.ATraversal'
+        ( Sugar.WorkArea (Sugar.EvaluationScopes Name (OnceT (T ViewM))) Name (OnceT (T ViewM)) (T ViewM)
+            ( Sugar.Payload (Sugar.EvaluationScopes Name (OnceT (T ViewM))) Name (OnceT (T ViewM)) (T ViewM)
+            , ExprGui.Payload
+            )
+        ) a ->
     T ViewM a
 fromWorkArea env path =
     convertWorkArea env <&> (fmap . fmap) (uncurry ExprGui.Payload)
@@ -215,8 +227,8 @@ testOpPrec =
 workAreaEq ::
     forall a m v.
     Eq a =>
-    Sugar.WorkArea v Name (T m) (T m) (Sugar.Payload v Name (T m) (T m), a) ->
-    Sugar.WorkArea v Name (T m) (T m) (Sugar.Payload v Name (T m) (T m), a) ->
+    Sugar.WorkArea v Name (OnceT (T m)) (T m) (Sugar.Payload v Name (OnceT (T m)) (T m), a) ->
+    Sugar.WorkArea v Name (OnceT (T m)) (T m) (Sugar.Payload v Name (OnceT (T m)) (T m), a) ->
     Bool
 workAreaEq x y =
     x' == unsafeCoerce y

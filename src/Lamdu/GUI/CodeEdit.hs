@@ -11,6 +11,8 @@ module Lamdu.GUI.CodeEdit
 
 import qualified Control.Lens as Lens
 import           Control.Lens.Extended ((==>))
+import           Control.Monad.Once (OnceT)
+import           Control.Monad.Trans.Reader (ReaderT)
 import           Control.Monad.Transaction (MonadTransaction(..))
 import           Data.CurAndPrev (CurAndPrev(..))
 import qualified Data.Property as Property
@@ -86,18 +88,18 @@ data ExportActions m = ExportActions
 type EvalResults = CurAndPrev EvalResults.EvalResults
 
 type Model m =
-    T m
+    OnceT (T m)
     ( EvalResults ->
-        T m
-        ( Sugar.WorkArea (Sugar.EvaluationScopes Name (T m)) Name (T m) (T m)
-            (Sugar.Payload (Sugar.EvaluationScopes Name (T m)) Name (T m) (T m)
+        OnceT (T m)
+        ( Sugar.WorkArea (Sugar.EvaluationScopes Name (OnceT (T m))) Name (OnceT (T m)) (T m)
+            (Sugar.Payload (Sugar.EvaluationScopes Name (OnceT (T m))) Name (OnceT (T m)) (T m)
             , (Sugar.ParenInfo, [Sugar.EntityId])
             )
         )
     )
 
 make ::
-    ( MonadTransaction m n, MonadReader env n, Has Config env
+    ( Has Config env
     , Has Theme env, GuiState.HasState env
     , Spacer.HasStdSpacing env
     , Has EvalResults env
@@ -107,9 +109,10 @@ make ::
     , Has SearchMenu.TermStyle env
     , Element.HasAnimIdPrefix env
     , Language.HasLanguage env
+    , Monad m
     ) =>
     Anchors.CodeAnchors m -> Anchors.GuiAnchors (T m) (T m) -> Widget.R -> Model m ->
-    n (StatusBar.StatusWidget (IOTrans m), Widget (IOTrans m))
+    ReaderT env (OnceT (T m)) (StatusBar.StatusWidget (IOTrans m), Widget (IOTrans m))
 make cp gp width mkWorkArea =
     do
         theExportActions <- Lens.view has
@@ -117,9 +120,9 @@ make cp gp width mkWorkArea =
         workArea <-
             mkWorkArea >>= (env ^. has &)
             <&> Lens.mapped . Lens.mapped %~ uncurry ExprGui.Payload
-            & transaction
+            & lift
         gotoDefinition <-
-            GotoDefinition.make (transaction (workArea ^. Sugar.waGlobals))
+            GotoDefinition.make (workArea ^. Sugar.waGlobals & lift)
             <&> StatusBar.hoist IOTrans.liftTrans
         assocTagName <- DataOps.assocTagName
         do
@@ -139,8 +142,9 @@ make cp gp width mkWorkArea =
             Responsive.vboxSpaced
                 ?? (replGui : panesEdits ++ [newDefinitionButton])
                 <&> Widget.widget . Widget.eventMapMaker . Lens.mapped %~ (<> eventMap)
-            & GuiM.run assocTagName ExpressionEdit.make BinderEdit.make gp env
-            & transaction
+            & GuiM.run assocTagName ExpressionEdit.make BinderEdit.make
+                (Anchors.onGui (Property.mkProperty %~ lift) gp) env
+            & lift
             <&> render
             <&> (^. Align.tValue)
             <&> (,) gotoDefinition
@@ -205,9 +209,9 @@ makePaneBodyEdit pane =
 makePaneEdit ::
     (Monad m, Language.HasLanguage env) =>
     ExportActions m ->
-    Sugar.Pane (Sugar.EvaluationScopes Name (T m)) Name (T m) (T m)
-        (Sugar.Payload (Sugar.EvaluationScopes Name (T m)) Name (T m) (T m), ExprGui.Payload) ->
-    GuiM env (T m) (T m) (Responsive (IOTrans m))
+    Sugar.Pane (Sugar.EvaluationScopes Name (OnceT (T m))) Name (OnceT (T m)) (T m)
+        (Sugar.Payload (Sugar.EvaluationScopes Name (OnceT (T m))) Name (OnceT (T m)) (T m), ExprGui.Payload) ->
+    GuiM env (OnceT (T m)) (T m) (Responsive (IOTrans m))
 makePaneEdit theExportActions pane =
     do
         env <- Lens.view id
@@ -237,7 +241,7 @@ makePaneEdit theExportActions pane =
             <&> Widget.weakerEvents paneEventMap
 
 makeNewDefinition ::
-    Monad m => Anchors.CodeAnchors m -> GuiM env (T m) (T m) (T m Widget.Id)
+    Monad m => Anchors.CodeAnchors m -> GuiM env (OnceT (T m)) (T m) (T m Widget.Id)
 makeNewDefinition cp =
     GuiM.mkPrejumpPosSaver <&>
     \savePrecursor ->
@@ -264,7 +268,7 @@ newDefinitionDoc =
 
 makeNewDefinitionButton ::
     (Monad m, Language.HasLanguage env) =>
-    Anchors.CodeAnchors m -> GuiM env (T m) (T m) (Widget (T m))
+    Anchors.CodeAnchors m -> GuiM env (OnceT (T m)) (T m) (Widget (T m))
 makeNewDefinitionButton cp =
     do
         newDefId <- Element.subAnimId ?? ["New definition"] <&> Widget.Id
@@ -283,7 +287,7 @@ jumpBack gp =
 panesEventMap ::
     (Monad m, Language.HasLanguage env) =>
     ExportActions m -> Anchors.CodeAnchors m -> Anchors.GuiAnchors (T m) (T m) ->
-    Sugar.VarInfo -> GuiM env (T m) (T m) (EventMap (IOTrans m GuiState.Update))
+    Sugar.VarInfo -> GuiM env (OnceT (T m)) (T m) (EventMap (IOTrans m GuiState.Update))
 panesEventMap theExportActions cp gp replVarInfo =
     do
         env <- Lens.view id

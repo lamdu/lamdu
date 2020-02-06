@@ -6,6 +6,7 @@ module Lamdu.Sugar
     ) where
 
 import qualified Control.Lens as Lens
+import           Control.Monad.Once (OnceT)
 import           Data.CurAndPrev (CurAndPrev(..))
 import qualified Lamdu.Annotations as Annotations
 import qualified Lamdu.Cache as Cache
@@ -39,20 +40,20 @@ sugarWorkArea ::
     , Monad m
     ) =>
     (Tag -> (IsOperator, TextsInLang)) -> env -> Anchors.CodeAnchors m ->
-    T m
+    OnceT (T m)
     ( CurAndPrev EvalResults ->
-        T m (Sugar.WorkArea (Sugar.EvaluationScopes Name (T m)) Name (T m) (T m)
-            (Sugar.Payload (Sugar.EvaluationScopes Name (T m)) Name (T m) (T m),
+        OnceT (T m) (Sugar.WorkArea (Sugar.EvaluationScopes Name (OnceT (T m))) Name (OnceT (T m)) (T m)
+            (Sugar.Payload (Sugar.EvaluationScopes Name (OnceT (T m))) Name (OnceT (T m)) (T m),
                 (Sugar.ParenInfo, [Sugar.EntityId])))
     )
 sugarWorkArea getTagName env cp =
     SugarConvert.loadWorkArea env cp
     <&>
     \workArea eval ->
-    addEvaluationResults cp eval workArea
+    addEvaluationResults cp eval workArea & lift
     >>= report .
         AddNames.addToWorkArea env
-        (fmap getTagName . ExprIRef.readTagData)
+        (fmap getTagName . (lift . ExprIRef.readTagData))
     <&> AddParens.addToWorkArea
     <&> Lens.mapped %~ \(parenInfo, pl) -> pl <&> (,) parenInfo
     where

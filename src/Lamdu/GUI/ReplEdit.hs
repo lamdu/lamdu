@@ -6,6 +6,7 @@ module Lamdu.GUI.ReplEdit
 
 import qualified Control.Lens as Lens
 import           Control.Lens.Extended (OneOf)
+import           Control.Monad.Once (OnceT)
 import qualified Control.Monad.Reader as Reader
 import           Data.CurAndPrev (CurPrevTag(..), curPrevTag, fallbackToPrev)
 import           GUI.Momentu.Align (Aligned(..), value, TextWidget)
@@ -242,9 +243,9 @@ make ::
     , Has (Texts.Navigation Text) env
     ) =>
     ExportRepl m ->
-    Sugar.Repl (Sugar.EvaluationScopes Name (T m)) Name (T m) (T m)
-    (Sugar.Payload (Sugar.EvaluationScopes Name (T m)) Name (T m) (T m), ExprGui.Payload) ->
-    GuiM env (T m) (T m) (Responsive (IOTrans m))
+    Sugar.Repl (Sugar.EvaluationScopes Name (OnceT (T m))) Name (OnceT (T m)) (T m)
+    (Sugar.Payload (Sugar.EvaluationScopes Name (OnceT (T m))) Name (OnceT (T m)) (T m), ExprGui.Payload) ->
+    GuiM env (OnceT (T m)) (T m) (Responsive (IOTrans m))
 make expRepl (Sugar.Repl replExpr varInfo replResult) =
     do
         env <- Lens.view id

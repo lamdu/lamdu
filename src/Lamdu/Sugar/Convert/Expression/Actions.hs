@@ -6,6 +6,7 @@ module Lamdu.Sugar.Convert.Expression.Actions
     ) where
 
 import qualified Control.Lens.Extended as Lens
+import           Control.Monad.Once (OnceT)
 import qualified Data.Map as Map
 import qualified Data.Property as Property
 import qualified Data.Set as Set
@@ -127,7 +128,7 @@ mkExtractToLet outerScope stored =
 
 mkWrapInRecord ::
     Monad m =>
-    Input.Payload m a # V.Term -> ConvertM m (TagReplace InternalName (T m) (T m) ())
+    Input.Payload m a # V.Term -> ConvertM m (TagReplace InternalName (OnceT (T m)) (T m) ())
 mkWrapInRecord exprPl =
     do
         typeProtectedSetToVal <- ConvertM.typeProtectedSetToVal
@@ -177,7 +178,7 @@ makeSetToEmptyRecord exprPl =
 
 makeActions ::
     Monad m =>
-    Input.Payload m a # V.Term -> ConvertM m (NodeActions InternalName (T m) (T m))
+    Input.Payload m a # V.Term -> ConvertM m (NodeActions InternalName (OnceT (T m)) (T m))
 makeActions exprPl =
     do
         ext <- mkExtract exprPl
@@ -248,8 +249,8 @@ setChildReplaceParentActions ::
     Monad m =>
     ConvertM m (
         ExprIRef.HRef m # V.Term ->
-        Term v name (T m) (T m) # Annotated (ConvertPayload m a) ->
-        Term v name (T m) (T m) # Annotated (ConvertPayload m a)
+        Term v name (OnceT (T m)) (T m) # Annotated (ConvertPayload m a) ->
+        Term v name (OnceT (T m)) (T m) # Annotated (ConvertPayload m a)
     )
 setChildReplaceParentActions =
     ConvertM.typeProtectedSetToVal
@@ -293,7 +294,7 @@ subexprPayloads subexprs cullPoints =
 addActionsWith ::
     Monad m =>
     a -> Input.Payload m b # V.Term ->
-    Term v InternalName (T m) (T m) # Annotated (ConvertPayload m a) ->
+    Term v InternalName (OnceT (T m)) (T m) # Annotated (ConvertPayload m a) ->
     ConvertM m (ExpressionU v m a)
 addActionsWith userData exprPl bodyS =
     do
@@ -311,7 +312,7 @@ addActionsWith userData exprPl bodyS =
 addActions ::
     (Monad m, Monoid a, Recursively HFoldable h) =>
     h # Ann (Input.Payload m a) -> Input.Payload m a # V.Term ->
-    Term v InternalName (T m) (T m) # Annotated (ConvertPayload m a) ->
+    Term v InternalName (OnceT (T m)) (T m) # Annotated (ConvertPayload m a) ->
     ConvertM m (ExpressionU v m a)
 addActions subexprs exprPl bodyS =
     addActionsWith (mconcat (subexprPayloads subexprs (bodyS ^.. childPayloads)))
@@ -352,13 +353,13 @@ makeAnnotation showAnn pl
 convertPayloads ::
     (Monad m, RTraversable h) =>
     Annotated (Ann.ShowAnnotation, ConvertPayload m a) # h ->
-    ConvertM m (Annotated (Payload EvalPrep InternalName (T m) (T m), a) # h)
+    ConvertM m (Annotated (Payload EvalPrep InternalName (OnceT (T m)) (T m), a) # h)
 convertPayloads = htraverseFlipped (const (Lens._Wrapped convertPayload))
 
 convertPayload ::
     Monad m =>
     (Ann.ShowAnnotation, ConvertPayload m a) ->
-    ConvertM m (Payload EvalPrep InternalName (T m) (T m), a)
+    ConvertM m (Payload EvalPrep InternalName (OnceT (T m)) (T m), a)
 convertPayload (showAnn, pl) =
     makeAnnotation showAnn (pl ^. pInput)
     <&>

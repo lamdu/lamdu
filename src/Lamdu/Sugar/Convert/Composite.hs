@@ -6,6 +6,7 @@ module Lamdu.Sugar.Convert.Composite
     ) where
 
 import qualified Control.Lens as Lens
+import           Control.Monad.Once (OnceT)
 import qualified Data.Set as Set
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
@@ -40,7 +41,7 @@ convertAddItem ::
     (T.Tag -> ValI m -> T m (DataOps.CompositeExtendResult m)) ->
     Set T.Tag ->
     Input.Payload m a # V.Term ->
-    ConvertM m (TagReplace InternalName (T m) (T m) EntityId)
+    ConvertM m (TagReplace InternalName (OnceT (T m)) (T m) EntityId)
 convertAddItem extendOp existingTags pl =
     do
         addItem <-
@@ -68,11 +69,11 @@ convertExtend ::
     Monad m =>
     (T.Tag -> ValI m -> ValI m -> ExprIRef.ValBody m) ->
     (T.Tag -> ValI m -> T m (DataOps.CompositeExtendResult m)) ->
-    Annotated b # Term EvalPrep InternalName (T m) (T m) ->
+    Annotated b # Term EvalPrep InternalName (OnceT (T m)) (T m) ->
     Input.Payload m a # V.Term ->
     ExtendVal m (Input.Payload m a # V.Term) ->
-    Composite EvalPrep InternalName (T m) (T m) # Annotated b ->
-    ConvertM m (Composite EvalPrep InternalName (T m) (T m) # Annotated b)
+    Composite EvalPrep InternalName (OnceT (T m)) (T m) # Annotated b ->
+    ConvertM m (Composite EvalPrep InternalName (OnceT (T m)) (T m) # Annotated b)
 convertExtend cons extendOp valS exprPl extendV restC =
     do
         itemS <-
@@ -101,11 +102,11 @@ convertOneItemOpenComposite ::
     V.Leaf ->
     (T.Tag -> ValI m -> ValI m -> ExprIRef.ValBody m) ->
     (T.Tag -> ValI m -> T m (DataOps.CompositeExtendResult m)) ->
-    k # Term EvalPrep InternalName (T m) (T m) ->
-    k # Term EvalPrep InternalName (T m) (T m) ->
+    k # Term EvalPrep InternalName (OnceT (T m)) (T m) ->
+    k # Term EvalPrep InternalName (OnceT (T m)) (T m) ->
     Input.Payload m a # V.Term ->
     ExtendVal m (Input.Payload m a # V.Term) ->
-    ConvertM m (Composite EvalPrep InternalName (T m) (T m) # k)
+    ConvertM m (Composite EvalPrep InternalName (OnceT (T m)) (T m) # k)
 convertOneItemOpenComposite leaf cons extendOp valS restS exprPl extendV =
     Composite
     <$> ( convertItem cons
@@ -135,7 +136,7 @@ convertEmpty ::
     Monad m =>
     (T.Tag -> ValI m -> T m (DataOps.CompositeExtendResult m)) ->
     Input.Payload m a # V.Term ->
-    ConvertM m (Composite v InternalName (T m) (T m) expr)
+    ConvertM m (Composite v InternalName (OnceT (T m)) (T m) expr)
 convertEmpty extendOp exprPl =
     do
         actions <-
@@ -161,10 +162,10 @@ convertItem ::
     (T.Tag -> ValI m -> ValI m -> ExprIRef.ValBody m) ->
     HRef m # V.Term ->
     EntityId -> Set T.Tag ->
-    h # Term EvalPrep InternalName (T m) (T m) ->
+    h # Term EvalPrep InternalName (OnceT (T m)) (T m) ->
     -- Using tuple in place of shared RecExtend/Case structure (no such in lamdu-calculus)
     ExtendVal m (ValI m) ->
-    ConvertM m (CompositeItem EvalPrep InternalName (T m) (T m) # h)
+    ConvertM m (CompositeItem EvalPrep InternalName (OnceT (T m)) (T m) # h)
 convertItem cons stored inst forbiddenTags exprS extendVal =
     do
         delItem <- deleteItem stored restI
@@ -186,8 +187,8 @@ convertItem cons stored inst forbiddenTags exprS extendVal =
 
 type BodyPrism m a =
     Lens.Prism'
-    (Term EvalPrep InternalName (T m) (T m) # Annotated (ConvertPayload m a))
-    (Composite EvalPrep InternalName (T m) (T m) # Annotated (ConvertPayload m a))
+    (Term EvalPrep InternalName (OnceT (T m)) (T m) # Annotated (ConvertPayload m a))
+    (Composite EvalPrep InternalName (OnceT (T m)) (T m) # Annotated (ConvertPayload m a))
 
 convert ::
     (Monad m, Monoid a) =>

@@ -3,6 +3,8 @@ module Test.Lamdu.Sugar where
 
 import           Control.DeepSeq (NFData, deepseq)
 import qualified Control.Lens as Lens
+import           Control.Monad.Once (OnceT, _OnceT)
+import           Control.Monad.State (evalStateT)
 import           Control.Monad.Transaction (getP)
 import qualified Data.Map as Map
 import qualified Data.Set as Set
@@ -97,11 +99,12 @@ workAreaLowLevelLoad =
 
 validate ::
     (NFData v, NFData t, NFData name) =>
-    WorkArea v name (T fa) (T fb)
-    (Sugar.Payload v name (T fa) (T fb), (t, [EntityId])) ->
+    WorkArea v name (OnceT (T fa)) (T fb)
+    (Sugar.Payload v name (OnceT (T fa)) (T fb), (t, [EntityId])) ->
     T ViewM
-    (WorkArea v name (T fa) (T fb)
-        (Sugar.Payload v name (T fa) (T fb), (t, [EntityId])))
+    ( WorkArea v name (OnceT (T fa)) (T fb)
+        (Sugar.Payload v name (OnceT (T fa)) (T fb), (t, [EntityId]))
+    )
 validate workArea
     | Map.null duplicateEntityIds =
         do
@@ -134,14 +137,14 @@ convertWorkArea ::
     ) =>
     env ->
     T ViewM
-    ( WorkArea (EvaluationScopes Name (T ViewM)) Name (T ViewM) (T ViewM)
-        ( Sugar.Payload (EvaluationScopes Name (T ViewM)) Name (T ViewM) (T ViewM)
+    ( WorkArea (EvaluationScopes Name (OnceT (T ViewM))) Name (OnceT (T ViewM)) (T ViewM)
+        ( Sugar.Payload (EvaluationScopes Name (OnceT (T ViewM))) Name (OnceT (T ViewM)) (T ViewM)
         , (ParenInfo, [EntityId])
         )
     )
 convertWorkArea env =
-    sugarWorkArea (Tag.getTagName env) env codeAnchors
-    >>= (env ^. has &)
+    (sugarWorkArea (Tag.getTagName env) env codeAnchors >>= (env ^. has &)) ^. _OnceT
+    & (`evalStateT` mempty)
     >>= validate
 
 testProgram :: FilePath -> T ViewM a -> IO a

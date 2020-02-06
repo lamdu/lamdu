@@ -7,6 +7,7 @@ module Control.Monad.Transaction
     , getP, setP, readIRef, writeIRef
     ) where
 
+import           Control.Monad.Once (OnceT)
 import           Control.Monad.Trans.Class (lift)
 import           Control.Monad.Trans.Except (ExceptT)
 import           Control.Monad.Trans.Maybe (MaybeT)
@@ -32,6 +33,7 @@ instance MonadTransaction n m => MonadTransaction n (MaybeT    m) where transact
 instance MonadTransaction n m => MonadTransaction n (StateT  s m) where transaction = lift . transaction
 instance MonadTransaction n m => MonadTransaction n (ReaderT r m) where transaction = lift . transaction
 instance MonadTransaction n m => MonadTransaction n (ExceptT e m) where transaction = lift . transaction
+instance MonadTransaction n m => MonadTransaction n (OnceT m)     where transaction = lift . transaction
 
 getP :: MonadTransaction n m => Property.MkProperty' (T n) a -> m a
 getP = transaction . Property.getP

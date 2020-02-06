@@ -6,6 +6,7 @@ module Lamdu.Sugar.Convert.Tag
     ) where
 
 import qualified Control.Lens as Lens
+import           Control.Monad.Once (OnceT)
 import           Control.Monad.Transaction (MonadTransaction, getP, setP)
 import           Data.Property (MkProperty')
 import qualified Data.Property as Property
@@ -45,7 +46,7 @@ ref ::
     Monad m =>
     T.Tag -> (T.Tag -> name) -> Set T.Tag -> (T.Tag -> EntityId) ->
     (T.Tag -> T m ()) ->
-    ConvertM m (TagRef name (T m) (T m))
+    ConvertM m (TagRef name (OnceT (T m)) (T m))
 ref tag name forbiddenTags mkInstance setTag =
     Lens.view id
     <&> \env ->
@@ -58,7 +59,7 @@ refWith ::
     Anchors.CodeAnchors m ->
     T.Tag -> (T.Tag -> name) -> Set T.Tag -> AllowAnonTag -> (T.Tag -> EntityId) ->
     (T.Tag -> T m ()) -> MkProperty' (T m) (Set T.Tag) ->
-    TagRef name (T m) (T m)
+    TagRef name (OnceT (T m)) (T m)
 refWith cp tag name forbiddenTags allowAnon mkInstance setTag tagsProp =
     TagRef
     { _tagRefTag = Tag
@@ -79,7 +80,7 @@ refWith cp tag name forbiddenTags allowAnon mkInstance setTag tagsProp =
 replace ::
     Monad m =>
     (T.Tag -> name) -> Set T.Tag -> AllowAnonTag -> (T.Tag -> EntityId) -> (T.Tag -> T m a) ->
-    ConvertM m (TagReplace name (T m) (T m) a)
+    ConvertM m (TagReplace name (OnceT (T m)) (T m) a)
 replace name forbiddenTags allowAnon mkInstance setTag =
     Lens.view id
     <&> \env ->
@@ -91,19 +92,23 @@ replaceWith ::
     (T.Tag -> name) -> Set T.Tag -> AllowAnonTag -> (T.Tag -> EntityId) ->
     (T.Tag -> T m a) ->
     MkProperty' (T m) (Set T.Tag) ->
-    TagReplace name (T m) (T m) a
+    TagReplace name (OnceT (T m)) (T m) a
 replaceWith name forbiddenTags allowAnon mkInstance setTag tagsProp =
     TagReplace
     { _tsOptions =
-        getP tagsProp
+        getP tagsProp & lift
         <&> (`Set.difference` forbiddenTags)
         <&> Set.toList
         <&> map toOption
     , _tsNewTag =
-        DataOps.genNewTag <&>
-        \newTag ->
-        toOption newTag
-        & toPick %~ (Property.modP tagsProp (Lens.contains newTag .~ True) >>)
+        DataOps.genNewTag
+        <&>
+        ( \newTag ->
+            toOption newTag
+            & toPick %~ (Property.modP tagsProp (Lens.contains newTag .~ True) >>)
+        )
+        -- TODO: Do only once!
+        & lift
     , _tsAnon =
         case allowAnon of
         RequireTag -> Nothing
@@ -126,7 +131,7 @@ replaceWith name forbiddenTags allowAnon mkInstance setTag tagsProp =
 taggedEntityWith ::
     (UniqueId.ToUUID a, MonadTransaction n m) =>
     Anchors.CodeAnchors n ->
-    a -> MkProperty' (T n) (Set T.Tag) -> m (TagRef InternalName (T n) (T n))
+    a -> MkProperty' (T n) (Set T.Tag) -> m (TagRef InternalName (OnceT (T n)) (T n))
 taggedEntityWith cp entity tagsProp =
     getP prop
     <&>
@@ -138,7 +143,7 @@ taggedEntityWith cp entity tagsProp =
 
 taggedEntity ::
     (UniqueId.ToUUID a, Monad m) =>
-    a -> ConvertM m (TagRef InternalName (T m) (T m))
+    a -> ConvertM m (TagRef InternalName (OnceT (T m)) (T m))
 taggedEntity entity =
     do
         env <- Lens.view id

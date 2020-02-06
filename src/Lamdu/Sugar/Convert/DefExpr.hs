@@ -4,6 +4,7 @@ module Lamdu.Sugar.Convert.DefExpr
     ) where
 
 import qualified Control.Lens as Lens
+import           Control.Monad.Once (OnceT)
 import qualified Data.Property as Property
 import           Hyper.Type.AST.Scheme (saveScheme)
 import           Hyper.Unify.Binding (UVar)
@@ -34,7 +35,7 @@ convert ::
     Pure # T.Scheme ->
     Definition.Expr (Ann (Input.Payload m a) # V.Term) ->
     DefI m ->
-    ConvertM m (DefinitionBody EvalPrep InternalName (T m) (T m) (ConvertPayload m a))
+    ConvertM m (DefinitionBody EvalPrep InternalName (OnceT (T m)) (T m) (ConvertPayload m a))
 convert defType defExpr defI =
     do
         (presMode, content) <-
@@ -50,7 +51,7 @@ convert defType defExpr defI =
         defTypeS <- ConvertType.convertScheme (EntityId.currentTypeOf entityId) defType
         DefinitionBodyExpression DefinitionExpression
             { _deType = defTypeS
-            , _dePresentationMode = presMode <&> (^. Property.mkProperty)
+            , _dePresentationMode = presMode <&> (^. Property.mkProperty) <&> lift
             , _deContent = content
             } & pure
     where

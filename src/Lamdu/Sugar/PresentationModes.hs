@@ -5,6 +5,7 @@ module Lamdu.Sugar.PresentationModes
 
 import           Control.Lens (Const)
 import qualified Control.Lens as Lens
+import           Control.Monad.Once (OnceT)
 import           Control.Monad.Transaction (getP)
 import qualified Data.Map as Map
 import           Lamdu.Calc.Term (Term)
@@ -26,12 +27,12 @@ type T = Transaction
 makeLabeledApply ::
     Monad m =>
     Annotated (ConvertPayload m a) # Const (Sugar.BinderVarRef InternalName (T m)) ->
-    [ Sugar.AnnotatedArg v InternalName (T m) (T m) # Annotated (ConvertPayload m a)
+    [ Sugar.AnnotatedArg v InternalName (OnceT (T m)) (T m) # Annotated (ConvertPayload m a)
     ] ->
     [Annotated (ConvertPayload m a) # Const (Sugar.GetVar InternalName (T m))] ->
     Input.Payload m a # Term ->
     ConvertM m
-    (Sugar.LabeledApply v InternalName (T m) (T m) # Annotated (ConvertPayload m a))
+    (Sugar.LabeledApply v InternalName (OnceT (T m)) (T m) # Annotated (ConvertPayload m a))
 makeLabeledApply func args punnedArgs exprPl =
     do
         presentationMode <- func ^. hVal . Lens._Wrapped . Sugar.bvVar & Anchors.assocPresentationMode & getP

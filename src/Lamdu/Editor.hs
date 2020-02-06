@@ -9,9 +9,12 @@ import           Control.Concurrent.MVar
 import           Control.DeepSeq (deepseq)
 import qualified Control.Exception as E
 import qualified Control.Lens as Lens
+import           Control.Monad.Once (OnceT, _OnceT, OnceState, MonadOnce(..))
+import           Control.Monad.State (StateT(..), mapStateT)
 import           Control.Monad.Trans.FastWriter (evalWriterT)
 import qualified Data.Aeson.Config as AesonConfig
 import           Data.CurAndPrev (current)
+import           Data.IORef (IORef, newIORef, readIORef, writeIORef)
 import           Data.Property (Property(..), MkProperty', mkProperty)
 import qualified Data.Property as Property
 import           GHC.Stack (SrcLoc(..))
@@ -55,9 +58,11 @@ import           Lamdu.Settings (Settings(..))
 import qualified Lamdu.Settings as Settings
 import qualified Lamdu.Style.Make as MakeStyle
 import           Lamdu.Sugar (sugarWorkArea)
+import qualified Lamdu.VersionControl as VersionControl
 import           Revision.Deltum.IRef (IRef)
 import           Revision.Deltum.Transaction (Transaction)
 import qualified Revision.Deltum.Transaction as Transaction
+import           Revision.Deltum.Rev.Version (Version)
 import qualified System.Environment as Env
 import           System.IO (hPutStrLn, hFlush, stderr)
 import qualified System.Metrics as Metrics
@@ -191,9 +196,10 @@ runMainLoop ::
     M.Window -> MainLoop Handlers -> Sampler ->
     EvalManager.Evaluator -> Transaction.Store DbM ->
     MkProperty' IO Settings -> Cache -> Cache.Functions -> Debug.Monitors ->
+    IORef (Maybe EditorCache) ->
     IO ()
 runMainLoop ekg stateStorage subpixel win mainLoop configSampler
-    evaluator db mkSettingsProp cache cachedFunctions monitors
+    evaluator db mkSettingsProp cache cachedFunctions monitors cacheRef
     =
     do
         getFonts <- EditorFonts.makeGetFonts configSampler subpixel
@@ -208,7 +214,7 @@ runMainLoop ekg stateStorage subpixel win mainLoop configSampler
                     env <-
                         mkEnv cachedFunctions monitors fonts evaluator
                         configSampler mainEnv settingsProp
-                    makeRootWidget env monitors db evaluator sample
+                    makeRootWidget env monitors db evaluator sample cacheRef
         reportPerfCounters <- traverse makeReportPerfCounters ekg
         MainLoop.run mainLoop win MainLoop.Handlers
             { makeWidget = makeWidget
@@ -222,7 +228,7 @@ makeMainGui ::
     [TitledSelection Folder.Theme] -> [TitledSelection Folder.Language] ->
     (forall a. T DbLayout.DbM a -> IO a) ->
     Env -> GUIMain.Model DbLayout.ViewM ->
-    T DbLayout.DbM (Widget IO)
+    OnceT (T DbLayout.DbM) (Widget IO)
 makeMainGui themeNames langNames dbToIO env mkWorkArea =
     GUIMain.make themeNames langNames (env ^. Env.settings) env mkWorkArea
     <&> Widget.updates %~
@@ -264,12 +270,53 @@ titledThemeSelection (Selection lang) sel =
     , _selection = sel
     }
 
+data EditorCache = EditorCache
+    { ecState :: OnceState
+    , ecMkWorkArea :: GUIMain.Model DbLayout.ViewM
+    , ecVer :: Version DbM
+    }
+
+initCache :: Transaction.Store DbM -> Env -> IORef (Maybe EditorCache) -> IO EditorCache
+initCache db env cacheRef =
+    do
+        curVer <- DbLayout.runDbTransaction db VersionControl.getVersion
+        readIORef cacheRef
+            >>=
+            \case
+            Just cache | curVer == ecVer cache -> pure cache
+            _ ->
+                do
+                    (x, s) <-
+                        once (sugarWorkArea (Tag.getTagName env) env DbLayout.codeAnchors) ^. _OnceT
+                        & (`runStateT` mempty)
+                        & VersionControl.runAction
+                        & DbLayout.runDbTransaction db
+                    let r = EditorCache
+                            { ecState = s
+                            , ecMkWorkArea = x
+                            , ecVer = curVer
+                            }
+                    writeIORef cacheRef (Just r)
+                    pure r
+
+withCache ::
+    Transaction.Store DbM -> Env -> IORef (Maybe EditorCache) ->
+    (EditorCache -> OnceT IO a) ->
+    IO a
+withCache db env cacheRef action =
+    do
+        cache <- initCache db env cacheRef
+        (r, s) <- runStateT (action cache ^. _OnceT) (ecState cache)
+        writeIORef cacheRef (Just cache { ecState = s })
+        pure r
+
 makeRootWidget ::
     HasCallStack =>
     Env -> Debug.Monitors ->
     Transaction.Store DbM -> EvalManager.Evaluator -> ConfigSampler.Sample ->
+    IORef (Maybe EditorCache) ->
     IO (Widget IO)
-makeRootWidget env perfMonitors db evaluator sample =
+makeRootWidget env perfMonitors db evaluator sample cacheRef =
     do
         themeNames <-
             Folder.getSelections (Proxy @Theme)
@@ -278,9 +325,11 @@ makeRootWidget env perfMonitors db evaluator sample =
             Folder.getSelections (Proxy @Language)
             >>= traverse titledLangSelection
         let bgColor = env ^. Env.theme . Theme.backgroundColor
-        sugarWorkArea (Tag.getTagName env) env DbLayout.codeAnchors
-            & makeMainGui themeNames langNames dbToIO env
-            & dbToIO
+        withCache db env cacheRef
+            (\cache ->
+                makeMainGui themeNames langNames dbToIO env (ecMkWorkArea cache)
+                & _OnceT %~ mapStateT dbToIO
+            )
             <&> M.backgroundColor backgroundId bgColor
             <&> measureLayout
     where
@@ -303,7 +352,9 @@ makeRootWidget env perfMonitors db evaluator sample =
                 Debug.Evaluator report = monitors ^. Debug.layout . Debug.mPure
                 f x = report ((x ^. Widget.fFocalAreas) `deepseq` x)
 
-run :: HasCallStack => Opts.EditorOpts -> Transaction.Store DbM -> IO ()
+run ::
+    HasCallStack =>
+    Opts.EditorOpts -> Transaction.Store DbM -> IO ()
 run opts rawDb =
     do
         mainLoop <- MainLoop.mainLoopWidget
@@ -321,6 +372,7 @@ run opts rawDb =
         let Debug.EvaluatorM reportDb = monitors ^. Debug.database . Debug.mAction
         let db = Transaction.onStoreM reportDb rawDb
         let stateStorage = stateStorageInIRef db DbLayout.guiState
+        cacheRef <- newIORef Nothing
         withMVarProtection db $
             \dbMVar ->
             M.withGLFW $
@@ -334,7 +386,8 @@ run opts rawDb =
                 mkSettingsProp <-
                     EditorSettings.newProp initialSettings configSampler evaluator
                 runMainLoop ekg stateStorage subpixel win mainLoop
-                    configSampler evaluator db mkSettingsProp cache cachedFunctions monitors
+                    configSampler evaluator db mkSettingsProp cache
+                    cachedFunctions monitors cacheRef
     where
         subpixel
             | opts ^. Opts.eoSubpixelEnabled = Font.LCDSubPixelEnabled
