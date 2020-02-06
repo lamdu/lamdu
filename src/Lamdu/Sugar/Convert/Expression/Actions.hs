@@ -206,17 +206,17 @@ instance FixReplaceParent (Const a) where
 --   replaces parent of fragment rather than fragment itself (i.e: replaces grandparent).
 
 -- TODO: These instances have a repeating pattern
-instance FixReplaceParent (Binder name (T m) (T m)) where
+instance FixReplaceParent (Binder name i o) where
     fixReplaceParent setToExpr =
         (hVal . _BinderExpr . typeMismatchPayloads %~ join setToExpr) .
         ((bodyIndex . Lens.filteredByIndex _BinderExpr . fragmentAnnIndex) <. annotation %@~ setToExpr)
 
-instance FixReplaceParent (Body name (T m) (T m)) where
+instance FixReplaceParent (Body name i o) where
     fixReplaceParent setToExpr =
         (hVal . typeMismatchPayloads %~ join setToExpr) .
         ((bodyIndex . fragmentAnnIndex) <. annotation %@~ setToExpr)
 
-instance FixReplaceParent (Else name (T m) (T m)) where
+instance FixReplaceParent (Else name i o) where
     fixReplaceParent setToExpr =
         (hVal . _SimpleElse . typeMismatchPayloads %~ join setToExpr) .
         ((bodyIndex . Lens.filteredByIndex _SimpleElse . fragmentAnnIndex) <. annotation%@~ setToExpr)
