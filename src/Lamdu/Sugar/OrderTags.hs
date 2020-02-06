@@ -1,60 +1,64 @@
-{-# LANGUAGE TypeApplications, FlexibleInstances, MultiParamTypeClasses, DefaultSignatures, ScopedTypeVariables, TypeOperators #-}
+{-# LANGUAGE TypeApplications, FlexibleInstances, MultiParamTypeClasses, DefaultSignatures, ScopedTypeVariables, TypeOperators, UndecidableInstances #-}
 
 module Lamdu.Sugar.OrderTags
     ( orderDef, orderType, orderNode
     ) where
 
 import qualified Control.Lens as Lens
+import           Control.Monad.Transaction (MonadTransaction(..))
 import           Data.List (sortOn)
 import           Hyper
 import           Lamdu.Data.Tag (tagOrder)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Sugar.Lens as SugarLens
 import qualified Lamdu.Sugar.Types as Sugar
-import           Revision.Deltum.Transaction (Transaction)
 
 import           Lamdu.Prelude
 
-type T = Transaction
-type OrderT m x = x -> T m x
+type OrderT m x = x -> m x
 
-class Order m name o t where
-    order :: OrderT m (t # Ann (Const (Sugar.Payload name i o a)))
+class Order i name o t where
+    order :: OrderT i (t # Ann (Const (Sugar.Payload name i o a)))
 
     default order ::
-        ( Monad m, HTraversable t
-        , HNodesConstraint t (Order m name o)
+        ( MonadTransaction m i, HTraversable t
+        , HNodesConstraint t (Order i name o)
         ) =>
-        OrderT m (t # Ann (Const (Sugar.Payload name i o a)))
-    order = htraverse (Proxy @(Order m name o) #> orderNode)
+        OrderT i (t # Ann (Const (Sugar.Payload name i o a)))
+    order = htraverse (Proxy @(Order i name o) #> orderNode)
 
-orderByTag :: Monad m => (a -> Sugar.Tag name) -> OrderT m [a]
+orderByTag :: MonadTransaction m i => (a -> Sugar.Tag name) -> OrderT i [a]
 orderByTag toTag =
     fmap (map fst . sortOn snd) . traverse loadOrder
     where
         loadOrder x =
             toTag x ^. Sugar.tagVal
             & ExprIRef.readTagData
+            & transaction
             <&> (,) x . (^. tagOrder)
 
-orderComposite :: Monad m => OrderT m (Sugar.CompositeFields name (Ann a # Sugar.Type name))
+orderComposite ::
+    MonadTransaction m i =>
+    OrderT i (Sugar.CompositeFields name (Ann a # Sugar.Type name))
 orderComposite =
     Sugar.compositeFields $
     \fields -> fields & orderByTag (^. _1) >>= traverse . _2 %%~ orderType
 
-orderTBody :: Monad m => OrderT m (Sugar.Type name # Ann a)
+orderTBody ::
+    MonadTransaction m i =>
+    OrderT i (Sugar.Type name # Ann a)
 orderTBody t =
     t
     & Sugar._TRecord %%~ orderComposite
     >>= Sugar._TVariant %%~ orderComposite
     >>= htraverse1 orderType
 
-orderType :: Monad m => OrderT m (Ann a # Sugar.Type name)
+orderType :: MonadTransaction m i => OrderT i (Ann a # Sugar.Type name)
 orderType = hVal orderTBody
 
 orderRecord ::
-    Monad m =>
-    OrderT m (Sugar.Composite name (T m) o # Ann (Const (Sugar.Payload name i o a)))
+    MonadTransaction m i =>
+    OrderT i (Sugar.Composite name i o # Ann (Const (Sugar.Payload name i o a)))
 orderRecord (Sugar.Composite items punned tail_ addItem) =
     Sugar.Composite
     <$> (orderByTag (^. Sugar.ciTag . Sugar.tagRefTag) items
@@ -63,31 +67,31 @@ orderRecord (Sugar.Composite items punned tail_ addItem) =
     <*> traverse orderNode tail_
     <*> pure addItem
 
-instance Monad m => Order m name o (Sugar.LabeledApply name (T m) o) where
+instance MonadTransaction m i => Order i name o (Sugar.LabeledApply name i o) where
     order (Sugar.LabeledApply func specialArgs annotated punned) =
         Sugar.LabeledApply func specialArgs
         <$> orderByTag (^. Sugar.aaTag) annotated
         <*> pure punned
-        >>= htraverse (Proxy @(Order m name o) #> orderNode)
+        >>= htraverse (Proxy @(Order i name o) #> orderNode)
 
 orderCase ::
-    Monad m =>
-    OrderT m (Sugar.Case name (T m) o # Ann (Const (Sugar.Payload name i o a)))
+    MonadTransaction m i =>
+    OrderT i (Sugar.Case name i o # Ann (Const (Sugar.Payload name i o a)))
 orderCase = Sugar.cBody orderRecord
 
-instance Monad m => Order m name o (Sugar.Lambda name (T m) o)
-instance Monad m => Order m name o (Lens.Const a)
-instance Monad m => Order m name o (Sugar.Else name (T m) o)
-instance Monad m => Order m name o (Sugar.IfElse name (T m) o)
-instance Monad m => Order m name o (Sugar.Let name (T m) o)
+instance MonadTransaction m i => Order i name o (Sugar.Lambda name i o)
+instance MonadTransaction m i => Order i name o (Lens.Const a)
+instance MonadTransaction m i => Order i name o (Sugar.Else name i o)
+instance MonadTransaction m i => Order i name o (Sugar.IfElse name i o)
+instance MonadTransaction m i => Order i name o (Sugar.Let name i o)
 
-instance Monad m => Order m name o (Sugar.Function name (T m) o) where
+instance MonadTransaction m i => Order i name o (Sugar.Function name i o) where
     order x =
         x
         & (Sugar.fParams . Sugar._Params) orderParams
         >>= Sugar.fBody orderNode
 
-orderParams :: Monad m => OrderT m [(Sugar.FuncParam name (T m), Sugar.ParamInfo name (T m) o)]
+orderParams :: MonadTransaction m i => OrderT i [(Sugar.FuncParam name i, Sugar.ParamInfo name i o)]
 orderParams xs =
     xs
     & (Lens.traversed . _1 . Sugar.fpAnnotation . Sugar._AnnotationType) orderType
@@ -95,15 +99,15 @@ orderParams xs =
 
 -- Special case assignment and binder to invoke the special cases in expr
 
-instance Monad m => Order m name o (Sugar.Assignment name (T m) o) where
+instance MonadTransaction m i => Order i name o (Sugar.Assignment name i o) where
     order (Sugar.BodyPlain x) = Sugar.apBody order x <&> Sugar.BodyPlain
     order (Sugar.BodyFunction x) = order x <&> Sugar.BodyFunction
 
-instance Monad m => Order m name o (Sugar.Binder name (T m) o) where
+instance MonadTransaction m i => Order i name o (Sugar.Binder name i o) where
     order (Sugar.BinderExpr x) = order x <&> Sugar.BinderExpr
     order (Sugar.BinderLet x) = order x <&> Sugar.BinderLet
 
-instance Monad m => Order m name o (Sugar.Body name (T m) o) where
+instance MonadTransaction m i => Order i name o (Sugar.Body name i o) where
     order (Sugar.BodyLam l) = order l <&> Sugar.BodyLam
     order (Sugar.BodyRecord r) = orderRecord r <&> Sugar.BodyRecord
     order (Sugar.BodyLabeledApply a) = order a <&> Sugar.BodyLabeledApply
@@ -125,15 +129,16 @@ instance Monad m => Order m name o (Sugar.Body name (T m) o) where
     order x@Sugar.BodyPlaceHolder{} = pure x
 
 orderNode ::
-    (Monad m, Order m name o f) =>
-    OrderT m (Annotated (Sugar.Payload name i o a) f)
+    (MonadTransaction m i, Order i name o f) =>
+    OrderT i (Annotated (Sugar.Payload name i o a) f)
 orderNode (Ann (Const a) x) =
     Ann
     <$> ((Sugar.plAnnotation . SugarLens.annotationTypes) orderType a <&> Const)
     <*> order x
 
 orderDef ::
-    Monad m => OrderT m (Sugar.Definition name (T m) o (Sugar.Payload name i o a))
+    MonadTransaction m i =>
+    OrderT i (Sugar.Definition name i o (Sugar.Payload name i o a))
 orderDef def =
     def
     & (SugarLens.defSchemes . Sugar.schemeType) orderType
