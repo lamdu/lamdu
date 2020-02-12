@@ -18,8 +18,8 @@ import           Lamdu.Prelude
 
 -- GUI input payload on sugar exprs
 data Payload = Payload
-    { _plHiddenEntityIds :: [Sugar.EntityId]
-    , _plParenInfo :: !ParenInfo
+    { _plParenInfo :: !ParenInfo
+    , _plHiddenEntityIds :: [Sugar.EntityId]
     } deriving (Generic, Eq, Show)
 Lens.makeLenses ''Payload
 

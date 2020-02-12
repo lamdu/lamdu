@@ -115,7 +115,7 @@ make cp gp width =
         env <- Lens.view id
         workArea <-
             sugarWorkArea (Tag.getTagName env) env cp
-            <&> Lens.mapped . Lens.mapped %~ uncurry (flip ExprGui.Payload)
+            <&> Lens.mapped . Lens.mapped %~ uncurry ExprGui.Payload
             & transaction
         gotoDefinition <-
             GotoDefinition.make (transaction (workArea ^. Sugar.waGlobals))
