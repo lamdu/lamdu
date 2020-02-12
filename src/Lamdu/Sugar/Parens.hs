@@ -1,8 +1,9 @@
 -- | A pass on the sugared AST to decide where to put parenthesis
-{-# LANGUAGE TypeApplications, TypeFamilies, RankNTypes, TypeOperators #-}
+{-# LANGUAGE TypeApplications, TypeFamilies, RankNTypes, TypeOperators, TemplateHaskell #-}
 module Lamdu.Sugar.Parens
     ( NeedsParens(..)
     , MinOpPrec
+    , ParenInfo(..), piNeedParens, piMinOpPrec
     , addToWorkArea, addToExprWith
     , addToBinderWith
     ) where
@@ -19,15 +20,19 @@ import           Lamdu.Prelude
 data NeedsParens = NeedsParens | NoNeedForParens
     deriving (Eq, Show)
 
-unambiguous :: Precedence Prec
-unambiguous = Precedence 0 0
-
 type MinOpPrec = Prec
+
+data ParenInfo = ParenInfo
+    { _piMinOpPrec :: !MinOpPrec
+    , _piNeedParens :: !Bool
+    } deriving (Eq, Show, Generic)
+
+Lens.makeLenses ''ParenInfo
 
 addToWorkArea ::
     HasPrecedence name =>
     WorkArea name i o a ->
-    WorkArea name i o (MinOpPrec, NeedsParens, a)
+    WorkArea name i o (ParenInfo, a)
 addToWorkArea w =
     w
     { _waRepl = w ^. waRepl & replExpr %~ addToNode
@@ -38,10 +43,10 @@ addToWorkArea w =
     }
 
 class AddParens expr where
-    addToBody :: expr # Ann (Const a) -> expr # Ann (Const (MinOpPrec, NeedsParens, a))
+    addToBody :: expr # Ann (Const a) -> expr # Ann (Const (ParenInfo, a))
 
-    addToNode :: Annotated a expr -> Annotated (MinOpPrec, NeedsParens, a) expr
-    addToNode (Ann (Const pl) x) = Ann (Const (0, NoNeedForParens, pl)) (addToBody x)
+    addToNode :: Annotated a expr -> Annotated (ParenInfo, a) expr
+    addToNode (Ann (Const pl) x) = Ann (Const (ParenInfo 0 False, pl)) (addToBody x)
 
 instance HasPrecedence name => AddParens (Assignment name i o) where
     addToBody (BodyFunction x) = x & fBody %~ addToNode & BodyFunction
@@ -51,10 +56,10 @@ addToBinderWith ::
     HasPrecedence name =>
     MinOpPrec ->
     Annotated a (Binder name i o) ->
-    Annotated (MinOpPrec, NeedsParens, a) (Binder name i o)
+    Annotated (ParenInfo, a) (Binder name i o)
 addToBinderWith minOpPrec (Ann (Const pl) x) =
     addToBody x
-    & Ann (Const (minOpPrec, NoNeedForParens, pl))
+    & Ann (Const (ParenInfo minOpPrec False, pl))
 
 instance HasPrecedence name => AddParens (Else name i o) where
     addToBody (SimpleElse expr) = addToBody expr & SimpleElse
@@ -69,19 +74,22 @@ instance HasPrecedence name => AddParens (Binder name i o) where
         hmap (Proxy @AddParens #> addToNode) x & BinderLet
 
 instance HasPrecedence name => AddParens (Body name i o) where
-    addToBody = loopExprBody unambiguous <&> (^. _2)
+    addToBody =
+        loopExprBody unambiguous <&> (^. _2)
+        where
+            unambiguous = Precedence 0 0
     addToNode = addToExprWith 0
 
 instance AddParens (Const a) where
     addToBody (Const x) = Const x
     addToNode (Ann (Const pl) (Const x)) =
-        Ann (Const (0, NoNeedForParens, pl)) (Const x)
+        Ann (Const (ParenInfo 0 False, pl)) (Const x)
 
 addToExprWith ::
     HasPrecedence name =>
     MinOpPrec ->
     Expression name i o a ->
-    Expression name i o (MinOpPrec, NeedsParens, a)
+    Expression name i o (ParenInfo, a)
 addToExprWith minOpPrec = loopExpr minOpPrec (Precedence 0 0)
 
 bareInfix ::
@@ -100,18 +108,18 @@ bareInfix =
 type AnnotateAST a body =
     MinOpPrec -> Precedence Prec ->
     Annotated a body ->
-    Annotated (MinOpPrec, NeedsParens, a) body
+    Annotated (ParenInfo, a) body
 
 loopExpr ::  HasPrecedence name => AnnotateAST a (Body name i o)
 loopExpr minOpPrec parentPrec (Ann (Const pl) body_) =
-    Ann (Const (minOpPrec, parens, pl)) newBody
+    Ann (Const (ParenInfo minOpPrec (parens == NeedsParens), pl)) newBody
     where
         (parens, newBody) = loopExprBody parentPrec body_
 
 loopExprBody ::
     HasPrecedence name =>
     Precedence Prec -> Body name i o # Ann (Const a) ->
-    (NeedsParens, Body name i o # Ann (Const (MinOpPrec, NeedsParens, a)))
+    (NeedsParens, Body name i o # Ann (Const (ParenInfo, a)))
 loopExprBody parentPrec body_ =
     case body_ of
     BodyPlaceHolder    -> result False BodyPlaceHolder
@@ -135,12 +143,12 @@ loopExprBody parentPrec body_ =
         result False = (,) NoNeedForParens
         leftSymbol ::
             AddParens body =>
-            Lens.ASetter s t (Annotated pl body) (Annotated (MinOpPrec, NeedsParens, pl) body) ->
+            Lens.ASetter s t (Annotated pl body) (Annotated (ParenInfo, pl) body) ->
             MinOpPrec -> (t -> res) -> s -> (NeedsParens, res)
         leftSymbol l prec = sideSymbol (\_ _ -> addToNode) before (parentPrec ^. after > prec) l prec
         rightSymbol ::
             HasPrecedence name =>
-            Lens.ASetter s t (Annotated pl (Body name i o)) (Annotated (MinOpPrec, NeedsParens, pl) (Body name i o)) ->
+            Lens.ASetter s t (Annotated pl (Body name i o)) (Annotated (ParenInfo, pl) (Body name i o)) ->
             (t -> res) -> s -> (NeedsParens, res)
         rightSymbol l =
             sideSymbol loopExpr after dotSomethingNeedParens l 12
@@ -153,7 +161,7 @@ loopExprBody parentPrec body_ =
             AnnotateAST pl body ->
             Lens.ASetter' (Precedence Prec) MinOpPrec ->
             Bool ->
-            Lens.ASetter s t (Annotated pl body) (Annotated (MinOpPrec, NeedsParens, pl) body) ->
+            Lens.ASetter s t (Annotated pl body) (Annotated (ParenInfo, pl) body) ->
             MinOpPrec -> (t -> res) -> s -> (NeedsParens, res)
         sideSymbol loop overrideSide needParens lens prec cons x =
             x & lens %~ loop prec childPrec & cons

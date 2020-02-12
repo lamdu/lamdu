@@ -67,9 +67,9 @@ exprInfoFromPl =
         -- Expression with parentheses intercepts all operations from inside it,
         -- But if it is itself selected then we're out of the parentheses,
         -- and its parents may take some operators.
-        if pl ^. Sugar.plData . ExprGui.plNeedParens && not isSelected
+        if pl ^. Sugar.plData . ExprGui.plParenInfo . ExprGui.piNeedParens && not isSelected
         then 0
-        else pl ^. Sugar.plData . ExprGui.plMinOpPrec
+        else pl ^. Sugar.plData . ExprGui.plParenInfo . ExprGui.piMinOpPrec
     , exprInfoIsSelected = isSelected
     }
 

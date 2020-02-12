@@ -31,15 +31,9 @@ import           Lamdu.Prelude
 type T = Transaction
 
 toGuiMPayload ::
-    ( AddParens.MinOpPrec, AddParens.NeedsParens
-    , Sugar.Payload name i o [Sugar.EntityId]
-    ) -> Sugar.Payload name i o ExprGui.Payload
-toGuiMPayload (minOpPrec, needParens, pl) =
-    pl <&>
-    \entityIds ->
-    ExprGui.Payload entityIds
-    (needParens == AddParens.NeedsParens)
-    minOpPrec
+    (AddParens.ParenInfo, Sugar.Payload name i o [Sugar.EntityId]) ->
+    Sugar.Payload name i o ExprGui.Payload
+toGuiMPayload (parenInfo, pl) = pl <&> (`ExprGui.Payload` parenInfo)
 
 loadWorkArea ::
     ( HasCallStack

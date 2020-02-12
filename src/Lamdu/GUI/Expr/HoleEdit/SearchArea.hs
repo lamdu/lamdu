@@ -91,7 +91,7 @@ makeRenderedResult pl ctx result =
         -- Running it more than once caused a horrible bug (bugfix: 848b6c4407)
         res <- rHoleResult result & GuiM.im
         res ^. Sugar.holeResultConverted
-            & postProcessSugar (pl ^. Sugar.plData . ExprGui.plMinOpPrec)
+            & postProcessSugar (pl ^. Sugar.plData . ExprGui.plParenInfo . ExprGui.piMinOpPrec)
             & ResultWidget.make ctx (rId result)
                 (res ^. Sugar.holeResultPick)
 
@@ -103,11 +103,10 @@ postProcessSugar minOpPrec binder =
     AddParens.addToBinderWith minOpPrec binder
     & hflipped %~ hmap (\_ -> Lens._Wrapped %~ pl)
     where
-        pl (x, needParens, sugarPl) =
+        pl (parenInfo, sugarPl) =
             ExprGui.Payload
             { ExprGui._plHiddenEntityIds = []
-            , ExprGui._plNeedParens = needParens == AddParens.NeedsParens
-            , ExprGui._plMinOpPrec = x
+            , ExprGui._plParenInfo = parenInfo
             }
             <$ sugarPl
 

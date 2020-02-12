@@ -45,6 +45,7 @@ import           Lamdu.Precedence (HasPrecedence(..))
 import           Lamdu.Sugar.Annotations (ShowAnnotation)
 import           Lamdu.Sugar.Internal (InternalName(..))
 import           Lamdu.Sugar.Internal.EntityId (EntityId(..))
+import           Lamdu.Sugar.Parens (ParenInfo)
 import qualified Lamdu.Sugar.Types as Sugar
 import           Revision.Deltum.Transaction (Transaction)
 import           Test.QuickCheck (Arbitrary(..), choose, getPositive, frequency)
@@ -279,6 +280,7 @@ instance NFData Name
 instance NFData Name.Collision
 instance NFData Name.TagName
 instance NFData Name.TagText
+instance NFData ParenInfo
 instance NFData ShowAnnotation
 instance NFData Sugar.BinderBodyScope
 instance NFData Sugar.BinderMode
