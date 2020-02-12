@@ -76,7 +76,7 @@ type ShrinkRatio = Vector2 Widget.R
 type PostProcessAnnotation m = WhichAnnotation -> m (ShrinkRatio -> View -> View)
 
 postProcessAnnotationFromSelected ::
-    (MonadReader env m, Has Theme env, Element.HasAnimIdPrefix env) =>
+    (MonadReader env m, Has Theme env, Has Dir.Layout env, Element.HasAnimIdPrefix env) =>
     Bool -> PostProcessAnnotation m
 postProcessAnnotationFromSelected False = shrinkIfNeeded
 postProcessAnnotationFromSelected True = hoverWideAnnotation
@@ -97,12 +97,13 @@ shrinkIfNeeded _ =
     Element.scale shrinkRatio view & addBg
 
 hoverWideAnnotation ::
-    (MonadReader env m, Has Theme env, Element.HasAnimIdPrefix env) =>
+    (MonadReader env m, Has Theme env, Has Dir.Layout env, Element.HasAnimIdPrefix env) =>
     PostProcessAnnotation m
 hoverWideAnnotation which =
     do
         shrinker <- shrinkIfNeeded which
         addBg <- addAnnotationHoverBackground
+        pad <- Element.pad
         pure $
             \shrinkRatio wideView ->
                 let shrunkView = shrinker shrinkRatio wideView
@@ -110,7 +111,7 @@ hoverWideAnnotation which =
                 -- Surrounding (and exits screen).
                 in
                 addBg wideView
-                & View.vSize .~ shrunkView ^. View.vSize
+                & pad 0 (shrunkView ^. View.vSize - wideView ^. View.vSize)
                 & Element.hoverLayeredImage
 
 processAnnotationGui ::
