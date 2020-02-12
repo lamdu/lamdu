@@ -224,7 +224,7 @@ payload :: Sugar.Payload InternalName Identity Unit ()
 payload =
     Sugar.Payload
     { Sugar._plAnnotation = Sugar.AnnotationNone
-    , Sugar._plNeverShrinkAnnotation = False
+    , Sugar._plNeverShrinkTypeAnnotations = False
     , Sugar._plEntityId = "dummy"
     , Sugar._plActions = nodeActions
     , Sugar._plData = ()

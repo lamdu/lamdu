@@ -28,7 +28,7 @@ import qualified Lamdu.Config.Theme.ValAnnotation as ValAnnotation
 import qualified Lamdu.GUI.Expr.HoleEdit.SearchArea as SearchArea
 import           Lamdu.GUI.Expr.HoleEdit.ValTerms (allowedFragmentSearchTerm)
 import qualified Lamdu.GUI.Expr.HoleEdit.WidgetIds as HoleWidgetIds
-import           Lamdu.GUI.ExpressionGui.Annotation (addInferredType, keepWideTypeAnnotation)
+import           Lamdu.GUI.ExpressionGui.Annotation (addInferredType, shrinkValAnnotationsIfNeeded)
 import           Lamdu.GUI.ExpressionGui.Monad (GuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as GuiM
 import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
@@ -106,7 +106,7 @@ make fragment pl =
                     spacing <- Lens.view
                         (has . Theme.valAnnotation . ValAnnotation.valAnnotationSpacing)
                     stdFontHeight <- Spacer.stdFontHeight
-                    addInferredType mismatchedType keepWideTypeAnnotation
+                    addInferredType mismatchedType shrinkValAnnotationsIfNeeded
                         <&> (lineBelow color animId (spacing * stdFontHeight) .)
             & Element.locallyAugmented ("inner type"::Text)
         hbox

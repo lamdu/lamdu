@@ -4,7 +4,7 @@ module Lamdu.GUI.ExpressionGui.Annotation
     , NeighborVals(..)
     , EvalAnnotationOptions(..), maybeAddAnnotationWith
 
-    , addInferredType, keepWideTypeAnnotation
+    , addInferredType, shrinkValAnnotationsIfNeeded
 
     , PostProcessAnnotation, WhichAnnotation(..), ShrinkRatio
     , postProcessAnnotationFromSelected
@@ -78,19 +78,19 @@ type PostProcessAnnotation m = WhichAnnotation -> m (ShrinkRatio -> View -> View
 postProcessAnnotationFromSelected ::
     (MonadReader env m, Has Theme env, Element.HasAnimIdPrefix env) =>
     Bool -> PostProcessAnnotation m
-postProcessAnnotationFromSelected False = shrinkWideAnnotation
+postProcessAnnotationFromSelected False = shrinkIfNeeded
 postProcessAnnotationFromSelected True = hoverWideAnnotation
 
-keepWideTypeAnnotation ::
+shrinkValAnnotationsIfNeeded ::
     (MonadReader env m, Has Theme env, Element.HasAnimIdPrefix env) =>
     PostProcessAnnotation m
-keepWideTypeAnnotation TypeAnnotation = addAnnotationBackground <&> const
-keepWideTypeAnnotation ValAnnotation = shrinkWideAnnotation ValAnnotation
+shrinkValAnnotationsIfNeeded TypeAnnotation = addAnnotationBackground <&> const
+shrinkValAnnotationsIfNeeded ValAnnotation = shrinkIfNeeded ValAnnotation
 
-shrinkWideAnnotation ::
+shrinkIfNeeded ::
     (MonadReader env m, Has Theme env, Element.HasAnimIdPrefix env) =>
     PostProcessAnnotation m
-shrinkWideAnnotation _ =
+shrinkIfNeeded _ =
     addAnnotationBackground
     <&>
     \addBg shrinkRatio view ->
@@ -101,7 +101,7 @@ hoverWideAnnotation ::
     PostProcessAnnotation m
 hoverWideAnnotation which =
     do
-        shrinker <- shrinkWideAnnotation which
+        shrinker <- shrinkIfNeeded which
         addBg <- addAnnotationHoverBackground
         pure $
             \shrinkRatio wideView ->
@@ -264,8 +264,8 @@ maybeAddAnnotationPl ::
 maybeAddAnnotationPl pl =
     do
         postProcessAnnotation <-
-            if pl ^. Sugar.plNeverShrinkAnnotation
-            then pure keepWideTypeAnnotation
+            if pl ^. Sugar.plNeverShrinkTypeAnnotations
+            then pure shrinkValAnnotationsIfNeeded
             else isExprSelected <&> postProcessAnnotationFromSelected
         maybeAddAnnotation postProcessAnnotation
             (pl ^. Sugar.plAnnotation)

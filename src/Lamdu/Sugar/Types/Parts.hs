@@ -25,7 +25,7 @@ module Lamdu.Sugar.Types.Parts
     , AddFirstParam(..), _AddInitialParam, _PrependParam, _NeedToPickTagToAddFirst
     , AddNextParam(..), _AddNext, _NeedToPickTagToAddNext
     , -- Expressions
-      Payload(..), plEntityId, plAnnotation, plNeverShrinkAnnotation, plActions, plData
+      Payload(..), plEntityId, plAnnotation, plNeverShrinkTypeAnnotations, plActions, plData
     , ClosedCompositeActions(..), closedCompositeOpen
     , OpenCompositeActions(..), openCompositeClose
     , CompositeTail(..), _OpenComposite, _ClosedComposite
@@ -143,7 +143,7 @@ data VarInfo
 
 data Payload name i o a = Payload
     { _plAnnotation :: Annotation name i
-    , _plNeverShrinkAnnotation :: Bool
+    , _plNeverShrinkTypeAnnotations :: Bool
     , _plActions :: NodeActions name i o
     , _plEntityId :: EntityId
     , _plData :: a

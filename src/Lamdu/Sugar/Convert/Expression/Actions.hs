@@ -347,7 +347,7 @@ convertPayload (showAnn, pl) =
     Payload
     { _plAnnotation = x
     , _plActions = pl ^. pActions
-    , _plNeverShrinkAnnotation = showAnn ^. Ann.showExpanded
+    , _plNeverShrinkTypeAnnotations = showAnn ^. Ann.showExpanded
     , _plEntityId = pl ^. pInput . Input.entityId
     , _plData = pl ^. pInput . Input.userData
     }
