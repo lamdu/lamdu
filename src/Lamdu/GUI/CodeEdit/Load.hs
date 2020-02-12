@@ -13,16 +13,13 @@ import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Tag as Tag
 import qualified Lamdu.Debug as Debug
 import           Lamdu.Eval.Results (EvalResults)
-import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
 import qualified Lamdu.I18N.Code as Texts
 import           Lamdu.I18N.LangId (LangId)
 import qualified Lamdu.I18N.Name as Texts
 import           Lamdu.Name (Name)
+import           Lamdu.Sugar (sugarWorkArea)
 import qualified Lamdu.Sugar.Config as SugarConfig
-import qualified Lamdu.Sugar.Convert as SugarConvert
-import qualified Lamdu.Sugar.Names.Add as AddNames
-import qualified Lamdu.Sugar.Parens as AddParens
 import qualified Lamdu.Sugar.Types as Sugar
 import           Revision.Deltum.Transaction (Transaction)
 
@@ -43,15 +40,7 @@ loadWorkArea ::
     , Monad m
     ) =>
     env -> Anchors.CodeAnchors m ->
-    T m
-    (Sugar.WorkArea Name (T m) (T m)
-        (Sugar.Payload Name (T m) (T m) ExprGui.Payload))
+    T m (Sugar.WorkArea Name (T m) (T m) (Sugar.Payload Name (T m) (T m) ExprGui.Payload))
 loadWorkArea env cp =
-    SugarConvert.loadWorkArea env cp
-    >>= report .
-        AddNames.addToWorkArea env
-        (fmap (Tag.getTagName env) . ExprIRef.readTagData)
-    <&> AddParens.addToWorkArea
-    <&> Lens.mapped %~ \(parenInfo, pl) -> pl <&> (`ExprGui.Payload` parenInfo)
-    where
-        Debug.EvaluatorM report = env ^. has . Debug.naming . Debug.mAction
+    sugarWorkArea (Tag.getTagName env) env cp
+    <&> Lens.mapped . Lens.mapped %~ uncurry (flip ExprGui.Payload)

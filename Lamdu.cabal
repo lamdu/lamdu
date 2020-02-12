@@ -399,6 +399,7 @@ Library
                   , Lamdu.Settings
                   , Lamdu.Style
                   , Lamdu.Style.Make
+                  , Lamdu.Sugar
                   , Lamdu.Sugar.Annotations
                   , Lamdu.Sugar.Config
                   , Lamdu.Sugar.Convert
