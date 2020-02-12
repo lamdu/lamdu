@@ -7,6 +7,7 @@ module Lamdu.GUI.ExpressionGui.Wrap
 
 import qualified Control.Lens as Lens
 import qualified GUI.Momentu.EventMap as E
+import qualified GUI.Momentu.Glue as Glue
 import qualified GUI.Momentu.I18N as MomentuTexts
 import           GUI.Momentu.Responsive (Responsive(..))
 import qualified GUI.Momentu.State as GuiState
@@ -14,7 +15,6 @@ import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
 import           GUI.Momentu.Widget.Id (subId)
 import qualified GUI.Momentu.Widgets.FocusDelegator as FocusDelegator
-import qualified GUI.Momentu.Widgets.Grid as Grid
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
 import qualified Lamdu.GUI.Expr.EventMap as ExprEventMap
@@ -58,7 +58,7 @@ stdWrap ::
     , Has (Texts.Code Text) env
     , Has (Texts.CodeUI Text) env
     , Has (Texts.Definitions Text) env
-    , Grid.HasTexts env
+    , Glue.HasTexts env
     ) =>
     Sugar.Payload Name i o ExprGui.Payload ->
     GuiM env i o (Responsive o) ->
@@ -85,7 +85,7 @@ parentDelegator myId =
 
 stdWrapParentExpr ::
     ( Monad i, Monad o
-    , Grid.HasTexts env
+    , Glue.HasTexts env
     , Has (Texts.Code Text) env
     , Has (Texts.CodeUI Text) env
     , Has (Texts.Definitions Text) env
