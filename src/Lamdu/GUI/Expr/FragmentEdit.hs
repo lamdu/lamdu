@@ -25,18 +25,15 @@ import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.Config.Theme.ValAnnotation as ValAnnotation
-import qualified Lamdu.GUI.Expr.EventMap as ExprEventMap
 import qualified Lamdu.GUI.Expr.HoleEdit.SearchArea as SearchArea
 import           Lamdu.GUI.Expr.HoleEdit.ValTerms (allowedFragmentSearchTerm)
 import qualified Lamdu.GUI.Expr.HoleEdit.WidgetIds as HoleWidgetIds
 import           Lamdu.GUI.ExpressionGui.Annotation
-                 ( WhichAnnotation(..)
-                 , addInferredType, keepWideTypeAnnotation, maybeAddAnnotationPl
-                 )
+                 (WhichAnnotation(..), addInferredType, keepWideTypeAnnotation)
 import           Lamdu.GUI.ExpressionGui.Monad (GuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as GuiM
 import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
-import           Lamdu.GUI.ExpressionGui.Wrap (parentDelegator)
+import           Lamdu.GUI.ExpressionGui.Wrap (stdWrapParentExpr)
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.I18N.Code as Texts
 import qualified Lamdu.I18N.CodeUI as Texts
@@ -79,8 +76,6 @@ make fragment pl =
 
         fragmentExprGui <- fragment ^. Sugar.fExpr & GuiM.makeSubexpression
 
-        addAnnotation <- maybeAddAnnotationPl pl
-
         rawSearchArea <-
             SearchArea.make SearchArea.WithoutAnnotation
             (fragment ^. Sugar.fOptions) pl allowedFragmentSearchTerm holeIds
@@ -108,18 +103,15 @@ make fragment pl =
             Just mismatchedType ->
                 addInferredType mismatchedType postProcessTypeAnn
             & Element.locallyAugmented ("inner type"::Text)
-        ExprEventMap.add ExprEventMap.defaultOptions pl
-            <*>
-            ( parentDelegator myId
-                ?? hbox
-                [ fragmentExprGui
-                , Responsive.fromWithTextPos $
-                    if isSelected && not isHoleResult
-                    then searchArea
-                    else searchAreaQMark
-                ]
-            )
-            <&> Widget.widget %~ addAnnotation . addInnerType
+        hbox
+            [ fragmentExprGui
+            , Responsive.fromWithTextPos $
+                if isSelected && not isHoleResult
+                then searchArea
+                else searchAreaQMark
+            ]
+            & Widget.widget %~ addInnerType
+            & pure & stdWrapParentExpr pl
             <&> Widget.weakerEvents (healEventMap healKeys env)
     where
         lineBelow color animId spacing ann =
