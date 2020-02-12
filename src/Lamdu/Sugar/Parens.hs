@@ -1,8 +1,7 @@
 -- | A pass on the sugared AST to decide where to put parenthesis
 {-# LANGUAGE TypeApplications, TypeFamilies, RankNTypes, TypeOperators, TemplateHaskell #-}
 module Lamdu.Sugar.Parens
-    ( NeedsParens(..)
-    , MinOpPrec
+    ( MinOpPrec
     , ParenInfo(..), piNeedParens, piMinOpPrec
     , addToWorkArea, addToExprWith
     , addToBinderWith
