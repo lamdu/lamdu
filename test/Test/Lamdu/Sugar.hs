@@ -17,15 +17,15 @@ import           Lamdu.Data.Anchors (Code(..))
 import qualified Lamdu.Data.Anchors as Anchors
 import           Lamdu.Data.Db.Layout (ViewM, codeAnchors, runDbTransaction)
 import qualified Lamdu.Data.Definition as Def
+import qualified Lamdu.Data.Tag as Tag
 import qualified Lamdu.Debug as Debug
 import           Lamdu.Expr.IRef (DefI, HRef, iref)
 import qualified Lamdu.Expr.Load as ExprLoad
-import           Lamdu.GUI.CodeEdit.Load (loadWorkArea)
-import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
 import qualified Lamdu.I18N.Code as Texts
 import           Lamdu.I18N.LangId (LangId)
 import qualified Lamdu.I18N.Name as Texts
 import           Lamdu.Name (Name)
+import           Lamdu.Sugar (sugarWorkArea, ParenInfo)
 import           Lamdu.Sugar.Config (Config(..))
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import           Lamdu.Sugar.Types as Sugar
@@ -42,17 +42,17 @@ type T = Transaction
 data IsHidden = NotHidden | Hidden deriving (Show)
 
 allEntityIds ::
-    WorkArea name i o (Sugar.Payload name i o ExprGui.Payload) ->
+    WorkArea name i o (Sugar.Payload name i o (t, [EntityId])) ->
     [(EntityId, IsHidden)]
 allEntityIds workArea =
-    (pls ^.. Lens.folded . plData . ExprGui.plHiddenEntityIds . Lens.folded
+    (pls ^.. Lens.folded . plData . _2 . Lens.folded
      <&> (, Hidden))
     <> (pls ^.. Lens.folded . plEntityId <&> (, NotHidden))
     where
         pls = workArea ^.. traverse
 
 validateHiddenEntityIds ::
-    WorkArea name i o (Sugar.Payload name i o ExprGui.Payload) -> Either String ()
+    WorkArea name i o (Sugar.Payload name i o (t, [EntityId])) -> Either String ()
 validateHiddenEntityIds workArea
     | Set.null hiddenAndExplicit = Right ()
     | otherwise =
@@ -62,7 +62,7 @@ validateHiddenEntityIds workArea
         pls = workArea ^.. traverse
         explicitEntityIds = pls ^.. Lens.folded . plEntityId & Set.fromList
         hiddenEntityIds =
-            pls ^.. Lens.folded . plData . ExprGui.plHiddenEntityIds . Lens.folded
+            pls ^.. Lens.folded . plData . _2 . Lens.folded
             & Set.fromList
         hiddenAndExplicit = Set.intersection explicitEntityIds hiddenEntityIds
 
@@ -96,12 +96,12 @@ workAreaLowLevelLoad =
     <*> (getP (panes codeAnchors) >>= traverse loadPane)
 
 validate ::
-    NFData name =>
+    (NFData t, NFData name) =>
     WorkArea name (T fa) (T fb)
-    (Sugar.Payload name (T fa) (T fb) ExprGui.Payload) ->
+    (Sugar.Payload name (T fa) (T fb) (t, [EntityId])) ->
     T ViewM
     (WorkArea name (T fa) (T fb)
-        (Sugar.Payload name (T fa) (T fb) ExprGui.Payload))
+        (Sugar.Payload name (T fa) (T fb) (t, [EntityId])))
 validate workArea
     | Map.null duplicateEntityIds =
         do
@@ -135,8 +135,10 @@ convertWorkArea ::
     env ->
     T ViewM
     (WorkArea Name (T ViewM) (T ViewM)
-        (Sugar.Payload Name (T ViewM) (T ViewM) ExprGui.Payload))
-convertWorkArea env = loadWorkArea env codeAnchors >>= validate
+        (Sugar.Payload Name (T ViewM) (T ViewM) (ParenInfo, [EntityId])))
+convertWorkArea env =
+    sugarWorkArea (Tag.getTagName env) env codeAnchors
+    >>= validate
 
 testProgram :: FilePath -> T ViewM a -> IO a
 testProgram program action =

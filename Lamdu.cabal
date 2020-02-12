@@ -330,7 +330,6 @@ Library
                   , Lamdu.Fuzzy
                   , Lamdu.GUI.CodeEdit
                   , Lamdu.GUI.CodeEdit.GotoDefinition
-                  , Lamdu.GUI.CodeEdit.Load
                   , Lamdu.GUI.DefinitionEdit
                   , Lamdu.GUI.EvalView
                   , Lamdu.GUI.Expr

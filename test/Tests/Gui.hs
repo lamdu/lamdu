@@ -73,7 +73,7 @@ makeGui ::
     String -> Env -> T ViewM (Responsive (T ViewM))
 makeGui afterDoc env =
     do
-        workArea <- convertWorkArea env
+        workArea <- convertWorkArea env <&> (fmap . fmap) (uncurry (flip ExprGui.Payload))
         let repl = workArea ^. Sugar.waRepl . Sugar.replExpr
         let replExprId = repl ^. SugarLens.binderResultExpr & WidgetIds.fromExprPayload
         let assocTagName = DataOps.assocTagName env
@@ -132,7 +132,9 @@ fromWorkArea ::
     (Sugar.WorkArea Name (T ViewM) (T ViewM)
         (Sugar.Payload Name (T ViewM) (T ViewM) ExprGui.Payload)) a ->
     T ViewM a
-fromWorkArea env path = convertWorkArea env <&> (^?! Lens.cloneTraversal path)
+fromWorkArea env path =
+    convertWorkArea env <&> (fmap . fmap) (uncurry (flip ExprGui.Payload))
+    <&> (^?! Lens.cloneTraversal path)
 
 dummyVirt :: VirtualCursor
 dummyVirt = VirtualCursor (Rect 0 0)

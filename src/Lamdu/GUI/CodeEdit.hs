@@ -43,10 +43,10 @@ import qualified Lamdu.Data.Anchors as Anchors
 import           Lamdu.Data.Definition (Definition(..))
 import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Data.Ops as DataOps
+import qualified Lamdu.Data.Tag as Tag
 import qualified Lamdu.Debug as Debug
 import qualified Lamdu.Eval.Results as EvalResults
 import qualified Lamdu.GUI.CodeEdit.GotoDefinition as GotoDefinition
-import           Lamdu.GUI.CodeEdit.Load (loadWorkArea)
 import qualified Lamdu.GUI.DefinitionEdit as DefinitionEdit
 import qualified Lamdu.GUI.Expr as ExpressionEdit
 import qualified Lamdu.GUI.Expr.BinderEdit as BinderEdit
@@ -71,6 +71,7 @@ import qualified Lamdu.I18N.Navigation as Texts
 import           Lamdu.Name (Name)
 import           Lamdu.Settings (Settings)
 import           Lamdu.Style (HasStyle)
+import           Lamdu.Sugar (sugarWorkArea)
 import qualified Lamdu.Sugar.Config as SugarConfig
 import qualified Lamdu.Sugar.Types as Sugar
 import           Revision.Deltum.Transaction (Transaction)
@@ -112,7 +113,10 @@ make cp gp width =
     do
         theExportActions <- Lens.view has
         env <- Lens.view id
-        workArea <- loadWorkArea env cp & transaction
+        workArea <-
+            sugarWorkArea (Tag.getTagName env) env cp
+            <&> Lens.mapped . Lens.mapped %~ uncurry (flip ExprGui.Payload)
+            & transaction
         gotoDefinition <-
             GotoDefinition.make (transaction (workArea ^. Sugar.waGlobals))
             <&> StatusBar.hoist IOTrans.liftTrans

@@ -11,8 +11,8 @@ import           Hyper.Combinator.Ann (Annotated)
 import qualified Lamdu.Annotations as Annotations
 import qualified Lamdu.Calc.Term as V
 import           Lamdu.Data.Db.Layout (ViewM)
-import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
 import           Lamdu.Name (Name(..))
+import           Lamdu.Sugar.Parens (ParenInfo)
 import           Lamdu.Sugar.Types as Sugar
 import           Revision.Deltum.Transaction (Transaction)
 import           Test.HUnit (assertBool)
@@ -58,7 +58,7 @@ testSugarActionsWith ::
     HasCallStack =>
     FilePath ->
     [WorkArea Name (T ViewM) (T ViewM)
-        (Sugar.Payload Name (T ViewM) (T ViewM) ExprGui.Payload) ->
+        (Sugar.Payload Name (T ViewM) (T ViewM) (ParenInfo, [EntityId])) ->
         T ViewM a] ->
     Env ->
     IO ()
@@ -71,7 +71,7 @@ testSugarActions ::
     HasCallStack =>
     FilePath ->
     [WorkArea Name (T ViewM) (T ViewM)
-        (Sugar.Payload Name (T ViewM) (T ViewM) ExprGui.Payload) ->
+        (Sugar.Payload Name (T ViewM) (T ViewM) (ParenInfo, [EntityId])) ->
         T ViewM a] ->
     IO ()
 testSugarActions program actions =

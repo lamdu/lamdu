@@ -2,6 +2,7 @@
 
 module Lamdu.Sugar
     ( sugarWorkArea
+    , Sugar.WorkArea, Sugar.Payload, AddParens.ParenInfo, Sugar.EntityId, Name
     ) where
 
 import qualified Control.Lens as Lens
