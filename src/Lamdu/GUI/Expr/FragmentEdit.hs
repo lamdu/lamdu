@@ -28,8 +28,7 @@ import qualified Lamdu.Config.Theme.ValAnnotation as ValAnnotation
 import qualified Lamdu.GUI.Expr.HoleEdit.SearchArea as SearchArea
 import           Lamdu.GUI.Expr.HoleEdit.ValTerms (allowedFragmentSearchTerm)
 import qualified Lamdu.GUI.Expr.HoleEdit.WidgetIds as HoleWidgetIds
-import           Lamdu.GUI.ExpressionGui.Annotation
-                 (WhichAnnotation(..), addInferredType, keepWideTypeAnnotation)
+import           Lamdu.GUI.ExpressionGui.Annotation (addInferredType, keepWideTypeAnnotation)
 import           Lamdu.GUI.ExpressionGui.Monad (GuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as GuiM
 import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
@@ -101,7 +100,14 @@ make fragment pl =
             case fragment ^. Sugar.fTypeMismatch of
             Nothing -> pure id
             Just mismatchedType ->
-                addInferredType mismatchedType postProcessTypeAnn
+                do
+                    color <- Lens.view (has . Theme.errorColor)
+                    animId <- Element.subAnimId ?? ["err-line"]
+                    spacing <- Lens.view
+                        (has . Theme.valAnnotation . ValAnnotation.valAnnotationSpacing)
+                    stdFontHeight <- Spacer.stdFontHeight
+                    addInferredType mismatchedType keepWideTypeAnnotation
+                        <&> (lineBelow color animId (spacing * stdFontHeight) .)
             & Element.locallyAugmented ("inner type"::Text)
         hbox
             [ fragmentExprGui
@@ -120,23 +126,8 @@ make fragment pl =
             where
                 line =
                     Anim.coloredRectangle animId color
-                    & Anim.scale (Vector2 (ann ^. View.vSize . _1) spacing)
-                    & Anim.translate (Vector2 0 (ann ^. View.vSize . _2))
-
-        postProcessTypeAnn annKind =
-            case (annKind, fragment ^. Sugar.fTypeMismatch) of
-            (TypeAnnotation, Just _) ->
-                do
-                    color <- Lens.view (has . Theme.errorColor)
-                    animId <- Element.subAnimId ?? ["err-line"]
-                    spacing <- Lens.view
-                        (has . Theme.valAnnotation . ValAnnotation.valAnnotationSpacing)
-                    stdFontHeight <- Spacer.stdFontHeight
-                    finalize <- keepWideTypeAnnotation annKind
-                    pure $ \shrinkRatio view ->
-                        lineBelow color animId (spacing * stdFontHeight) view
-                            & finalize shrinkRatio
-            _ -> pure (const id)
+                    & Anim.scale (Vector2 (ann ^. Element.width) spacing)
+                    & Anim.translate (Vector2 0 (ann ^. Element.height))
 
         myId = WidgetIds.fromExprPayload pl
         holeIds = WidgetIds.fragmentHoleId myId & HoleWidgetIds.makeFrom
