@@ -304,7 +304,7 @@ isReserved ::
     env -> Text -> Bool
 isReserved env name =
     reservedWords ^. Lens.contains name
-    || (name ^? Lens.ix 0 <&> Char.isDigit & fromMaybe False)
+    || (name ^? Lens.ix 0 & any Char.isDigit)
     where
         reservedWords =
             env ^.. has @(Texts.Code Text) . Lens.folded
