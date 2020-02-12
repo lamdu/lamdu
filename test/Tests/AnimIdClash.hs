@@ -62,7 +62,7 @@ adhocPayload :: ExprGui.Payload
 adhocPayload =
     ExprGui.Payload
     { ExprGui._plHiddenEntityIds = []
-    , ExprGui._plParenInfo = ExprGui.ParenInfo 13 False
+    , ExprGui._plParenInfo = Sugar.ParenInfo 13 False
     }
 
 testFragment :: Test

@@ -2,7 +2,7 @@
 
 module Lamdu.Sugar
     ( sugarWorkArea
-    , Sugar.WorkArea, Sugar.Payload, AddParens.ParenInfo, Sugar.EntityId, Name
+    , Sugar.WorkArea, Sugar.Payload, Sugar.ParenInfo, Sugar.EntityId, Name
     ) where
 
 import qualified Control.Lens as Lens
@@ -40,7 +40,8 @@ sugarWorkArea ::
     ) =>
     (Tag -> (IsOperator, TextsInLang)) -> env -> Anchors.CodeAnchors m ->
     T m
-    (Sugar.WorkArea Name (T m) (T m) (Sugar.Payload Name (T m) (T m) (AddParens.ParenInfo, [Sugar.EntityId])))
+    (Sugar.WorkArea Name (T m) (T m)
+        (Sugar.Payload Name (T m) (T m) (Sugar.ParenInfo, [Sugar.EntityId])))
 sugarWorkArea getTagName env cp =
     SugarConvert.loadWorkArea env cp
     >>= report .

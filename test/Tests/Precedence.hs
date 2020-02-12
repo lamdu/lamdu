@@ -33,7 +33,7 @@ test =
 testPunnedArgOp :: Test
 testPunnedArgOp =
     expr ^?!
-    hVal . Sugar._BodyLabeledApply . Sugar.aPunnedArgs . traverse . annotation . _1 . Parens.piMinOpPrec
+    hVal . Sugar._BodyLabeledApply . Sugar.aPunnedArgs . traverse . annotation . _1 . Sugar.piMinOpPrec
     & assertEqual "punned arg precedence" 0
     & testCase "punned-arg-op"
     where
@@ -51,7 +51,7 @@ testPunnedArgOp =
 testGetFieldOfApply :: Test
 testGetFieldOfApply =
     expr ^?!
-    hVal . Sugar._BodySimpleApply . V.appArg . annotation . _1 . Parens.piNeedParens
+    hVal . Sugar._BodySimpleApply . V.appArg . annotation . _1 . Sugar.piNeedParens
     & assertBool "get field should disambiguate compound expression"
     & testCase "get-field-of-apply"
     where
@@ -64,14 +64,14 @@ testMinOpPrecOperator =
         assertEqual "minOpPrec is not 10?!" 10 minOpPrec
         & testCase "min-op-prec-infix"
     where
-        (Parens.ParenInfo minOpPrec needsParens, _) = expr ^?! infixArgs . _2 . annotation
+        (Sugar.ParenInfo minOpPrec needsParens, _) = expr ^?! infixArgs . _2 . annotation
         expr = i 1 `Stub.mul` (i 2 `Stub.plus` i 3) & Parens.addToExprWith 0
         i = Stub.litNum
 
 -- Test for https://trello.com/c/OuaLvwiJ/445-wrong-parenthesis
 test445 :: Test
 test445 =
-    assertBool "Expected paren" (problemPos ^. annotation . _1 . Parens.piNeedParens)
+    assertBool "Expected paren" (problemPos ^. annotation . _1 . Sugar.piNeedParens)
     & testCase "445-wrong-parenthesis"
     where
         expr =

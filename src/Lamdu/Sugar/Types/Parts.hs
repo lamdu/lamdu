@@ -30,6 +30,8 @@ module Lamdu.Sugar.Types.Parts
     , OpenCompositeActions(..), openCompositeClose
     , CompositeTail(..), _OpenComposite, _ClosedComposite
     , NullaryVal(..), nullaryClosedCompositeActions, nullaryAddItem
+
+    , ParenInfo(..), piNeedParens, piMinOpPrec
     ) where
 
 import qualified Control.Lens as Lens
@@ -177,15 +179,21 @@ data HoleResultScore = HoleResultScore
     , _hrsScore :: ![Int]
     } deriving (Eq, Ord, Generic)
 
+data ParenInfo = ParenInfo
+    { _piMinOpPrec :: !Int
+    , _piNeedParens :: !Bool
+    } deriving (Eq, Show, Generic)
+
 Lens.makeLenses ''ClosedCompositeActions
 Lens.makeLenses ''FuncParam
 Lens.makeLenses ''FuncParamActions
 Lens.makeLenses ''HoleResultScore
 Lens.makeLenses ''NodeActions
-Lens.makeLenses ''NullaryVal
 Lens.makeLenses ''NullParamActions
+Lens.makeLenses ''NullaryVal
 Lens.makeLenses ''OpenCompositeActions
 Lens.makeLenses ''ParamInfo
+Lens.makeLenses ''ParenInfo
 Lens.makeLenses ''Payload
 Lens.makeLenses ''ValAnnotation
 Lens.makePrisms ''AddFirstParam

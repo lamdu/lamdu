@@ -2,7 +2,6 @@
 {-# LANGUAGE TypeApplications, TypeFamilies, RankNTypes, TypeOperators, TemplateHaskell #-}
 module Lamdu.Sugar.Parens
     ( MinOpPrec
-    , ParenInfo(..), piNeedParens, piMinOpPrec
     , addToWorkArea, addToExprWith
     , addToBinderWith
     ) where
@@ -20,13 +19,6 @@ data NeedsParens = NeedsParens | NoNeedForParens
     deriving (Eq, Show)
 
 type MinOpPrec = Prec
-
-data ParenInfo = ParenInfo
-    { _piMinOpPrec :: !MinOpPrec
-    , _piNeedParens :: !Bool
-    } deriving (Eq, Show, Generic)
-
-Lens.makeLenses ''ParenInfo
 
 addToWorkArea ::
     HasPrecedence name =>
