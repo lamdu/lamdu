@@ -30,11 +30,6 @@ import           Lamdu.Prelude
 
 type T = Transaction
 
-toGuiMPayload ::
-    (AddParens.ParenInfo, Sugar.Payload name i o [Sugar.EntityId]) ->
-    Sugar.Payload name i o ExprGui.Payload
-toGuiMPayload (parenInfo, pl) = pl <&> (`ExprGui.Payload` parenInfo)
-
 loadWorkArea ::
     ( HasCallStack
     , Has LangId env
@@ -57,6 +52,6 @@ loadWorkArea env cp =
         AddNames.addToWorkArea env
         (fmap (Tag.getTagName env) . ExprIRef.readTagData)
     <&> AddParens.addToWorkArea
-    <&> Lens.mapped %~ toGuiMPayload
+    <&> Lens.mapped %~ \(parenInfo, pl) -> pl <&> (`ExprGui.Payload` parenInfo)
     where
         Debug.EvaluatorM report = env ^. has . Debug.naming . Debug.mAction
