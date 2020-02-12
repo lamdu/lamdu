@@ -1,4 +1,4 @@
-{-# LANGUAGE FlexibleInstances, TypeFamilies, TypeApplications, TypeOperators, ScopedTypeVariables #-}
+{-# LANGUAGE TypeFamilies, TypeApplications, TypeOperators, ScopedTypeVariables #-}
 
 module Lamdu.Sugar.Convert.Expression.Actions
     ( subexprPayloads, addActionsWith, addActions, makeActions, convertPayload
