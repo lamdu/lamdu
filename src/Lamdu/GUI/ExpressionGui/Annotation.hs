@@ -215,22 +215,20 @@ addAnnotationH ::
     ) =>
     m (WithTextPos View) ->
     m (ShrinkRatio -> View -> View) ->
-    m ((Widget.R -> Widget.R) -> Widget f -> Widget f)
+    m (Widget f -> Widget f)
 addAnnotationH f postProcess =
     do
         vspace <- annotationSpacer
         annotationLayout <- f <&> (^. Align.tValue)
         processAnn <- processAnnotationGui postProcess
         padToSize <- Element.padToSize
-        let ann minWidth w =
+        let ann w =
                 processAnn (w ^. Element.width) annotationLayout
                 & padToSize (Vector2 theMinWidth 0) 0
                 where
-                    theMinWidth = minWidth (w ^. Element.width)
+                    theMinWidth = w ^. Element.width
         (|---|) <- Glue.mkGlue ?? Glue.Vertical
-        let onAlignedWidget minWidth w =
-                w |---| vspace |---| ann minWidth w
-        pure $ \minWidth -> onAlignedWidget minWidth
+        pure (\w -> w |---| vspace |---| ann w)
 
 addInferredType ::
     ( Functor f, MonadReader env m, Spacer.HasStdSpacing env, Has Theme env
@@ -240,21 +238,17 @@ addInferredType ::
     Annotated Sugar.EntityId (Sugar.Type Name) -> PostProcessAnnotation m ->
     m (Widget f -> Widget f)
 addInferredType typ postProcess =
-    addAnnotationH (TypeView.make typ) (postProcess TypeAnnotation) ?? const 0
+    addAnnotationH (TypeView.make typ) (postProcess TypeAnnotation)
 
 addEvaluationResult ::
     (Monad i, Functor f, Has (Texts.Name Text) env) =>
     Maybe (NeighborVals (Maybe (EvalResDisplay Name))) ->
     EvalResDisplay Name -> PostProcessAnnotation (GuiM env i o) ->
-    GuiM env i o
-    ((Widget.R -> Widget.R) ->
-     Widget f ->
-     Widget f)
+    GuiM env i o (Widget f -> Widget f)
 addEvaluationResult mNeigh resDisp postProcess =
     case erdVal resDisp ^. Sugar.resBody of
-    Sugar.RRecord (Sugar.ResRecord []) ->
-        Styled.addBgColor Theme.evaluatedPathBGColor <&> const
-    Sugar.RFunc _ -> pure (flip const)
+    Sugar.RRecord (Sugar.ResRecord []) -> Styled.addBgColor Theme.evaluatedPathBGColor
+    Sugar.RFunc _ -> pure id
     _ -> addAnnotationH (makeEvalView mNeigh resDisp) (postProcess ValAnnotation)
 
 maybeAddAnnotationPl ::
@@ -337,14 +331,7 @@ maybeAddValAnnotationWith opt postProcessAnnotation ann =
     \case
     Nothing -> maybe (pure id) (addInferredType ?? postProcessAnnotation) (ann ^. Sugar.annotationType)
     Just (scopeAndVal, mNeighborVals) ->
-        do
-            typeView <-
-                case ann ^. Sugar.annotationType of
-                Just typ -> TypeView.make typ <&> (^. Align.tValue)
-                Nothing -> pure Element.empty
-            process <- processAnnotationGui (postProcessAnnotation ValAnnotation)
-            addEvaluationResult mNeighborVals scopeAndVal postProcessAnnotation
-                <&> \add -> add $ \width -> process width typeView ^. Element.width
+        addEvaluationResult mNeighborVals scopeAndVal postProcessAnnotation
 
 maybeAddAnnotation ::
     ( Monad i, Monad o, Glue.HasTexts env, Has (Texts.Code Text) env
