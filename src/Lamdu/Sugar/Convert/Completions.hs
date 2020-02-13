@@ -76,6 +76,8 @@ suggestForTypeUTermObvious (Just (T.TFun (FuncType param result))) =
     Just (T.TVariant row) -> suggestCaseWith row result
     _ -> suggestLam result
     <&> Just
+suggestForTypeUTermObvious (Just (T.TRecord r)) =
+    lookupBody r <&> forRecordUTermObvious
 suggestForTypeUTermObvious _ = pure Nothing
 
 suggestLam ::
@@ -94,7 +96,6 @@ forRecord ::
 forRecord r =
     lookupBody r >>=
     \case
-    Just T.REmpty -> V.BLeaf V.LRecEmpty & Just & pure
     Just (T.RExtend (RowExtend tag typ rest)) ->
         RowExtend tag
         <$> suggestForTypeObvious typ
@@ -104,7 +105,11 @@ forRecord r =
             )
         <&> V.BRecExtend
         <&> Just
-    _ -> pure Nothing
+    t -> forRecordUTermObvious t & pure
+
+forRecordUTermObvious :: Maybe (T.Row # h0) -> Maybe (V.Term # h1)
+forRecordUTermObvious (Just T.REmpty) = V.BLeaf V.LRecEmpty & Just
+forRecordUTermObvious _ = Nothing
 
 suggestCaseWith ::
     (UnifyGen m T.Type, UnifyGen m T.Row) =>
