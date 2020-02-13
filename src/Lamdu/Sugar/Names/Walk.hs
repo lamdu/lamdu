@@ -169,14 +169,13 @@ toResBody f =
 toResVal :: MonadNaming m => ResVal (OldName m) -> m (ResVal (NewName m))
 toResVal = resBody (toResBody toResVal)
 
-toValAnnotation :: MonadNaming m => ValAnnotation (OldName m) (IM m) -> m (ValAnnotation (NewName m) (IM m))
-toValAnnotation (ValAnnotation evalRes typ) =
-    do
-        run <- opRun
-        Lens._Just toType typ
-            <&>
-            ValAnnotation
-            (evalRes <&> traverse . traverse %~ (>>= run . toResVal))
+toValAnnotation ::
+    MonadNaming m =>
+    EvaluationScopes (OldName m) (IM m) -> m (EvaluationScopes (NewName m) (IM m))
+toValAnnotation evalRes =
+    opRun <&>
+    \run ->
+    evalRes <&> traverse . traverse %~ (>>= run . toResVal)
 
 toAnnotation :: MonadNaming m => Annotation (OldName m) (IM m) -> m (Annotation (NewName m) (IM m))
 toAnnotation AnnotationNone = pure AnnotationNone

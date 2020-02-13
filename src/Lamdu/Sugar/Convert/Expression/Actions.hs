@@ -317,24 +317,18 @@ makeAnnotation ::
     Monad m =>
     Ann.ShowAnnotation -> Input.Payload m a # V.Term ->
     ConvertM m (Annotation InternalName (T m))
-makeAnnotation showAnn pl =
-    Lens.view ConvertM.scAnnotationsMode >>=
-    \case
-    Annotations.None
-        | showAnn ^. Ann.showExpanded -> makeTypeAnnotationPl pl <&> AnnotationType
-    Annotations.Types
-        | showAnn ^. Ann.showInTypeMode -> makeTypeAnnotationPl pl <&> AnnotationType
-    Annotations.Evaluation
-        | showAnn ^. Ann.showInEvalMode ->
-            guard (showAnn ^. Ann.showExpanded)
-            & Lens._Just (const (makeTypeAnnotationPl pl))
-            <&>
-            ValAnnotation
-            ( pl ^. Input.evalResults <&> (^. Input.eResults)
-                & ConvertEval.results (EntityId.ofEvalOf (pl ^. Input.entityId))
-            )
-            <&> AnnotationVal
-    _ -> pure AnnotationNone
+makeAnnotation showAnn pl
+    | showAnn ^. Ann.showTypeAlways = makeTypeAnnotationPl pl <&> AnnotationType
+    | otherwise =
+        Lens.view ConvertM.scAnnotationsMode >>=
+        \case
+        Annotations.Types | showAnn ^. Ann.showInTypeMode ->
+            makeTypeAnnotationPl pl <&> AnnotationType
+        Annotations.Evaluation | showAnn ^. Ann.showInEvalMode ->
+            pl ^. Input.evalResults <&> (^. Input.eResults)
+            & ConvertEval.results (EntityId.ofEvalOf (pl ^. Input.entityId))
+            & AnnotationVal & pure
+        _ -> pure AnnotationNone
 
 convertPayload ::
     Monad m =>
@@ -347,7 +341,7 @@ convertPayload (showAnn, pl) =
     Payload
     { _plAnnotation = x
     , _plActions = pl ^. pActions
-    , _plNeverShrinkTypeAnnotations = showAnn ^. Ann.showExpanded
+    , _plNeverShrinkTypeAnnotations = showAnn ^. Ann.showTypeAlways
     , _plEntityId = pl ^. pInput . Input.entityId
     , _plData = pl ^. pInput . Input.userData
     }

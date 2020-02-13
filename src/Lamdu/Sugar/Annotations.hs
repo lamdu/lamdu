@@ -1,7 +1,7 @@
 {-# LANGUAGE TemplateHaskell, TypeApplications, DataKinds, TypeFamilies, TypeOperators #-}
 
 module Lamdu.Sugar.Annotations
-    ( ShowAnnotation(..), showExpanded, showInTypeMode, showInEvalMode
+    ( ShowAnnotation(..), showTypeAlways, showInTypeMode, showInEvalMode
     , MarkAnnotations
     , markNodeAnnotations
     , neverShowAnnotations, alwaysShowAnnotations
@@ -16,10 +16,8 @@ import           Lamdu.Sugar.Types
 import           Lamdu.Prelude
 
 data ShowAnnotation = ShowAnnotation
-    { -- showExpanded means we:
-      -- A) Show type even in concise-mode
-      -- B) Do not shrink type annotations to fit
-      _showExpanded :: Bool
+    { -- For holes and fragments we always show types
+      _showTypeAlways :: Bool
     , _showInTypeMode :: Bool
     , _showInEvalMode :: Bool
     } deriving (Eq, Ord, Show, Generic)
@@ -28,7 +26,7 @@ Lens.makeLenses ''ShowAnnotation
 showAnnotationWhenVerbose :: ShowAnnotation
 showAnnotationWhenVerbose =
     ShowAnnotation
-    { _showExpanded = False
+    { _showTypeAlways = False
     , _showInTypeMode = True
     , _showInEvalMode = True
     }
@@ -42,7 +40,7 @@ neverShowAnnotations = ShowAnnotation False False False
 dontShowEval :: ShowAnnotation
 dontShowEval =
     ShowAnnotation
-    { _showExpanded = False
+    { _showTypeAlways = False
     , _showInTypeMode = True
     , _showInEvalMode = False
     }
@@ -50,7 +48,7 @@ dontShowEval =
 dontShowType :: ShowAnnotation
 dontShowType =
     ShowAnnotation
-    { _showExpanded = False
+    { _showTypeAlways = False
     , _showInTypeMode = False
     , _showInEvalMode = True
     }

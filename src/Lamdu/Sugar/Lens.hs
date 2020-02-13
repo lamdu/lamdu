@@ -9,7 +9,6 @@ module Lamdu.Sugar.Lens
     , binderFuncParamActions
     , binderResultExpr
     , holeTransformExprs, holeOptionTransformExprs
-    , annotationTypes
     , getVarName
     ) where
 
@@ -139,11 +138,6 @@ holeTransformExprs onExpr =
 assignmentBodyAddFirstParam :: Lens' (Assignment name i o a) (AddFirstParam name i o)
 assignmentBodyAddFirstParam f (BodyFunction x) = fAddFirstParam f x <&> BodyFunction
 assignmentBodyAddFirstParam f (BodyPlain x) = apAddFirstParam f x <&> BodyPlain
-
-annotationTypes :: Lens.Traversal' (Annotation name i) (Annotated EntityId (Type name))
-annotationTypes _ AnnotationNone = pure AnnotationNone
-annotationTypes f (AnnotationType x) = f x <&> AnnotationType
-annotationTypes f (AnnotationVal x) = (annotationType . Lens._Just) f x <&> AnnotationVal
 
 getVarName :: Lens.Traversal' (GetVar a o) a
 getVarName f (GetParam x) = (pNameRef . nrName) f x <&> GetParam

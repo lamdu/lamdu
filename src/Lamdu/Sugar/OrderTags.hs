@@ -133,7 +133,7 @@ orderNode ::
     OrderT i (Annotated (Sugar.Payload name i o a) f)
 orderNode (Ann (Const a) x) =
     Ann
-    <$> ((Sugar.plAnnotation . SugarLens.annotationTypes) orderType a <&> Const)
+    <$> ((Sugar.plAnnotation . Sugar._AnnotationType) orderType a <&> Const)
     <*> order x
 
 orderDef ::

@@ -276,7 +276,7 @@ evaluationResult ::
 evaluationResult pl =
     do
         scopeId <- GuiM.readMScopeId
-        case pl ^? Sugar.plAnnotation . Sugar._AnnotationVal . Sugar.annotationVal of
+        case pl ^? Sugar.plAnnotation . Sugar._AnnotationVal of
             Nothing -> pure Nothing
             Just x -> valOfScope x scopeId & GuiM.im <&> Lens._Just %~ erdVal
 
@@ -318,18 +318,17 @@ maybeAddAnnotationWith opt postProcessAnnotation ann =
     Sugar.AnnotationVal val -> maybeAddValAnnotationWith opt postProcessAnnotation val
 
 maybeAddValAnnotationWith ::
-    ( Monad i, Monad o, Glue.HasTexts env
-    , Has (Texts.Code Text) env
+    ( Monad i, Monad o
     , Has (Texts.Name Text) env
     ) =>
     EvalAnnotationOptions -> PostProcessAnnotation (GuiM env i o) ->
-    Sugar.ValAnnotation Name i ->
+    Sugar.EvaluationScopes Name i ->
     GuiM env i o (Widget o -> Widget o)
 maybeAddValAnnotationWith opt postProcessAnnotation ann =
-    getAnnotationMode opt (ann ^. Sugar.annotationVal)
+    getAnnotationMode opt ann
     >>=
     \case
-    Nothing -> maybe (pure id) (addInferredType ?? postProcessAnnotation) (ann ^. Sugar.annotationType)
+    Nothing -> pure id
     Just (scopeAndVal, mNeighborVals) ->
         addEvaluationResult mNeighborVals scopeAndVal postProcessAnnotation
 

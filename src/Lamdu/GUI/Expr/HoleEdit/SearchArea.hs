@@ -51,7 +51,6 @@ import qualified Lamdu.I18N.Code as Texts
 import qualified Lamdu.I18N.CodeUI as Texts
 import qualified Lamdu.I18N.Name as Texts
 import           Lamdu.Name (Name)
-import qualified Lamdu.Sugar.Lens as SugarLens
 import qualified Lamdu.Sugar.Parens as AddParens
 import qualified Lamdu.Sugar.Types as Sugar
 
@@ -142,7 +141,7 @@ makeInferredTypeAnnotation ::
     Sugar.Annotation Name i -> AnimId -> m View
 makeInferredTypeAnnotation ann animId =
     Annotation.addAnnotationBackground
-    <*> TypeView.make (ann ^?! SugarLens.annotationTypes)
+    <*> TypeView.make (ann ^?! Sugar._AnnotationType)
     <&> (^. Align.tValue)
     & Reader.local (Element.animIdPrefix .~ animId)
 

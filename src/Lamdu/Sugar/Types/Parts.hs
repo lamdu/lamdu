@@ -8,7 +8,6 @@ module Lamdu.Sugar.Types.Parts
     , HoleResultScore(..), hrsNumFragments, hrsScore
     , -- Annotations
       Annotation(..), _AnnotationVal, _AnnotationType, _AnnotationNone
-    , ValAnnotation(..), annotationVal, annotationType
     -- Node actions
     , DetachAction(..), _FragmentAlready, _FragmentExprAlready, _DetachAction
     , NodeActions(..), detach, mSetToHole, setToLiteral, extract, mReplaceParent, wrapInRecord
@@ -48,16 +47,9 @@ import           Lamdu.Prelude
 data FuncApplyLimit = UnlimitedFuncApply | AtMostOneFuncApply
     deriving (Eq, Ord, Generic)
 
--- Value annotations may also have types as fallbacks in scopes where no value was calculated
-data ValAnnotation name i =
-    ValAnnotation
-    { _annotationVal :: EvaluationScopes name i
-    , _annotationType :: Maybe (Annotated EntityId (Type name))
-    } deriving Generic
-
 data Annotation name i
     = AnnotationType (Annotated EntityId (Type name))
-    | AnnotationVal (ValAnnotation name i)
+    | AnnotationVal (EvaluationScopes name i)
     | AnnotationNone
     deriving Generic
 
@@ -195,7 +187,6 @@ Lens.makeLenses ''OpenCompositeActions
 Lens.makeLenses ''ParamInfo
 Lens.makeLenses ''ParenInfo
 Lens.makeLenses ''Payload
-Lens.makeLenses ''ValAnnotation
 Lens.makePrisms ''AddFirstParam
 Lens.makePrisms ''AddNextParam
 Lens.makePrisms ''Annotation
