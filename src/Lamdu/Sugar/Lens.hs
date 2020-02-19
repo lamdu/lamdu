@@ -1,5 +1,4 @@
-{-# LANGUAGE TypeApplications, FlexibleInstances, KindSignatures, MultiParamTypeClasses #-}
-{-# LANGUAGE TypeOperators, DataKinds, DefaultSignatures #-}
+{-# LANGUAGE TypeApplications, FlexibleInstances, DefaultSignatures #-}
 module Lamdu.Sugar.Lens
     ( SugarExpr(..)
     , childPayloads

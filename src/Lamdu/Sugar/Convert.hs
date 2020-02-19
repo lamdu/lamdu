@@ -1,4 +1,4 @@
-{-# LANGUAGE TypeOperators, TypeApplications #-}
+{-# LANGUAGE TypeApplications #-}
 module Lamdu.Sugar.Convert
     ( loadWorkArea, InternalName
     ) where

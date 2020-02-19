@@ -4,7 +4,7 @@
 -- so that it knows which other instances it will create.
 {-# OPTIONS -Wno-redundant-constraints #-}
 
-{-# LANGUAGE TemplateHaskell, TypeFamilies, MultiParamTypeClasses, UndecidableInstances, DataKinds, GADTs, TypeOperators, ConstraintKinds, FlexibleInstances #-}
+{-# LANGUAGE TemplateHaskell, TypeFamilies, MultiParamTypeClasses, UndecidableInstances, DataKinds, GADTs, ConstraintKinds, FlexibleInstances #-}
 module Lamdu.Sugar.Types.Expression
     ( Body(..)
         , _BodyLam, _BodyLabeledApply, _BodySimpleApply

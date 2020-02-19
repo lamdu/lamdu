@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell, PatternGuards, TupleSections, TypeFamilies, DataKinds, TypeOperators, TypeApplications #-}
+{-# LANGUAGE TemplateHaskell, TupleSections, TypeFamilies, TypeApplications #-}
 module Lamdu.Sugar.Convert.Binder.Params
     ( ConventionalParams(..), cpParams, cpAddFirstParam
     , convertParams, convertLamParams

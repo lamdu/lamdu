@@ -1,4 +1,3 @@
-{-# LANGUAGE TypeOperators #-}
 module Lamdu.GUI.Expr.HoleEdit.ValTerms
     ( expr
     , binder

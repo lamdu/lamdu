@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell, TupleSections, TypeOperators #-}
+{-# LANGUAGE TemplateHaskell, TupleSections #-}
 module Lamdu.Eval.Manager
     ( Evaluator
     , NewParams(..), new

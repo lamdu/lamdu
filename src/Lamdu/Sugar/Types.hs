@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell, KindSignatures, DataKinds, TypeOperators #-}
+{-# LANGUAGE TemplateHaskell #-}
 module Lamdu.Sugar.Types
     ( module Exported
     , EntityId

@@ -1,4 +1,4 @@
-{-# LANGUAGE TypeOperators, TypeFamilies #-}
+{-# LANGUAGE TypeFamilies #-}
 module Lamdu.Data.Ops
     ( newHole, applyHoleTo, setToAppliedHole
     , replace, replaceWithHole, setToHole, lambdaWrap, redexWrap

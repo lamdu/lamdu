@@ -1,6 +1,6 @@
 -- | Functions memoized with Data.Cache.Fenced
 
-{-# LANGUAGE ScopedTypeVariables, TypeOperators, TypeApplications #-}
+{-# LANGUAGE ScopedTypeVariables, TypeApplications #-}
 
 module Lamdu.Cache
     ( Functions(..)

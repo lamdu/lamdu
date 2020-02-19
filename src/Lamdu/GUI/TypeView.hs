@@ -1,4 +1,4 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving, FlexibleInstances, MultiParamTypeClasses, TemplateHaskell, TupleSections, TypeOperators #-}
+{-# LANGUAGE TemplateHaskell, TupleSections #-}
 module Lamdu.GUI.TypeView
     ( make, makeScheme
     ) where

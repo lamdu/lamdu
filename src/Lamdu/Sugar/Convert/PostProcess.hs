@@ -1,4 +1,4 @@
-{-# LANGUAGE TypeApplications, TypeOperators #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Lamdu.Sugar.Convert.PostProcess
     ( Result(..), def, expr

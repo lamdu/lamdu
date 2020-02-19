@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell, TypeApplications, ScopedTypeVariables, RankNTypes, TypeOperators #-}
+{-# LANGUAGE TemplateHaskell, TypeApplications, ScopedTypeVariables, RankNTypes #-}
 
 module Lamdu.Calc.Term.Utils
     ( Composite(..), tags, rest

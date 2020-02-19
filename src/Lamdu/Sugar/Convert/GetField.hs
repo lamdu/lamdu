@@ -1,4 +1,3 @@
-{-# LANGUAGE TypeOperators #-}
 module Lamdu.Sugar.Convert.GetField
     ( convert
     ) where

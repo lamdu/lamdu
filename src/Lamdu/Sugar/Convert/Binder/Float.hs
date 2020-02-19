@@ -1,4 +1,4 @@
-{-# LANGUAGE PatternGuards, TypeOperators, GADTs, TypeApplications #-}
+{-# LANGUAGE GADTs, TypeApplications #-}
 
 module Lamdu.Sugar.Convert.Binder.Float
     ( makeFloatLetToOuterScope

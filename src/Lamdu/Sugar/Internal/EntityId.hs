@@ -1,4 +1,4 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving, TypeOperators #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 module Lamdu.Sugar.Internal.EntityId
     ( EntityId(..)
     , bs

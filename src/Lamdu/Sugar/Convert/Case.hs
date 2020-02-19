@@ -1,4 +1,3 @@
-{-# LANGUAGE TypeOperators #-}
 module Lamdu.Sugar.Convert.Case
     ( convert
     , convertAbsurd

@@ -1,4 +1,3 @@
-{-# LANGUAGE TypeFamilies, TypeOperators #-}
 module Lamdu.GUI.Expr
     ( make
     ) where

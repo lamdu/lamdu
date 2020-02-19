@@ -1,5 +1,5 @@
 {-# LANGUAGE TypeApplications, ScopedTypeVariables, DefaultSignatures #-}
-{-# LANGUAGE MultiParamTypeClasses, TypeOperators, TemplateHaskell #-}
+{-# LANGUAGE MultiParamTypeClasses, TemplateHaskell #-}
 
 module Revision.Deltum.Hyper
     ( HStore(..), readRecursively

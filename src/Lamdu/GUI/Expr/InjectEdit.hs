@@ -1,4 +1,4 @@
-{-# LANGUAGE RankNTypes, TypeOperators #-}
+{-# LANGUAGE RankNTypes #-}
 module Lamdu.GUI.Expr.InjectEdit
     ( make
     ) where

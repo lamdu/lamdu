@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell, TypeOperators #-}
+{-# LANGUAGE TemplateHaskell #-}
 module Lamdu.GUI.Expr.IfElseEdit
     ( make
     ) where

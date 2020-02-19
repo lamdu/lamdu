@@ -1,4 +1,4 @@
-{-# LANGUAGE TypeApplications, ScopedTypeVariables, TypeOperators #-}
+{-# LANGUAGE TypeApplications, ScopedTypeVariables #-}
 module Lamdu.Eval.Results.Process
     ( addTypes
     ) where

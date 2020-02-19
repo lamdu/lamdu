@@ -1,7 +1,5 @@
 -- | Convert Lamdu.Calc.Type datatypes to sugared counterparts
 
-{-# LANGUAGE TypeOperators #-}
-
 module Lamdu.Sugar.Convert.Type
     ( convertType
     , convertScheme

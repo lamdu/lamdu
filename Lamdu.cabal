@@ -84,7 +84,7 @@ Executable lamdu
 
 Test-Suite Tests
   type: exitcode-stdio-1.0
-  default-extensions: NoImplicitPrelude, OverloadedStrings, PartialTypeSignatures, LambdaCase, DeriveTraversable, DeriveGeneric, DeriveAnyClass, DerivingStrategies, FlexibleContexts
+  default-extensions: NoImplicitPrelude, OverloadedStrings, PartialTypeSignatures, LambdaCase, DeriveTraversable, DeriveGeneric, DeriveAnyClass, DerivingStrategies, FlexibleContexts, TypeOperators
   default-language: Haskell2010
   hs-source-dirs: test
   main-is: Tests.hs
@@ -129,7 +129,7 @@ Test-Suite Tests
 Library
   hs-source-dirs: src
   default-language: Haskell2010
-  default-extensions: NoImplicitPrelude, OverloadedStrings, PartialTypeSignatures, LambdaCase, DeriveTraversable, DeriveGeneric, DeriveAnyClass, DerivingStrategies, FlexibleContexts
+  default-extensions: NoImplicitPrelude, OverloadedStrings, PartialTypeSignatures, LambdaCase, DeriveTraversable, DeriveGeneric, DeriveAnyClass, DerivingStrategies, FlexibleContexts, TypeOperators
   build-depends:    aeson >= 1.1
                   , aeson-diff
                   , aeson-pretty

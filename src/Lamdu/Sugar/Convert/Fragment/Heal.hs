@@ -1,4 +1,4 @@
-{-# LANGUAGE TypeOperators, TypeApplications, ScopedTypeVariables, GADTs, FlexibleInstances #-}
+{-# LANGUAGE TypeApplications, ScopedTypeVariables, GADTs, FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 module Lamdu.Sugar.Convert.Fragment.Heal
     ( healMismatch

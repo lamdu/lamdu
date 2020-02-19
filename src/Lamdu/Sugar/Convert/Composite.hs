@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell, RankNTypes, TypeOperators #-}
+{-# LANGUAGE TemplateHaskell, RankNTypes #-}
 
 module Lamdu.Sugar.Convert.Composite
     ( convertEmpty, BodyPrism, convert

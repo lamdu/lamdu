@@ -1,5 +1,3 @@
-{-# LANGUAGE TypeOperators #-}
-
 module Lamdu.GUI.Expr.ApplyEdit
     ( makeSimple, makeLabeled
     ) where

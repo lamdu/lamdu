@@ -1,4 +1,3 @@
-{-# LANGUAGE TypeFamilies, Rank2Types, TypeOperators #-}
 module Lamdu.Sugar.Convert.Expression
     ( convert
     ) where

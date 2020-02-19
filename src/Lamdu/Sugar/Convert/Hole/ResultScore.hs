@@ -1,4 +1,4 @@
-{-# LANGUAGE TypeOperators, GADTs, TypeApplications #-}
+{-# LANGUAGE GADTs, TypeApplications #-}
 module Lamdu.Sugar.Convert.Hole.ResultScore
     ( resultScore
     ) where

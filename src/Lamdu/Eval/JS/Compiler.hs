@@ -1,4 +1,4 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving, TemplateHaskell, QuasiQuotes, PolymorphicComponents, TypeOperators #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving, TemplateHaskell, QuasiQuotes #-}
 -- | Compile Lamdu vals to Javascript
 
 module Lamdu.Eval.JS.Compiler

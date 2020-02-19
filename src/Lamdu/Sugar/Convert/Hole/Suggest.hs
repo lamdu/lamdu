@@ -1,4 +1,4 @@
-{-# LANGUAGE TypeFamilies, TypeApplications, TypeOperators, RankNTypes #-}
+{-# LANGUAGE TypeFamilies, TypeApplications, RankNTypes #-}
 module Lamdu.Sugar.Convert.Hole.Suggest
     ( termTransforms
     , termTransformsWithModify

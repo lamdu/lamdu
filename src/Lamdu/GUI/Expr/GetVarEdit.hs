@@ -1,5 +1,3 @@
-{-# LANGUAGE TypeOperators #-}
-
 module Lamdu.GUI.Expr.GetVarEdit
     ( make, makeGetBinder, makeNoActions, makeSimpleView
     , makePunnedVars

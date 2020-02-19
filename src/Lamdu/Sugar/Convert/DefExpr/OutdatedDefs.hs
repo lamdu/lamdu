@@ -1,4 +1,4 @@
-{-# LANGUAGE TypeFamilies, TypeOperators #-}
+{-# LANGUAGE TypeFamilies #-}
 module Lamdu.Sugar.Convert.DefExpr.OutdatedDefs
     ( scan
     ) where

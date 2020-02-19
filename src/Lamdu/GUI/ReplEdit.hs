@@ -1,5 +1,5 @@
 -- | REPL Edit
-{-# LANGUAGE RankNTypes, TypeOperators #-}
+{-# LANGUAGE RankNTypes #-}
 module Lamdu.GUI.ReplEdit
     ( ExportRepl(..), make, isExecutableType
     ) where

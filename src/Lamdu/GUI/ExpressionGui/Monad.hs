@@ -1,7 +1,6 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving, TemplateHaskell #-}
-{-# LANGUAGE MultiParamTypeClasses, FlexibleInstances, TypeFamilies #-}
+{-# LANGUAGE MultiParamTypeClasses, FlexibleInstances, DerivingVia #-}
 {-# LANGUAGE UndecidableInstances, PolymorphicComponents #-}
-{-# LANGUAGE DerivingVia, DataKinds, TypeOperators #-}
 module Lamdu.GUI.ExpressionGui.Monad
     ( StoredEntityIds(..)
     --

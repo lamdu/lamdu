@@ -1,6 +1,6 @@
 -- | Common completions for holes and fragments
 
-{-# LANGUAGE TypeFamilies, TypeOperators #-}
+{-# LANGUAGE TypeFamilies #-}
 module Lamdu.Sugar.Convert.Completions
     ( suggestForType
     , suggestForTypeObvious, suggestForTypeUTermWithoutSplit, suggestCaseWith

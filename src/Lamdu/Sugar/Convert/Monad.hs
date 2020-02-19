@@ -1,6 +1,5 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving, TemplateHaskell, PolymorphicComponents #-}
-{-# LANGUAGE ConstraintKinds, FlexibleInstances, MultiParamTypeClasses #-}
-{-# LANGUAGE TypeFamilies, TypeOperators #-}
+{-# LANGUAGE FlexibleInstances, MultiParamTypeClasses #-}
 module Lamdu.Sugar.Convert.Monad
     ( TagParamInfo(..)
     , TagFieldParam(..), _TagFieldParam, _CollidingFieldParam

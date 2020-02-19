@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell, TypeOperators #-}
+{-# LANGUAGE TemplateHaskell #-}
 module Lamdu.Data.Definition
     ( FFIName(..)
     , Expr(..), expr, exprFrozenDeps

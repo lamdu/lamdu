@@ -1,5 +1,5 @@
 -- | A pass on the sugared AST to decide where to put parenthesis
-{-# LANGUAGE TypeApplications, TypeFamilies, TypeOperators #-}
+{-# LANGUAGE TypeApplications, TypeFamilies #-}
 module Lamdu.Sugar.Parens
     ( MinOpPrec
     , addToWorkArea, addToExprWith

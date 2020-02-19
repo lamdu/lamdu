@@ -1,5 +1,5 @@
 -- TODO: Split/rename to more generic (non-sugar) modules
-{-# LANGUAGE ScopedTypeVariables, TypeApplications, TypeOperators, GADTs #-}
+{-# LANGUAGE ScopedTypeVariables, TypeApplications, GADTs #-}
 
 module Lamdu.Expr.GenIds
     ( randomizeExprAndParams

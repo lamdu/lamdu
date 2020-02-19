@@ -1,5 +1,5 @@
 {-# OPTIONS_GHC -Wno-incomplete-uni-patterns #-}
-{-# LANGUAGE TemplateHaskell, TupleSections, DerivingVia, TypeOperators #-}
+{-# LANGUAGE TemplateHaskell, TupleSections, DerivingVia #-}
 -- | Run a process that evaluates given compiled
 module Lamdu.Eval.JS
     ( module Lamdu.Eval.JS.Types

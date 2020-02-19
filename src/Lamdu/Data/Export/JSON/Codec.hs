@@ -1,5 +1,5 @@
 -- | JSON encoder/decoder for Lamdu types
-{-# LANGUAGE TemplateHaskell, TypeFamilies, TypeOperators, PolyKinds, TypeApplications, FlexibleInstances #-}
+{-# LANGUAGE TemplateHaskell, TypeFamilies, TypeApplications, FlexibleInstances #-}
 module Lamdu.Data.Export.JSON.Codec
     ( TagOrder
     , Version(..)

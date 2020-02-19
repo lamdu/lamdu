@@ -1,4 +1,4 @@
-{-# LANGUAGE TypeFamilies, TypeOperators #-}
+{-# LANGUAGE TypeFamilies #-}
 module Lamdu.Expr.Load
     ( def, defExpr, expr, nominal
     ) where

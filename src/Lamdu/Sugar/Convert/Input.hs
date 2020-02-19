@@ -1,5 +1,5 @@
 -- | Preprocess of input to sugar
-{-# LANGUAGE TemplateHaskell, TypeApplications, TypeOperators, FlexibleInstances #-}
+{-# LANGUAGE TemplateHaskell, TypeApplications, FlexibleInstances #-}
 {-# LANGUAGE DataKinds, UndecidableInstances, GADTs, TypeFamilies #-}
 module Lamdu.Sugar.Convert.Input
     ( Payload(..)

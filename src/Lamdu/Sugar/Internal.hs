@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell, TypeOperators #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module Lamdu.Sugar.Internal
     ( ConvertPayload(..), pInput, pActions

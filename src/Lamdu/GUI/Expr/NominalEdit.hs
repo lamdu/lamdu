@@ -1,4 +1,4 @@
-{-# LANGUAGE NoMonomorphismRestriction, RankNTypes, TypeOperators #-}
+{-# LANGUAGE RankNTypes #-}
 module Lamdu.GUI.Expr.NominalEdit
     ( makeFromNom, makeToNom
     ) where

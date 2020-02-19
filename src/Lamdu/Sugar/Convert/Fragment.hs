@@ -1,6 +1,6 @@
 -- | Convert applied holes to Fragments
 
-{-# LANGUAGE TypeFamilies, PolyKinds, TypeOperators, TypeApplications, ScopedTypeVariables #-}
+{-# LANGUAGE TypeFamilies, TypeApplications, ScopedTypeVariables #-}
 
 module Lamdu.Sugar.Convert.Fragment
     ( convertAppliedHole

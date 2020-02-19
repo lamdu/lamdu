@@ -1,4 +1,3 @@
-{-# LANGUAGE TypeOperators #-}
 module Lamdu.GUI.Expr.FragmentEdit
     ( make
     ) where

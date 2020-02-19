@@ -1,6 +1,6 @@
 -- | Different leaf types in the Sugar expressions.
 -- These don't contain more expressions in them.
-{-# LANGUAGE TemplateHaskell, DataKinds, KindSignatures, TypeOperators #-}
+{-# LANGUAGE TemplateHaskell #-}
 module Lamdu.Sugar.Types.Parts
     ( VarInfo(..), _VarNominal, _VarGeneric, _VarFunction, _VarRecord, _VarVariant
     , FuncApplyLimit(..), _UnlimitedFuncApply, _AtMostOneFuncApply

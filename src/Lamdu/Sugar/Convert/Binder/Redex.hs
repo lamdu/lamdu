@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell, TypeOperators, RankNTypes, GADTs #-}
+{-# LANGUAGE TemplateHaskell, RankNTypes, GADTs #-}
 
 module Lamdu.Sugar.Convert.Binder.Redex
     ( Redex(..), bodyScope, lam, lamPl, paramRefs, arg

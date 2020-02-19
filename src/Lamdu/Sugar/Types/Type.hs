@@ -1,5 +1,5 @@
 -- | Sugaring of Lamdu.Calc.Type modules/ASTs
-{-# LANGUAGE TemplateHaskell, TypeFamilies, UndecidableInstances, GADTs, TypeOperators, DataKinds #-}
+{-# LANGUAGE TemplateHaskell, TypeFamilies, GADTs #-}
 module Lamdu.Sugar.Types.Type
     ( Scheme(..), schemeForAll, schemeType
     , T.NominalId

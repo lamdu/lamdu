@@ -1,7 +1,5 @@
 -- | Convert eval results
 
-{-# LANGUAGE TypeOperators #-}
-
 module Lamdu.Sugar.Convert.Eval
     ( results, param, completion
     ) where

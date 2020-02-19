@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell, MultiParamTypeClasses, TypeOperators #-}
+{-# LANGUAGE TemplateHaskell, MultiParamTypeClasses #-}
 
 module Lamdu.Data.Export.JS
     ( exportFancy

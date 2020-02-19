@@ -1,4 +1,4 @@
-{-# LANGUAGE TypeFamilies, PolyKinds, TypeOperators, ScopedTypeVariables #-}
+{-# LANGUAGE TypeFamilies, ScopedTypeVariables #-}
 module Lamdu.Sugar.Convert.Binder.Inline
     ( inlineLet
     ) where

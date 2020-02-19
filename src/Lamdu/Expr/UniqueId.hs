@@ -1,4 +1,4 @@
-{-# LANGUAGE UndecidableInstances, DataKinds, FlexibleInstances, TypeOperators #-}
+{-# LANGUAGE UndecidableInstances, DataKinds, FlexibleInstances #-}
 module Lamdu.Expr.UniqueId
     ( ToUUID(..), UniqueId(..), identifierOfUUID, varOfUUID
     ) where

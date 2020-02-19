@@ -1,4 +1,4 @@
-{-# LANGUAGE PolyKinds, TypeOperators #-}
+{-# LANGUAGE PolyKinds #-}
 
 module Lamdu.Sugar.Convert.GetVar
     ( convert, globalNameRef

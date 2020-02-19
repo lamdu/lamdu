@@ -1,4 +1,4 @@
-{-# LANGUAGE RankNTypes, GADTs, TypeOperators #-}
+{-# LANGUAGE RankNTypes, GADTs #-}
 module Lamdu.Data.Ops.Subexprs
     ( onMatchingSubexprs
     , toHole

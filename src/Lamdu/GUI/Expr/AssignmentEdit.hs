@@ -1,5 +1,3 @@
-{-# LANGUAGE TypeOperators #-}
-
 module Lamdu.GUI.Expr.AssignmentEdit
     ( make
     , Parts(..), makeFunctionParts

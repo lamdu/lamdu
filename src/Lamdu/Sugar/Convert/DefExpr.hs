@@ -1,4 +1,4 @@
-{-# LANGUAGE ScopedTypeVariables, TypeApplications, TypeOperators #-}
+{-# LANGUAGE TypeApplications #-}
 module Lamdu.Sugar.Convert.DefExpr
     ( convert
     ) where

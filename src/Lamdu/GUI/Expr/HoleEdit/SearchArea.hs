@@ -3,8 +3,6 @@
 --
 -- For non-fragments this is the whole hole.
 
-{-# LANGUAGE TypeOperators #-}
-
 module Lamdu.GUI.Expr.HoleEdit.SearchArea
     ( make
     , AnnotationMode(..)

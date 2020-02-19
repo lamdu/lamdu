@@ -1,6 +1,6 @@
 -- | Load & infer expressions for sugar processing
 -- (unify with stored ParamLists, recursion support)
-{-# LANGUAGE TemplateHaskell, TupleSections, TypeApplications, TypeOperators #-}
+{-# LANGUAGE TemplateHaskell, TupleSections, TypeApplications #-}
 {-# LANGUAGE ScopedTypeVariables, FlexibleInstances #-}
 module Lamdu.Sugar.Convert.Load
     ( InferOut(..), irVal, irCtx
