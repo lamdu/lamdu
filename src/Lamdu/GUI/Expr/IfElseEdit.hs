@@ -23,7 +23,6 @@ import           GUI.Momentu.View (View)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Grid as Grid
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
-import           Hyper.Combinator.Ann (Annotated)
 import qualified Lamdu.Config as Config
 import qualified Lamdu.GUI.Expr.EventMap as ExprEventMap
 import           Lamdu.GUI.ExpressionGui.Monad (GuiM)
@@ -56,7 +55,7 @@ makeIfThen ::
     , Has (MomentuTexts.Texts Text) env
     ) =>
     WithTextPos View -> AnimId ->
-    Sugar.IfElse Name i o # Ann (Const (Sugar.Payload Name i o ExprGui.Payload)) ->
+    Sugar.IfElse Name i o # Annotated (Sugar.Payload Name i o ExprGui.Payload) ->
     GuiM env i o (Row (Responsive o))
 makeIfThen prefixLabel animId ifElse =
     do
@@ -179,7 +178,7 @@ make ::
     , Has (Texts.Name Text) env
     , Has (Texts.Navigation Text) env
     ) =>
-    Sugar.IfElse Name i o # Ann (Const (Sugar.Payload Name i o ExprGui.Payload)) ->
+    Sugar.IfElse Name i o # Annotated (Sugar.Payload Name i o ExprGui.Payload) ->
     Sugar.Payload Name i o ExprGui.Payload ->
     GuiM env i o (Responsive o)
 make ifElse pl =

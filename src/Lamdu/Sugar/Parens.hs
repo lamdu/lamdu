@@ -34,7 +34,7 @@ addToWorkArea w =
     }
 
 class AddParens expr where
-    addToBody :: expr # Ann (Const a) -> expr # Ann (Const (ParenInfo, a))
+    addToBody :: expr # Annotated a -> expr # Annotated (ParenInfo, a)
 
     addToNode :: Annotated a # expr -> Annotated (ParenInfo, a) # expr
     addToNode (Ann (Const pl) x) = Ann (Const (ParenInfo 0 False, pl)) (addToBody x)
@@ -84,7 +84,7 @@ addToExprWith ::
 addToExprWith minOpPrec = loopExpr minOpPrec (Precedence 0 0)
 
 bareInfix ::
-    Lens.Prism' (LabeledApply name i o # Ann (Const a))
+    Lens.Prism' (LabeledApply name i o # Annotated a)
     ( Expression name i o a
     , Annotated a # Const (BinderVarRef name o)
     , Expression name i o a
@@ -109,8 +109,8 @@ loopExpr minOpPrec parentPrec (Ann (Const pl) body_) =
 
 loopExprBody ::
     HasPrecedence name =>
-    Precedence Prec -> Body name i o # Ann (Const a) ->
-    (NeedsParens, Body name i o # Ann (Const (ParenInfo, a)))
+    Precedence Prec -> Body name i o # Annotated a ->
+    (NeedsParens, Body name i o # Annotated (ParenInfo, a))
 loopExprBody parentPrec body_ =
     case body_ of
     BodyPlaceHolder    -> result False BodyPlaceHolder

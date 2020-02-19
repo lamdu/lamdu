@@ -89,7 +89,7 @@ prepareParamType ::
     forall m h.
     (Monad m, Recursively (PrepareParamType m) h) =>
     Ann (HRef m) # HCompose Prune h ->
-    Annotated (Priority, EditAction (T m ())) # (HCompose Prune h)
+    Annotated (Priority, EditAction (T m ())) # HCompose Prune h
 prepareParamType (Ann a b) =
     withDict (recursively (Proxy @(PrepareParamType m h))) $
     Ann

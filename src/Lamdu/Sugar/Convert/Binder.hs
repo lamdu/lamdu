@@ -180,7 +180,7 @@ makeFunction ::
     MkProperty' (T m) (Maybe BinderParamScopeId) ->
     ConventionalParams m -> Ann (Input.Payload m a) # V.Term ->
     ConvertM m
-    (Function InternalName (T m) (T m) # Ann (Const (ConvertPayload m a)))
+    (Function InternalName (T m) (T m) # Annotated (ConvertPayload m a))
 makeFunction chosenScopeProp params funcBody =
     convertBinder funcBody
     <&> mkRes
@@ -265,7 +265,7 @@ convertLam lam exprPl =
                 hmap (const (annotation . pActions . mReplaceParent . Lens._Just %~ (lamParamToHole lam >>)))
 
 useNormalLambda ::
-    Set InternalName -> Function InternalName i o # Ann (Const a) -> Bool
+    Set InternalName -> Function InternalName i o # Annotated a -> Bool
 useNormalLambda paramNames func
     | Set.size paramNames < 2 = True
     | otherwise =
@@ -310,7 +310,7 @@ instance GetParam (Body InternalName i o) where
     getParam x = x ^? _BodyGetVar <&> Const >>= getParam
 
 allParamsUsed ::
-    Set InternalName -> Function InternalName i o # Ann (Const a) -> Bool
+    Set InternalName -> Function InternalName i o # Annotated a -> Bool
 allParamsUsed paramNames func =
     Set.null (paramNames `Set.difference` usedParams)
     where

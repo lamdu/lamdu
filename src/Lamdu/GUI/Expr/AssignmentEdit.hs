@@ -40,7 +40,6 @@ import qualified GUI.Momentu.Widgets.Label as Label
 import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
 import qualified GUI.Momentu.Widgets.TextView as TextView
-import           Hyper.Combinator.Ann (Annotated)
 import qualified Lamdu.Annotations as Annotations
 import qualified Lamdu.Config as Config
 import           Lamdu.Config.Theme (Theme)
@@ -117,7 +116,7 @@ lookupMKey k m = k >>= (`Map.lookup` m)
 
 mkChosenScopeCursor ::
     Monad i =>
-    Sugar.Function Name i o # Ann (Const (Sugar.Payload name i o ExprGui.Payload)) ->
+    Sugar.Function Name i o # Annotated (Sugar.Payload name i o ExprGui.Payload) ->
     GuiM env i o (CurAndPrev (Maybe ScopeCursor))
 mkChosenScopeCursor func =
     do
@@ -388,7 +387,7 @@ makeFunctionParts ::
     , Has (Texts.Navigation Text) env
     ) =>
     Sugar.FuncApplyLimit ->
-    Sugar.Function Name i o # Ann (Const (Sugar.Payload Name i o ExprGui.Payload)) ->
+    Sugar.Function Name i o # Annotated (Sugar.Payload Name i o ExprGui.Payload) ->
     Sugar.Payload Name i o ExprGui.Payload ->
     Widget.Id ->
     GuiM env i o (Parts i o)
@@ -442,7 +441,7 @@ makePlainParts ::
     , TextEdit.HasTexts env
     , SearchMenu.HasTexts env
     ) =>
-    Sugar.AssignPlain Name i o # Ann (Const (Sugar.Payload Name i o ExprGui.Payload)) ->
+    Sugar.AssignPlain Name i o # Annotated (Sugar.Payload Name i o ExprGui.Payload) ->
     Sugar.Payload Name i o ExprGui.Payload ->
     Widget.Id ->
     GuiM env i o (Parts i o)

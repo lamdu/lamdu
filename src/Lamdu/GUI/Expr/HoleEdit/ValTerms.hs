@@ -52,7 +52,7 @@ ofBody ::
     ( Has (Texts.Code Text) env
     , Has (Texts.CodeUI Text) env
     ) =>
-    env -> Body Name i o # Ann (Const a) -> [Text]
+    env -> Body Name i o # Annotated a -> [Text]
 ofBody env =
     \case
     BodyLam {} ->
@@ -119,7 +119,7 @@ binder ::
     ( Has (Texts.Code Text) env
     , Has (Texts.CodeUI Text) env
     ) =>
-    env -> Binder Name i o # Ann (Const a) -> [Text]
+    env -> Binder Name i o # Annotated a -> [Text]
 binder env BinderLet{} = [env ^. has . Texts.let_]
 binder env (BinderExpr x) = ofBody env x
 

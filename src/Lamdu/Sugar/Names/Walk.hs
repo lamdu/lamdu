@@ -10,7 +10,6 @@ module Lamdu.Sugar.Names.Walk
 
 import qualified Control.Lens as Lens
 import qualified Data.Set as Set
-import           Hyper.Combinator.Ann (Annotated)
 import           Hyper.Type.AST.App (appChildren)
 import           Hyper.Type.AST.FuncType (FuncType(..))
 import qualified Lamdu.Calc.Type as T
@@ -87,8 +86,8 @@ toTId = tidName %%~ opGetName Nothing TaggedNominal
 
 toTBody ::
     MonadNaming m =>
-    Type (OldName m) # Ann (Const a) ->
-    m (Type (NewName m) # Ann (Const a))
+    Type (OldName m) # Annotated a ->
+    m (Type (NewName m) # Annotated a)
 toTBody (TVar tv) = opGetName Nothing TypeVar tv <&> TVar
 toTBody (TFun (FuncType a b)) = FuncType <$> toType a <*> toType b <&> TFun
 toTBody (TRecord composite) = TRecord <$> toCompositeFields composite
@@ -194,8 +193,8 @@ toPayload payload@Payload{_plAnnotation, _plActions} =
 
 toNode ::
     MonadNaming m =>
-    (ka # Ann (Const (Payload (OldName m) (IM m) o p)) ->
-     m (kb # Ann (Const (Payload (NewName m) (IM m) o p)))) ->
+    (ka # Annotated (Payload (OldName m) (IM m) o p) ->
+     m (kb # Annotated (Payload (NewName m) (IM m) o p))) ->
     Annotated (Payload (OldName m) (IM m) o p) # ka ->
     m (Annotated (Payload (NewName m) (IM m) o p) # kb)
 toNode toV (Ann (Const pl) v) =
@@ -205,8 +204,8 @@ toNode toV (Ann (Const pl) v) =
 
 toLet ::
     MonadNaming m =>
-    Let (OldName m) (IM m) o # Ann (Const (Payload (OldName m) (IM m) o a)) ->
-    m (Let (NewName m) (IM m) o # Ann (Const (Payload (NewName m) (IM m) o a)))
+    Let (OldName m) (IM m) o # Annotated (Payload (OldName m) (IM m) o a) ->
+    m (Let (NewName m) (IM m) o # Annotated (Payload (NewName m) (IM m) o a))
 toLet let_@Let{_lName, _lVarInfo, _lBody, _lValue} =
     do
         (_lName, _lBody) <-
@@ -217,8 +216,8 @@ toLet let_@Let{_lName, _lVarInfo, _lBody, _lValue} =
 
 toBinder ::
     MonadNaming m =>
-    Binder (OldName m) (IM m) o # Ann (Const (Payload (OldName m) (IM m) o a)) ->
-    m (Binder (NewName m) (IM m) o # Ann (Const (Payload (NewName m) (IM m) o a)))
+    Binder (OldName m) (IM m) o # Annotated (Payload (OldName m) (IM m) o a) ->
+    m (Binder (NewName m) (IM m) o # Annotated (Payload (NewName m) (IM m) o a))
 toBinder (BinderLet l) = toLet l <&> BinderLet
 toBinder (BinderExpr e) = toBody e <&> BinderExpr
 
@@ -230,8 +229,8 @@ toAddFirstParam = _PrependParam toTagReplace
 
 toFunction ::
     MonadNaming m =>
-    Function (OldName m) (IM m) o # Ann (Const (Payload (OldName m) (IM m) o a)) ->
-    m (Function (NewName m) (IM m) o # Ann (Const (Payload (NewName m) (IM m) o a)))
+    Function (OldName m) (IM m) o # Annotated (Payload (OldName m) (IM m) o a) ->
+    m (Function (NewName m) (IM m) o # Annotated (Payload (NewName m) (IM m) o a))
 toFunction func@Function{_fParams, _fBody, _fAddFirstParam} =
     (\(_fParams, _fBody) _fAddFirstParam ->
          func{_fParams, _fBody, _fAddFirstParam})
@@ -240,8 +239,8 @@ toFunction func@Function{_fParams, _fBody, _fAddFirstParam} =
 
 toBinderPlain ::
     MonadNaming m =>
-    AssignPlain (OldName m) (IM m) o # Ann (Const (Payload (OldName m) (IM m) o a)) ->
-    m (AssignPlain (NewName m) (IM m) o # Ann (Const (Payload (NewName m) (IM m) o a)))
+    AssignPlain (OldName m) (IM m) o # Annotated (Payload (OldName m) (IM m) o a) ->
+    m (AssignPlain (NewName m) (IM m) o # Annotated (Payload (NewName m) (IM m) o a))
 toBinderPlain AssignPlain{_apBody, _apAddFirstParam} =
     (\_apBody _apAddFirstParam -> AssignPlain{_apBody, _apAddFirstParam})
     <$> toBinder _apBody
@@ -259,8 +258,8 @@ toAssignment =
 
 toLam ::
     MonadNaming m =>
-    Lambda (OldName m) (IM m) o # Ann (Const (Payload (OldName m) (IM m) o a)) ->
-    m (Lambda (NewName m) (IM m) o # Ann (Const (Payload (NewName m) (IM m) o a)))
+    Lambda (OldName m) (IM m) o # Annotated (Payload (OldName m) (IM m) o a) ->
+    m (Lambda (NewName m) (IM m) o # Annotated (Payload (NewName m) (IM m) o a))
 toLam = lamFunc toFunction
 
 toTagOf ::
@@ -314,8 +313,8 @@ toAnnotatedArg expr (AnnotatedArg tag e) =
 
 toLabeledApply ::
     MonadNaming m =>
-    LabeledApply (OldName m) (IM m) o # Ann (Const (Payload (OldName m) (IM m) o a)) ->
-    m (LabeledApply (NewName m) (IM m) o # Ann (Const (Payload (NewName m) (IM m) o a)))
+    LabeledApply (OldName m) (IM m) o # Annotated (Payload (OldName m) (IM m) o a) ->
+    m (LabeledApply (NewName m) (IM m) o # Annotated (Payload (NewName m) (IM m) o a))
 toLabeledApply
     app@LabeledApply{_aFunc, _aSpecialArgs, _aAnnotatedArgs, _aPunnedArgs} =
     LabeledApply
@@ -336,8 +335,8 @@ toHole hole =
 
 toFragment ::
     MonadNaming m =>
-    Fragment (OldName m) (IM m) o # Ann (Const (Payload (OldName m) (IM m) o a)) ->
-    m (Fragment (NewName m) (IM m) o # Ann (Const (Payload (NewName m) (IM m) o a)))
+    Fragment (OldName m) (IM m) o # Annotated (Payload (OldName m) (IM m) o a) ->
+    m (Fragment (NewName m) (IM m) o # Annotated (Payload (NewName m) (IM m) o a))
 toFragment Fragment{_fExpr, _fHeal, _fTypeMismatch, _fOptions} =
     do
         newTypeMismatch <- Lens._Just toType _fTypeMismatch
@@ -366,8 +365,8 @@ toCompositeItem toExpr (CompositeItem del tag e) =
 
 toComposite ::
     MonadNaming m =>
-    Composite (OldName m) (IM m) o # Ann (Const (Payload (OldName m) (IM m) o a)) ->
-    m (Composite (NewName m) (IM m) o # Ann (Const (Payload (NewName m) (IM m) o a)))
+    Composite (OldName m) (IM m) o # Annotated (Payload (OldName m) (IM m) o a) ->
+    m (Composite (NewName m) (IM m) o # Annotated (Payload (NewName m) (IM m) o a))
 toComposite (Composite items punned tail_ addItem) =
     Composite
     <$> traverse (toCompositeItem toExpression) items
@@ -377,35 +376,35 @@ toComposite (Composite items punned tail_ addItem) =
 
 toCase ::
     MonadNaming m =>
-    Case (OldName m) (IM m) o # Ann (Const (Payload (OldName m) (IM m) o a)) ->
-    m (Case (NewName m) (IM m) o # Ann (Const (Payload (NewName m) (IM m) o a)))
+    Case (OldName m) (IM m) o # Annotated (Payload (OldName m) (IM m) o a) ->
+    m (Case (NewName m) (IM m) o # Annotated (Payload (NewName m) (IM m) o a))
 toCase (Case k c) = Case <$> traverse toExpression k <*> toComposite c
 
 toInjectVal ::
     MonadNaming m =>
-    InjectContent (OldName m) (IM m) o # Ann (Const (Payload (OldName m) (IM m) o a)) ->
-    m (InjectContent (NewName m) (IM m) o # Ann (Const (Payload (NewName m) (IM m) o a)))
+    InjectContent (OldName m) (IM m) o # Annotated (Payload (OldName m) (IM m) o a) ->
+    m (InjectContent (NewName m) (IM m) o # Annotated (Payload (NewName m) (IM m) o a))
 toInjectVal (InjectVal v) = toExpression v <&> InjectVal
 toInjectVal (InjectNullary n) = toNode (Lens._Wrapped (nullaryAddItem toTagReplace)) n <&> InjectNullary
 
 toInject ::
     MonadNaming m =>
-    Inject (OldName m) (IM m) o # Ann (Const (Payload (OldName m) (IM m) o a)) ->
-    m (Inject (NewName m) (IM m) o # Ann (Const (Payload (NewName m) (IM m) o a)))
+    Inject (OldName m) (IM m) o # Annotated (Payload (OldName m) (IM m) o a) ->
+    m (Inject (NewName m) (IM m) o # Annotated (Payload (NewName m) (IM m) o a))
 toInject (Inject t v) =
     Inject <$> toTagRefOf Tag t <*> toInjectVal v
 
 toElse ::
     MonadNaming m =>
-    Else (OldName m) (IM m) o # Ann (Const (Payload (OldName m) (IM m) o a)) ->
-    m (Else (NewName m) (IM m) o # Ann (Const (Payload (NewName m) (IM m) o a)))
+    Else (OldName m) (IM m) o # Annotated (Payload (OldName m) (IM m) o a) ->
+    m (Else (NewName m) (IM m) o # Annotated (Payload (NewName m) (IM m) o a))
 toElse (SimpleElse x) = toBody x <&> SimpleElse
 toElse (ElseIf x) = eiContent toIfElse x <&> ElseIf
 
 toIfElse ::
     MonadNaming m =>
-    IfElse (OldName m) (IM m) o # Ann (Const (Payload (OldName m) (IM m) o a)) ->
-    m (IfElse (NewName m) (IM m) o # Ann (Const (Payload (NewName m) (IM m) o a)))
+    IfElse (OldName m) (IM m) o # Annotated (Payload (OldName m) (IM m) o a) ->
+    m (IfElse (NewName m) (IM m) o # Annotated (Payload (NewName m) (IM m) o a))
 toIfElse (IfElse i t e) =
     IfElse
     <$> toExpression i
@@ -414,8 +413,8 @@ toIfElse (IfElse i t e) =
 
 toBody ::
     MonadNaming m =>
-    Body (OldName m) (IM m) o # Ann (Const (Payload (OldName m) (IM m) o a)) ->
-    m (Body (NewName m) (IM m) o # Ann (Const (Payload (NewName m) (IM m) o a)))
+    Body (OldName m) (IM m) o # Annotated (Payload (OldName m) (IM m) o a) ->
+    m (Body (NewName m) (IM m) o # Annotated (Payload (NewName m) (IM m) o a))
 toBody =
     \case
     BodyGetField     x -> x & traverse toExpression >>= gfTag toTag <&> BodyGetField

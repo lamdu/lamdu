@@ -28,7 +28,7 @@ import qualified Debug.Trace as Trace
 import           GHC.Generics as X (Generic, Generic1)
 import           GHC.Stack.Types as X (HasCallStack)
 import           Generic.Data as X (Generically(..), Generically1(..))
-import           Hyper as X (type (#), type (:#), Ann(..), hVal, hAnn, annotation, Pure(..), _Pure)
+import           Hyper as X (type (#), type (:#), Ann(..), hVal, hAnn, annotation, Pure(..), _Pure, Annotated)
 
 import           Prelude.Compat as X hiding (return)
 

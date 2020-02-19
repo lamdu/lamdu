@@ -10,7 +10,6 @@ module Lamdu.Sugar.Types.Type
 
 import qualified Control.Lens as Lens
 import           Hyper (makeHTraversableAndBases)
-import           Hyper.Combinator.Ann (Annotated)
 import           Hyper.Type.AST.FuncType (FuncType)
 import           Hyper.Type.AST.Scheme (QVars)
 import qualified Lamdu.Calc.Type as T

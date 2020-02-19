@@ -23,7 +23,6 @@ import qualified GUI.Momentu.Widgets.Menu as Menu
 import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import           Hyper (htraverse, (#>), withDict)
-import           Hyper.Combinator.Ann (Annotated)
 import           Lamdu.Config (Config(..))
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Theme as Theme

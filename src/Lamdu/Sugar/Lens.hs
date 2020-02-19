@@ -21,7 +21,7 @@ import           Lamdu.Prelude
 
 childPayloads ::
     HTraversable expr =>
-    Lens.Traversal' (expr # Ann (Const a)) a
+    Lens.Traversal' (expr # Annotated a) a
 childPayloads f =
     htraverse (const (annotation f))
 
@@ -101,7 +101,7 @@ binderFuncParamActions _ (NullParam a) = pure (NullParam a)
 binderFuncParamActions f (Params ps) = (traverse . _2 . piActions) f ps <&> Params
 
 binderResultExpr ::
-    Lens.IndexedLens' (Body name i o # Ann (Const ()))
+    Lens.IndexedLens' (Body name i o # Annotated ())
     (Annotated a # Binder name i o) a
 binderResultExpr f (Ann (Const pl) x) =
     case x of

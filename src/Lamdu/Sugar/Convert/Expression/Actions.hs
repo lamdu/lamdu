@@ -188,7 +188,7 @@ makeActions exprPl =
 
 fragmentAnnIndex ::
     (Applicative f, Lens.Indexable j p) =>
-    p a (f a) -> Lens.Indexed (Body name i o # Ann (Const j)) a (f a)
+    p a (f a) -> Lens.Indexed (Body name i o # Annotated j) a (f a)
 fragmentAnnIndex = Lens.filteredByIndex (_BodyFragment . fExpr . annotation)
 
 bodyIndex ::
@@ -224,7 +224,7 @@ instance FixReplaceParent (Else name i o) where
 -- TODO: This is an indexed lens of some sort?
 typeMismatchPayloads ::
     (a -> Identity a) ->
-    Body name i o # Ann (Const a) -> Identity (Body name i o # Ann (Const a))
+    Body name i o # Annotated a -> Identity (Body name i o # Annotated a)
 typeMismatchPayloads =
     _BodyFragment . Lens.filteredBy (fTypeMismatch . Lens._Just) . fExpr .
     annotation
@@ -233,8 +233,8 @@ setChildReplaceParentActions ::
     Monad m =>
     ConvertM m (
         ExprIRef.HRef m # V.Term ->
-        Body name (T m) (T m) # Ann (Const (ConvertPayload m a)) ->
-        Body name (T m) (T m) # Ann (Const (ConvertPayload m a))
+        Body name (T m) (T m) # Annotated (ConvertPayload m a) ->
+        Body name (T m) (T m) # Annotated (ConvertPayload m a)
     )
 setChildReplaceParentActions =
     ConvertM.typeProtectedSetToVal
@@ -278,7 +278,7 @@ subexprPayloads subexprs cullPoints =
 addActionsWith ::
     Monad m =>
     a -> Input.Payload m b # V.Term ->
-    Body InternalName (T m) (T m) # Ann (Const (ConvertPayload m a)) ->
+    Body InternalName (T m) (T m) # Annotated (ConvertPayload m a) ->
     ConvertM m (ExpressionU m a)
 addActionsWith userData exprPl bodyS =
     do
@@ -296,7 +296,7 @@ addActionsWith userData exprPl bodyS =
 addActions ::
     (Monad m, Monoid a, Recursively HFoldable h) =>
     h # Ann (Input.Payload m a) -> Input.Payload m a # V.Term ->
-    Body InternalName (T m) (T m) # Ann (Const (ConvertPayload m a)) ->
+    Body InternalName (T m) (T m) # Annotated (ConvertPayload m a) ->
     ConvertM m (ExpressionU m a)
 addActions subexprs exprPl bodyS =
     addActionsWith (mconcat (subexprPayloads subexprs (bodyS ^.. childPayloads)))

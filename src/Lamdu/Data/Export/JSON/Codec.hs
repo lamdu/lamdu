@@ -364,8 +364,8 @@ encodeVal (Ann uuid body) =
     & Aeson.Object
 
 class Codec h where
-    decodeBody :: Aeson.Object -> AesonTypes.Parser (h # Ann (Const UUID))
-    encodeBody :: h # Ann (Const UUID) -> Aeson.Object
+    decodeBody :: Aeson.Object -> AesonTypes.Parser (h # Annotated UUID)
+    encodeBody :: h # Annotated UUID -> Aeson.Object
 
 decodeVal :: Codec h => Decoder (Ann (Const UUID) # h)
 decodeVal =

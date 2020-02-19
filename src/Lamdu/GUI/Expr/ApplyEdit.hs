@@ -16,7 +16,6 @@ import           GUI.Momentu.Responsive.TaggedList (TaggedItem(..), taggedList)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Grid as Grid
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
-import           Hyper.Combinator.Ann (Annotated)
 import qualified Lamdu.GUI.Expr.EventMap as ExprEventMap
 import qualified Lamdu.GUI.Expr.GetVarEdit as GetVarEdit
 import qualified Lamdu.GUI.Expr.TagEdit as TagEdit
@@ -67,7 +66,7 @@ makeLabeled ::
     , Has (Texts.Name Text) env
     , Has (Texts.Navigation Text) env
     ) =>
-    Sugar.LabeledApply Name i o # Ann (Const (Sugar.Payload Name i o ExprGui.Payload)) ->
+    Sugar.LabeledApply Name i o # Annotated (Sugar.Payload Name i o ExprGui.Payload) ->
     Sugar.Payload Name i o ExprGui.Payload ->
     GuiM env i o (Responsive o)
 makeLabeled apply pl =
@@ -118,7 +117,7 @@ addArgs ::
     , Has (Texts.Code Text) env, Has (Texts.CodeUI Text) env
     , Has (Texts.Name Text) env, Grid.HasTexts env
     ) =>
-    Sugar.LabeledApply Name i o # Ann (Const (Sugar.Payload Name i o ExprGui.Payload)) ->
+    Sugar.LabeledApply Name i o # Annotated (Sugar.Payload Name i o ExprGui.Payload) ->
     Responsive o -> GuiM env i o (Responsive o)
 addArgs apply funcRow =
     do
@@ -146,7 +145,7 @@ makeSimple ::
     , Has (Texts.Name Text) env
     , Has (Texts.Navigation Text) env
     ) =>
-    Sugar.App (Sugar.Body Name i o) # Ann (Const (Sugar.Payload Name i o ExprGui.Payload)) ->
+    Sugar.App (Sugar.Body Name i o) # Annotated (Sugar.Payload Name i o ExprGui.Payload) ->
     Sugar.Payload Name i o ExprGui.Payload ->
     GuiM env i o (Responsive o)
 makeSimple (Sugar.App func arg) pl =

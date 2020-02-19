@@ -7,7 +7,6 @@ module Lamdu.Sugar.Convert.Composite
 
 import qualified Control.Lens as Lens
 import qualified Data.Set as Set
-import           Hyper.Combinator.Ann (Annotated)
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Data.Ops as DataOps
@@ -72,8 +71,8 @@ convertExtend ::
     Annotated b # Body InternalName (T m) (T m) ->
     Input.Payload m a # V.Term ->
     ExtendVal m (Input.Payload m a # V.Term) ->
-    Composite InternalName (T m) (T m) # Ann (Const b) ->
-    ConvertM m (Composite InternalName (T m) (T m) # Ann (Const b))
+    Composite InternalName (T m) (T m) # Annotated b ->
+    ConvertM m (Composite InternalName (T m) (T m) # Annotated b)
 convertExtend cons extendOp valS exprPl extendV restC =
     do
         itemS <-
@@ -186,8 +185,8 @@ convertItem cons stored inst forbiddenTags exprS extendVal =
 
 type BodyPrism m a =
     Lens.Prism'
-    (Body InternalName (T m) (T m) # Ann (Const (ConvertPayload m a)))
-    (Composite InternalName (T m) (T m) # Ann (Const (ConvertPayload m a)))
+    (Body InternalName (T m) (T m) # Annotated (ConvertPayload m a))
+    (Composite InternalName (T m) (T m) # Annotated (ConvertPayload m a))
 
 convert ::
     (Monad m, Monoid a) =>

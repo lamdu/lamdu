@@ -55,7 +55,7 @@ defRef var tag =
     }
 
 node ::
-    h # Ann (Const (Sugar.Payload InternalName Identity Unit ())) ->
+    h # Annotated (Sugar.Payload InternalName Identity Unit ()) ->
     Annotated (Sugar.Payload InternalName Identity Unit ()) # h
 node = Const payload & Ann
 
@@ -211,7 +211,7 @@ binderExpr ::
 binderExpr params body = funcExpr params body & Sugar.BodyFunction & node
 
 expr ::
-    Sugar.Body InternalName Identity Unit # Ann (Const (Sugar.Payload InternalName Identity Unit ())) ->
+    Sugar.Body InternalName Identity Unit # Annotated (Sugar.Payload InternalName Identity Unit ()) ->
     Sugar.Expression InternalName Identity Unit (Sugar.Payload InternalName Identity Unit ())
 expr = node
 

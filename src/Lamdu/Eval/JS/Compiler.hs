@@ -478,7 +478,7 @@ compileLiteral literal =
             ints = [JS.int (fromIntegral byte) | byte <- BS.unpack bytes]
     PrimVal.Float num -> JS.number num & codeGenFromExpr
 
-compileRecExtend :: Monad m => RowExtend T.Tag V.Term V.Term # Ann (Const ValId) -> M m CodeGen
+compileRecExtend :: Monad m => RowExtend T.Tag V.Term V.Term # Annotated ValId -> M m CodeGen
 compileRecExtend x =
     do
         Flatten.Composite tags mRest <-
@@ -499,14 +499,14 @@ compileRecExtend x =
                 ]
             & pure
 
-compileInject :: Monad m => V.Inject # Ann (Const ValId) -> M m CodeGen
+compileInject :: Monad m => V.Inject # Annotated ValId -> M m CodeGen
 compileInject (V.Inject tag dat) =
     do
         tagStr <- tagString tag <&> Text.unpack <&> JS.string
         dat' <- compileVal NotTailCall dat
         inject tagStr (codeGenExpression dat') & codeGenFromExpr & pure
 
-compileCase :: Monad m => ValId -> RowExtend T.Tag V.Term V.Term # Ann (Const ValId) -> M m CodeGen
+compileCase :: Monad m => ValId -> RowExtend T.Tag V.Term V.Term # Annotated ValId -> M m CodeGen
 compileCase valId =
     -- we're generating a lambda here, which will be called via
     -- rts.rerun, so its body is as much a tail-call position as any
@@ -515,7 +515,7 @@ compileCase valId =
 
 compileCaseOnVar ::
     Monad m =>
-    IsTailCall -> ValId -> RowExtend T.Tag V.Term V.Term # Ann (Const ValId) ->
+    IsTailCall -> ValId -> RowExtend T.Tag V.Term V.Term # Annotated ValId ->
     JSS.Expression () -> M m [JSS.Statement ()]
 compileCaseOnVar isTail valId x scrutineeVar =
     do
@@ -536,7 +536,7 @@ compileCaseOnVar isTail valId x scrutineeVar =
             <&> codeGenLamStmts
             <&> JS.casee (JS.string (Text.unpack tagStr))
 
-compileGetField :: Monad m => V.GetField # Ann (Const ValId) -> M m CodeGen
+compileGetField :: Monad m => V.GetField # Annotated ValId -> M m CodeGen
 compileGetField (V.GetField record tag) =
     do
         tagId <- tagIdent tag
@@ -577,7 +577,7 @@ listenNoTellLogUsed = censor (const LogUnused) . listen
 compileLambda ::
     Monad m =>
     ValId ->
-    V.TypedLam V.Var (HCompose Prune T.Type) V.Term # Ann (Const ValId) ->
+    V.TypedLam V.Var (HCompose Prune T.Type) V.Term # Annotated ValId ->
     M m CodeGen
 compileLambda valId (V.TypedLam v _paramTyp res) =
     Lens.view envMode
@@ -605,7 +605,7 @@ compileLambda valId (V.TypedLam v _paramTyp res) =
         compileRes = compileVal TailCall res <&> codeGenLamStmts & withLocalVar v
 
 compileApply ::
-    Monad m => IsTailCall -> ValId -> V.App V.Term # Ann (Const ValId) -> M m CodeGen
+    Monad m => IsTailCall -> ValId -> V.App V.Term # Annotated ValId -> M m CodeGen
 compileApply isTail valId (V.App func arg) =
     do
         arg' <- compileVal NotTailCall arg <&> codeGenExpression
@@ -728,7 +728,7 @@ compileLeaf valId x =
 
 compileToNom ::
     Monad m =>
-    IsTailCall -> ToNom T.NominalId V.Term # Ann (Const ValId) -> M m CodeGen
+    IsTailCall -> ToNom T.NominalId V.Term # Annotated ValId -> M m CodeGen
 compileToNom isTail (ToNom tId x) =
     case x ^? ExprLens.valLiteral <&> PrimVal.toKnown of
     Just (PrimVal.Bytes bytes)

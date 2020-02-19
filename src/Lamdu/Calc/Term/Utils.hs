@@ -34,7 +34,7 @@ data Composite a = Composite
     } deriving (Functor, Foldable, Traversable)
 Lens.makeLenses ''Composite
 
-case_ :: RowExtend T.Tag V.Term V.Term # Ann (Const pl) -> Composite (Val pl)
+case_ :: RowExtend T.Tag V.Term V.Term # Annotated pl -> Composite (Val pl)
 case_ (RowExtend tag handler r) =
     caseVal r
     & tags . Lens.at tag ?~ handler
@@ -45,7 +45,7 @@ case_ (RowExtend tag handler r) =
             V.BCase x -> case_ x
             _ -> Composite mempty (Just v)
 
-recExtend :: RowExtend T.Tag V.Term V.Term # Ann (Const pl) -> Composite (Val pl)
+recExtend :: RowExtend T.Tag V.Term V.Term # Annotated pl -> Composite (Val pl)
 recExtend (RowExtend tag field r) =
     recExtendVal r
     & tags . Lens.at tag ?~ field

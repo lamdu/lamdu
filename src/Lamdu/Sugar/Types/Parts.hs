@@ -34,7 +34,6 @@ module Lamdu.Sugar.Types.Parts
     ) where
 
 import qualified Control.Lens as Lens
-import           Hyper.Combinator.Ann (Annotated)
 import qualified Lamdu.Calc.Type as T
 import           Lamdu.Sugar.Internal.EntityId (EntityId)
 import           Lamdu.Sugar.Types.Eval

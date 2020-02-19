@@ -79,7 +79,7 @@ makeEditor ::
     , TextEdit.HasTexts env
     , SearchMenu.HasTexts env
     ) =>
-    Sugar.Body Name i o # Ann (Const (Sugar.Payload Name i o ExprGui.Payload)) ->
+    Sugar.Body Name i o # Annotated (Sugar.Payload Name i o ExprGui.Payload) ->
     Sugar.Payload Name i o ExprGui.Payload ->
     GuiM env i o (Responsive o)
 makeEditor body pl =

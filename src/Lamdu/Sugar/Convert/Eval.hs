@@ -69,7 +69,7 @@ convertNullaryInject entityId (ER.Inject tag (Ann _ ER.RRecEmpty)) =
     & ResVal entityId & Just
 convertNullaryInject _ _ = Nothing
 
-convertList :: EntityId -> Pure # T.Type -> ER.Inject # Ann (Const (Pure # T.Type)) -> Maybe (ResVal InternalName)
+convertList :: EntityId -> Pure # T.Type -> ER.Inject # Annotated (Pure # T.Type) -> Maybe (ResVal InternalName)
 convertList entityId typ (ER.Inject _ x) =
     do
         Pure (T.TInst (NominalInst tid _)) <- Just typ
@@ -80,14 +80,14 @@ convertList entityId typ (ER.Inject _ x) =
         convertVal (EntityId.ofEvalField Builtins.headTag entityId) hd
             & ResList & RList & ResVal entityId & Just
 
-simpleInject :: EntityId -> ER.Inject # Ann (Const (Pure # T.Type)) -> ResVal InternalName
+simpleInject :: EntityId -> ER.Inject # Annotated (Pure # T.Type) -> ResVal InternalName
 simpleInject entityId (ER.Inject tag x) =
     convertVal (EntityId.ofEvalField tag entityId) x
     & Just
     & ResInject (ConvertTag.withoutContext entityId tag) & RInject
     & ResVal entityId
 
-convertInject :: EntityId -> Pure # T.Type -> ER.Inject # Ann (Const (Pure # T.Type)) -> ResVal InternalName
+convertInject :: EntityId -> Pure # T.Type -> ER.Inject # Annotated (Pure # T.Type) -> ResVal InternalName
 convertInject entityId typ inj =
     convertNullaryInject entityId inj
     <|> convertList entityId typ inj

@@ -7,7 +7,6 @@ import           Control.Lens (Const)
 import qualified Control.Lens as Lens
 import           Control.Monad.Transaction (getP)
 import qualified Data.Map as Map
-import           Hyper.Combinator.Ann (Annotated)
 import           Lamdu.Calc.Term (Term)
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Sugar.Convert.Input as Input
@@ -33,7 +32,7 @@ makeLabeledApply ::
     [Annotated (ConvertPayload m a) # Const (Sugar.GetVar InternalName (T m))] ->
     Input.Payload m a # Term ->
     ConvertM m
-    (Sugar.LabeledApply InternalName (T m) (T m) # Ann (Const (ConvertPayload m a)))
+    (Sugar.LabeledApply InternalName (T m) (T m) # Annotated (ConvertPayload m a))
 makeLabeledApply func args punnedArgs exprPl =
     do
         presentationMode <- func ^. hVal . Lens._Wrapped . Sugar.bvVar & Anchors.assocPresentationMode & getP

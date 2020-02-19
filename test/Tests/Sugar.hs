@@ -76,13 +76,13 @@ testSugarActions ::
 testSugarActions program actions =
     Env.make >>= testSugarActionsWith program actions
 
-replBinder :: Lens.Traversal' (WorkArea name i o a) (Binder name i o # Ann (Const a))
+replBinder :: Lens.Traversal' (WorkArea name i o a) (Binder name i o # Annotated a)
 replBinder = waRepl . replExpr . hVal
 
-replBody :: Lens.Traversal' (WorkArea name i o a) (Body name i o # Ann (Const a))
+replBody :: Lens.Traversal' (WorkArea name i o a) (Body name i o # Annotated a)
 replBody = replBinder . _BinderExpr
 
-replLet :: Lens.Traversal' (WorkArea name i o a) (Let name i o # Ann (Const a))
+replLet :: Lens.Traversal' (WorkArea name i o a) (Let name i o # Annotated a)
 replLet = replBinder . _BinderLet
 
 lamFirstParam :: Lens.Traversal' (Body name i o a) (FuncParam name i, ParamInfo name i o)
@@ -486,7 +486,7 @@ testCreateLetInLetVal =
         theLet ::
             Lens.Traversal'
             (WorkArea name i o a)
-            (Let name i o # Ann (Const a))
+            (Let name i o # Annotated a)
         theLet = replBody . _BodyLam . lamFunc . fBody . hVal . _BinderLet
 
 testHoleTypeShown :: Test

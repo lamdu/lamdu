@@ -18,13 +18,13 @@ import           Lamdu.Prelude
 type OrderT m x = x -> m x
 
 class Order i name o t where
-    order :: OrderT i (t # Ann (Const (Sugar.Payload name i o a)))
+    order :: OrderT i (t # Annotated (Sugar.Payload name i o a))
 
     default order ::
         ( MonadTransaction m i, HTraversable t
         , HNodesConstraint t (Order i name o)
         ) =>
-        OrderT i (t # Ann (Const (Sugar.Payload name i o a)))
+        OrderT i (t # Annotated (Sugar.Payload name i o a))
     order = htraverse (Proxy @(Order i name o) #> orderNode)
 
 orderByTag :: MonadTransaction m i => (a -> Sugar.Tag name) -> OrderT i [a]
@@ -58,7 +58,7 @@ orderType = hVal orderTBody
 
 orderRecord ::
     MonadTransaction m i =>
-    OrderT i (Sugar.Composite name i o # Ann (Const (Sugar.Payload name i o a)))
+    OrderT i (Sugar.Composite name i o # Annotated (Sugar.Payload name i o a))
 orderRecord (Sugar.Composite items punned tail_ addItem) =
     Sugar.Composite
     <$> (orderByTag (^. Sugar.ciTag . Sugar.tagRefTag) items
@@ -76,7 +76,7 @@ instance MonadTransaction m i => Order i name o (Sugar.LabeledApply name i o) wh
 
 orderCase ::
     MonadTransaction m i =>
-    OrderT i (Sugar.Case name i o # Ann (Const (Sugar.Payload name i o a)))
+    OrderT i (Sugar.Case name i o # Annotated (Sugar.Payload name i o a))
 orderCase = Sugar.cBody orderRecord
 
 instance MonadTransaction m i => Order i name o (Sugar.Lambda name i o)
