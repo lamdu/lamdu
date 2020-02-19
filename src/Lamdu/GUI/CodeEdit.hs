@@ -1,4 +1,4 @@
-{-# LANGUAGE NamedFieldPuns, DisambiguateRecordFields #-}
+{-# LANGUAGE NamedFieldPuns, DisambiguateRecordFields, TypeApplications #-}
 module Lamdu.GUI.CodeEdit
     ( make
     , EvalResults
@@ -30,6 +30,7 @@ import qualified GUI.Momentu.Widgets.Menu as Menu
 import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
+import           Hyper (Recursively, HFunctor(..), hflipped, (#>))
 import           Hyper.Type.AST.Scheme (Scheme(..), QVars(..))
 import qualified Lamdu.Annotations as Annotations
 import qualified Lamdu.Builtins.Anchors as Builtins
@@ -115,8 +116,10 @@ make cp gp width =
         env <- Lens.view id
         workArea <-
             sugarWorkArea (Tag.getTagName env) env cp
-            <&> Lens.mapped . Lens.mapped %~ uncurry ExprGui.Payload
             & transaction
+            <&> hmap (
+                    Proxy @(Recursively HFunctor) #>
+                    hflipped %~ hmap (\_ -> Lens._Wrapped . Lens.mapped %~ uncurry ExprGui.Payload))
         gotoDefinition <-
             GotoDefinition.make (transaction (workArea ^. Sugar.waGlobals))
             <&> StatusBar.hoist IOTrans.liftTrans
@@ -179,8 +182,7 @@ makePaneBodyEdit ::
     , Has (Texts.Name Text) env, Has (Texts.Navigation Text) env
     , Has LangId env, Has (Map LangId Text) env
     ) =>
-    Sugar.Pane Name i o
-    (Sugar.Payload Name i o ExprGui.Payload) ->
+    Sugar.Pane Name i o # Annotated (Sugar.Payload Name i o ExprGui.Payload) ->
     GuiM env i o (Responsive o)
 makePaneBodyEdit pane =
     case pane ^. Sugar.paneBody of
@@ -204,8 +206,7 @@ makePaneBodyEdit pane =
 makePaneEdit ::
     (Monad m, Language.HasLanguage env) =>
     ExportActions m ->
-    Sugar.Pane Name (T m) (T m)
-    (Sugar.Payload Name (T m) (T m) ExprGui.Payload) ->
+    Sugar.Pane Name (T m) (T m) # Annotated (Sugar.Payload Name (T m) (T m) ExprGui.Payload) ->
     GuiM env (T m) (T m) (Responsive (IOTrans m))
 makePaneEdit theExportActions pane =
     do

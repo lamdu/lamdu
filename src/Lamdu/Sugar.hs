@@ -1,5 +1,7 @@
 -- | Top-level wrapper for Sugar.Convert, Sugar.Parens, Sugar.AddNames
 
+{-# LANGUAGE TypeApplications #-}
+
 module Lamdu.Sugar
     ( sugarWorkArea
     , Sugar.WorkArea, Sugar.Payload, Sugar.ParenInfo, Sugar.EntityId, Name
@@ -7,6 +9,7 @@ module Lamdu.Sugar
 
 import qualified Control.Lens as Lens
 import           Data.CurAndPrev (CurAndPrev(..))
+import           Hyper (Recursively, HFunctor(..), hflipped, (#>))
 import qualified Lamdu.Annotations as Annotations
 import qualified Lamdu.Cache as Cache
 import qualified Lamdu.Data.Anchors as Anchors
@@ -40,14 +43,16 @@ sugarWorkArea ::
     ) =>
     (Tag -> (IsOperator, TextsInLang)) -> env -> Anchors.CodeAnchors m ->
     T m
-    (Sugar.WorkArea Name (T m) (T m)
-        (Sugar.Payload Name (T m) (T m) (Sugar.ParenInfo, [Sugar.EntityId])))
+    (Sugar.WorkArea Name (T m) (T m) #
+        Annotated (Sugar.Payload Name (T m) (T m) (Sugar.ParenInfo, [Sugar.EntityId])))
 sugarWorkArea getTagName env cp =
     SugarConvert.loadWorkArea env cp
     >>= report .
         AddNames.addToWorkArea env
         (fmap getTagName . ExprIRef.readTagData)
     <&> AddParens.addToWorkArea
-    <&> Lens.mapped %~ \(parenInfo, pl) -> pl <&> (,) parenInfo
+    <&> hmap (
+            Proxy @(Recursively HFunctor) #>
+            hflipped %~ hmap (\_ -> Lens._Wrapped %~ \(parenInfo, pl) -> pl <&> (,) parenInfo))
     where
         Debug.EvaluatorM report = env ^. has . Debug.naming . Debug.mAction

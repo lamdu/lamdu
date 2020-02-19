@@ -141,8 +141,8 @@ mkTag var tag =
 def ::
     Annotated Sugar.EntityId # Sugar.Type InternalName ->
     UUID -> T.Tag ->
-    Annotated expr # Sugar.Assignment InternalName Identity Unit ->
-    Sugar.Definition InternalName Identity Unit expr
+    Annotated a # Sugar.Assignment InternalName Identity Unit ->
+    Sugar.Definition InternalName Identity Unit # Annotated a
 def typ var tag body =
     Sugar.Definition
     { Sugar._drName = mkTag (Just var) tag
@@ -163,7 +163,7 @@ def typ var tag body =
     where
         emptyForalls = T.Types (QVars mempty) (QVars mempty)
 
-repl :: Sugar.Expression name i o a -> Sugar.Repl name i o a
+repl :: Sugar.Expression name i o a -> Sugar.Repl name i o # Annotated a
 repl (Ann (Const pl) x) =
     Sugar.Repl
     { Sugar._replExpr = Ann (Const pl) (Sugar.BinderExpr x)

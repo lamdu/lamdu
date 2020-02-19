@@ -13,7 +13,7 @@ source-repository-package
 source-repository-package
     type: git
     location: https://github.com/lamdu/hypertypes
-    tag: 95925a374169870b09b8d1268e79416fac5f41ab
+    tag: cde184d32912ac852c6f7f074df0a718fe77f387
 
 source-repository-package
     type: git

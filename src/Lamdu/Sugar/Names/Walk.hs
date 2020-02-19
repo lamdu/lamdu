@@ -478,8 +478,8 @@ withBinderParams (Params xs) = traverse (withFuncParam withParamInfo) xs <&> Par
 
 toDefExpr ::
     MonadNaming m =>
-    DefinitionExpression (OldName m) (IM m) o (Payload (OldName m) (IM m) o a) ->
-    m (DefinitionExpression (NewName m) (IM m) o (Payload (NewName m) (IM m) o a))
+    DefinitionExpression (OldName m) (IM m) o # Annotated (Payload (OldName m) (IM m) o a) ->
+    m (DefinitionExpression (NewName m) (IM m) o # Annotated (Payload (NewName m) (IM m) o a))
 toDefExpr (DefinitionExpression typ presMode content) =
     DefinitionExpression
     <$> toScheme typ
@@ -488,8 +488,8 @@ toDefExpr (DefinitionExpression typ presMode content) =
 
 toDefinitionBody ::
     MonadNaming m =>
-    DefinitionBody (OldName m) (IM m) o (Payload (OldName m) (IM m) o a) ->
-    m (DefinitionBody (NewName m) (IM m) o (Payload (NewName m) (IM m) o a))
+    DefinitionBody (OldName m) (IM m) o # Annotated (Payload (OldName m) (IM m) o a) ->
+    m (DefinitionBody (NewName m) (IM m) o # Annotated (Payload (NewName m) (IM m) o a))
 toDefinitionBody (DefinitionBodyBuiltin bi) =
     bi & biType %%~ toScheme <&> DefinitionBodyBuiltin
 toDefinitionBody (DefinitionBodyExpression expr) =
@@ -497,8 +497,8 @@ toDefinitionBody (DefinitionBodyExpression expr) =
 
 toDef ::
     MonadNaming m =>
-    Definition (OldName m) (IM m) o (Payload (OldName m) (IM m) o a) ->
-    m (Definition (NewName m) (IM m) o (Payload (NewName m) (IM m) o a))
+    Definition (OldName m) (IM m) o # Annotated (Payload (OldName m) (IM m) o a) ->
+    m (Definition (NewName m) (IM m) o # Annotated (Payload (NewName m) (IM m) o a))
 toDef def@Definition{_drName, _drBody} =
     do
         -- NOTE: A global def binding is not considered a binder, as
@@ -513,21 +513,21 @@ toTagPane (TagPane tag i18n setSymbol setName) =
 
 toPaneBody ::
     MonadNaming m =>
-    PaneBody (OldName m) (IM m) o (Payload (OldName m) (IM m) o a) ->
-    m (PaneBody (NewName m) (IM m) o (Payload (NewName m) (IM m) o a))
+    PaneBody (OldName m) (IM m) o # Annotated (Payload (OldName m) (IM m) o a) ->
+    m (PaneBody (NewName m) (IM m) o # Annotated (Payload (NewName m) (IM m) o a))
 toPaneBody (PaneDefinition def) = toDef def <&> PaneDefinition
 toPaneBody (PaneTag x) = toTagPane x <&> PaneTag
 
 toPane ::
     MonadNaming m =>
-    Pane (OldName m) (IM m) o (Payload (OldName m) (IM m) o a) ->
-    m (Pane (NewName m) (IM m) o (Payload (NewName m) (IM m) o a))
+    Pane (OldName m) (IM m) o # Annotated (Payload (OldName m) (IM m) o a) ->
+    m (Pane (NewName m) (IM m) o # Annotated (Payload (NewName m) (IM m) o a))
 toPane = paneBody toPaneBody
 
 toRepl ::
     MonadNaming m =>
-    Repl (OldName m) (IM m) o (Payload (OldName m) (IM m) o a) ->
-    m (Repl (NewName m) (IM m) o (Payload (NewName m) (IM m) o a))
+    Repl (OldName m) (IM m) o # Annotated (Payload (OldName m) (IM m) o a) ->
+    m (Repl (NewName m) (IM m) o # Annotated (Payload (NewName m) (IM m) o a))
 toRepl (Repl bod varInfo res) =
     Repl
     <$> toNode toBinder bod
@@ -536,8 +536,8 @@ toRepl (Repl bod varInfo res) =
 
 toWorkArea ::
     MonadNaming m =>
-    WorkArea (OldName m) (IM m) o (Payload (OldName m) (IM m) o a) ->
-    m (WorkArea (NewName m) (IM m) o (Payload (NewName m) (IM m) o a))
+    WorkArea (OldName m) (IM m) o # Annotated (Payload (OldName m) (IM m) o a) ->
+    m (WorkArea (NewName m) (IM m) o # Annotated (Payload (NewName m) (IM m) o a))
 toWorkArea WorkArea { _waPanes, _waRepl, _waGlobals } =
     do
         run <- opRun
