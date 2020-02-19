@@ -137,9 +137,9 @@ convertInferDefExpr env cp defType defExpr defI =
                 }
         ConvertDefExpr.convert
             defType (defExpr & Definition.expr .~ valInferred) defI
-            <&> _DefinitionBodyExpression . deContent %~ markAnnotations (env ^. has)
             >>= (_DefinitionBodyExpression . deContent)
-                (htraverseFlipped (const (Lens._Wrapped convertPayload)))
+                (htraverseFlipped (const (Lens._Wrapped convertPayload)) .
+                    markAnnotations (env ^. has))
             & ConvertM.run context
     where
         cachedInfer = Cache.infer (env ^. has)
