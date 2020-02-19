@@ -130,7 +130,7 @@ instance MonadTransaction m i => Order i name o (Sugar.Body name i o) where
 
 orderNode ::
     (MonadTransaction m i, Order i name o f) =>
-    OrderT i (Annotated (Sugar.Payload name i o a) f)
+    OrderT i (Annotated (Sugar.Payload name i o a) # f)
 orderNode (Ann (Const a) x) =
     Ann
     <$> ((Sugar.plAnnotation . Sugar._AnnotationType) orderType a <&> Const)

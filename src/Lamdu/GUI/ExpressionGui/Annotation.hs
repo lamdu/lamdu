@@ -1,4 +1,4 @@
-{-# LANGUAGE TypeFamilies, TupleSections #-}
+{-# LANGUAGE TypeFamilies, TupleSections, TypeOperators #-}
 module Lamdu.GUI.ExpressionGui.Annotation
     ( annotationSpacer
     , NeighborVals(..)
@@ -235,7 +235,7 @@ addInferredType ::
     , Element.HasAnimIdPrefix env, Glue.HasTexts env
     , Has (Texts.Code Text) env, Has (Texts.Name Text) env
     ) =>
-    Annotated Sugar.EntityId (Sugar.Type Name) -> PostProcessAnnotation m ->
+    Annotated Sugar.EntityId # Sugar.Type Name -> PostProcessAnnotation m ->
     m (Widget f -> Widget f)
 addInferredType typ postProcess =
     addAnnotationH (TypeView.make typ) (postProcess TypeAnnotation)

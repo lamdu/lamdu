@@ -65,8 +65,7 @@ convertLet ::
     (Monad m, Monoid a) =>
     Input.Payload m a # V.Term ->
     Redex # Input.Payload m a ->
-    ConvertM m
-    (Annotated (ConvertPayload m a) (Binder InternalName (T m) (T m)))
+    ConvertM m (Annotated (ConvertPayload m a) # Binder InternalName (T m) (T m))
 convertLet pl redex =
     do
         float <- makeFloatLetToOuterScope (pl ^. Input.stored . ExprIRef.setIref) redex
@@ -139,7 +138,7 @@ convertLet pl redex =
 convertBinder ::
     (Monad m, Monoid a) =>
     Ann (Input.Payload m a) # V.Term ->
-    ConvertM m (Annotated (ConvertPayload m a) (Binder InternalName (T m) (T m)))
+    ConvertM m (Annotated (ConvertPayload m a) # Binder InternalName (T m) (T m))
 convertBinder expr@(Ann pl body) =
     Lens.view (ConvertM.scConfig . Config.sugarsEnabled . Config.letExpression) >>=
     \case
@@ -212,7 +211,7 @@ makeAssignment ::
     Ann (Input.Payload m a) # V.Term ->
     Input.Payload m a # V.Term ->
     ConvertM m
-    (Annotated (ConvertPayload m a) (Assignment InternalName (T m) (T m)))
+    (Annotated (ConvertPayload m a) # Assignment InternalName (T m) (T m))
 makeAssignment chosenScopeProp params funcBody pl =
     case params ^. cpParams of
     Nothing ->
@@ -371,7 +370,7 @@ convertAssignment ::
     Ann (Input.Payload m a) # V.Term ->
     ConvertM m
     ( Maybe (MkProperty' (T m) PresentationMode)
-    , Annotated (ConvertPayload m a) (Assignment InternalName (T m) (T m))
+    , Annotated (ConvertPayload m a) # Assignment InternalName (T m) (T m)
     )
 convertAssignment binderKind defVar expr =
     Lens.view (ConvertM.scConfig . Config.sugarsEnabled . Config.assignmentParameters)
@@ -400,7 +399,7 @@ convertDefinitionBinder ::
     DefI m -> Ann (Input.Payload m a) # V.Term ->
     ConvertM m
     ( Maybe (MkProperty' (T m) PresentationMode)
-    , Annotated (ConvertPayload m a) (Assignment InternalName (T m) (T m))
+    , Annotated (ConvertPayload m a) # Assignment InternalName (T m) (T m)
     )
 convertDefinitionBinder defI =
     convertAssignment (BinderKindDef defI) (ExprIRef.globalId defI)

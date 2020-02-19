@@ -64,7 +64,7 @@ Hyper.makeHTraversableAndBases ''Body
 deriving instance Show (k :# Body) => Show (Body k)
 deriving instance Show (k :# Body) => Show (Inject k)
 
-type Val pl = Annotated pl Body
+type Val pl = Annotated pl # Body
 
 data CompiledErrorType
     = ReachedHole -- ^ Reached a hole

@@ -73,8 +73,8 @@ binderVarType (GetDefinition _) = GlobalDef
 
 toCompositeFields ::
     MonadNaming m =>
-    CompositeFields (OldName m) (Annotated a (Type (OldName m))) ->
-    m (CompositeFields (NewName m) (Annotated a (Type (NewName m))))
+    CompositeFields (OldName m) (Annotated a # Type (OldName m)) ->
+    m (CompositeFields (NewName m) (Annotated a # Type (NewName m)))
 toCompositeFields (CompositeFields fields mExt) =
     CompositeFields
     <$> traverse toField fields
@@ -100,8 +100,8 @@ toTBody (TInst tid params) =
 
 toType ::
     MonadNaming m =>
-    Annotated a (Type (OldName m)) ->
-    m (Annotated a (Type (NewName m)))
+    Annotated a # Type (OldName m) ->
+    m (Annotated a # Type (NewName m))
 toType (Ann (Const pl) x) = toTBody x <&> Ann (Const pl)
 
 toScheme :: MonadNaming m => Scheme (OldName m) -> m (Scheme (NewName m))
@@ -196,8 +196,8 @@ toNode ::
     MonadNaming m =>
     (ka # Ann (Const (Payload (OldName m) (IM m) o p)) ->
      m (kb # Ann (Const (Payload (NewName m) (IM m) o p)))) ->
-    Annotated (Payload (OldName m) (IM m) o p) ka ->
-    m (Annotated (Payload (NewName m) (IM m) o p) kb)
+    Annotated (Payload (OldName m) (IM m) o p) # ka ->
+    m (Annotated (Payload (NewName m) (IM m) o p) # kb)
 toNode toV (Ann (Const pl) v) =
     Ann
     <$> (toPayload pl <&> Const)
@@ -249,8 +249,8 @@ toBinderPlain AssignPlain{_apBody, _apAddFirstParam} =
 
 toAssignment ::
     MonadNaming m =>
-    Annotated (Payload (OldName m) (IM m) o a) (Assignment (OldName m) (IM m) o) ->
-    m (Annotated (Payload (NewName m) (IM m) o a) (Assignment (NewName m) (IM m) o))
+    Annotated (Payload (OldName m) (IM m) o a) # Assignment (OldName m) (IM m) o ->
+    m (Annotated (Payload (NewName m) (IM m) o a) # Assignment (NewName m) (IM m) o)
 toAssignment =
     \case
     BodyPlain x -> toBinderPlain x <&> BodyPlain

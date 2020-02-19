@@ -456,8 +456,7 @@ testFloatToRepl =
                     (workArea ^?! innerLet . literalVal)
 
         innerLet ::
-            Lens.Traversal' (WorkArea name i o a)
-            (Annotated a (Assignment name i o))
+            Lens.Traversal' (WorkArea name i o a) (Annotated a # Assignment name i o)
         innerLet = replLet . lBody . hVal . _BinderLet . lValue
         literalVal = hVal . _BodyPlain . apBody . _BinderExpr . _BodyLiteral . _LiteralNum . Property.pVal
 

@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell, KindSignatures, DataKinds #-}
+{-# LANGUAGE TemplateHaskell, KindSignatures, DataKinds, TypeOperators #-}
 module Lamdu.Sugar.Types
     ( module Exported
     , EntityId
@@ -37,7 +37,7 @@ import           Lamdu.Prelude
 data DefinitionExpression name i o a = DefinitionExpression
     { _deType :: Scheme name
     , _dePresentationMode :: Maybe (i (Property o Meta.PresentationMode))
-    , _deContent :: Annotated a (Assignment name i o)
+    , _deContent :: Annotated a # Assignment name i o
     } deriving Generic
 
 Lens.makeLenses ''DefinitionExpression
@@ -90,7 +90,7 @@ data Pane name i o a = Pane
     } deriving (Functor, Foldable, Traversable, Generic)
 
 data Repl name i o a = Repl
-    { _replExpr :: Annotated a (Binder name i o)
+    { _replExpr :: Annotated a # Binder name i o
     , _replVarInfo :: VarInfo
     , _replResult :: EvalCompletion name o
     } deriving Generic

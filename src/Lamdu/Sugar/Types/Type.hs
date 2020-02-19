@@ -46,7 +46,7 @@ data Type name k
 
 data Scheme name = Scheme
     { _schemeForAll :: T.Types # QVars
-    , _schemeType :: Annotated EntityId (Type name)
+    , _schemeType :: Annotated EntityId # Type name
     } deriving Generic
 
 Lens.makeLenses ''CompositeFields

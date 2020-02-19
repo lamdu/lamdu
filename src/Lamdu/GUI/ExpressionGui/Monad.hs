@@ -80,8 +80,7 @@ data Askable env i o = Askable
     , _aAssocTagName :: T.Tag -> MkProperty' o Text
     , _aMakeSubexpression :: ExprGui.SugarExpr i o -> GuiM env i o (Responsive o)
     , _aMakeBinder ::
-        Annotated (Sugar.Payload Name i o ExprGui.Payload)
-        (Sugar.Binder Name i o) ->
+        Annotated (Sugar.Payload Name i o ExprGui.Payload) # Sugar.Binder Name i o ->
         GuiM env i o (Responsive o)
     , _aGuiAnchors :: Anchors.GuiAnchors i o
     , _aDepthLeft :: Int
@@ -186,7 +185,7 @@ makeSubexpression = make aMakeSubexpression
 
 makeBinder ::
     Monad i =>
-    Annotated (Sugar.Payload Name i o ExprGui.Payload) (Sugar.Binder Name i o) ->
+    Annotated (Sugar.Payload Name i o ExprGui.Payload) # Sugar.Binder Name i o ->
     GuiM env i o (Responsive.Responsive o)
 makeBinder = make aMakeBinder
 
@@ -203,9 +202,8 @@ run ::
     ) =>
     (T.Tag -> MkProperty' o Text) ->
     (ExprGui.SugarExpr i o -> GuiM env i o (Responsive o)) ->
-    (Annotated (Sugar.Payload Name i o ExprGui.Payload)
-        (Sugar.Binder Name i o)
-        -> GuiM env i o (Responsive o)) ->
+    (Annotated (Sugar.Payload Name i o ExprGui.Payload) # Sugar.Binder Name i o ->
+        GuiM env i o (Responsive o)) ->
     Anchors.GuiAnchors i o ->
     env -> GuiM env i o a -> i a
 run assocTagName_ makeSubexpr mkBinder theGuiAnchors env (GuiM action) =

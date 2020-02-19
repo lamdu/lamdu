@@ -173,8 +173,8 @@ convertDefBody env cp (Definition.Definition bod defType defI) =
 markAnnotations ::
     (MarkAnnotations t, RTraversable t) =>
     Config ->
-    Annotated a t ->
-    Annotated (ShowAnnotation, a) t
+    Annotated a # t ->
+    Annotated (ShowAnnotation, a) # t
 markAnnotations config
     | config ^. showAllAnnotations =
         hflipped %~ hmap (const (Lens._Wrapped %~ (,) alwaysShowAnnotations))

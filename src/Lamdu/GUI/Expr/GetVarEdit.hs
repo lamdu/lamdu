@@ -1,3 +1,5 @@
+{-# LANGUAGE TypeOperators #-}
+
 module Lamdu.GUI.Expr.GetVarEdit
     ( make, makeGetBinder, makeNoActions, makeSimpleView
     , makePunnedVars
@@ -374,8 +376,7 @@ makePunnedVars ::
     , Has (Texts.Code Text) env, Has (Texts.CodeUI Text) env
     , Has (Texts.Name Text) env, Grid.HasTexts env
     ) =>
-    [Annotated (Sugar.Payload Name i o ExprGui.Payload)
-        (Const (Sugar.GetVar Name o))] ->
+    [Annotated (Sugar.Payload Name i o ExprGui.Payload) # Const (Sugar.GetVar Name o)] ->
     GuiM env i o (Responsive o)
 makePunnedVars args =
     do

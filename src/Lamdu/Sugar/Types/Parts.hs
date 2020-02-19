@@ -1,6 +1,6 @@
 -- | Different leaf types in the Sugar expressions.
 -- These don't contain more expressions in them.
-{-# LANGUAGE TemplateHaskell, DataKinds, KindSignatures #-}
+{-# LANGUAGE TemplateHaskell, DataKinds, KindSignatures, TypeOperators #-}
 module Lamdu.Sugar.Types.Parts
     ( VarInfo(..), _VarNominal, _VarGeneric, _VarFunction, _VarRecord, _VarVariant
     , FuncApplyLimit(..), _UnlimitedFuncApply, _AtMostOneFuncApply
@@ -48,7 +48,7 @@ data FuncApplyLimit = UnlimitedFuncApply | AtMostOneFuncApply
     deriving (Eq, Ord, Generic)
 
 data Annotation name i
-    = AnnotationType (Annotated EntityId (Type name))
+    = AnnotationType (Annotated EntityId # Type name)
     | AnnotationVal (EvaluationScopes name i)
     | AnnotationNone
     deriving Generic

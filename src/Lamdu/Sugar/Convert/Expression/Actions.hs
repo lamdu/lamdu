@@ -196,7 +196,7 @@ bodyIndex ::
 bodyIndex = Lens.filteredBy hVal
 
 class FixReplaceParent expr where
-    fixReplaceParent :: (a -> a -> a) -> Annotated a expr -> Annotated a expr
+    fixReplaceParent :: (a -> a -> a) -> Annotated a # expr -> Annotated a # expr
 
 instance FixReplaceParent (Const a) where
     fixReplaceParent _ = id
@@ -304,13 +304,13 @@ addActions subexprs exprPl bodyS =
 
 makeTypeAnnotationPl ::
     Monad m =>
-    Input.Payload m a # V.Term -> ConvertM m (Annotated EntityId (Type InternalName))
+    Input.Payload m a # V.Term -> ConvertM m (Annotated EntityId # Type InternalName)
 makeTypeAnnotationPl payload =
     makeTypeAnnotation (payload ^. Input.entityId) (payload ^. Input.inferredType)
 
 makeTypeAnnotation ::
     Monad m =>
-    EntityId -> Pure # T.Type -> ConvertM m (Annotated EntityId (Type InternalName))
+    EntityId -> Pure # T.Type -> ConvertM m (Annotated EntityId # Type InternalName)
 makeTypeAnnotation = convertType . EntityId.ofTypeOf
 
 makeAnnotation ::

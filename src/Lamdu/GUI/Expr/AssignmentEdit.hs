@@ -469,8 +469,7 @@ makeParts ::
     , Has (Texts.Navigation Text) env
     ) =>
     Sugar.FuncApplyLimit ->
-    Annotated (Sugar.Payload Name i o ExprGui.Payload)
-        (Sugar.Assignment Name i o) ->
+    Annotated (Sugar.Payload Name i o ExprGui.Payload) # Sugar.Assignment Name i o ->
     Widget.Id ->
     GuiM env i o (Parts i o)
 makeParts funcApplyLimit (Ann (Const pl) assignmentBody) =
@@ -511,8 +510,7 @@ make ::
     ) =>
     Maybe (i (Property o Meta.PresentationMode)) ->
     Sugar.TagRef Name i o -> Lens.ALens' TextColors Draw.Color ->
-    Annotated (Sugar.Payload Name i o ExprGui.Payload)
-    (Sugar.Assignment Name i o) ->
+    Annotated (Sugar.Payload Name i o ExprGui.Payload) # Sugar.Assignment Name i o ->
     GuiM env i o (Responsive o)
 make pMode tag color assignment =
     makeParts Sugar.UnlimitedFuncApply assignment delParamDest

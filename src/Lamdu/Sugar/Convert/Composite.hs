@@ -69,7 +69,7 @@ convertExtend ::
     Monad m =>
     (T.Tag -> ValI m -> ValI m -> ExprIRef.ValBody m) ->
     (T.Tag -> ValI m -> T m (DataOps.CompositeExtendResult m)) ->
-    Annotated b (Body InternalName (T m) (T m)) ->
+    Annotated b # Body InternalName (T m) (T m) ->
     Input.Payload m a # V.Term ->
     ExtendVal m (Input.Payload m a # V.Term) ->
     Composite InternalName (T m) (T m) # Ann (Const b) ->

@@ -60,8 +60,8 @@ topLevelAnn = annotation . _1
 
 markNodeAnnotations ::
     MarkAnnotations t =>
-    Annotated a t ->
-    Annotated (ShowAnnotation, a) t
+    Annotated a # t ->
+    Annotated (ShowAnnotation, a) # t
 markNodeAnnotations (Ann (Const pl) x) =
     Ann (Const (showAnn, pl)) newBody
     where

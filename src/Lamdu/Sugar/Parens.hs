@@ -36,7 +36,7 @@ addToWorkArea w =
 class AddParens expr where
     addToBody :: expr # Ann (Const a) -> expr # Ann (Const (ParenInfo, a))
 
-    addToNode :: Annotated a expr -> Annotated (ParenInfo, a) expr
+    addToNode :: Annotated a # expr -> Annotated (ParenInfo, a) # expr
     addToNode (Ann (Const pl) x) = Ann (Const (ParenInfo 0 False, pl)) (addToBody x)
 
 instance HasPrecedence name => AddParens (Assignment name i o) where
@@ -46,8 +46,8 @@ instance HasPrecedence name => AddParens (Assignment name i o) where
 addToBinderWith ::
     HasPrecedence name =>
     MinOpPrec ->
-    Annotated a (Binder name i o) ->
-    Annotated (ParenInfo, a) (Binder name i o)
+    Annotated a # Binder name i o ->
+    Annotated (ParenInfo, a) # Binder name i o
 addToBinderWith minOpPrec (Ann (Const pl) x) =
     addToBody x
     & Ann (Const (ParenInfo minOpPrec False, pl))
@@ -86,7 +86,7 @@ addToExprWith minOpPrec = loopExpr minOpPrec (Precedence 0 0)
 bareInfix ::
     Lens.Prism' (LabeledApply name i o # Ann (Const a))
     ( Expression name i o a
-    , Annotated a (Const (BinderVarRef name o))
+    , Annotated a # Const (BinderVarRef name o)
     , Expression name i o a
     )
 bareInfix =
@@ -98,8 +98,8 @@ bareInfix =
 
 type AnnotateAST a body =
     MinOpPrec -> Precedence Prec ->
-    Annotated a body ->
-    Annotated (ParenInfo, a) body
+    Annotated a # body ->
+    Annotated (ParenInfo, a) # body
 
 loopExpr ::  HasPrecedence name => AnnotateAST a (Body name i o)
 loopExpr minOpPrec parentPrec (Ann (Const pl) body_) =
@@ -134,12 +134,12 @@ loopExprBody parentPrec body_ =
         result False = (,) NoNeedForParens
         leftSymbol ::
             AddParens body =>
-            Lens.ASetter s t (Annotated pl body) (Annotated (ParenInfo, pl) body) ->
+            Lens.ASetter s t (Annotated pl # body) (Annotated (ParenInfo, pl) # body) ->
             MinOpPrec -> (t -> res) -> s -> (NeedsParens, res)
         leftSymbol l prec = sideSymbol (\_ _ -> addToNode) before (parentPrec ^. after > prec) l prec
         rightSymbol ::
             HasPrecedence name =>
-            Lens.ASetter s t (Annotated pl (Body name i o)) (Annotated (ParenInfo, pl) (Body name i o)) ->
+            Lens.ASetter s t (Annotated pl # Body name i o) (Annotated (ParenInfo, pl) # Body name i o) ->
             (t -> res) -> s -> (NeedsParens, res)
         rightSymbol l =
             sideSymbol loopExpr after dotSomethingNeedParens l 12
@@ -152,7 +152,7 @@ loopExprBody parentPrec body_ =
             AnnotateAST pl body ->
             Lens.ASetter' (Precedence Prec) MinOpPrec ->
             Bool ->
-            Lens.ASetter s t (Annotated pl body) (Annotated (ParenInfo, pl) body) ->
+            Lens.ASetter s t (Annotated pl # body) (Annotated (ParenInfo, pl) # body) ->
             MinOpPrec -> (t -> res) -> s -> (NeedsParens, res)
         sideSymbol loop overrideSide needParens lens prec cons x =
             x & lens %~ loop prec childPrec & cons

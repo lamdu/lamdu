@@ -87,7 +87,7 @@ makeInject val tag pl =
         mReplaceParent = val ^. annotation . Sugar.plActions . Sugar.mReplaceParent
 
 emptyRec ::
-    Annotated a (Const (Sugar.NullaryVal name i o)) ->
+    Annotated a # Const (Sugar.NullaryVal name i o) ->
     Sugar.Expression name i o a
 emptyRec (Ann (Const pl) (Const (Sugar.NullaryVal closedActions addItem))) =
     Sugar.Composite [] [] (Sugar.ClosedComposite closedActions) addItem
@@ -105,8 +105,7 @@ makeNullaryInject ::
     , Has (Texts.Name Text) env
     , Has (Texts.Navigation Text) env
     ) =>
-    Annotated (Sugar.Payload Name i o ExprGui.Payload)
-    (Const (Sugar.NullaryVal Name i o)) ->
+    Annotated (Sugar.Payload Name i o ExprGui.Payload) # Const (Sugar.NullaryVal Name i o) ->
     Sugar.TagRef Name i o ->
     Sugar.Payload Name i o ExprGui.Payload ->
     GuiM env i o (Responsive o)

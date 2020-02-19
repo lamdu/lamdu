@@ -1,5 +1,5 @@
 {-# OPTIONS_GHC -Wno-incomplete-uni-patterns #-}
-{-# LANGUAGE TemplateHaskell, TupleSections, DerivingVia #-}
+{-# LANGUAGE TemplateHaskell, TupleSections, DerivingVia, TypeOperators #-}
 -- | Run a process that evaluates given compiled
 module Lamdu.Eval.JS
     ( module Lamdu.Eval.JS.Types
@@ -63,7 +63,7 @@ import           System.Process.Utils (withProcess)
 import           Lamdu.Prelude
 
 data Actions = Actions
-    { _aLoadGlobal :: V.Var -> IO (Definition (Annotated UUID V.Term) ())
+    { _aLoadGlobal :: V.Var -> IO (Definition (Annotated UUID # V.Term) ())
     , _aReportUpdatesAvailable :: IO ()
     , _aJSDebugPaths :: JSDebugPaths FilePath
     }

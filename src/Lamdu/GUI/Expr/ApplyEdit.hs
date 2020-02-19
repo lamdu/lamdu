@@ -48,8 +48,7 @@ makeFunc ::
     , Has (Texts.Navigation Text) env
     ) =>
     GetVarEdit.Role ->
-    Annotated (Sugar.Payload Name i o ExprGui.Payload)
-        (Const (Sugar.BinderVarRef Name o)) ->
+    Annotated (Sugar.Payload Name i o ExprGui.Payload) # Const (Sugar.BinderVarRef Name o) ->
     GuiM env i o (Responsive o)
 makeFunc role func =
     GetVarEdit.makeGetBinder role (func ^. hVal . Lens._Wrapped) myId

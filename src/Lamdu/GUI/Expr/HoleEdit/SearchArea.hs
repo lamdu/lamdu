@@ -3,6 +3,8 @@
 --
 -- For non-fragments this is the whole hole.
 
+{-# LANGUAGE TypeOperators #-}
+
 module Lamdu.GUI.Expr.HoleEdit.SearchArea
     ( make
     , AnnotationMode(..)
@@ -96,8 +98,8 @@ makeRenderedResult pl ctx result =
 
 postProcessSugar ::
     AddParens.MinOpPrec ->
-    Annotated (Sugar.Payload Name i o ()) (Sugar.Binder Name i o) ->
-    Annotated (Sugar.Payload Name i o ExprGui.Payload) (Sugar.Binder Name i o)
+    Annotated (Sugar.Payload Name i o ()) # Sugar.Binder Name i o ->
+    Annotated (Sugar.Payload Name i o ExprGui.Payload) # Sugar.Binder Name i o
 postProcessSugar minOpPrec binder =
     AddParens.addToBinderWith minOpPrec binder
     & hflipped %~ hmap (\_ -> Lens._Wrapped %~ pl)

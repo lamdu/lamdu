@@ -44,8 +44,8 @@ type Priority = (PriorityClass, Int)
 
 class HFunctor h => Prepare h where
     fixPriorities ::
-        Annotated ((a, Int), b) h ->
-        Annotated ((a, Int), b) h
+        Annotated ((a, Int), b) # h ->
+        Annotated ((a, Int), b) # h
     fixPriorities = id
     wrap :: Monad m => HRef m # h -> T m ()
 
@@ -74,7 +74,7 @@ prepareInFragExpr ::
     forall m h.
     (Monad m, Recursively Prepare h) =>
     Ann (HRef m) # h ->
-    Annotated (Priority, EditAction (T m ())) h
+    Annotated (Priority, EditAction (T m ())) # h
 prepareInFragExpr (Ann a v) =
     withDict (recursively (Proxy @(Prepare h))) $
     hmap (Proxy @(Recursively Prepare) #> prepareInFragExpr) v
@@ -89,7 +89,7 @@ prepareParamType ::
     forall m h.
     (Monad m, Recursively (PrepareParamType m) h) =>
     Ann (HRef m) # HCompose Prune h ->
-    Annotated (Priority, EditAction (T m ())) (HCompose Prune h)
+    Annotated (Priority, EditAction (T m ())) # (HCompose Prune h)
 prepareParamType (Ann a b) =
     withDict (recursively (Proxy @(PrepareParamType m h))) $
     Ann
@@ -102,7 +102,7 @@ prepare ::
     Monad m =>
     ValI m ->
     Ann (HRef m) # Term ->
-    Annotated (Priority, EditAction (T m ())) Term
+    Annotated (Priority, EditAction (T m ())) # Term
 prepare fragI (Ann a v) =
     if fragI == a ^. iref
     then

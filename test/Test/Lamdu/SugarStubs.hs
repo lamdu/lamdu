@@ -27,9 +27,9 @@ import           Test.Lamdu.Prelude
 
 infixr 1 ~>
 (~>) ::
-    Annotated Sugar.EntityId (Sugar.Type name) ->
-    Annotated Sugar.EntityId (Sugar.Type name) ->
-    Annotated Sugar.EntityId (Sugar.Type name)
+    Annotated Sugar.EntityId # Sugar.Type name ->
+    Annotated Sugar.EntityId # Sugar.Type name ->
+    Annotated Sugar.EntityId # Sugar.Type name
 param ~> res = FuncType param res & Sugar.TFun & Ann (Const "dummy")
 
 nameRef :: name -> Sugar.NameRef name Unit
@@ -56,13 +56,13 @@ defRef var tag =
 
 node ::
     h # Ann (Const (Sugar.Payload InternalName Identity Unit ())) ->
-    Annotated (Sugar.Payload InternalName Identity Unit ()) h
+    Annotated (Sugar.Payload InternalName Identity Unit ()) # h
 node = Const payload & Ann
 
 labeledApplyFunc ::
     Sugar.BinderVarRef InternalName Unit ->
-    Annotated (Sugar.Payload InternalName Identity Unit ())
-    (Const (Sugar.BinderVarRef InternalName Unit))
+    Annotated (Sugar.Payload InternalName Identity Unit ()) #
+    Const (Sugar.BinderVarRef InternalName Unit)
 labeledApplyFunc = node . Const
 
 type Infix2 = Expr -> Expr -> Expr
@@ -139,9 +139,9 @@ mkTag var tag =
     }
 
 def ::
-    Annotated Sugar.EntityId (Sugar.Type InternalName) ->
+    Annotated Sugar.EntityId # Sugar.Type InternalName ->
     UUID -> T.Tag ->
-    Annotated expr (Sugar.Assignment InternalName Identity Unit) ->
+    Annotated expr # Sugar.Assignment InternalName Identity Unit ->
     Sugar.Definition InternalName Identity Unit expr
 def typ var tag body =
     Sugar.Definition
@@ -206,8 +206,8 @@ funcExpr params (Ann (Const ba) bx) =
 
 binderExpr ::
     [(UUID, T.Tag)] -> Expr ->
-    Annotated (Sugar.Payload InternalName Identity Unit ())
-    (Sugar.Assignment InternalName Identity Unit)
+    Annotated (Sugar.Payload InternalName Identity Unit ()) #
+    Sugar.Assignment InternalName Identity Unit
 binderExpr params body = funcExpr params body & Sugar.BodyFunction & node
 
 expr ::
@@ -215,7 +215,7 @@ expr ::
     Sugar.Expression InternalName Identity Unit (Sugar.Payload InternalName Identity Unit ())
 expr = node
 
-numType :: Annotated Sugar.EntityId (Sugar.Type InternalName)
+numType :: Annotated Sugar.EntityId # Sugar.Type InternalName
 numType =
     Sugar.TInst (Sugar.TId (taggedEntityName "numTid" "num") "num") mempty
     & Ann (Const "dummy")

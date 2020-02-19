@@ -185,7 +185,7 @@ makeAltsWidget ::
     ) =>
     Maybe Tag ->
     [Sugar.CompositeItem Name i o (ExprGui.SugarExpr i o)] ->
-    [Annotated (Sugar.Payload Name i o ExprGui.Payload) (Const (Sugar.GetVar Name o))] ->
+    [Annotated (Sugar.Payload Name i o ExprGui.Payload) # Const (Sugar.GetVar Name o)] ->
     Sugar.TagReplace Name i o Sugar.EntityId ->
     Widget.Id ->
     GuiM env i o (Responsive o)

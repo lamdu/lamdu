@@ -340,7 +340,7 @@ loadInfer sugarContext scope v =
 sugar ::
     (Monad m, Monoid a) =>
     ConvertM.Context m -> Input.Payload m dummy # V.Term -> Val a ->
-    T m (Annotated (Payload InternalName (T m) (T m) a) (Binder InternalName (T m) (T m)))
+    T m (Annotated (Payload InternalName (T m) (T m) a) # Binder InternalName (T m) (T m))
 sugar sugarContext holePl v =
     do
         (val, inferCtx) <-
