@@ -21,10 +21,24 @@
     - hint: {lhs: "zipWith a [0::Int ..]", rhs: "Control.Lens.imap a"}
     - hint: {lhs: "map (uncurry a) (Data.Map.toList b)", rhs: "Control.Lens.imap a b ^.. Control.Lens.folded"}
     - hint: {lhs: "mempty & (Control.Lens.at a ?~ b)", rhs: "a Control.Lens.Extended.==> b"}
+    - warn: {lhs: "do { a <- b; pure c }", rhs: b <&> \a -> c}
+    - warn: {lhs: "do { a <- b; c & pure }", rhs: b <&> \a -> c}
+    - warn: {lhs: "[a] & sequenceA", rhs: "a <&> pure"}
+    - warn: {lhs: "lift a >>= lift . b", rhs: "a >>= b & lift"}
+    - warn: {lhs: "pure a <&> b", rhs: "pure (b a)"}
+    - warn: {lhs: "a & lift <&> b >>= lift . c", rhs: "a <&> b >>= c & lift"}
 
 - group:
     name: generalise-for-conciseness
     enabled: true
+
+- group:
+    name: use-lens
+    enabled: true
+    rules:
+    - warn: {lhs: "head (a ++ [b])", rhs: "fromMaybe b (a ^? traverse)"}
+    - warn: {lhs: "head (a <> [b])", rhs: "fromMaybe b (a ^? traverse)"}
+    - warn: {lhs: "mconcat [a | x <- take 1 b]", rhs: "foldMap (\\x -> a) (b ^? traverse)"}
 
 # extend existing group
 - group:
@@ -35,16 +49,7 @@
     - warn: {lhs: "Control.Lens.at a . Control.Lens._Just", rhs: "Control.Lens.ix a"}
     - warn: {lhs: "a & (b .~ (a ^. b))", rhs: "a"}
     - warn: {lhs: "(a ^. b) & (c .~ (a ^. (b . c)))", rhs: "a ^. b"}
-    - warn: {lhs: "head (a ++ [b])", rhs: "fromMaybe b (a ^? traverse)"}
-    - warn: {lhs: "mconcat [a | x <- take 1 b]", rhs: "foldMap (\\x -> a) (b ^? traverse)"}
     - warn: {lhs: "a ^.. (b . Control.Lens.withIndex)", rhs: "a ^@.. b"}
-    # standard rules using lens operators & and <&>
-    - warn: {lhs: "pure a <&> b", rhs: "pure (b a)"}
-    - warn: {lhs: "lift a >>= lift . b", rhs: "a >>= b & lift"}
-    - warn: {lhs: "a & lift <&> b >>= lift . c", rhs: "a <&> b >>= c & lift"}
-    - warn: {lhs: "[a] & sequenceA", rhs: "a <&> pure"}
-    - warn: {lhs: "do { a <- b; pure c }", rhs: b <&> \a -> c}
-    - warn: {lhs: "do { a <- b; c & pure }", rhs: b <&> \a -> c}
     - error: {lhs: "(^. Control.Lens.folded) . fmap a", rhs: "foldMap a"}
     - error: {lhs: "(a <&> b) ^. Control.Lens.folded", rhs: "foldMap b a"}
     - error: {lhs: "Control.Lens.has (Control.Lens.at a)", rhs: "True"}

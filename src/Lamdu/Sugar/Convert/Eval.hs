@@ -74,7 +74,7 @@ convertList entityId typ (ER.Inject _ x) =
     do
         Pure (T.TInst (NominalInst tid _)) <- Just typ
         guard (tid == Builtins.listTid)
-        (_, fields) <- flattenRecord x & either (const Nothing) Just & maybeToMPlus
+        (_, fields) <- flattenRecord x ^? Lens._Right & maybeToMPlus
         hd <- fields ^? Lens.ix Builtins.headTag & maybeToMPlus
         ER.RFunc{} <- fields ^? Lens.ix Builtins.tailTag . hVal & maybeToMPlus
         convertVal (EntityId.ofEvalField Builtins.headTag entityId) hd
