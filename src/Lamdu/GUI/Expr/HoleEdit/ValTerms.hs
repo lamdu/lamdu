@@ -44,7 +44,7 @@ expr ::
     ( Has (Texts.Code Text) env
     , Has (Texts.CodeUI Text) env
     ) =>
-    env -> Expression Name i o a -> [Text]
+    env -> Annotated a # Term Name i o -> [Text]
 expr env = ofBody env . (^. hVal)
 
 ofBody ::

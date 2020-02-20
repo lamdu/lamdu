@@ -54,7 +54,7 @@ dontShowType =
     }
 
 topLevelAnn ::
-    Lens' (Expression name i o (ShowAnnotation, a))
+    Lens' (Annotated (ShowAnnotation, a) # h)
     ShowAnnotation
 topLevelAnn = annotation . _1
 

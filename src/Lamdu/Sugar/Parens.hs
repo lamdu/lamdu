@@ -79,15 +79,15 @@ instance AddParens (Const a) where
 addToExprWith ::
     HasPrecedence name =>
     MinOpPrec ->
-    Expression name i o a ->
-    Expression name i o (ParenInfo, a)
+    Annotated a # Term name i o ->
+    Annotated (ParenInfo, a) # Term name i o
 addToExprWith minOpPrec = loopExpr minOpPrec (Precedence 0 0)
 
 bareInfix ::
     Lens.Prism' (LabeledApply name i o # Annotated a)
-    ( Expression name i o a
+    ( Annotated a # Term name i o
     , Annotated a # Const (BinderVarRef name o)
-    , Expression name i o a
+    , Annotated a # Term name i o
     )
 bareInfix =
     Lens.prism' toLabeledApply fromLabeledApply

@@ -67,7 +67,7 @@ mkOptions ::
     ConvertM.PositionInfo ->
     ConvertM.Context m ->
     Ann (Input.Payload m a) # V.Term ->
-    Expression name i o pl ->
+    Ann pl # Term name i o ->
     Input.Payload m a # V.Term ->
     ConvertM m (T m [HoleOption InternalName (T m) (T m)])
 mkOptions posInfo sugarContext argI argS exprPl =

@@ -87,7 +87,7 @@ makeInject val tag pl =
 
 emptyRec ::
     Annotated a # Const (Sugar.NullaryVal name i o) ->
-    Sugar.Expression name i o a
+    Annotated a # Sugar.Term name i o
 emptyRec (Ann (Const pl) (Const (Sugar.NullaryVal closedActions addItem))) =
     Sugar.Composite [] [] (Sugar.ClosedComposite closedActions) addItem
     & Sugar.BodyRecord

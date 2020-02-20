@@ -11,7 +11,6 @@ module Lamdu.Sugar.Types.Expression
         , _BodyGetVar, _BodyGetField, _BodyInject, _BodyHole
         , _BodyLiteral, _BodyCase, _BodyRecord, _BodyFragment
         , _BodyFromNom, _BodyToNom, _BodyIfElse
-    , Expression
     , AnnotatedArg(..), aaTag, aaExpr
     , LabeledApply(..), aFunc, aSpecialArgs, aAnnotatedArgs, aPunnedArgs
     , App(..), appFunc, appArg
@@ -67,8 +66,6 @@ import           Lamdu.Sugar.Types.Tag
 import           Lamdu.Sugar.Types.Type
 
 import           Lamdu.Prelude
-
-type Expression name i o a = Annotated a # Term name i o
 
 data AnnotatedArg name i o k = AnnotatedArg
     { _aaTag :: Tag name

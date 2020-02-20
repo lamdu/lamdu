@@ -177,7 +177,7 @@ make sub expr =
 
 makeSubexpression ::
     Monad i =>
-    Sugar.Expression Name i o (Sugar.Payload Name i o ExprGui.Payload) ->
+    Annotated (Sugar.Payload Name i o ExprGui.Payload) # Sugar.Term Name i o ->
     GuiM env i o (Responsive.Responsive o)
 makeSubexpression = make aMakeSubexpression
 

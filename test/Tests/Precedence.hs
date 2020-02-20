@@ -13,9 +13,9 @@ import           Test.Lamdu.Prelude
 
 infixArgs ::
     Lens.Traversal'
-    (Sugar.Expression name i o a)
-    ( Sugar.Expression name i o a
-    , Sugar.Expression name i o a
+    (Annotated a # Sugar.Term name i o)
+    ( Annotated a # Sugar.Term name i o
+    , Annotated a # Sugar.Term name i o
     )
 infixArgs = hVal . Sugar._BodyLabeledApply . Sugar.aSpecialArgs . Sugar._Operator
 

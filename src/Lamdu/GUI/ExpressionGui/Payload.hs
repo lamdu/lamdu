@@ -23,7 +23,7 @@ data Payload = Payload
 Lens.makeLenses ''Payload
 
 type SugarExpr i o =
-    Sugar.Expression Name i o (Sugar.Payload Name i o Payload)
+    Annotated (Sugar.Payload Name i o Payload) # Sugar.Term Name i o
 
 -- | Just myId or Nothing depending on whether parens are needed
 mParensId :: Sugar.Payload name i o Payload -> Maybe AnimId

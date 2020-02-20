@@ -39,8 +39,8 @@ prop :: a -> Property Unit a
 prop x = Property x (const Unit)
 
 type Expr =
-    Sugar.Expression InternalName Identity Unit
-    (Sugar.Payload InternalName Identity Unit ())
+    Annotated (Sugar.Payload InternalName Identity Unit ()) #
+    Sugar.Term InternalName Identity Unit
 
 litNum :: Double -> Expr
 litNum x = prop x & Sugar.LiteralNum & Sugar.BodyLiteral & expr
@@ -163,7 +163,9 @@ def typ var tag body =
     where
         emptyForalls = T.Types (QVars mempty) (QVars mempty)
 
-repl :: Sugar.Expression name i o a -> Sugar.Repl name i o a
+repl ::
+    Annotated a # Sugar.Term name i o ->
+    Sugar.Repl name i o a
 repl (Ann (Const pl) x) =
     Sugar.Repl
     { Sugar._replExpr = Ann (Const pl) (Sugar.BinderTerm x)
@@ -212,7 +214,7 @@ binderExpr params body = funcExpr params body & Sugar.BodyFunction & node
 
 expr ::
     Sugar.Term InternalName Identity Unit # Annotated (Sugar.Payload InternalName Identity Unit ()) ->
-    Sugar.Expression InternalName Identity Unit (Sugar.Payload InternalName Identity Unit ())
+    Annotated (Sugar.Payload InternalName Identity Unit ()) # Sugar.Term InternalName Identity Unit
 expr = node
 
 numType :: Annotated Sugar.EntityId # Sugar.Type InternalName
@@ -267,10 +269,8 @@ tagRefReplace =
 
 addNamesToExpr ::
     Language ->
-    Sugar.Expression InternalName Identity Unit
-    (Sugar.Payload InternalName Identity Unit a) ->
-    Sugar.Expression Name Identity Unit
-    (Sugar.Payload Name Identity Unit a)
+    Annotated (Sugar.Payload InternalName Identity Unit a) # Sugar.Term InternalName Identity Unit ->
+    Annotated (Sugar.Payload Name Identity Unit a) # Sugar.Term Name Identity Unit
 addNamesToExpr lang x =
     AddNames.runPasses lang
     getName NameWalk.toExpression NameWalk.toExpression NameWalk.toExpression NameWalk.toExpression x

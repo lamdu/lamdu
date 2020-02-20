@@ -306,7 +306,7 @@ openRecordEventMap ::
     , Functor o
     ) =>
     Sugar.OpenCompositeActions o ->
-    Sugar.Expression name i o a ->
+    Annotated a # Sugar.Term name i o ->
     m (EventMap (o GuiState.Update))
 openRecordEventMap (Sugar.OpenCompositeActions close) restExpr
     | isHole restExpr =
