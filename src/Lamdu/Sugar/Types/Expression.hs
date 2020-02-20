@@ -14,10 +14,13 @@ module Lamdu.Sugar.Types.Expression
     , Expression
     , AnnotatedArg(..), aaTag, aaExpr
     , LabeledApply(..), aFunc, aSpecialArgs, aAnnotatedArgs, aPunnedArgs
+    , App(..), appFunc, appArg
     , Fragment(..), fExpr, fHeal, fTypeMismatch, fOptions
     , Lambda(..), lamFunc, lamMode, lamApplyLimit
     , InjectContent(..), _InjectVal, _InjectNullary
     , Inject(..), iTag, iContent
+    , GetField(..), gfRecord, gfTag
+    , Nominal(..), nTId, nVal
     -- Binders
     , Let(..)
         , lValue, lName, lUsages
@@ -41,7 +44,10 @@ module Lamdu.Sugar.Types.Expression
     , IfElse(..), iIf, iThen, iElse
     -- Record & Cases
     , Composite(..), cItems, cPunnedItems, cAddItem, cTail
+    , CompositeItem(..), ciDelete, ciTag, ciExpr
     , Case(..), cKind, cBody
+    , CaseArg(..), caVal, caToLambdaCase
+    , CaseKind(..), _LambdaCase, _CaseWithArg
     ) where
 
 import qualified Control.Lens as Lens
@@ -49,13 +55,13 @@ import           Control.Monad.ListT (ListT)
 import           Data.Kind (Constraint)
 import           Data.Property (Property)
 import           Hyper
+import           Hyper.Type.AST.App (App(..), appFunc, appArg)
 import           Lamdu.Data.Anchors (BinderParamScopeId(..), bParamScopeId)
 import qualified Lamdu.Data.Meta as Meta
 import           Lamdu.Sugar.Internal.EntityId (EntityId)
 import           Lamdu.Sugar.Types.Eval
 import           Lamdu.Sugar.Types.GetVar (GetVar, BinderVarRef, BinderMode)
 import           Lamdu.Sugar.Types.Parts
-import           Lamdu.Sugar.Types.Simple
 import           Lamdu.Sugar.Types.Tag
 import           Lamdu.Sugar.Types.Type
 
@@ -85,6 +91,11 @@ data InjectContent name i o k
 data Inject name i o f = Inject
     { _iTag :: TagRef name i o
     , _iContent :: InjectContent name i o f
+    } deriving Generic
+
+data GetField name i o k = GetField
+    { _gfRecord :: k :# Body name i o
+    , _gfTag :: TagRef name i o
     } deriving Generic
 
 data Lambda name i o f = Lambda
@@ -141,17 +152,38 @@ data IfElse name i o k = IfElse
     , _iElse :: k :# Else name i o
     } deriving Generic
 
+data CompositeItem name i o k = CompositeItem
+    { _ciDelete :: o EntityId
+    , _ciTag :: TagRef name i o
+    , _ciExpr :: k :# Body name i o
+    } deriving Generic
+
 data Composite name i o k = Composite
-    { _cItems :: [CompositeItem name i o (k :# Body name i o)]
+    { _cItems :: [CompositeItem name i o k]
     , -- Punned items are like Haskell's NamedFieldPuns
       _cPunnedItems :: [k :# Lens.Const (GetVar name o)]
     , _cTail :: CompositeTail o (k :# Body name i o)
     , _cAddItem :: TagReplace name i o EntityId
     } deriving Generic
 
+data CaseArg name i o k = CaseArg
+    { _caVal :: k :# Body name i o
+    , _caToLambdaCase :: o EntityId
+    } deriving Generic
+
+data CaseKind name i o k
+    = LambdaCase
+    | CaseWithArg (CaseArg name i o k)
+    deriving Generic
+
 data Case name i o k = Case
-    { _cKind :: CaseKind o (k :# Body name i o)
+    { _cKind :: CaseKind name i o k
     , _cBody :: Composite name i o k
+    } deriving Generic
+
+data Nominal name i o k = Nominal
+    { _nTId :: TId name
+    , _nVal :: k :# Binder name i o
     } deriving Generic
 
 data Body name i o k
@@ -161,12 +193,12 @@ data Body name i o k
     | BodyHole (Hole name i o)
     | BodyLiteral (Literal (Property o))
     | BodyRecord (Composite name i o k)
-    | BodyGetField (GetField name i o (k :# Body name i o))
+    | BodyGetField (GetField name i o k)
     | BodyCase (Case name i o k)
     | BodyIfElse (IfElse name i o k)
     | BodyInject (Inject name i o k)
     | BodyGetVar (GetVar name o)
-    | BodyToNom (Nominal name (k :# Binder name i o))
+    | BodyToNom (Nominal name i o k)
     | BodyFromNom (TId name)
     | BodyFragment (Fragment name i o k)
     | BodyPlaceHolder -- Used for hole results, shown as "★"
@@ -215,10 +247,14 @@ data Assignment name i o f
 Lens.makeLenses ''AnnotatedArg
 Lens.makeLenses ''AssignPlain
 Lens.makeLenses ''Case
+Lens.makeLenses ''CaseArg
+Lens.makePrisms ''CaseKind
 Lens.makeLenses ''Composite
+Lens.makeLenses ''CompositeItem
 Lens.makeLenses ''ElseIfContent
 Lens.makeLenses ''Fragment
 Lens.makeLenses ''Function
+Lens.makeLenses ''GetField
 Lens.makeLenses ''Hole
 Lens.makeLenses ''HoleOption
 Lens.makeLenses ''HoleResult
@@ -227,6 +263,7 @@ Lens.makeLenses ''Inject
 Lens.makeLenses ''LabeledApply
 Lens.makeLenses ''Lambda
 Lens.makeLenses ''Let
+Lens.makeLenses ''Nominal
 Lens.makePrisms ''Assignment
 Lens.makePrisms ''Binder
 Lens.makePrisms ''Body
@@ -234,9 +271,10 @@ Lens.makePrisms ''Else
 Lens.makePrisms ''InjectContent
 
 traverse makeHTraversableAndBases
-    [ ''Assignment, ''AssignPlain, ''Body, ''Binder, ''Case
-    , ''Composite, ''Else, ''ElseIfContent, ''Fragment, ''Function
-    , ''IfElse, ''Inject, ''InjectContent, ''LabeledApply, ''Lambda, ''Let
+    [ ''Assignment, ''AssignPlain, ''Body, ''Binder, ''Case, ''CaseArg, ''CaseKind
+    , ''Composite, ''CompositeItem, ''Else, ''ElseIfContent, ''Fragment, ''Function
+    , ''GetField, ''IfElse, ''Inject, ''InjectContent, ''LabeledApply, ''Lambda, ''Let
+    , ''Nominal
     ] <&> concat
 
 -- TODO: Replace boilerplate below with TH

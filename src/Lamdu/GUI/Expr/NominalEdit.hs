@@ -46,12 +46,9 @@ makeToNom ::
     , Has (Texts.Name Text) env
     , Has (Texts.Definitions Text) env
     ) =>
-    Sugar.Nominal Name
-        (Annotated (Sugar.Payload Name i o ExprGui.Payload) #
-            Sugar.Binder Name i o) ->
-    Sugar.Payload Name i o ExprGui.Payload ->
+    Annotated (Sugar.Payload Name i o ExprGui.Payload) # Sugar.Nominal Name i o ->
     GuiM env i o (Responsive o)
-makeToNom (Sugar.Nominal tid binder) pl =
+makeToNom (Ann (Const pl) (Sugar.Nominal tid binder)) =
     do
         env <- Lens.view id
         let mkEventMap action =

@@ -160,10 +160,10 @@ convertItem ::
     Monad m =>
     (T.Tag -> ValI m -> ValI m -> ExprIRef.ValBody m) ->
     HRef m # V.Term ->
-    EntityId -> Set T.Tag -> expr ->
+    EntityId -> Set T.Tag -> h # Body InternalName (T m) (T m) ->
     -- Using tuple in place of shared RecExtend/Case structure (no such in lamdu-calculus)
     ExtendVal m (ValI m) ->
-    ConvertM m (CompositeItem InternalName (T m) (T m) expr)
+    ConvertM m (CompositeItem InternalName (T m) (T m) # h)
 convertItem cons stored inst forbiddenTags exprS extendVal =
     do
         delItem <- deleteItem stored restI

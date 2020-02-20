@@ -62,7 +62,7 @@ orderRecord ::
 orderRecord (Sugar.Composite items punned tail_ addItem) =
     Sugar.Composite
     <$> (orderByTag (^. Sugar.ciTag . Sugar.tagRefTag) items
-        >>= (traverse . traverse) orderNode)
+        >>= (traverse . Sugar.ciExpr) orderNode)
     <*> pure punned
     <*> traverse orderNode tail_
     <*> pure addItem
@@ -120,9 +120,9 @@ instance MonadTransaction m i => Order i name o (Sugar.Body name i o) where
         <&> Sugar.BodyFragment
     order (Sugar.BodyIfElse x) = order x <&> Sugar.BodyIfElse
     order (Sugar.BodyInject x) = (Sugar.iContent . Sugar._InjectVal) orderNode x <&> Sugar.BodyInject
-    order (Sugar.BodyToNom x) = traverse orderNode x <&> Sugar.BodyToNom
+    order (Sugar.BodyToNom x) = Sugar.nVal orderNode x <&> Sugar.BodyToNom
     order (Sugar.BodySimpleApply x) = htraverse1 orderNode x <&> Sugar.BodySimpleApply
-    order (Sugar.BodyGetField x) = traverse orderNode x <&> Sugar.BodyGetField
+    order (Sugar.BodyGetField x) = Sugar.gfRecord orderNode x <&> Sugar.BodyGetField
     order x@Sugar.BodyFromNom{} = pure x
     order x@Sugar.BodyLiteral{} = pure x
     order x@Sugar.BodyGetVar{} = pure x

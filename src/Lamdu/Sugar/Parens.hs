@@ -122,9 +122,9 @@ loopExprBody parentPrec body_ =
     BodyRecord       x -> hmap (p #> addToNode) x & BodyRecord & result False
     BodyCase         x -> hmap (p #> addToNode) x & BodyCase & result (caseNeedsParens x)
     BodyLam          x -> leftSymbol (lamFunc . fBody) 0 BodyLam x
-    BodyToNom        x -> leftSymbol Lens.mapped 0 BodyToNom x
+    BodyToNom        x -> leftSymbol nVal 0 BodyToNom x
     BodyInject       x -> inject x
-    BodyGetField     x -> rightSymbol Lens.mapped BodyGetField x
+    BodyGetField     x -> rightSymbol gfRecord BodyGetField x
     BodySimpleApply  x -> simpleApply x
     BodyLabeledApply x -> labeledApply x
     BodyIfElse       x -> ifElse x

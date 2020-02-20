@@ -453,7 +453,6 @@ Library
                   , Lamdu.Sugar.Types.Expression
                   , Lamdu.Sugar.Types.GetVar
                   , Lamdu.Sugar.Types.Parts
-                  , Lamdu.Sugar.Types.Simple
                   , Lamdu.Sugar.Types.Tag
                   , Lamdu.Sugar.Types.Type
                   , Lamdu.VersionControl

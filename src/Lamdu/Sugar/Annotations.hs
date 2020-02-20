@@ -162,8 +162,8 @@ markBodyAnnotations oldBody =
             -- cKind contains the scrutinee which is not always
             -- visible (for case alts that aren't lambdas), so
             -- maybe we do want to show the annotation
-            & cKind . Lens.mapped . nonHoleAnn .~ neverShowAnnotations
-            & cBody . cItems . Lens.mapped . Lens.mapped . hVal %~ onHandler
+            & cKind . _CaseWithArg . caVal . nonHoleAnn .~ neverShowAnnotations
+            & cBody . cItems . Lens.mapped . ciExpr . hVal %~ onHandler
             & BodyCase
         )
     where

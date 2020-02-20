@@ -144,7 +144,7 @@ makeAltRow ::
     , Has (Texts.Navigation Text) env
     ) =>
     Maybe Tag ->
-    Sugar.CompositeItem Name i o (ExprGui.SugarExpr i o) ->
+    Sugar.CompositeItem Name i o # Annotated (Sugar.Payload Name i o ExprGui.Payload) ->
     GuiM env i o (TaggedItem o)
 makeAltRow mActiveTag (Sugar.CompositeItem delete tag altExpr) =
     do
@@ -181,7 +181,7 @@ makeAltsWidget ::
     , Has (Grid.Texts Text) env
     ) =>
     Maybe Tag ->
-    [Sugar.CompositeItem Name i o (ExprGui.SugarExpr i o)] ->
+    [Sugar.CompositeItem Name i o # Annotated (Sugar.Payload Name i o ExprGui.Payload)] ->
     [Annotated (Sugar.Payload Name i o ExprGui.Payload) # Const (Sugar.GetVar Name o)] ->
     Sugar.TagReplace Name i o Sugar.EntityId ->
     Widget.Id ->

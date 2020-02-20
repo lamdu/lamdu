@@ -1,4 +1,6 @@
 -- | "if" sugar/guards conversion
+{-# LANGUAGE TypeFamilies #-}
+
 module Lamdu.Sugar.Convert.IfElse (convertIfElse) where
 
 import qualified Control.Lens as Lens

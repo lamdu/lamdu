@@ -355,13 +355,12 @@ toFragment Fragment{_fExpr, _fHeal, _fTypeMismatch, _fOptions} =
 
 toCompositeItem ::
     MonadNaming m =>
-    (a -> m b) ->
-    CompositeItem (OldName m) (IM m) o a ->
-    m (CompositeItem (NewName m) (IM m) o b)
-toCompositeItem toExpr (CompositeItem del tag e) =
+    CompositeItem (OldName m) (IM m) o # Annotated (Payload (OldName m) (IM m) o a) ->
+    m (CompositeItem (NewName m) (IM m) o # Annotated (Payload (NewName m) (IM m) o a))
+toCompositeItem (CompositeItem del tag e) =
     CompositeItem del
     <$> toTagRefOf Tag tag
-    <*> toExpr e
+    <*> toExpression e
 
 toComposite ::
     MonadNaming m =>
@@ -369,7 +368,7 @@ toComposite ::
     m (Composite (NewName m) (IM m) o # Annotated (Payload (NewName m) (IM m) o a))
 toComposite (Composite items punned tail_ addItem) =
     Composite
-    <$> traverse (toCompositeItem toExpression) items
+    <$> traverse toCompositeItem items
     <*> traverse (toNode (Lens._Wrapped toGetVar)) punned
     <*> (_OpenComposite . _2) toExpression tail_
     <*> toTagReplace addItem
@@ -378,7 +377,7 @@ toCase ::
     MonadNaming m =>
     Case (OldName m) (IM m) o # Annotated (Payload (OldName m) (IM m) o a) ->
     m (Case (NewName m) (IM m) o # Annotated (Payload (NewName m) (IM m) o a))
-toCase (Case k c) = Case <$> traverse toExpression k <*> toComposite c
+toCase (Case k c) = Case <$> (_CaseWithArg . caVal) toExpression k <*> toComposite c
 
 toInjectVal ::
     MonadNaming m =>
@@ -393,6 +392,18 @@ toInject ::
     m (Inject (NewName m) (IM m) o # Annotated (Payload (NewName m) (IM m) o a))
 toInject (Inject t v) =
     Inject <$> toTagRefOf Tag t <*> toInjectVal v
+
+toGetField ::
+    MonadNaming m =>
+    GetField (OldName m) (IM m) o # Annotated (Payload (OldName m) (IM m) o a) ->
+    m (GetField (NewName m) (IM m) o # Annotated (Payload (NewName m) (IM m) o a))
+toGetField (GetField r t) = GetField <$> toExpression r <*> toTagRefOf Tag t
+
+toNominal ::
+    MonadNaming m =>
+    Nominal (OldName m) (IM m) o # Annotated (Payload (OldName m) (IM m) o a) ->
+    m (Nominal (NewName m) (IM m) o # Annotated (Payload (NewName m) (IM m) o a))
+toNominal (Nominal t e) = Nominal <$> toTId t <*> toNode toBinder e
 
 toElse ::
     MonadNaming m =>
@@ -417,7 +428,7 @@ toBody ::
     m (Body (NewName m) (IM m) o # Annotated (Payload (NewName m) (IM m) o a))
 toBody =
     \case
-    BodyGetField     x -> x & traverse toExpression >>= gfTag toTag <&> BodyGetField
+    BodyGetField     x -> x & toGetField <&> BodyGetField
     BodyInject       x -> x & toInject <&> BodyInject
     BodyRecord       x -> x & toComposite <&> BodyRecord
     BodyCase         x -> x & toCase <&> BodyCase
@@ -426,14 +437,12 @@ toBody =
     BodyLabeledApply x -> x & toLabeledApply <&> BodyLabeledApply
     BodyHole         x -> x & toHole <&> BodyHole
     BodyFromNom      x -> x & toTId <&> BodyFromNom
-    BodyToNom        x -> x & traverse (toNode toBinder) >>= nTId toTId <&> BodyToNom
+    BodyToNom        x -> x & toNominal <&> BodyToNom
     BodyGetVar       x -> x & toGetVar <&> BodyGetVar
     BodyLiteral      x -> x & BodyLiteral & pure
     BodyLam          x -> x & toLam <&> BodyLam
     BodyFragment     x -> x & toFragment <&> BodyFragment
     BodyPlaceHolder    -> pure BodyPlaceHolder
-    where
-        toTag = toTagRefOf Tag
 
 funcSignature :: LabeledApply name i o a -> FunctionSignature
 funcSignature apply =

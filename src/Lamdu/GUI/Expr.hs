@@ -92,10 +92,10 @@ makeEditor body pl =
     Sugar.BodyRecord       x -> editor pl x RecordEdit.make
     Sugar.BodyCase         x -> editor pl x CaseEdit.make
     Sugar.BodyIfElse       x -> editor pl x IfElseEdit.make
-    Sugar.BodyGetField     x -> GetFieldEdit.make     x pl
+    Sugar.BodyGetField     x -> editor pl x GetFieldEdit.make
     Sugar.BodyInject       x -> editor pl x InjectEdit.make
     Sugar.BodyGetVar       x -> editor pl (Const x) GetVarEdit.make
-    Sugar.BodyToNom        x -> NominalEdit.makeToNom x pl
+    Sugar.BodyToNom        x -> editor pl x NominalEdit.makeToNom
     Sugar.BodyFromNom      x -> editor pl (Const x) NominalEdit.makeFromNom
     Sugar.BodyFragment     x -> editor pl x FragmentEdit.make
     & Reader.local

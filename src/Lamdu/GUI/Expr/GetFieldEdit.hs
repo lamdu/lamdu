@@ -42,10 +42,9 @@ make ::
     , Has (Texts.Name Text) env
     , Has (Texts.Navigation Text) env
     ) =>
-    Sugar.GetField Name i o (ExprGui.SugarExpr i o) ->
-    Sugar.Payload Name i o ExprGui.Payload ->
+    Annotated (Sugar.Payload Name i o ExprGui.Payload) # Sugar.GetField Name i o ->
     GuiM env i o (Responsive o)
-make (Sugar.GetField recExpr tag) pl =
+make (Ann (Const pl) (Sugar.GetField recExpr tag)) =
     do
         recExprEdit <- GuiM.makeSubexpression recExpr
         env <- Lens.view id
