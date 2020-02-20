@@ -49,11 +49,11 @@ make ::
     , SearchMenu.HasTexts env
     ) =>
     ExprGui.SugarExpr i o -> GuiM env i o (Responsive o)
-make (Ann (Const pl) body) =
-    makeEditor body pl & assignCursor
+make e =
+    makeEditor e & assignCursor
     where
-        exprHiddenEntityIds = pl ^. Sugar.plData . ExprGui.plHiddenEntityIds
-        myId = WidgetIds.fromExprPayload pl
+        exprHiddenEntityIds = e ^. annotation . Sugar.plData . ExprGui.plHiddenEntityIds
+        myId = e ^. annotation & WidgetIds.fromExprPayload
         assignCursor x =
             exprHiddenEntityIds <&> WidgetIds.fromEntityId
             & foldr (`GuiState.assignCursorPrefix` const myId) x
@@ -78,10 +78,9 @@ makeEditor ::
     , TextEdit.HasTexts env
     , SearchMenu.HasTexts env
     ) =>
-    Sugar.Term Name i o # Annotated (Sugar.Payload Name i o ExprGui.Payload) ->
-    Sugar.Payload Name i o ExprGui.Payload ->
+    Annotated (Sugar.Payload Name i o ExprGui.Payload) # Sugar.Term Name i o ->
     GuiM env i o (Responsive o)
-makeEditor body pl =
+makeEditor (Ann (Const pl) body) =
     case body of
     Sugar.BodyPlaceHolder    -> placeHolder pl
     Sugar.BodyHole         x -> editor pl (Const x) HoleEdit.make
