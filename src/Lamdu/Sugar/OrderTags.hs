@@ -64,7 +64,7 @@ orderRecord (Sugar.Composite items punned tail_ addItem) =
     <$> (orderByTag (^. Sugar.ciTag . Sugar.tagRefTag) items
         >>= (traverse . Sugar.ciExpr) orderNode)
     <*> pure punned
-    <*> traverse orderNode tail_
+    <*> (Sugar._OpenComposite . _2) orderNode tail_
     <*> pure addItem
 
 instance MonadTransaction m i => Order i name o (Sugar.LabeledApply name i o) where

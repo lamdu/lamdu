@@ -27,7 +27,6 @@ module Lamdu.Sugar.Types.Parts
       Payload(..), plEntityId, plAnnotation, plNeverShrinkTypeAnnotations, plActions, plData
     , ClosedCompositeActions(..), closedCompositeOpen
     , OpenCompositeActions(..), openCompositeClose
-    , CompositeTail(..), _OpenComposite, _ClosedComposite
     , NullaryVal(..), nullaryClosedCompositeActions, nullaryAddItem
 
     , ParenInfo(..), piNeedParens, piMinOpPrec
@@ -148,11 +147,6 @@ newtype OpenCompositeActions o = OpenCompositeActions
     { _openCompositeClose :: o EntityId
     } deriving stock Generic
 
-data CompositeTail o expr
-    = OpenComposite (OpenCompositeActions o) expr
-    | ClosedComposite (ClosedCompositeActions o)
-    deriving (Functor, Foldable, Traversable, Generic)
-
 -- | The empty record in a nullary inject
 data NullaryVal name i o = NullaryVal
     { _nullaryClosedCompositeActions :: ClosedCompositeActions o
@@ -190,7 +184,6 @@ Lens.makePrisms ''AddFirstParam
 Lens.makePrisms ''AddNextParam
 Lens.makePrisms ''Annotation
 Lens.makePrisms ''BinderParams
-Lens.makePrisms ''CompositeTail
 Lens.makePrisms ''DetachAction
 Lens.makePrisms ''FuncApplyLimit
 Lens.makePrisms ''Literal
