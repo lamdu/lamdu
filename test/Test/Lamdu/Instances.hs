@@ -148,7 +148,7 @@ instance Eq n => Eq (Sugar.TagPane n Unit) where
     Sugar.TagPane t0 n0 _ _ == Sugar.TagPane t1 n1 _ _ =
         t0 == t1 && n0 == n1
 
-deriving instance (Eq a, Eq n) => Eq (Sugar.AnnotatedArg n a)
+deriving instance (Eq a, Eq n) => Eq (Sugar.AnnotatedArg n Unit Unit # Annotated a)
 deriving instance (Eq a, Eq n) => Eq (Sugar.AssignPlain n Unit Unit # Annotated a)
 deriving instance (Eq a, Eq n) => Eq (Sugar.Assignment n Unit Unit # Annotated a)
 deriving instance (Eq a, Eq n) => Eq (Sugar.Binder n Unit Unit # Annotated a)
@@ -221,7 +221,7 @@ deriving instance Eq n => Eq (Sugar.TagOption n Unit a)
 deriving instance Eq n => Eq (Sugar.TagRef n Unit Unit)
 deriving instance Eq n => Eq (Sugar.TagReplace n Unit Unit a)
 
-instance (NFData a, NFData n) => NFData (Sugar.AnnotatedArg n a)
+instance (NFData a, NFData n) => NFData (Sugar.AnnotatedArg n (T i) (T o) # Annotated a)
 instance (NFData a, NFData n) => NFData (Sugar.AssignPlain n (T i) (T o) # Annotated a)
 instance (NFData a, NFData n) => NFData (Sugar.Assignment n (T i) (T o) # Annotated a)
 instance (NFData a, NFData n) => NFData (Sugar.Binder n (T i) (T o) # Annotated a)

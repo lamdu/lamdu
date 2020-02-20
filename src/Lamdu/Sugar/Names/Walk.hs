@@ -303,13 +303,12 @@ withTagRef nameType varInfo (Sugar.TagRef info actions jumpTo) =
 
 toAnnotatedArg ::
     MonadNaming m =>
-    (a -> m b) ->
-    AnnotatedArg (OldName m) a ->
-    m (AnnotatedArg (NewName m) b)
-toAnnotatedArg expr (AnnotatedArg tag e) =
+    AnnotatedArg (OldName m) (IM m) o # Annotated (Payload (OldName m) (IM m) o a) ->
+    m (AnnotatedArg (NewName m) (IM m) o # Annotated (Payload (NewName m) (IM m) o a))
+toAnnotatedArg (AnnotatedArg tag e) =
     AnnotatedArg
     <$> toTagOf Tag tag
-    <*> expr e
+    <*> toExpression e
 
 toLabeledApply ::
     MonadNaming m =>
@@ -320,7 +319,7 @@ toLabeledApply
     LabeledApply
     <$> toNode (Lens._Wrapped (toBinderVarRef (Just (funcSignature app)))) _aFunc
     <*> traverse toExpression _aSpecialArgs
-    <*> traverse (toAnnotatedArg toExpression) _aAnnotatedArgs
+    <*> traverse toAnnotatedArg _aAnnotatedArgs
     <*> traverse (toNode (Lens._Wrapped toGetVar)) _aPunnedArgs
 
 toHole ::

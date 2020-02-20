@@ -70,17 +70,17 @@ import           Lamdu.Prelude
 
 type Expression name i o a = Annotated a # Term name i o
 
-data AnnotatedArg name expr = AnnotatedArg
+data AnnotatedArg name i o k = AnnotatedArg
     { _aaTag :: Tag name
-    , _aaExpr :: expr
-    } deriving (Functor, Foldable, Traversable, Generic)
+    , _aaExpr :: k :# Term name i o
+    } deriving Generic
 
 -- TODO: func + specialArgs into a single sum type so that field order
 -- matches gui order, no need for special traversal code
 data LabeledApply name i o k = LabeledApply
     { _aFunc :: k :# Lens.Const (BinderVarRef name o)
     , _aSpecialArgs :: Meta.SpecialArgs (k :# Term name i o)
-    , _aAnnotatedArgs :: [AnnotatedArg name (k :# Term name i o)]
+    , _aAnnotatedArgs :: [AnnotatedArg name i o k]
     , _aPunnedArgs :: [k :# Lens.Const (GetVar name o)]
     } deriving Generic
 
@@ -278,8 +278,8 @@ Lens.makePrisms ''InjectContent
 Lens.makePrisms ''Term
 
 traverse makeHTraversableAndBases
-    [ ''Assignment, ''AssignPlain, ''Binder, ''Case, ''CaseArg, ''CaseKind
-    , ''Composite, ''CompositeItem, ''CompositeTail, ''Else, ''ElseIfContent
+    [ ''AnnotatedArg, ''Assignment, ''AssignPlain, ''Binder, ''Case, ''CaseArg
+    , ''CaseKind, ''Composite, ''CompositeItem, ''CompositeTail, ''Else, ''ElseIfContent
     , ''Fragment, ''Function, ''GetField, ''IfElse, ''Inject, ''InjectContent
     , ''LabeledApply, ''Lambda, ''Let, ''Nominal, ''Term
     ] <&> concat

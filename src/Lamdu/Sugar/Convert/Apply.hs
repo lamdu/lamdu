@@ -1,3 +1,5 @@
+{-# LANGUAGE TypeFamilies #-}
+
 module Lamdu.Sugar.Convert.Apply
     ( convert
     ) where

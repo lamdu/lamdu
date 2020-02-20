@@ -25,9 +25,7 @@ type T = Transaction
 makeLabeledApply ::
     Monad m =>
     Annotated (ConvertPayload m a) # Const (Sugar.BinderVarRef InternalName (T m)) ->
-    [ Sugar.AnnotatedArg InternalName
-        (Sugar.Expression InternalName (T m) (T m) (ConvertPayload m a))
-    ] ->
+    [Sugar.AnnotatedArg InternalName (T m) (T m) # Annotated (ConvertPayload m a)] ->
     [Annotated (ConvertPayload m a) # Const (Sugar.GetVar InternalName (T m))] ->
     Input.Payload m a # Term ->
     ConvertM m
