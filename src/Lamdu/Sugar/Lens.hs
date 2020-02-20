@@ -59,12 +59,12 @@ instance SugarExpr (Function name i o) where
     isForbiddenInLightLam = Lens.has (fParams . _Params)
 
 instance SugarExpr (Binder name i o) where
-    isUnfinished (BinderExpr x) = isUnfinished x
+    isUnfinished (BinderTerm x) = isUnfinished x
     isUnfinished BinderLet{} = False
     isForbiddenInLightLam BinderLet{} = True
-    isForbiddenInLightLam (BinderExpr x) = isForbiddenInLightLam x
+    isForbiddenInLightLam (BinderTerm x) = isForbiddenInLightLam x
 
-instance SugarExpr (Body name i o) where
+instance SugarExpr (Term name i o) where
     isUnfinished BodyHole{} = True
     isUnfinished BodyFragment{} = True
     isUnfinished (BodyGetVar (GetBinder x)) = isUnfinished (Const x)
@@ -76,7 +76,7 @@ binderVarRefUnfinished :: Lens.Traversal' (BinderVarRef name m) ()
 binderVarRefUnfinished =
     bvForm . _GetDefinition . Lens.failing _DefDeleted (_DefTypeChanged . Lens.united)
 
-bodyUnfinished :: Lens.Traversal' (Body name i o # Ann a) ()
+bodyUnfinished :: Lens.Traversal' (Term name i o # Ann a) ()
 bodyUnfinished =
     _BodyHole . Lens.united
     & Lens.failing (_BodyFragment . Lens.united)
@@ -100,11 +100,11 @@ binderFuncParamActions _ (NullParam a) = pure (NullParam a)
 binderFuncParamActions f (Params ps) = (traverse . _2 . piActions) f ps <&> Params
 
 binderResultExpr ::
-    Lens.IndexedLens' (Body name i o # Annotated ())
+    Lens.IndexedLens' (Term name i o # Annotated ())
     (Annotated a # Binder name i o) a
 binderResultExpr f (Ann (Const pl) x) =
     case x of
-    BinderExpr e ->
+    BinderTerm e ->
         Lens.indexed f
         (hmap (Proxy @(Recursively HFunctor) #> hflipped %~ hmap (\_ Const{} -> Const ())) e)
         pl

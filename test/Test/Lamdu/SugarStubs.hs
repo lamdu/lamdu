@@ -166,7 +166,7 @@ def typ var tag body =
 repl :: Sugar.Expression name i o a -> Sugar.Repl name i o a
 repl (Ann (Const pl) x) =
     Sugar.Repl
-    { Sugar._replExpr = Ann (Const pl) (Sugar.BinderExpr x)
+    { Sugar._replExpr = Ann (Const pl) (Sugar.BinderTerm x)
     , Sugar._replVarInfo = Sugar.VarGeneric
     , Sugar._replResult = CurAndPrev Nothing Nothing
     }
@@ -201,7 +201,7 @@ funcExpr params (Ann (Const ba) bx) =
     , Sugar._fBodyScopes = CurAndPrev mempty mempty & Sugar.BinderBodyScope
     , Sugar._fAddFirstParam = Sugar.PrependParam tagRefReplace
     , Sugar._fParams = params <&> mkFuncParam & Sugar.Params
-    , Sugar._fBody = Ann (Const ba) (Sugar.BinderExpr bx)
+    , Sugar._fBody = Ann (Const ba) (Sugar.BinderTerm bx)
     }
 
 binderExpr ::
@@ -211,7 +211,7 @@ binderExpr ::
 binderExpr params body = funcExpr params body & Sugar.BodyFunction & node
 
 expr ::
-    Sugar.Body InternalName Identity Unit # Annotated (Sugar.Payload InternalName Identity Unit ()) ->
+    Sugar.Term InternalName Identity Unit # Annotated (Sugar.Payload InternalName Identity Unit ()) ->
     Sugar.Expression InternalName Identity Unit (Sugar.Payload InternalName Identity Unit ())
 expr = node
 

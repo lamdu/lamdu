@@ -162,7 +162,7 @@ convertBinder expr@(Ann pl body) =
                     mconcat (subexprPayloads body (x ^.. SugarLens.childPayloads))
                 )
                 & Const
-            , _hVal = BinderExpr x
+            , _hVal = BinderTerm x
             }
 
 localNewExtractDestPos ::
@@ -304,9 +304,9 @@ instance GetParam (Assignment InternalName i o) where
     getParam x = x ^? _BodyPlain . apBody >>= getParam
 
 instance GetParam (Binder InternalName i o) where
-    getParam x = x ^? _BinderExpr >>= getParam
+    getParam x = x ^? _BinderTerm >>= getParam
 
-instance GetParam (Body InternalName i o) where
+instance GetParam (Term InternalName i o) where
     getParam x = x ^? _BodyGetVar <&> Const >>= getParam
 
 allParamsUsed ::
@@ -352,10 +352,10 @@ instance MarkLightParams (Assignment InternalName i o) where
     markLightParams ps (BodyFunction x) = markLightParams ps x & BodyFunction
 
 instance MarkLightParams (Binder InternalName i o) where
-    markLightParams ps (BinderExpr x) = markLightParams ps x & BinderExpr
+    markLightParams ps (BinderTerm x) = markLightParams ps x & BinderTerm
     markLightParams ps (BinderLet x) = markLightParams ps x & BinderLet
 
-instance MarkLightParams (Body InternalName i o) where
+instance MarkLightParams (Term InternalName i o) where
     markLightParams paramNames (BodyGetVar (GetParam n))
         | paramNames ^. Lens.contains (n ^. pNameRef . nrName) =
             n

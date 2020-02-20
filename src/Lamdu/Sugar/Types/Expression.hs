@@ -6,7 +6,7 @@
 
 {-# LANGUAGE TemplateHaskell, TypeFamilies, MultiParamTypeClasses, UndecidableInstances, DataKinds, GADTs, ConstraintKinds, FlexibleInstances #-}
 module Lamdu.Sugar.Types.Expression
-    ( Body(..)
+    ( Term(..)
         , _BodyLam, _BodyLabeledApply, _BodySimpleApply
         , _BodyGetVar, _BodyGetField, _BodyInject, _BodyHole
         , _BodyLiteral, _BodyCase, _BodyRecord, _BodyFragment
@@ -28,7 +28,7 @@ module Lamdu.Sugar.Types.Expression
     , Meta.SpecialArgs(..), Meta._Verbose, Meta._Operator
     , Meta.DefinitionState(..)
     , BinderParamScopeId(..), bParamScopeId
-    , Binder(..), _BinderLet, _BinderExpr
+    , Binder(..), _BinderLet, _BinderTerm
     , Function(..)
         , fChosenScopeProp, fParams, fBody
         , fAddFirstParam, fBodyScopes
@@ -68,7 +68,7 @@ import           Lamdu.Sugar.Types.Type
 
 import           Lamdu.Prelude
 
-type Expression name i o a = Annotated a # Body name i o
+type Expression name i o a = Annotated a # Term name i o
 
 data AnnotatedArg name expr = AnnotatedArg
     { _aaTag :: Tag name
@@ -79,14 +79,14 @@ data AnnotatedArg name expr = AnnotatedArg
 -- matches gui order, no need for special traversal code
 data LabeledApply name i o k = LabeledApply
     { _aFunc :: k :# Lens.Const (BinderVarRef name o)
-    , _aSpecialArgs :: Meta.SpecialArgs (k :# Body name i o)
-    , _aAnnotatedArgs :: [AnnotatedArg name (k :# Body name i o)]
+    , _aSpecialArgs :: Meta.SpecialArgs (k :# Term name i o)
+    , _aAnnotatedArgs :: [AnnotatedArg name (k :# Term name i o)]
     , _aPunnedArgs :: [k :# Lens.Const (GetVar name o)]
     } deriving Generic
 
 data InjectContent name i o k
     = InjectNullary (k :# Lens.Const (NullaryVal name i o))
-    | InjectVal (k :# Body name i o)
+    | InjectVal (k :# Term name i o)
     deriving Generic
 
 data Inject name i o f = Inject
@@ -95,7 +95,7 @@ data Inject name i o f = Inject
     } deriving Generic
 
 data GetField name i o k = GetField
-    { _gfRecord :: k :# Body name i o
+    { _gfRecord :: k :# Term name i o
     , _gfTag :: TagRef name i o
     } deriving Generic
 
@@ -108,7 +108,7 @@ data Lambda name i o f = Lambda
 -- | An expression marked for transformation.
 -- Holds an expression to be transformed but acts like a hole.
 data Fragment name i o k = Fragment
-    { _fExpr :: k :# Body name i o
+    { _fExpr :: k :# Term name i o
     , _fHeal :: o EntityId
     , _fTypeMismatch :: Maybe (Annotated EntityId # Type name)
     , _fOptions :: i [HoleOption name i o]
@@ -143,24 +143,24 @@ data ElseIfContent name i o f = ElseIfContent
     } deriving Generic
 
 data Else name i o f
-    = SimpleElse (Body name i o f)
+    = SimpleElse (Term name i o f)
     | ElseIf (ElseIfContent name i o f)
     deriving Generic
 
 data IfElse name i o k = IfElse
-    { _iIf :: k :# Body name i o
-    , _iThen :: k :# Body name i o
+    { _iIf :: k :# Term name i o
+    , _iThen :: k :# Term name i o
     , _iElse :: k :# Else name i o
     } deriving Generic
 
 data CompositeItem name i o k = CompositeItem
     { _ciDelete :: o EntityId
     , _ciTag :: TagRef name i o
-    , _ciExpr :: k :# Body name i o
+    , _ciExpr :: k :# Term name i o
     } deriving Generic
 
 data CompositeTail name i o k
-    = OpenComposite (OpenCompositeActions o) (k :# Body name i o)
+    = OpenComposite (OpenCompositeActions o) (k :# Term name i o)
     | ClosedComposite (ClosedCompositeActions o)
     deriving Generic
 
@@ -173,7 +173,7 @@ data Composite name i o k = Composite
     } deriving Generic
 
 data CaseArg name i o k = CaseArg
-    { _caVal :: k :# Body name i o
+    { _caVal :: k :# Term name i o
     , _caToLambdaCase :: o EntityId
     } deriving Generic
 
@@ -192,9 +192,9 @@ data Nominal name i o k = Nominal
     , _nVal :: k :# Binder name i o
     } deriving Generic
 
-data Body name i o k
+data Term name i o k
     = BodyLam (Lambda name i o k)
-    | BodySimpleApply (App (Body name i o) k)
+    | BodySimpleApply (App (Term name i o) k)
     | BodyLabeledApply (LabeledApply name i o k)
     | BodyHole (Hole name i o)
     | BodyLiteral (Literal (Property o))
@@ -228,7 +228,7 @@ data Let name i o k = Let
 -- * Let-item/redex: "let x = y in [[THIS]]"
 data Binder name i o f
     = BinderLet (Let name i o f)
-    | BinderExpr (Body name i o f)
+    | BinderTerm (Term name i o f)
     deriving Generic
 
 data Function name i o k = Function
@@ -273,44 +273,44 @@ Lens.makeLenses ''Let
 Lens.makeLenses ''Nominal
 Lens.makePrisms ''Assignment
 Lens.makePrisms ''Binder
-Lens.makePrisms ''Body
 Lens.makePrisms ''Else
 Lens.makePrisms ''InjectContent
+Lens.makePrisms ''Term
 
 traverse makeHTraversableAndBases
-    [ ''Assignment, ''AssignPlain, ''Body, ''Binder, ''Case, ''CaseArg, ''CaseKind
+    [ ''Assignment, ''AssignPlain, ''Binder, ''Case, ''CaseArg, ''CaseKind
     , ''Composite, ''CompositeItem, ''CompositeTail, ''Else, ''ElseIfContent
     , ''Fragment, ''Function, ''GetField, ''IfElse, ''Inject, ''InjectContent
-    , ''LabeledApply, ''Lambda, ''Let, ''Nominal
+    , ''LabeledApply, ''Lambda, ''Let, ''Nominal, ''Term
     ] <&> concat
 
 -- TODO: Replace boilerplate below with TH
 
 instance RNodes (Assignment name i o)
-instance RNodes (Body name i o)
 instance RNodes (Binder name i o)
 instance RNodes (Else name i o)
 instance RNodes (Function name i o)
+instance RNodes (Term name i o)
 
 type Dep c name i o =
     ( (c (Assignment name i o) :: Constraint)
-    , c (Body name i o)
     , c (Binder name i o)
     , c (Const (BinderVarRef name o))
     , c (Const (NullaryVal name i o))
     , c (Const (GetVar name o))
     , c (Else name i o)
     , c (Function name i o)
+    , c (Term name i o)
     )
 
 instance Dep c name i o => Recursively c (Assignment name i o)
-instance Dep c name i o => Recursively c (Body name i o)
 instance Dep c name i o => Recursively c (Binder name i o)
 instance Dep c name i o => Recursively c (Else name i o)
 instance Dep c name i o => Recursively c (Function name i o)
+instance Dep c name i o => Recursively c (Term name i o)
 
 instance RTraversable (Assignment name i o)
-instance RTraversable (Body name i o)
 instance RTraversable (Binder name i o)
 instance RTraversable (Else name i o)
 instance RTraversable (Function name i o)
+instance RTraversable (Term name i o)

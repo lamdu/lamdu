@@ -11,7 +11,7 @@ import           Hyper
 import           Hyper.Type.Functor
 import qualified Lamdu.Annotations as Annotations
 import qualified Lamdu.Cache as Cache
-import           Lamdu.Calc.Term (Term)
+import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
 import           Lamdu.Data.Anchors (Code(..))
 import qualified Lamdu.Data.Anchors as Anchors
@@ -67,13 +67,13 @@ validateHiddenEntityIds workArea
         hiddenAndExplicit = Set.intersection explicitEntityIds hiddenEntityIds
 
 data PaneLowLevel
-    = PaneDefLowLevel (Def.Definition (Ann (HRef ViewM) # Term) (DefI ViewM))
+    = PaneDefLowLevel (Def.Definition (Ann (HRef ViewM) # V.Term) (DefI ViewM))
     | PaneTagLowLevel T.Tag
 
 Lens.makePrisms ''PaneLowLevel
 
 data WorkAreaLowLevel = WorkAreaLowLevel
-    { wallRepl :: Def.Expr (Ann (HRef ViewM) # Term)
+    { wallRepl :: Def.Expr (Ann (HRef ViewM) # V.Term)
     , wallPanes :: [PaneLowLevel]
     }
 

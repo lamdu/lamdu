@@ -62,8 +62,8 @@ test =
 
 replExpr ::
     Lens.Traversal' (Sugar.WorkArea name i o a)
-    (Sugar.Body name i o # Annotated a)
-replExpr = Sugar.waRepl . Sugar.replExpr . hVal . Sugar._BinderExpr
+    (Sugar.Term name i o # Annotated a)
+replExpr = Sugar.waRepl . Sugar.replExpr . hVal . Sugar._BinderTerm
 
 wideFocused :: Lens.Traversal' (Responsive f) (Widget.Surrounding -> Widget.Focused (f GuiState.Update))
 wideFocused = Responsive.rWide . Align.tValue . Widget.wState . Widget._StateFocused

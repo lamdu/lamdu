@@ -219,7 +219,7 @@ toBinder ::
     Binder (OldName m) (IM m) o # Annotated (Payload (OldName m) (IM m) o a) ->
     m (Binder (NewName m) (IM m) o # Annotated (Payload (NewName m) (IM m) o a))
 toBinder (BinderLet l) = toLet l <&> BinderLet
-toBinder (BinderExpr e) = toBody e <&> BinderExpr
+toBinder (BinderTerm e) = toBody e <&> BinderTerm
 
 toAddFirstParam ::
     MonadNaming m =>
@@ -424,8 +424,8 @@ toIfElse (IfElse i t e) =
 
 toBody ::
     MonadNaming m =>
-    Body (OldName m) (IM m) o # Annotated (Payload (OldName m) (IM m) o a) ->
-    m (Body (NewName m) (IM m) o # Annotated (Payload (NewName m) (IM m) o a))
+    Term (OldName m) (IM m) o # Annotated (Payload (OldName m) (IM m) o a) ->
+    m (Term (NewName m) (IM m) o # Annotated (Payload (NewName m) (IM m) o a))
 toBody =
     \case
     BodyGetField     x -> x & toGetField <&> BodyGetField

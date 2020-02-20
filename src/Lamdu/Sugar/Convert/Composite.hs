@@ -68,7 +68,7 @@ convertExtend ::
     Monad m =>
     (T.Tag -> ValI m -> ValI m -> ExprIRef.ValBody m) ->
     (T.Tag -> ValI m -> T m (DataOps.CompositeExtendResult m)) ->
-    Annotated b # Body InternalName (T m) (T m) ->
+    Annotated b # Term InternalName (T m) (T m) ->
     Input.Payload m a # V.Term ->
     ExtendVal m (Input.Payload m a # V.Term) ->
     Composite InternalName (T m) (T m) # Annotated b ->
@@ -101,8 +101,8 @@ convertOneItemOpenComposite ::
     V.Leaf ->
     (T.Tag -> ValI m -> ValI m -> ExprIRef.ValBody m) ->
     (T.Tag -> ValI m -> T m (DataOps.CompositeExtendResult m)) ->
-    k # Body InternalName (T m) (T m) ->
-    k # Body InternalName (T m) (T m) ->
+    k # Term InternalName (T m) (T m) ->
+    k # Term InternalName (T m) (T m) ->
     Input.Payload m a # V.Term ->
     ExtendVal m (Input.Payload m a # V.Term) ->
     ConvertM m (Composite InternalName (T m) (T m) # k)
@@ -160,7 +160,7 @@ convertItem ::
     Monad m =>
     (T.Tag -> ValI m -> ValI m -> ExprIRef.ValBody m) ->
     HRef m # V.Term ->
-    EntityId -> Set T.Tag -> h # Body InternalName (T m) (T m) ->
+    EntityId -> Set T.Tag -> h # Term InternalName (T m) (T m) ->
     -- Using tuple in place of shared RecExtend/Case structure (no such in lamdu-calculus)
     ExtendVal m (ValI m) ->
     ConvertM m (CompositeItem InternalName (T m) (T m) # h)
@@ -185,7 +185,7 @@ convertItem cons stored inst forbiddenTags exprS extendVal =
 
 type BodyPrism m a =
     Lens.Prism'
-    (Body InternalName (T m) (T m) # Annotated (ConvertPayload m a))
+    (Term InternalName (T m) (T m) # Annotated (ConvertPayload m a))
     (Composite InternalName (T m) (T m) # Annotated (ConvertPayload m a))
 
 convert ::

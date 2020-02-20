@@ -79,13 +79,13 @@ testSugarActions program actions =
 replBinder :: Lens.Traversal' (WorkArea name i o a) (Binder name i o # Annotated a)
 replBinder = waRepl . replExpr . hVal
 
-replBody :: Lens.Traversal' (WorkArea name i o a) (Body name i o # Annotated a)
-replBody = replBinder . _BinderExpr
+replBody :: Lens.Traversal' (WorkArea name i o a) (Term name i o # Annotated a)
+replBody = replBinder . _BinderTerm
 
 replLet :: Lens.Traversal' (WorkArea name i o a) (Let name i o # Annotated a)
 replLet = replBinder . _BinderLet
 
-lamFirstParam :: Lens.Traversal' (Body name i o a) (FuncParam name i, ParamInfo name i o)
+lamFirstParam :: Lens.Traversal' (Term name i o a) (FuncParam name i, ParamInfo name i o)
 lamFirstParam = _BodyLam . lamFunc . fParams . _Params . Lens.ix 0
 
 testUnnamed :: Test
@@ -97,7 +97,6 @@ testUnnamed =
             case workArea ^?! replBody . _BodyGetVar . _GetBinder . bvNameRef . nrName of
             Unnamed{} -> pure ()
             _ -> fail "Unexpected name"
-
 
 -- | Test for issue #374
 -- https://trello.com/c/CDLdSlj7/374-changing-tag-results-in-inference-error
@@ -153,7 +152,7 @@ testInline =
         inline workArea =
             do
                 yOption <-
-                    letItem ^. lBody . hVal . _BinderExpr . _BodyHole
+                    letItem ^. lBody . hVal . _BinderTerm . _BodyHole
                     . holeOptions
                     >>= findM isY
                     <&> fromMaybe (error "expected option")
@@ -166,7 +165,7 @@ testInline =
                 result <- mkResult
                 result ^. holeResultPick
                 _ <-
-                    result ^?! holeResultConverted . hVal . _BinderExpr
+                    result ^?! holeResultConverted . hVal . _BinderTerm
                     . _BodyGetVar . _GetBinder . bvInline . _InlineVar
                 pure ()
             where
@@ -177,14 +176,14 @@ testInline =
                 isY option =
                     option ^. hoSugaredBaseExpr
                     <&> Lens.has
-                    (hVal . _BinderExpr . _BodyGetVar . _GetBinder .
+                    (hVal . _BinderTerm . _BodyGetVar . _GetBinder .
                         bvForm . _GetLet)
         verify workArea
             | Lens.has afterInline workArea = pure ()
             | otherwise = fail "Expected inline result"
         afterInline =
             replBody . _BodyLam . lamFunc . fBody .
-            hVal . _BinderExpr . _BodyLiteral . _LiteralNum
+            hVal . _BinderTerm . _BodyLiteral . _LiteralNum
 
 findM :: Monad m => (a -> m Bool) -> [a] -> m (Maybe a)
 findM _ [] = pure Nothing
@@ -264,18 +263,18 @@ testInsistFactorial =
             waPanes . traverse . paneBody . _PaneDefinition .
             drBody . _DefinitionBodyExpression . deContent .
             hVal . _BodyFunction . fBody .
-            hVal . _BinderExpr . _BodyIfElse
+            hVal . _BinderTerm . _BodyIfElse
         insist =
             Lens.cloneTraversal ifElse . iThen .
             hVal . _BodyLam . lamFunc . fBody .
-            hVal . _BinderExpr . _BodyFragment . fHeal
+            hVal . _BinderTerm . _BodyFragment . fHeal
         verify workArea
             | Lens.has unexpected workArea = fail "fragment created at unexpected position"
             | otherwise = pure ()
         unexpected =
             Lens.cloneTraversal ifElse . iElse .
             hVal . _SimpleElse . _BodyLam . lamFunc . fBody .
-            hVal . _BinderExpr . _BodySimpleApply . appFunc .
+            hVal . _BinderTerm . _BodySimpleApply . appFunc .
             hVal . _BodyFragment
 
 testInsistEq :: Test
@@ -307,14 +306,14 @@ testInsistIf =
         insist =
             replBody . _BodyIfElse . iThen .
             hVal . _BodyLam . lamFunc . fBody .
-            hVal . _BinderExpr . _BodyFragment . fHeal
+            hVal . _BinderTerm . _BodyFragment . fHeal
         verify workArea
             | Lens.has expected workArea = pure ()
             | otherwise = fail "fragment not created at expected position"
         expected =
             replBody . _BodyIfElse . iElse .
             hVal . _SimpleElse . _BodyLam . lamFunc . fBody .
-            hVal . _BinderExpr . _BodyFragment
+            hVal . _BinderTerm . _BodyFragment
 
 testInsistSubsets :: Test
 testInsistSubsets =
@@ -330,16 +329,16 @@ testInsistSubsets =
             waPanes . traverse . paneBody . _PaneDefinition .
             drBody . _DefinitionBodyExpression . deContent .
             hVal . _BodyFunction . fBody .
-            hVal . _BinderExpr . _BodyCase . cBody . cItems . Lens.ix 1 . ciExpr .
+            hVal . _BinderTerm . _BodyCase . cBody . cItems . Lens.ix 1 . ciExpr .
             hVal . _BodyLam . lamFunc . fBody .
-            hVal . _BinderExpr . _BodyLabeledApply . aSpecialArgs . _Operator
+            hVal . _BinderTerm . _BodyLabeledApply . aSpecialArgs . _Operator
         insist =
             Lens.cloneTraversal consArgs . Lens._2 .
             hVal . _BodyLam . lamFunc . fBody .
             hVal . _BinderLet . lBody .
-            hVal . _BinderExpr . _BodyLabeledApply . aSpecialArgs . _Operator . Lens._2 .
+            hVal . _BinderTerm . _BodyLabeledApply . aSpecialArgs . _Operator . Lens._2 .
             hVal . _BodyLam . lamFunc . fBody .
-            hVal . _BinderExpr . _BodyLabeledApply . aSpecialArgs . _Operator . Lens._1 .
+            hVal . _BinderTerm . _BodyLabeledApply . aSpecialArgs . _Operator . Lens._1 .
             hVal . _BodyFragment . fHeal
         verify workArea
             | Lens.has expected workArea = pure ()
@@ -391,7 +390,7 @@ updateDef =
             waPanes . traverse . paneBody . _PaneDefinition .
             drBody . _DefinitionBodyExpression . deContent .
             hVal . _BodyFunction . fBody .
-            hVal . _BinderExpr . _BodyLabeledApply . aFunc .
+            hVal . _BinderTerm . _BodyLabeledApply . aFunc .
             hVal . Lens._Wrapped . bvForm . _GetDefinition . _DefTypeChanged . defTypeUseCurrent
 
 testReplaceParent :: Test
@@ -458,7 +457,7 @@ testFloatToRepl =
         innerLet ::
             Lens.Traversal' (WorkArea name i o a) (Annotated a # Assignment name i o)
         innerLet = replLet . lBody . hVal . _BinderLet . lValue
-        literalVal = hVal . _BodyPlain . apBody . _BinderExpr . _BodyLiteral . _LiteralNum . Property.pVal
+        literalVal = hVal . _BodyPlain . apBody . _BinderTerm . _BodyLiteral . _LiteralNum . Property.pVal
 
 testCreateLetInLetVal :: Test
 testCreateLetInLetVal =

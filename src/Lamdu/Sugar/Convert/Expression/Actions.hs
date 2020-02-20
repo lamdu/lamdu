@@ -188,7 +188,7 @@ makeActions exprPl =
 
 fragmentAnnIndex ::
     (Applicative f, Lens.Indexable j p) =>
-    p a (f a) -> Lens.Indexed (Body name i o # Annotated j) a (f a)
+    p a (f a) -> Lens.Indexed (Term name i o # Annotated j) a (f a)
 fragmentAnnIndex = Lens.filteredByIndex (_BodyFragment . fExpr . annotation)
 
 bodyIndex ::
@@ -208,10 +208,10 @@ instance FixReplaceParent (Const a) where
 -- TODO: These instances have a repeating pattern
 instance FixReplaceParent (Binder name i o) where
     fixReplaceParent setToExpr =
-        (hVal . _BinderExpr . typeMismatchPayloads %~ join setToExpr) .
-        ((bodyIndex . Lens.filteredByIndex _BinderExpr . fragmentAnnIndex) <. annotation %@~ setToExpr)
+        (hVal . _BinderTerm . typeMismatchPayloads %~ join setToExpr) .
+        ((bodyIndex . Lens.filteredByIndex _BinderTerm . fragmentAnnIndex) <. annotation %@~ setToExpr)
 
-instance FixReplaceParent (Body name i o) where
+instance FixReplaceParent (Term name i o) where
     fixReplaceParent setToExpr =
         (hVal . typeMismatchPayloads %~ join setToExpr) .
         ((bodyIndex . fragmentAnnIndex) <. annotation %@~ setToExpr)
@@ -224,7 +224,7 @@ instance FixReplaceParent (Else name i o) where
 -- TODO: This is an indexed lens of some sort?
 typeMismatchPayloads ::
     (a -> Identity a) ->
-    Body name i o # Annotated a -> Identity (Body name i o # Annotated a)
+    Term name i o # Annotated a -> Identity (Term name i o # Annotated a)
 typeMismatchPayloads =
     _BodyFragment . Lens.filteredBy (fTypeMismatch . Lens._Just) . fExpr .
     annotation
@@ -233,8 +233,8 @@ setChildReplaceParentActions ::
     Monad m =>
     ConvertM m (
         ExprIRef.HRef m # V.Term ->
-        Body name (T m) (T m) # Annotated (ConvertPayload m a) ->
-        Body name (T m) (T m) # Annotated (ConvertPayload m a)
+        Term name (T m) (T m) # Annotated (ConvertPayload m a) ->
+        Term name (T m) (T m) # Annotated (ConvertPayload m a)
     )
 setChildReplaceParentActions =
     ConvertM.typeProtectedSetToVal
@@ -278,7 +278,7 @@ subexprPayloads subexprs cullPoints =
 addActionsWith ::
     Monad m =>
     a -> Input.Payload m b # V.Term ->
-    Body InternalName (T m) (T m) # Annotated (ConvertPayload m a) ->
+    Term InternalName (T m) (T m) # Annotated (ConvertPayload m a) ->
     ConvertM m (ExpressionU m a)
 addActionsWith userData exprPl bodyS =
     do
@@ -296,7 +296,7 @@ addActionsWith userData exprPl bodyS =
 addActions ::
     (Monad m, Monoid a, Recursively HFoldable h) =>
     h # Ann (Input.Payload m a) -> Input.Payload m a # V.Term ->
-    Body InternalName (T m) (T m) # Annotated (ConvertPayload m a) ->
+    Term InternalName (T m) (T m) # Annotated (ConvertPayload m a) ->
     ConvertM m (ExpressionU m a)
 addActions subexprs exprPl bodyS =
     addActionsWith (mconcat (subexprPayloads subexprs (bodyS ^.. childPayloads)))

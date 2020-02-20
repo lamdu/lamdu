@@ -18,7 +18,7 @@ import           Hyper.Infer (InferOf)
 import qualified Lamdu.Annotations as Annotations
 import qualified Lamdu.Cache as Cache
 import qualified Lamdu.Calc.Lens as ExprLens
-import           Lamdu.Calc.Term (Term)
+import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Definition as Definition
@@ -103,7 +103,7 @@ convertInferDefExpr ::
     , Has Config env, Has Cache.Functions env, Has Annotations.Mode env
     ) =>
     env -> Anchors.CodeAnchors m ->
-    Pure # T.Scheme -> Definition.Expr (Ann (HRef m) # Term) -> DefI m ->
+    Pure # T.Scheme -> Definition.Expr (Ann (HRef m) # V.Term) -> DefI m ->
     T m (DefinitionBody InternalName (T m) (T m) (Payload InternalName (T m) (T m) [EntityId]))
 convertInferDefExpr env cp defType defExpr defI =
     do
@@ -161,7 +161,7 @@ convertDefBody ::
     , Has Config env, Has Cache.Functions env, Has Annotations.Mode env
     ) =>
     env -> Anchors.CodeAnchors m ->
-    Definition.Definition (Ann (HRef m) # Term) (DefI m) ->
+    Definition.Definition (Ann (HRef m) # V.Term) (DefI m) ->
     T m
     (DefinitionBody InternalName (T m) (T m) (Payload InternalName (T m) (T m) [EntityId]))
 convertDefBody env cp (Definition.Definition bod defType defI) =

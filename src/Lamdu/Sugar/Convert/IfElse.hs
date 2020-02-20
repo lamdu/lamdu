@@ -51,7 +51,7 @@ convertIfElse setToVal caseBody =
             , _iElse =
                 case altFalse ^@?
                      ciExpr . hVal . _BodyLam . lamFunc . Lens.selfIndex
-                     <. (fBody . hVal . _BinderExpr . _BodyIfElse)
+                     <. (fBody . hVal . _BinderTerm . _BodyIfElse)
                 of
                 Just (binder, innerIfElse) ->
                     ElseIf ElseIfContent
@@ -67,7 +67,7 @@ convertIfElse setToVal caseBody =
                 Nothing ->
                     altFalse ^. ciExpr . hVal
                     & _BodyHole . holeMDelete ?~ elseDel
-                    & _BodyLam . lamFunc . fBody . hVal . _BinderExpr .
+                    & _BodyLam . lamFunc . fBody . hVal . _BinderTerm .
                         _BodyHole . holeMDelete ?~ elseDel
                     & SimpleElse
                 & Ann (Const (altFalse ^. ciExpr . annotation))
@@ -76,6 +76,6 @@ convertIfElse setToVal caseBody =
                 elseDel = setToVal (delTarget altTrue) <&> EntityId.ofValI
                 delTarget alt =
                     alt ^? ciExpr . hVal . _BodyLam . lamFunc . fBody
-                    . Lens.filteredBy (hVal . _BinderExpr) . annotation
+                    . Lens.filteredBy (hVal . _BinderTerm) . annotation
                     & fromMaybe (alt ^. ciExpr . annotation)
                     & (^. pInput . Input.stored . iref)

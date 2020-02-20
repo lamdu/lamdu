@@ -71,8 +71,8 @@ class MarkAnnotations (t :: AHyperType -> *) where
     markAnnotations :: t # Annotated a -> (ShowAnnotation, t # Annotated (ShowAnnotation, a))
 
 instance MarkAnnotations (Binder name i o) where
-    markAnnotations (BinderExpr body) =
-        markBodyAnnotations body & _2 %~ BinderExpr
+    markAnnotations (BinderTerm body) =
+        markBodyAnnotations body & _2 %~ BinderTerm
     markAnnotations (BinderLet let_) =
         ( neverShowAnnotations
         , hmap (Proxy @MarkAnnotations #> markNodeAnnotations) let_
@@ -102,12 +102,12 @@ instance MarkAnnotations (Else name i o) where
 instance MarkAnnotations (Const a) where
     markAnnotations (Const x) = (neverShowAnnotations, Const x)
 
-instance MarkAnnotations (Body name i o) where
+instance MarkAnnotations (Term name i o) where
     markAnnotations = markBodyAnnotations
 
 markBodyAnnotations ::
-    Body name i o # Annotated a ->
-    (ShowAnnotation, Body name i o # Annotated (ShowAnnotation, a))
+    Term name i o # Annotated a ->
+    (ShowAnnotation, Term name i o # Annotated (ShowAnnotation, a))
 markBodyAnnotations oldBody =
     case newBody of
     BodyPlaceHolder -> set neverShowAnnotations

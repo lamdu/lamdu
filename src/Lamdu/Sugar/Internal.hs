@@ -13,7 +13,7 @@ import qualified Control.Lens as Lens
 import           Control.Monad.Transaction (MonadTransaction, getP)
 import           Data.UUID.Types (UUID)
 import           Hyper
-import           Lamdu.Calc.Term (Term)
+import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Data.Anchors as Anchors
 import           Lamdu.Expr.IRef (HRef)
@@ -30,7 +30,7 @@ type T = Transaction
 
 data ConvertPayload m a = ConvertPayload
     { -- Stored of top-level subtree for sugar expression subtree
-      _pInput :: Input.Payload m a # Term
+      _pInput :: Input.Payload m a # V.Term
     , _pActions :: NodeActions InternalName (T m) (T m)
     }
 
@@ -84,7 +84,7 @@ type ExpressionU m a = Expression InternalName (T m) (T m) (ConvertPayload m a)
 
 replaceWith ::
     Monad m =>
-    HRef m # Term -> HRef m # Term ->
+    HRef m # V.Term -> HRef m # V.Term ->
     T m EntityId
 replaceWith parentP replacerP =
     EntityId.ofValI replacerI <$ (parentP ^. ExprIRef.setIref) replacerI

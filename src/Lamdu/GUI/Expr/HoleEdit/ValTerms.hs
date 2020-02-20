@@ -51,7 +51,7 @@ ofBody ::
     ( Has (Texts.Code Text) env
     , Has (Texts.CodeUI Text) env
     ) =>
-    env -> Body Name i o # Annotated a -> [Text]
+    env -> Term Name i o # Annotated a -> [Text]
 ofBody env =
     \case
     BodyLam {} ->
@@ -120,7 +120,7 @@ binder ::
     ) =>
     env -> Binder Name i o # Annotated a -> [Text]
 binder env BinderLet{} = [env ^. has . Texts.let_]
-binder env (BinderExpr x) = ofBody env x
+binder env (BinderTerm x) = ofBody env x
 
 type Suffix = Char
 
@@ -168,7 +168,7 @@ allowedFragmentSearchTerm searchTerm =
 -- the search term is a remainder and which belongs inside the hole
 -- result expr
 getSearchStringRemainder ::
-    SearchMenu.ResultsContext -> Body name i o # Ann a -> Text
+    SearchMenu.ResultsContext -> Term name i o # Ann a -> Text
 getSearchStringRemainder ctx holeResult
     | isA _BodyInject = ""
       -- NOTE: This is wrong for operator search terms like ".." which
@@ -185,7 +185,7 @@ getSearchStringRemainder ctx holeResult
         fragmentExpr = _BodyFragment . fExpr
         isA x = any (`Lens.has` holeResult) [x, fragmentExpr . hVal . x]
 
-verifyInjectSuffix :: Text -> Body name i o f -> Bool
+verifyInjectSuffix :: Text -> Term name i o f -> Bool
 verifyInjectSuffix searchTerm x =
     case suffix of
     Just ':' | Lens.has (injectContent . _InjectNullary) x -> False

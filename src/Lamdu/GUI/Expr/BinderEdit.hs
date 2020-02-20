@@ -112,7 +112,7 @@ make ::
     ) =>
     Annotated (Sugar.Payload Name i o ExprGui.Payload) # Sugar.Binder Name i o ->
     GuiM env i o (Responsive o)
-make (Ann (Const pl) (Sugar.BinderExpr assignmentBody)) =
+make (Ann (Const pl) (Sugar.BinderTerm assignmentBody)) =
     Ann (Const pl) assignmentBody & GuiM.makeSubexpression
 make (Ann (Const pl) (Sugar.BinderLet l)) =
     do
