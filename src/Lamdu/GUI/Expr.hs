@@ -84,19 +84,22 @@ makeEditor ::
 makeEditor body pl =
     case body of
     Sugar.BodyPlaceHolder    -> placeHolder pl
-    Sugar.BodyHole         x -> HoleEdit.make         x pl
-    Sugar.BodyLabeledApply x -> ApplyEdit.makeLabeled x pl
-    Sugar.BodySimpleApply  x -> ApplyEdit.makeSimple  x pl
-    Sugar.BodyLam          x -> LambdaEdit.make       x pl
-    Sugar.BodyLiteral      x -> LiteralEdit.make      x pl
-    Sugar.BodyRecord       x -> RecordEdit.make       x pl
-    Sugar.BodyCase         x -> CaseEdit.make         x pl
-    Sugar.BodyIfElse       x -> IfElseEdit.make       x pl
+    Sugar.BodyHole         x -> editor pl (Const x) HoleEdit.make
+    Sugar.BodyLabeledApply x -> editor pl x ApplyEdit.makeLabeled
+    Sugar.BodySimpleApply  x -> editor pl x ApplyEdit.makeSimple
+    Sugar.BodyLam          x -> editor pl x LambdaEdit.make
+    Sugar.BodyLiteral      x -> editor pl (Const x) LiteralEdit.make
+    Sugar.BodyRecord       x -> editor pl x RecordEdit.make
+    Sugar.BodyCase         x -> editor pl x CaseEdit.make
+    Sugar.BodyIfElse       x -> editor pl x IfElseEdit.make
     Sugar.BodyGetField     x -> GetFieldEdit.make     x pl
-    Sugar.BodyInject       x -> InjectEdit.make       x pl
-    Sugar.BodyGetVar       x -> GetVarEdit.make       x pl
+    Sugar.BodyInject       x -> editor pl x InjectEdit.make
+    Sugar.BodyGetVar       x -> editor pl (Const x) GetVarEdit.make
     Sugar.BodyToNom        x -> NominalEdit.makeToNom x pl
-    Sugar.BodyFromNom      x -> NominalEdit.makeFromNom x pl
-    Sugar.BodyFragment     x -> FragmentEdit.make     x pl
+    Sugar.BodyFromNom      x -> editor pl (Const x) NominalEdit.makeFromNom
+    Sugar.BodyFragment     x -> editor pl x FragmentEdit.make
     & Reader.local
         (Element.animIdPrefix .~ Widget.toAnimId (WidgetIds.fromExprPayload pl))
+
+editor :: a -> h # Annotated a -> (Annotated a # h -> r) -> r
+editor pl x f = Ann (Const pl) x & f

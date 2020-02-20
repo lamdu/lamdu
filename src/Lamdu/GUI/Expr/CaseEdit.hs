@@ -80,10 +80,9 @@ make ::
     , Has (Texts.Name Text) env
     , Has (Texts.Navigation Text) env
     ) =>
-    Sugar.Case Name i o # Annotated (Sugar.Payload Name i o ExprGui.Payload) ->
-    Sugar.Payload Name i o ExprGui.Payload ->
+    Annotated (Sugar.Payload Name i o ExprGui.Payload) # Sugar.Case Name i o ->
     GuiM env i o (Responsive o)
-make (Sugar.Case mArg (Sugar.Composite alts punned caseTail addAlt)) pl =
+make (Ann (Const pl) (Sugar.Case mArg (Sugar.Composite alts punned caseTail addAlt))) =
     do
         env <- Lens.view id
         mActiveTag <-

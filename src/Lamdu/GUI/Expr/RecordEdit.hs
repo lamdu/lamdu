@@ -132,10 +132,9 @@ make ::
     , Has (Texts.Name Text) env
     , Has (Texts.Navigation Text) env
     ) =>
-    Sugar.Composite Name i o # Annotated (Sugar.Payload Name i o ExprGui.Payload) ->
-    Sugar.Payload Name i o ExprGui.Payload ->
+    Annotated (Sugar.Payload Name i o ExprGui.Payload) # Sugar.Composite Name i o ->
     GuiM env i o (Responsive o)
-make (Sugar.Composite [] [] Sugar.ClosedComposite{} addField) pl =
+make (Ann (Const pl) (Sugar.Composite [] [] Sugar.ClosedComposite{} addField)) =
     -- Ignore the ClosedComposite actions - it only has the open
     -- action which is equivalent ot deletion on the unit record
     do
@@ -145,7 +144,7 @@ make (Sugar.Composite [] [] Sugar.ClosedComposite{} addField) pl =
                 makeAddFieldRow addField pl <&> (:[]) >>= makeRecord pure
                 & stdWrapParentExpr pl
             else makeUnit pl
-make (Sugar.Composite fields punned recordTail addField) pl =
+make (Ann (Const pl) (Sugar.Composite fields punned recordTail addField)) =
     do
         addFieldEventMap <- mkAddFieldEventMap (WidgetIds.fromExprPayload pl)
         tailEventMap <-

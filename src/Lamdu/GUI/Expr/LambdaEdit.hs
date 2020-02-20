@@ -158,14 +158,13 @@ make ::
     , Has (Texts.Name Text) env
     , Has (Texts.Navigation Text) env
     ) =>
-    Sugar.Lambda Name i o # Annotated (Sugar.Payload Name i o ExprGui.Payload) ->
-    Sugar.Payload Name i o ExprGui.Payload ->
+    Annotated (Sugar.Payload Name i o ExprGui.Payload) # Sugar.Lambda Name i o ->
     GuiM env i o (Responsive o)
-make lam pl =
+make (Ann (Const pl) lam) =
     do
         AssignmentEdit.Parts mParamsEdit mScopeEdit bodyEdit eventMap _wrap rhsId <-
             AssignmentEdit.makeFunctionParts (lam ^. Sugar.lamApplyLimit)
-            func pl (WidgetIds.fromEntityId bodyId)
+            (Ann (Const pl) func) (WidgetIds.fromEntityId bodyId)
         rhsJumperEquals <- AssignmentEdit.makeJumpToRhs rhsId
         paramsAndLabelEdits <-
             case (lam ^. Sugar.lamMode, params) of

@@ -178,10 +178,9 @@ make ::
     , Has (Texts.Name Text) env
     , Has (Texts.Navigation Text) env
     ) =>
-    Sugar.IfElse Name i o # Annotated (Sugar.Payload Name i o ExprGui.Payload) ->
-    Sugar.Payload Name i o ExprGui.Payload ->
+    Annotated (Sugar.Payload Name i o ExprGui.Payload) # Sugar.IfElse Name i o ->
     GuiM env i o (Responsive o)
-make ifElse pl =
+make (Ann (Const pl) ifElse) =
     renderRows (ExprGui.mParensId pl)
     <*>
     ( (:)

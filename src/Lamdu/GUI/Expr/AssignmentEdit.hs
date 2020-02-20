@@ -385,11 +385,10 @@ makeFunctionParts ::
     , Has (Texts.Navigation Text) env
     ) =>
     Sugar.FuncApplyLimit ->
-    Sugar.Function Name i o # Annotated (Sugar.Payload Name i o ExprGui.Payload) ->
-    Sugar.Payload Name i o ExprGui.Payload ->
+    Annotated (Sugar.Payload Name i o ExprGui.Payload) # Sugar.Function Name i o ->
     Widget.Id ->
     GuiM env i o (Parts i o)
-makeFunctionParts funcApplyLimit func pl delVarBackwardsId =
+makeFunctionParts funcApplyLimit (Ann (Const pl) func) delVarBackwardsId =
     do
         mScopeCursor <- mkChosenScopeCursor func
         let binderScopeId = mScopeCursor <&> Lens.mapped %~ (^. Sugar.bParamScopeId) . sBinderScope
@@ -439,11 +438,10 @@ makePlainParts ::
     , TextEdit.HasTexts env
     , SearchMenu.HasTexts env
     ) =>
-    Sugar.AssignPlain Name i o # Annotated (Sugar.Payload Name i o ExprGui.Payload) ->
-    Sugar.Payload Name i o ExprGui.Payload ->
+    Annotated (Sugar.Payload Name i o ExprGui.Payload) # Sugar.AssignPlain Name i o ->
     Widget.Id ->
     GuiM env i o (Parts i o)
-makePlainParts assignPlain pl delVarBackwardsId =
+makePlainParts (Ann (Const pl) assignPlain) delVarBackwardsId =
     do
         mParamsEdit <-
             makeMParamsEdit (pure Nothing) ScopeNavNotFocused delVarBackwardsId myId myId
@@ -471,8 +469,8 @@ makeParts ::
     GuiM env i o (Parts i o)
 makeParts funcApplyLimit (Ann (Const pl) assignmentBody) =
     case assignmentBody of
-    Sugar.BodyFunction x -> makeFunctionParts funcApplyLimit x pl
-    Sugar.BodyPlain x -> makePlainParts x pl
+    Sugar.BodyFunction x -> makeFunctionParts funcApplyLimit (Ann (Const pl) x)
+    Sugar.BodyPlain x -> makePlainParts (Ann (Const pl) x)
 
 makeJumpToRhs ::
     ( Monad i, Monad o

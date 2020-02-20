@@ -87,10 +87,9 @@ makeFromNom ::
     , Has (Texts.Name Text) env
     , Has (Texts.Definitions Text) env
     ) =>
-    Sugar.TId Name ->
-    Sugar.Payload Name i o ExprGui.Payload ->
+    Annotated (Sugar.Payload Name i o ExprGui.Payload) # Const (Sugar.TId Name) ->
     GuiM env i o (Responsive o)
-makeFromNom nom pl =
+makeFromNom (Ann (Const pl) (Const nom)) =
     mkNomLabel Texts.fromNom nom <&> Responsive.fromTextView
     & stdWrapParentExpr pl
 

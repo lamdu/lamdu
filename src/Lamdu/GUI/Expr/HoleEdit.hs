@@ -64,10 +64,9 @@ make ::
     , TextEdit.HasTexts env
     , SearchMenu.HasTexts env
     ) =>
-    Sugar.Hole Name i o ->
-    Sugar.Payload Name i o ExprGui.Payload ->
+    Annotated (Sugar.Payload Name i o ExprGui.Payload) # Const (Sugar.Hole Name i o) ->
     GuiM env i o (Responsive o)
-make hole pl =
+make (Ann (Const pl) (Const hole)) =
     do
         searchTerm <- SearchMenu.readSearchTerm searchMenuId
         delKeys <- Lens.view id <&> Config.delKeys

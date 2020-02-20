@@ -281,10 +281,9 @@ make ::
     , TextEdit.HasTexts env
     , Grid.HasTexts env
     ) =>
-    Sugar.Literal (Property o) ->
-    Sugar.Payload Name i o ExprGui.Payload ->
+    Annotated (Sugar.Payload Name i o ExprGui.Payload) # Const (Sugar.Literal (Property o)) ->
     GuiM env i o (Responsive o)
-make lit pl =
+make (Ann (Const pl) (Const lit)) =
     case lit of
     Sugar.LiteralNum x -> numEdit x pl <&> Responsive.fromWithTextPos
     Sugar.LiteralBytes x -> genericEdit Style.bytes x pl

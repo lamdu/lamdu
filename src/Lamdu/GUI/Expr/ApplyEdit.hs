@@ -64,10 +64,9 @@ makeLabeled ::
     , Has (Texts.Name Text) env
     , Has (Texts.Navigation Text) env
     ) =>
-    Sugar.LabeledApply Name i o # Annotated (Sugar.Payload Name i o ExprGui.Payload) ->
-    Sugar.Payload Name i o ExprGui.Payload ->
+    Annotated (Sugar.Payload Name i o ExprGui.Payload) # Sugar.LabeledApply Name i o ->
     GuiM env i o (Responsive o)
-makeLabeled apply pl =
+makeLabeled (Ann (Const pl) apply) =
     ExprEventMap.add ExprEventMap.defaultOptions pl <*>
     ( Wrap.parentDelegator (WidgetIds.fromExprPayload pl) <*>
         case apply ^. Sugar.aSpecialArgs of
@@ -88,7 +87,6 @@ makeLabeled apply pl =
         wrap x =
             (maybeAddAnnotationPl pl <&> (Widget.widget %~)) <*>
             addArgs apply x
-
         func = apply ^. Sugar.aFunc
 
 makeArgRow ::
@@ -143,10 +141,9 @@ makeSimple ::
     , Has (Texts.Name Text) env
     , Has (Texts.Navigation Text) env
     ) =>
-    Sugar.App (Sugar.Body Name i o) # Annotated (Sugar.Payload Name i o ExprGui.Payload) ->
-    Sugar.Payload Name i o ExprGui.Payload ->
+    Annotated (Sugar.Payload Name i o ExprGui.Payload) # Sugar.App (Sugar.Body Name i o) ->
     GuiM env i o (Responsive o)
-makeSimple (Sugar.App func arg) pl =
+makeSimple (Ann (Const pl) (Sugar.App func arg)) =
     (ResponsiveExpr.boxSpacedMDisamb ?? ExprGui.mParensId pl)
     <*> sequenceA
     [ GuiM.makeSubexpression func

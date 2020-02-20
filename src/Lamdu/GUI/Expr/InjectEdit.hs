@@ -144,10 +144,10 @@ make ::
     , Has (Texts.Name Text) env
     , Has (Texts.Navigation Text) env
     ) =>
-    Sugar.Inject Name i o # Annotated (Sugar.Payload Name i o ExprGui.Payload) ->
-    Sugar.Payload Name i o ExprGui.Payload ->
+    Annotated (Sugar.Payload Name i o ExprGui.Payload) # Sugar.Inject Name i o ->
     GuiM env i o (Responsive o)
-make (Sugar.Inject tag mVal) =
-    case mVal of
-    Sugar.InjectNullary nullary -> makeNullaryInject nullary tag
-    Sugar.InjectVal val -> makeInject val tag
+make (Ann (Const pl) (Sugar.Inject tag mVal)) =
+    ( case mVal of
+        Sugar.InjectNullary nullary -> makeNullaryInject nullary
+        Sugar.InjectVal val -> makeInject val
+    ) tag pl
