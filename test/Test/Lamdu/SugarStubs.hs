@@ -266,8 +266,8 @@ tagRefReplace =
 
 addNamesToExpr ::
     Language ->
-    Annotated (Sugar.Payload InternalName Identity Unit a) # Sugar.Term InternalName Identity Unit ->
-    Annotated (Sugar.Payload Name Identity Unit a) # Sugar.Term Name Identity Unit
+    Sugar.Expr Sugar.Term InternalName Identity Unit a ->
+    Sugar.Expr Sugar.Term Name Identity Unit a
 addNamesToExpr lang x =
     AddNames.runPasses lang
     getName NameWalk.toExpression NameWalk.toExpression NameWalk.toExpression NameWalk.toExpression x
