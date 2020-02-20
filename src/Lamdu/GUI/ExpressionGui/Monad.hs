@@ -163,8 +163,8 @@ instance MonadTransaction n i => MonadTransaction n (GuiM env i o) where
 make ::
     Monad i =>
     Lens.Getter (Askable env i o)
-        (Ann (Const (Sugar.Payload name i o a)) # e -> GuiM env i o (Responsive.Responsive o)) ->
-    Ann (Const (Sugar.Payload name i o a)) # e ->
+        (Annotated (Sugar.Payload name i o a) # e -> GuiM env i o (Responsive.Responsive o)) ->
+    Annotated (Sugar.Payload name i o a) # e ->
     GuiM env i o (Responsive.Responsive o)
 make sub expr =
     do
