@@ -58,7 +58,7 @@ orderType = hVal orderTBody
 
 orderRecord ::
     MonadTransaction m i =>
-    OrderT i (Sugar.Composite name i o # Annotated (Sugar.Payload name i o a))
+    OrderT i (Sugar.Body Sugar.Composite name i o a)
 orderRecord (Sugar.Composite items punned tail_ addItem) =
     Sugar.Composite
     <$> (orderByTag (^. Sugar.ciTag . Sugar.tagRefTag) items
@@ -76,7 +76,7 @@ instance MonadTransaction m i => Order i name o (Sugar.LabeledApply name i o) wh
 
 orderCase ::
     MonadTransaction m i =>
-    OrderT i (Sugar.Case name i o # Annotated (Sugar.Payload name i o a))
+    OrderT i (Sugar.Body Sugar.Case name i o a)
 orderCase = Sugar.cBody orderRecord
 
 instance MonadTransaction m i => Order i name o (Sugar.Lambda name i o)

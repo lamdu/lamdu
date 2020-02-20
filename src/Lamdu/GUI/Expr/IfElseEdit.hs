@@ -55,7 +55,7 @@ makeIfThen ::
     , Has (MomentuTexts.Texts Text) env
     ) =>
     WithTextPos View -> AnimId ->
-    Sugar.IfElse Name i o # Annotated (Sugar.Payload Name i o ExprGui.Payload) ->
+    Sugar.Body Sugar.IfElse Name i o ExprGui.Payload ->
     GuiM env i o (Row (Responsive o))
 makeIfThen prefixLabel animId ifElse =
     do

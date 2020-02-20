@@ -114,7 +114,7 @@ lookupMKey k m = k >>= (`Map.lookup` m)
 
 mkChosenScopeCursor ::
     Monad i =>
-    Sugar.Function Name i o # Annotated (Sugar.Payload name i o ExprGui.Payload) ->
+    Sugar.Body Sugar.Function Name i o ExprGui.Payload ->
     GuiM env i o (CurAndPrev (Maybe ScopeCursor))
 mkChosenScopeCursor func =
     do

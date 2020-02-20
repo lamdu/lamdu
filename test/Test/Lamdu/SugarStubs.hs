@@ -210,7 +210,7 @@ binderExpr ::
 binderExpr params body = funcExpr params body & Sugar.BodyFunction & node
 
 expr ::
-    Sugar.Term InternalName Identity Unit # Annotated (Sugar.Payload InternalName Identity Unit ()) ->
+    Sugar.Body Sugar.Term InternalName Identity Unit () ->
     Sugar.Expr Sugar.Term InternalName Identity Unit ()
 expr = node
 

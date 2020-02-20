@@ -53,7 +53,7 @@ makeLetEdit ::
     , Has (Texts.Name Text) env
     , Has (Texts.Navigation Text) env
     ) =>
-    Sugar.Let Name i o # Annotated (Sugar.Payload Name i o ExprGui.Payload) ->
+    Sugar.Body Sugar.Let Name i o ExprGui.Payload ->
     GuiM env i o (Responsive o)
 makeLetEdit item =
     do

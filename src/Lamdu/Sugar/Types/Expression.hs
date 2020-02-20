@@ -6,7 +6,7 @@
 
 {-# LANGUAGE TemplateHaskell, TypeFamilies, MultiParamTypeClasses, UndecidableInstances, DataKinds, GADTs, ConstraintKinds, FlexibleInstances #-}
 module Lamdu.Sugar.Types.Expression
-    ( Expr
+    ( Expr, Body
     , Term(..)
         , _BodyLam, _BodyLabeledApply, _BodySimpleApply
         , _BodyGetVar, _BodyGetField, _BodyInject, _BodyHole
@@ -69,6 +69,7 @@ import           Lamdu.Sugar.Types.Type
 import           Lamdu.Prelude
 
 type Expr e name i o a = Annotated (Payload name i o a) # e name i o
+type Body e name i o a = e name i o # Annotated (Payload name i o a)
 
 data AnnotatedArg name i o k = AnnotatedArg
     { _aaTag :: Tag name
