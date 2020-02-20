@@ -247,7 +247,8 @@ makeOpenCase ::
     , Has (Texts.CodeUI Text) env
     , Grid.HasTexts env
     ) =>
-    Sugar.OpenCompositeActions o -> ExprGui.SugarExpr i o ->
+    Sugar.OpenCompositeActions o ->
+    Sugar.Expr Sugar.Term Name i o ExprGui.Payload ->
     AnimId -> Responsive o -> GuiM env i o (Responsive o)
 makeOpenCase actions rest animId altsGui =
     do

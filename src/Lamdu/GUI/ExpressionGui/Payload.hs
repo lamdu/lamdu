@@ -1,7 +1,6 @@
 {-# LANGUAGE TemplateHaskell #-}
 module Lamdu.GUI.ExpressionGui.Payload
-    ( SugarExpr
-    , Payload(..), plHiddenEntityIds, plParenInfo
+    ( Payload(..), plHiddenEntityIds, plParenInfo
     , mParensId
     ) where
 
@@ -9,7 +8,6 @@ import qualified Control.Lens as Lens
 import           GUI.Momentu.Animation (AnimId)
 import qualified GUI.Momentu.Widget.Id as WidgetId
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
-import           Lamdu.Name (Name)
 import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
@@ -21,9 +19,6 @@ data Payload = Payload
     , _plHiddenEntityIds :: [Sugar.EntityId]
     } deriving (Generic, Eq, Show)
 Lens.makeLenses ''Payload
-
--- TODO: Remove?
-type SugarExpr i o = Sugar.Expr Sugar.Term Name i o Payload
 
 -- | Just myId or Nothing depending on whether parens are needed
 mParensId :: Sugar.Payload name i o Payload -> Maybe AnimId

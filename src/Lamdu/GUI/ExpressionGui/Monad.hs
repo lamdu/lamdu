@@ -76,7 +76,9 @@ data Askable env i o = Askable
     , _aConfig :: Config
     , _aTheme :: Theme
     , _aAssocTagName :: T.Tag -> MkProperty' o Text
-    , _aMakeSubexpression :: ExprGui.SugarExpr i o -> GuiM env i o (Responsive o)
+    , _aMakeSubexpression ::
+        Sugar.Expr Sugar.Term Name i o ExprGui.Payload ->
+        GuiM env i o (Responsive o)
     , _aMakeBinder ::
         Sugar.Expr Sugar.Binder Name i o ExprGui.Payload ->
         GuiM env i o (Responsive o)
@@ -199,7 +201,8 @@ run ::
     , Has Settings env, HasStyle env
     ) =>
     (T.Tag -> MkProperty' o Text) ->
-    (ExprGui.SugarExpr i o -> GuiM env i o (Responsive o)) ->
+    (Sugar.Expr Sugar.Term Name i o ExprGui.Payload ->
+        GuiM env i o (Responsive o)) ->
     (Sugar.Expr Sugar.Binder Name i o ExprGui.Payload ->
         GuiM env i o (Responsive o)) ->
     Anchors.GuiAnchors i o ->

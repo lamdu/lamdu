@@ -279,7 +279,8 @@ separationBar theme animId width =
 
 makeOpenRecord ::
     (Monad i, Monad o, Glue.HasTexts env, Has (Texts.CodeUI Text) env) =>
-    Sugar.OpenCompositeActions o -> ExprGui.SugarExpr i o ->
+    Sugar.OpenCompositeActions o ->
+    Sugar.Expr Sugar.Term Name i o ExprGui.Payload ->
     Responsive o -> GuiM env i o (Responsive o)
 makeOpenRecord (Sugar.OpenCompositeActions close) rest fieldsGui =
     do

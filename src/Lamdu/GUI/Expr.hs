@@ -48,7 +48,8 @@ make ::
     , TextEdit.HasTexts env
     , SearchMenu.HasTexts env
     ) =>
-    ExprGui.SugarExpr i o -> GuiM env i o (Responsive o)
+    Sugar.Expr Sugar.Term Name i o ExprGui.Payload ->
+    GuiM env i o (Responsive o)
 make e =
     makeEditor e & assignCursor
     where
