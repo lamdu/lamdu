@@ -46,7 +46,7 @@ makeToNom ::
     , Has (Texts.Name Text) env
     , Has (Texts.Definitions Text) env
     ) =>
-    Annotated (Sugar.Payload Name i o ExprGui.Payload) # Sugar.Nominal Name i o ->
+    Sugar.Expr Sugar.Nominal Name i o ExprGui.Payload ->
     GuiM env i o (Responsive o)
 makeToNom (Ann (Const pl) (Sugar.Nominal tid binder)) =
     do

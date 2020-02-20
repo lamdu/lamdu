@@ -110,7 +110,7 @@ make ::
     , Has (Texts.Name Text) env
     , Has (Texts.Navigation Text) env
     ) =>
-    Annotated (Sugar.Payload Name i o ExprGui.Payload) # Sugar.Binder Name i o ->
+    Sugar.Expr Sugar.Binder Name i o ExprGui.Payload ->
     GuiM env i o (Responsive o)
 make (Ann (Const pl) (Sugar.BinderTerm assignmentBody)) =
     Ann (Const pl) assignmentBody & GuiM.makeSubexpression

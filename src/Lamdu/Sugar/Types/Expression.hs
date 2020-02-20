@@ -6,7 +6,8 @@
 
 {-# LANGUAGE TemplateHaskell, TypeFamilies, MultiParamTypeClasses, UndecidableInstances, DataKinds, GADTs, ConstraintKinds, FlexibleInstances #-}
 module Lamdu.Sugar.Types.Expression
-    ( Term(..)
+    ( Expr
+    , Term(..)
         , _BodyLam, _BodyLabeledApply, _BodySimpleApply
         , _BodyGetVar, _BodyGetField, _BodyInject, _BodyHole
         , _BodyLiteral, _BodyCase, _BodyRecord, _BodyFragment
@@ -67,6 +68,8 @@ import           Lamdu.Sugar.Types.Type
 
 import           Lamdu.Prelude
 
+type Expr e name i o a = Annotated (Payload name i o a) # e name i o
+
 data AnnotatedArg name i o k = AnnotatedArg
     { _aaTag :: Tag name
     , _aaExpr :: k :# Term name i o
@@ -112,13 +115,13 @@ data Fragment name i o k = Fragment
     } deriving Generic
 
 data HoleResult name i o = HoleResult
-    { _holeResultConverted :: Annotated (Payload name i o ()) # Binder name i o
+    { _holeResultConverted :: Expr Binder name i o ()
     , _holeResultPick :: o ()
     } deriving Generic
 
 data HoleOption name i o = HoleOption
     { _hoEntityId :: EntityId
-    , _hoSugaredBaseExpr :: i (Annotated (Payload name i o ()) # Binder name i o)
+    , _hoSugaredBaseExpr :: i (Expr Binder name i o ())
     , -- A group in the hole results based on this option
       _hoResults :: ListT i (HoleResultScore, i (HoleResult name i o))
     } deriving Generic

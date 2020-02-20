@@ -89,7 +89,7 @@ makeElse ::
     , Has (MomentuTexts.Texts Text) env
     ) =>
     AnimId ->
-    Annotated (Sugar.Payload Name i o ExprGui.Payload) # Sugar.Else Name i o ->
+    Sugar.Expr Sugar.Else Name i o ExprGui.Payload ->
     GuiM env i o [Row (Responsive o)]
 makeElse parentAnimId (Ann (Const pl) (Sugar.SimpleElse expr)) =
     ( Row elseAnimId
@@ -178,7 +178,7 @@ make ::
     , Has (Texts.Name Text) env
     , Has (Texts.Navigation Text) env
     ) =>
-    Annotated (Sugar.Payload Name i o ExprGui.Payload) # Sugar.IfElse Name i o ->
+    Sugar.Expr Sugar.IfElse Name i o ExprGui.Payload ->
     GuiM env i o (Responsive o)
 make (Ann (Const pl) ifElse) =
     renderRows (ExprGui.mParensId pl)

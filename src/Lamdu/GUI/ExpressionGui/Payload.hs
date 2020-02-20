@@ -22,8 +22,8 @@ data Payload = Payload
     } deriving (Generic, Eq, Show)
 Lens.makeLenses ''Payload
 
-type SugarExpr i o =
-    Annotated (Sugar.Payload Name i o Payload) # Sugar.Term Name i o
+-- TODO: Remove?
+type SugarExpr i o = Sugar.Expr Sugar.Term Name i o Payload
 
 -- | Just myId or Nothing depending on whether parens are needed
 mParensId :: Sugar.Payload name i o Payload -> Maybe AnimId

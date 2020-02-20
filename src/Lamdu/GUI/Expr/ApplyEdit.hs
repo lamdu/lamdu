@@ -64,7 +64,7 @@ makeLabeled ::
     , Has (Texts.Name Text) env
     , Has (Texts.Navigation Text) env
     ) =>
-    Annotated (Sugar.Payload Name i o ExprGui.Payload) # Sugar.LabeledApply Name i o ->
+    Sugar.Expr Sugar.LabeledApply Name i o ExprGui.Payload ->
     GuiM env i o (Responsive o)
 makeLabeled (Ann (Const pl) apply) =
     ExprEventMap.add ExprEventMap.defaultOptions pl <*>

@@ -42,7 +42,7 @@ make ::
     , Has (Texts.Name Text) env
     , Has (Texts.Navigation Text) env
     ) =>
-    Annotated (Sugar.Payload Name i o ExprGui.Payload) # Sugar.GetField Name i o ->
+    Sugar.Expr Sugar.GetField Name i o ExprGui.Payload ->
     GuiM env i o (Responsive o)
 make (Ann (Const pl) (Sugar.GetField recExpr tag)) =
     do

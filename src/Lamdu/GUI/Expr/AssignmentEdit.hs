@@ -385,7 +385,7 @@ makeFunctionParts ::
     , Has (Texts.Navigation Text) env
     ) =>
     Sugar.FuncApplyLimit ->
-    Annotated (Sugar.Payload Name i o ExprGui.Payload) # Sugar.Function Name i o ->
+    Sugar.Expr Sugar.Function Name i o ExprGui.Payload ->
     Widget.Id ->
     GuiM env i o (Parts i o)
 makeFunctionParts funcApplyLimit (Ann (Const pl) func) delVarBackwardsId =
@@ -438,7 +438,7 @@ makePlainParts ::
     , TextEdit.HasTexts env
     , SearchMenu.HasTexts env
     ) =>
-    Annotated (Sugar.Payload Name i o ExprGui.Payload) # Sugar.AssignPlain Name i o ->
+    Sugar.Expr Sugar.AssignPlain Name i o ExprGui.Payload ->
     Widget.Id ->
     GuiM env i o (Parts i o)
 makePlainParts (Ann (Const pl) assignPlain) delVarBackwardsId =
@@ -464,7 +464,7 @@ makeParts ::
     , Has (Texts.Navigation Text) env
     ) =>
     Sugar.FuncApplyLimit ->
-    Annotated (Sugar.Payload Name i o ExprGui.Payload) # Sugar.Assignment Name i o ->
+    Sugar.Expr Sugar.Assignment Name i o ExprGui.Payload ->
     Widget.Id ->
     GuiM env i o (Parts i o)
 makeParts funcApplyLimit (Ann (Const pl) assignmentBody) =
@@ -505,7 +505,7 @@ make ::
     ) =>
     Maybe (i (Property o Meta.PresentationMode)) ->
     Sugar.TagRef Name i o -> Lens.ALens' TextColors Draw.Color ->
-    Annotated (Sugar.Payload Name i o ExprGui.Payload) # Sugar.Assignment Name i o ->
+    Sugar.Expr Sugar.Assignment Name i o ExprGui.Payload ->
     GuiM env i o (Responsive o)
 make pMode tag color assignment =
     makeParts Sugar.UnlimitedFuncApply assignment delParamDest

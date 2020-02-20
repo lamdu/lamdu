@@ -38,9 +38,7 @@ nameRef = (`Sugar.NameRef` Unit)
 prop :: a -> Property Unit a
 prop x = Property x (const Unit)
 
-type Expr =
-    Annotated (Sugar.Payload InternalName Identity Unit ()) #
-    Sugar.Term InternalName Identity Unit
+type Expr = Sugar.Expr Sugar.Term InternalName Identity Unit ()
 
 litNum :: Double -> Expr
 litNum x = prop x & Sugar.LiteralNum & Sugar.BodyLiteral & expr
@@ -208,13 +206,12 @@ funcExpr params (Ann (Const ba) bx) =
 
 binderExpr ::
     [(UUID, T.Tag)] -> Expr ->
-    Annotated (Sugar.Payload InternalName Identity Unit ()) #
-    Sugar.Assignment InternalName Identity Unit
+    Sugar.Expr Sugar.Assignment InternalName Identity Unit ()
 binderExpr params body = funcExpr params body & Sugar.BodyFunction & node
 
 expr ::
     Sugar.Term InternalName Identity Unit # Annotated (Sugar.Payload InternalName Identity Unit ()) ->
-    Annotated (Sugar.Payload InternalName Identity Unit ()) # Sugar.Term InternalName Identity Unit
+    Sugar.Expr Sugar.Term InternalName Identity Unit ()
 expr = node
 
 numType :: Annotated Sugar.EntityId # Sugar.Type InternalName

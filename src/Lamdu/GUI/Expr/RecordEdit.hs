@@ -132,7 +132,7 @@ make ::
     , Has (Texts.Name Text) env
     , Has (Texts.Navigation Text) env
     ) =>
-    Annotated (Sugar.Payload Name i o ExprGui.Payload) # Sugar.Composite Name i o ->
+    Sugar.Expr Sugar.Composite Name i o ExprGui.Payload ->
     GuiM env i o (Responsive o)
 make (Ann (Const pl) (Sugar.Composite [] [] Sugar.ClosedComposite{} addField)) =
     -- Ignore the ClosedComposite actions - it only has the open
