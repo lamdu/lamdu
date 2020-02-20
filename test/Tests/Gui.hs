@@ -1,4 +1,4 @@
-{-# LANGUAGE OverloadedStrings, ScopedTypeVariables, TypeOperators, TypeApplications #-}
+{-# LANGUAGE OverloadedStrings, ScopedTypeVariables, TypeOperators #-}
 
 module Tests.Gui where
 
@@ -6,7 +6,6 @@ import qualified Control.Lens as Lens
 import           Control.Monad.Unit (Unit(..))
 import qualified Data.Map as Map
 import           Data.Vector.Vector2 (Vector2(..))
-import           Hyper
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (Event(..))
@@ -62,8 +61,8 @@ test =
     ]
 
 replExpr ::
-    Lens.Traversal' (Sugar.WorkArea name i o # Ann h)
-    (Sugar.Body name i o # Ann h)
+    Lens.Traversal' (Sugar.WorkArea name i o a)
+    (Sugar.Body name i o # Annotated a)
 replExpr = Sugar.waRepl . Sugar.replExpr . hVal . Sugar._BinderExpr
 
 wideFocused :: Lens.Traversal' (Responsive f) (Widget.Surrounding -> Widget.Focused (f GuiState.Update))
@@ -74,11 +73,7 @@ makeGui ::
     String -> Env -> T ViewM (Responsive (T ViewM))
 makeGui afterDoc env =
     do
-        workArea <-
-            convertWorkArea env
-            <&> hmap (
-                    Proxy @(Recursively HFunctor) #>
-                    hflipped %~ hmap (\_ -> Lens._Wrapped . Lens.mapped %~ uncurry ExprGui.Payload))
+        workArea <- convertWorkArea env <&> (fmap . fmap) (uncurry ExprGui.Payload)
         let repl = workArea ^. Sugar.waRepl . Sugar.replExpr
         let replExprId = repl ^. SugarLens.binderResultExpr & WidgetIds.fromExprPayload
         let assocTagName = DataOps.assocTagName env
@@ -134,14 +129,11 @@ applyEvent env virtCursor event =
 
 fromWorkArea ::
     Env -> Lens.ATraversal'
-    (Sugar.WorkArea Name (T ViewM) (T ViewM) #
-        Annotated (Sugar.Payload Name (T ViewM) (T ViewM) ExprGui.Payload)) a ->
+    (Sugar.WorkArea Name (T ViewM) (T ViewM)
+        (Sugar.Payload Name (T ViewM) (T ViewM) ExprGui.Payload)) a ->
     T ViewM a
 fromWorkArea env path =
-    convertWorkArea env
-    <&> hmap (
-            Proxy @(Recursively HFunctor) #>
-            hflipped %~ hmap (\_ -> Lens._Wrapped . Lens.mapped %~ uncurry ExprGui.Payload))
+    convertWorkArea env <&> (fmap . fmap) (uncurry ExprGui.Payload)
     <&> (^?! Lens.cloneTraversal path)
 
 dummyVirt :: VirtualCursor
@@ -223,15 +215,18 @@ testOpPrec =
 workAreaEq ::
     forall a m.
     Eq a =>
-    Sugar.WorkArea Name (T m) (T m) # Annotated (Sugar.Payload Name (T m) (T m) a) ->
-    Sugar.WorkArea Name (T m) (T m) # Annotated (Sugar.Payload Name (T m) (T m) a) ->
+    Sugar.WorkArea Name (T m) (T m)
+    (Sugar.Payload Name (T m) (T m) a) ->
+    Sugar.WorkArea Name (T m) (T m)
+    (Sugar.Payload Name (T m) (T m) a) ->
     Bool
 workAreaEq x y =
     x' == unsafeCoerce y
     where
         x' =
             unsafeCoerce x ::
-                Sugar.WorkArea Name Unit Unit # Annotated (Sugar.Payload Name Unit Unit a)
+                Sugar.WorkArea Name Unit Unit
+                (Sugar.Payload Name Unit Unit a)
 
 testKeyboardDirAndBack ::
     HasCallStack =>

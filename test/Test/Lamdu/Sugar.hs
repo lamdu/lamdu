@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell, TupleSections, TypeOperators, TypeApplications #-}
+{-# LANGUAGE TemplateHaskell, TupleSections, TypeOperators #-}
 module Test.Lamdu.Sugar where
 
 import           Control.DeepSeq (NFData, deepseq)
@@ -41,32 +41,25 @@ type T = Transaction
 
 data IsHidden = NotHidden | Hidden deriving (Show)
 
-getPls :: WorkArea name i o # Annotated a -> [a]
-getPls =
-    hfoldMap
-    ( Proxy @(Recursively HFoldable)
-        #> (hfoldMap (const (^.. Lens._Wrapped)) . (_HFlip #))
-    )
-
 allEntityIds ::
-    WorkArea name i o # Annotated (Sugar.Payload name i o (t, [EntityId])) ->
+    WorkArea name i o (Sugar.Payload name i o (t, [EntityId])) ->
     [(EntityId, IsHidden)]
 allEntityIds workArea =
     (pls ^.. Lens.folded . plData . _2 . Lens.folded
      <&> (, Hidden))
     <> (pls ^.. Lens.folded . plEntityId <&> (, NotHidden))
     where
-        pls = getPls workArea
+        pls = workArea ^.. traverse
 
 validateHiddenEntityIds ::
-    WorkArea name i o # Annotated (Sugar.Payload name i o (t, [EntityId])) -> Either String ()
+    WorkArea name i o (Sugar.Payload name i o (t, [EntityId])) -> Either String ()
 validateHiddenEntityIds workArea
     | Set.null hiddenAndExplicit = Right ()
     | otherwise =
         show hiddenAndExplicit ++ " are both hidden and explicit entityIds"
         & Left
     where
-        pls = getPls workArea
+        pls = workArea ^.. traverse
         explicitEntityIds = pls ^.. Lens.folded . plEntityId & Set.fromList
         hiddenEntityIds =
             pls ^.. Lens.folded . plData . _2 . Lens.folded
@@ -104,11 +97,11 @@ workAreaLowLevelLoad =
 
 validate ::
     (NFData t, NFData name) =>
-    WorkArea name (T fa) (T fb) #
-        Annotated (Sugar.Payload name (T fa) (T fb) (t, [EntityId])) ->
+    WorkArea name (T fa) (T fb)
+    (Sugar.Payload name (T fa) (T fb) (t, [EntityId])) ->
     T ViewM
-    (WorkArea name (T fa) (T fb) #
-        Annotated (Sugar.Payload name (T fa) (T fb) (t, [EntityId])))
+    (WorkArea name (T fa) (T fb)
+        (Sugar.Payload name (T fa) (T fb) (t, [EntityId])))
 validate workArea
     | Map.null duplicateEntityIds =
         do
@@ -141,8 +134,8 @@ convertWorkArea ::
     ) =>
     env ->
     T ViewM
-    (WorkArea Name (T ViewM) (T ViewM) #
-        Annotated (Sugar.Payload Name (T ViewM) (T ViewM) (ParenInfo, [EntityId])))
+    (WorkArea Name (T ViewM) (T ViewM)
+        (Sugar.Payload Name (T ViewM) (T ViewM) (ParenInfo, [EntityId])))
 convertWorkArea env =
     sugarWorkArea (Tag.getTagName env) env codeAnchors
     >>= validate

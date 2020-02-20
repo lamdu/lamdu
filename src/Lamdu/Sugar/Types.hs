@@ -1,6 +1,4 @@
-{-# LANGUAGE TemplateHaskell, KindSignatures, DataKinds, GADTs, TypeFamilies #-}
-{-# LANGUAGE UndecidableInstances, FlexibleInstances, ConstraintKinds, MultiParamTypeClasses #-}
-
+{-# LANGUAGE TemplateHaskell #-}
 module Lamdu.Sugar.Types
     ( module Exported
     , EntityId
@@ -36,13 +34,22 @@ import           Lamdu.Sugar.Types.Type as Exported
 
 import           Lamdu.Prelude
 
-data DefinitionExpression name i o h = DefinitionExpression
+data DefinitionExpression name i o a = DefinitionExpression
     { _deType :: Scheme name
     , _dePresentationMode :: Maybe (i (Property o Meta.PresentationMode))
-    , _deContent :: h :# Assignment name i o
+    , _deContent :: Annotated a # Assignment name i o
     } deriving Generic
 
 Lens.makeLenses ''DefinitionExpression
+
+instance Functor (DefinitionExpression name i o) where
+    fmap f = deContent . hflipped %~ hmap (\_ -> Lens._Wrapped %~ f)
+
+instance Foldable (DefinitionExpression name i o) where
+    foldMap f = (^. deContent . hflipped . Lens.to (hfoldMap (\_ (Const x) -> f x)))
+
+instance Traversable (DefinitionExpression name i o) where
+    traverse f = deContent (htraverseFlipped (\_ -> Lens._Wrapped f))
 
 data DefinitionBuiltin name o = DefinitionBuiltin
     { _biName :: Definition.FFIName
@@ -50,18 +57,18 @@ data DefinitionBuiltin name o = DefinitionBuiltin
     , _biType :: Scheme name
     } deriving Generic
 
-data DefinitionBody name i o h
-    = DefinitionBodyExpression (DefinitionExpression name i o h)
+data DefinitionBody name i o a
+    = DefinitionBodyExpression (DefinitionExpression name i o a)
     | DefinitionBodyBuiltin (DefinitionBuiltin name o)
-    deriving Generic
+    deriving (Functor, Foldable, Traversable, Generic)
 
-data Definition name i o h = Definition
+data Definition name i o a = Definition
     { _drName :: TagRef name i o
     , _drDefI :: V.Var
     , _drDefinitionState :: Property o Meta.DefinitionState
     , _drEntityId :: EntityId
-    , _drBody :: DefinitionBody name i o h
-    } deriving Generic
+    , _drBody :: DefinitionBody name i o a
+    } deriving (Functor, Foldable, Traversable, Generic)
 
 data TagPane name o = TagPane
     { _tpTag :: Tag name
@@ -70,31 +77,40 @@ data TagPane name o = TagPane
     , _tpSetTexts :: LangId -> DataTag.TextsInLang -> o ()
     } deriving Generic
 
-data PaneBody name i o h
-    = PaneDefinition (Definition name i o h)
+data PaneBody name i o a
+    = PaneDefinition (Definition name i o a)
     | PaneTag (TagPane name o)
-    deriving Generic
+    deriving (Functor, Foldable, Traversable, Generic)
 
-data Pane name i o h = Pane
-    { _paneBody :: PaneBody name i o h
+data Pane name i o a = Pane
+    { _paneBody :: PaneBody name i o a
     , _paneClose :: o EntityId
     , _paneMoveDown :: Maybe (o ())
     , _paneMoveUp :: Maybe (o ())
-    } deriving Generic
+    } deriving (Functor, Foldable, Traversable, Generic)
 
-data Repl name i o h = Repl
-    { _replExpr :: h :# Binder name i o
+data Repl name i o a = Repl
+    { _replExpr :: Annotated a # Binder name i o
     , _replVarInfo :: VarInfo
     , _replResult :: EvalCompletion name o
     } deriving Generic
 
 Lens.makeLenses ''Repl
 
-data WorkArea name i o h = WorkArea
-    { _waPanes :: [Pane name i o h]
-    , _waRepl :: Repl name i o h
+instance Functor (Repl name i o) where
+    fmap f = replExpr %~ hflipped %~ hmap (\_ -> Lens._Wrapped %~ f)
+
+instance Foldable (Repl name i o) where
+    foldMap f = (^. replExpr . hflipped . Lens.to (hfoldMap (\_ (Const x) -> f x)))
+
+instance Traversable (Repl name i o) where
+    traverse f = replExpr (htraverseFlipped (\_ -> Lens._Wrapped f))
+
+data WorkArea name i o a = WorkArea
+    { _waPanes :: [Pane name i o a]
+    , _waRepl :: Repl name i o a
     , _waGlobals :: i [NameRef name o]
-    } deriving Generic
+    } deriving (Functor, Foldable, Traversable, Generic)
 
 Lens.makeLenses ''Definition
 Lens.makeLenses ''DefinitionBuiltin
@@ -103,43 +119,3 @@ Lens.makeLenses ''TagPane
 Lens.makeLenses ''WorkArea
 Lens.makePrisms ''DefinitionBody
 Lens.makePrisms ''PaneBody
-
-traverse makeHTraversableAndBases
-    [ ''DefinitionExpression, ''DefinitionBody, ''Definition
-    , ''PaneBody, ''Pane
-    , ''Repl, ''WorkArea
-    ] <&> concat
-
-instance RNodes (DefinitionExpression name i o)
-instance RNodes (DefinitionBody name i o)
-instance RNodes (Definition name i o)
-instance RNodes (PaneBody name i o)
-instance RNodes (Pane name i o)
-instance RNodes (Repl name i o)
-instance RNodes (WorkArea name i o)
-
-type Dep c name i o =
-    ( (c (Assignment name i o) :: Constraint)
-    , c (Body name i o)
-    , c (Binder name i o)
-    , c (Const (BinderVarRef name o))
-    , c (Const (NullaryVal name i o))
-    , c (Const (GetVar name o))
-    , c (Else name i o)
-    , c (Function name i o)
-    , c (DefinitionExpression name i o)
-    , c (DefinitionBody name i o)
-    , c (Definition name i o)
-    , c (PaneBody name i o)
-    , c (Pane name i o)
-    , c (Repl name i o)
-    , c (WorkArea name i o)
-    )
-
-instance Dep c name i o => Recursively c (DefinitionExpression name i o)
-instance Dep c name i o => Recursively c (DefinitionBody name i o)
-instance Dep c name i o => Recursively c (Definition name i o)
-instance Dep c name i o => Recursively c (PaneBody name i o)
-instance Dep c name i o => Recursively c (Pane name i o)
-instance Dep c name i o => Recursively c (Repl name i o)
-instance Dep c name i o => Recursively c (WorkArea name i o)
