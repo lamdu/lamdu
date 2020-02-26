@@ -28,6 +28,7 @@ module GUI.Momentu.EventMap
 
 import           Control.Applicative ((<|>))
 import qualified Control.Lens as Lens
+import           Control.Monad ((>=>))
 import qualified Data.Aeson.TH.Extended as JsonTH
 import           Data.Char (isAscii)
 import           Data.Foldable (asum)
@@ -226,7 +227,7 @@ mapMaybe p (EventMap m dropHandlers charGroups mAllChars) =
     where
         t = dhHandler . Lens.mapped %~ (>>= p)
         f (Doesn'tWantClipboard val) = p val <&> Doesn'tWantClipboard
-        f (WantsClipboard func) = (>>= p) . func & WantsClipboard & Just
+        f (WantsClipboard func) = WantsClipboard (func >=> p) & Just
 
 filter :: (a -> Bool) -> EventMap a -> EventMap a
 filter p =
