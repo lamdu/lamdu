@@ -306,8 +306,8 @@ withTagRef nameType varInfo (Sugar.TagRef info actions jumpTo) =
 
 toAnnotatedArg ::
     MonadNaming m =>
-    Body AnnotatedArg (OldName m) (IM m) o a ->
-    m (Body AnnotatedArg (NewName m) (IM m) o a)
+    Body (AnnotatedArg (EvaluationScopes (OldName m) (IM m))) (OldName m) (IM m) o a ->
+    m (Body (AnnotatedArg (EvaluationScopes (NewName m) (IM m))) (NewName m) (IM m) o a)
 toAnnotatedArg (AnnotatedArg tag e) =
     AnnotatedArg
     <$> toTagOf Tag tag

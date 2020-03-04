@@ -68,9 +68,9 @@ import           Lamdu.Prelude
 type Expr e name i o a = Annotated (Payload name i o a) # e name i o
 type Body e name i o a = e name i o # Annotated (Payload name i o a)
 
-data AnnotatedArg name i o k = AnnotatedArg
+data AnnotatedArg v name i o k = AnnotatedArg
     { _aaTag :: Tag name
-    , _aaExpr :: k :# Term (EvaluationScopes name i) name i o
+    , _aaExpr :: k :# Term v name i o
     } deriving Generic
 
 -- TODO: func + specialArgs into a single sum type so that field order
@@ -78,7 +78,7 @@ data AnnotatedArg name i o k = AnnotatedArg
 data LabeledApply name i o k = LabeledApply
     { _aFunc :: k :# Lens.Const (BinderVarRef name o)
     , _aSpecialArgs :: Meta.SpecialArgs (k :# Term (EvaluationScopes name i) name i o)
-    , _aAnnotatedArgs :: [AnnotatedArg name i o k]
+    , _aAnnotatedArgs :: [AnnotatedArg (EvaluationScopes name i) name i o k]
     , _aPunnedArgs :: [k :# Lens.Const (GetVar name o)]
     } deriving Generic
 

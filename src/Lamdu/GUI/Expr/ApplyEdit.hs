@@ -91,7 +91,7 @@ makeLabeled (Ann (Const pl) apply) =
 
 makeArgRow ::
     (Monad i, Glue.HasTexts env, Has (Texts.Name Text) env) =>
-    Sugar.Body Sugar.AnnotatedArg Name i o ExprGui.Payload ->
+    Sugar.Body (Sugar.AnnotatedArg (Sugar.EvaluationScopes Name i)) Name i o ExprGui.Payload ->
     GuiM env i o (TaggedItem o)
 makeArgRow arg =
     do
