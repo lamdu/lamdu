@@ -261,8 +261,8 @@ toAssignment =
 
 toLam ::
     MonadNaming m =>
-    Body Lambda (OldName m) (IM m) o a ->
-    m (Body Lambda (NewName m) (IM m) o a)
+    Body (Lambda (EvaluationScopes (OldName m) (IM m))) (OldName m) (IM m) o a ->
+    m (Body (Lambda (EvaluationScopes (NewName m) (IM m))) (NewName m) (IM m) o a)
 toLam = lamFunc toFunction
 
 toTagOf ::

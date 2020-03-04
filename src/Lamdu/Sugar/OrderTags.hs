@@ -79,7 +79,7 @@ orderCase ::
     OrderT i (Sugar.Body Sugar.Case name i o a)
 orderCase = Sugar.cBody orderRecord
 
-instance MonadTransaction m i => Order i name o (Sugar.Lambda name i o)
+instance MonadTransaction m i => Order i name o (Sugar.Lambda v name i o)
 instance MonadTransaction m i => Order i name o (Lens.Const a)
 instance MonadTransaction m i => Order i name o (Sugar.Else name i o)
 instance MonadTransaction m i => Order i name o (Sugar.IfElse name i o)

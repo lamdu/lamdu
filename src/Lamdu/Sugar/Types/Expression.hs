@@ -97,10 +97,10 @@ data GetField name i o k = GetField
     , _gfTag :: TagRef name i o
     } deriving Generic
 
-data Lambda name i o f = Lambda
+data Lambda v name i o f = Lambda
     { _lamMode :: BinderMode
     , _lamApplyLimit :: FuncApplyLimit
-    , _lamFunc :: Function (EvaluationScopes name i) name i o f
+    , _lamFunc :: Function v name i o f
     } deriving Generic
 
 -- | An expression marked for transformation.
@@ -185,7 +185,7 @@ data Nominal name i o k = Nominal
     } deriving Generic
 
 data Term name i o k
-    = BodyLam (Lambda name i o k)
+    = BodyLam (Lambda (EvaluationScopes name i) name i o k)
     | BodySimpleApply (App (Term name i o) k)
     | BodyLabeledApply (LabeledApply name i o k)
     | BodyHole (Hole name i o)
