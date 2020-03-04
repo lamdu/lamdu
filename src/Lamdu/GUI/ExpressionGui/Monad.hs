@@ -77,7 +77,7 @@ data Askable env i o = Askable
     , _aTheme :: Theme
     , _aAssocTagName :: T.Tag -> MkProperty' o Text
     , _aMakeSubexpression ::
-        Sugar.Expr Sugar.Term Name i o ExprGui.Payload ->
+        Sugar.Expr (Sugar.Term (Sugar.EvaluationScopes Name i)) Name i o ExprGui.Payload ->
         GuiM env i o (Responsive o)
     , _aMakeBinder ::
         Sugar.Expr (Sugar.Binder (Sugar.EvaluationScopes Name i)) Name i o ExprGui.Payload ->
@@ -179,7 +179,7 @@ make sub expr =
 
 makeSubexpression ::
     Monad i =>
-    Sugar.Expr Sugar.Term Name i o ExprGui.Payload ->
+    Sugar.Expr (Sugar.Term (Sugar.EvaluationScopes Name i)) Name i o ExprGui.Payload ->
     GuiM env i o (Responsive.Responsive o)
 makeSubexpression = make aMakeSubexpression
 
@@ -201,7 +201,7 @@ run ::
     , Has Settings env, HasStyle env
     ) =>
     (T.Tag -> MkProperty' o Text) ->
-    (Sugar.Expr Sugar.Term Name i o ExprGui.Payload ->
+    (Sugar.Expr (Sugar.Term (Sugar.EvaluationScopes Name i)) Name i o ExprGui.Payload ->
         GuiM env i o (Responsive o)) ->
     (Sugar.Expr (Sugar.Binder (Sugar.EvaluationScopes Name i)) Name i o ExprGui.Payload ->
         GuiM env i o (Responsive o)) ->

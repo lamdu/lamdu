@@ -1,4 +1,4 @@
-{-# LANGUAGE TypeApplications, DisambiguateRecordFields, KindSignatures, FlexibleInstances, DefaultSignatures, DataKinds #-}
+{-# LANGUAGE TypeApplications, DisambiguateRecordFields, KindSignatures, FlexibleInstances, DefaultSignatures, DataKinds, TypeFamilies #-}
 module Lamdu.Sugar.Convert.Binder
     ( convertDefinitionBinder, convertLam
     , convertBinder
@@ -251,10 +251,10 @@ makeAssignment _chosenScopeProp binderKind _defVar expr =
             )
 
 convertLam ::
-    (Monad m, Monoid a) =>
+    (Monad m, Monoid a, v ~ EvaluationScopes InternalName (T m)) =>
     V.TypedLam V.Var (HCompose Prune T.Type) V.Term # Ann (Input.Payload m a) ->
     Input.Payload m a # V.Term ->
-    ConvertM m (ExpressionU m a)
+    ConvertM m (ExpressionU v m a)
 convertLam lam exprPl =
     do
         convParams <- convertLamParams lam exprPl
@@ -322,7 +322,7 @@ instance GetParam (Assignment v InternalName i o) where
 instance GetParam (Binder v InternalName i o) where
     getParam x = x ^? _BinderTerm >>= getParam
 
-instance GetParam (Term InternalName i o) where
+instance GetParam (Term v InternalName i o) where
     getParam x = x ^? _BodyGetVar <&> Const >>= getParam
 
 allParamsUsed ::
@@ -372,7 +372,7 @@ instance MarkLightParams (Binder v InternalName i o) where
     markLightParams ps (BinderTerm x) = markLightParams ps x & BinderTerm
     markLightParams ps (BinderLet x) = markLightParams ps x & BinderLet
 
-instance MarkLightParams (Term InternalName i o) where
+instance MarkLightParams (Term v InternalName i o) where
     markLightParams paramNames (BodyGetVar (GetParam n))
         | paramNames ^. Lens.contains (n ^. pNameRef . nrName) =
             n

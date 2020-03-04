@@ -426,8 +426,8 @@ toIfElse (IfElse i t e) =
 
 toBody ::
     MonadNaming m =>
-    Body Term (OldName m) (IM m) o a ->
-    m (Body Term (NewName m) (IM m) o a)
+    Body (Term (EvaluationScopes (OldName m) (IM m))) (OldName m) (IM m) o a ->
+    m (Body (Term (EvaluationScopes (NewName m) (IM m))) (NewName m) (IM m) o a)
 toBody =
     \case
     BodyGetField     x -> x & toGetField <&> BodyGetField
@@ -455,8 +455,8 @@ funcSignature apply =
 
 toExpression ::
     MonadNaming m =>
-    Expr Term (OldName m) (IM m) o a ->
-    m (Expr Term (NewName m) (IM m) o a)
+    Expr (Term (EvaluationScopes (OldName m) (IM m))) (OldName m) (IM m) o a ->
+    m (Expr (Term (EvaluationScopes (NewName m) (IM m))) (NewName m) (IM m) o a)
 toExpression = toNode toBody
 
 withParamInfo ::

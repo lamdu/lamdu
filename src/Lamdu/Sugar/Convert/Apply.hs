@@ -32,15 +32,18 @@ import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import           Lamdu.Sugar.Lens (childPayloads, getVarName)
 import qualified Lamdu.Sugar.PresentationModes as PresentationModes
 import           Lamdu.Sugar.Types
+import           Revision.Deltum.Transaction (Transaction)
 
 import           Lamdu.Prelude
+
+type T = Transaction
 
 convert ::
     (Monad m, Monoid a) =>
     ConvertM.PositionInfo ->
     V.App V.Term # Ann (Input.Payload m a) ->
     Input.Payload m a # V.Term ->
-    ConvertM m (ExpressionU m a)
+    ConvertM m (ExpressionU (EvaluationScopes InternalName (T m)) m a)
 convert posInfo app@(V.App funcI argI) exprPl =
     runMatcherT $
     do
@@ -90,8 +93,8 @@ validateDefParamsMatchArgs var record frozenDeps =
 convertLabeled ::
     (Monad m, Monoid a, Recursively HFoldable h) =>
     h # Ann (Input.Payload m a) ->
-    ExpressionU m a -> ExpressionU m a -> Input.Payload m a # V.Term ->
-    MaybeT (ConvertM m) (ExpressionU m a)
+    ExpressionU v m a -> ExpressionU v m a -> Input.Payload m a # V.Term ->
+    MaybeT (ConvertM m) (ExpressionU v m a)
 convertLabeled subexprs funcS argS exprPl =
     do
         Lens.view (ConvertM.scConfig . Config.sugarsEnabled . Config.labeledApply) >>= guard
@@ -131,8 +134,8 @@ convertLabeled subexprs funcS argS exprPl =
 convertPrefix ::
     (Monad m, Monoid a, Recursively HFoldable h) =>
     h # Ann (Input.Payload m a) ->
-    ExpressionU m a -> ExpressionU m a -> Input.Payload m a # V.Term ->
-    ConvertM m (ExpressionU m a)
+    ExpressionU v m a -> ExpressionU v m a -> Input.Payload m a # V.Term ->
+    ConvertM m (ExpressionU v m a)
 convertPrefix subexprs funcS argS applyPl =
     do
         protectedSetToVal <- ConvertM.typeProtectedSetToVal

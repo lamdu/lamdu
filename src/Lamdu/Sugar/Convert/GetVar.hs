@@ -199,7 +199,7 @@ convertParam param =
 
 convert ::
     (Monad m, Monoid a) =>
-    V.Var -> Input.Payload m a # V.Term -> ConvertM m (ExpressionU m a)
+    V.Var -> Input.Payload m a # V.Term -> ConvertM m (ExpressionU v m a)
 convert param exprPl
     | param == ConvertFragment.fragmentVar =
         addActions (Const ()) exprPl BodyPlaceHolder

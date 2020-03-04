@@ -31,7 +31,7 @@ convertLiteralCommon ::
     (Monad m, Monoid b) =>
     (Property (T m) a -> Literal (Property (T m))) ->
     (a -> PrimVal.KnownPrim) -> a ->
-    Input.Payload m b # V.Term -> ConvertM m (ExpressionU m b)
+    Input.Payload m b # V.Term -> ConvertM m (ExpressionU v m b)
 convertLiteralCommon mkLit mkBody x exprPl =
     Property
     { _pVal = x
@@ -44,17 +44,18 @@ convertLiteralCommon mkLit mkBody x exprPl =
 
 convertLiteralFloat ::
     (Monad m, Monoid a) =>
-    Double -> Input.Payload m a # V.Term -> ConvertM m (ExpressionU m a)
+    Double -> Input.Payload m a # V.Term -> ConvertM m (ExpressionU v m a)
 convertLiteralFloat = convertLiteralCommon LiteralNum PrimVal.Float
 
 convertLiteralBytes ::
     (Monad m, Monoid a) =>
-    ByteString -> Input.Payload m a # V.Term -> ConvertM m (ExpressionU m a)
+    ByteString -> Input.Payload m a # V.Term -> ConvertM m (ExpressionU v m a)
 convertLiteralBytes = convertLiteralCommon LiteralBytes PrimVal.Bytes
 
 convert ::
     (Monad m, Monoid a) =>
-    ConvertM.PositionInfo -> Ann (Input.Payload m a) # V.Term -> ConvertM m (ExpressionU m a)
+    ConvertM.PositionInfo -> Ann (Input.Payload m a) # V.Term ->
+    ConvertM m (ExpressionU (EvaluationScopes InternalName (T m)) m a)
 convert _ (Ann pl (V.BLam x)) = ConvertBinder.convertLam x pl
 convert _ (Ann pl (V.BRecExtend x)) = ConvertRecord.convertExtend x pl
 convert _ (Ann pl (V.BGetField x)) = ConvertGetField.convert x pl

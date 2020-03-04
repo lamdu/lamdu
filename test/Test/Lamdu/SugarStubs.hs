@@ -38,7 +38,9 @@ nameRef = (`Sugar.NameRef` Unit)
 prop :: a -> Property Unit a
 prop x = Property x (const Unit)
 
-type Expr = Sugar.Expr Sugar.Term InternalName Identity Unit ()
+type Expr =
+    Sugar.Expr (Sugar.Term (Sugar.EvaluationScopes InternalName Identity))
+    InternalName Identity Unit ()
 
 litNum :: Double -> Expr
 litNum x = prop x & Sugar.LiteralNum & Sugar.BodyLiteral & expr
@@ -164,7 +166,7 @@ def typ var tag body =
         emptyForalls = T.Types (QVars mempty) (QVars mempty)
 
 repl ::
-    Annotated a # Sugar.Term name i o ->
+    Annotated a # Sugar.Term (Sugar.EvaluationScopes name i) name i o ->
     Sugar.Repl name i o a
 repl (Ann (Const pl) x) =
     Sugar.Repl
@@ -194,7 +196,7 @@ mkFuncParam (paramVar, paramTag) =
 
 funcExpr ::
     [(UUID, T.Tag)] -> Expr ->
-    Sugar.Function v InternalName Identity Unit #
+    Sugar.Function (Sugar.EvaluationScopes InternalName Identity) InternalName Identity Unit #
     Ann (Const (Sugar.Payload InternalName Identity Unit ()))
 funcExpr params (Ann (Const ba) bx) =
     Sugar.Function
@@ -207,12 +209,13 @@ funcExpr params (Ann (Const ba) bx) =
 
 binderExpr ::
     [(UUID, T.Tag)] -> Expr ->
-    Sugar.Expr (Sugar.Assignment v) InternalName Identity Unit ()
+    Sugar.Expr (Sugar.Assignment (Sugar.EvaluationScopes InternalName Identity))
+    InternalName Identity Unit ()
 binderExpr params body = funcExpr params body & Sugar.BodyFunction & node
 
 expr ::
-    Sugar.Body Sugar.Term InternalName Identity Unit () ->
-    Sugar.Expr Sugar.Term InternalName Identity Unit ()
+    Sugar.Body (Sugar.Term v) InternalName Identity Unit () ->
+    Sugar.Expr (Sugar.Term v) InternalName Identity Unit ()
 expr = node
 
 numType :: Annotated Sugar.EntityId # Sugar.Type InternalName
@@ -268,8 +271,8 @@ tagRefReplace =
 
 addNamesToExpr ::
     Language ->
-    Sugar.Expr Sugar.Term InternalName Identity Unit a ->
-    Sugar.Expr Sugar.Term Name Identity Unit a
+    Sugar.Expr (Sugar.Term (Sugar.EvaluationScopes InternalName Identity)) InternalName Identity Unit a ->
+    Sugar.Expr (Sugar.Term (Sugar.EvaluationScopes Name Identity)) Name Identity Unit a
 addNamesToExpr lang x =
     AddNames.runPasses lang
     getName NameWalk.toExpression NameWalk.toExpression NameWalk.toExpression NameWalk.toExpression x

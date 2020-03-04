@@ -22,7 +22,7 @@ convertGetFieldParam ::
     (Monad m, Monoid a) =>
     V.GetField # Ann (Input.Payload m a) ->
     Input.Payload m a # V.Term ->
-    ConvertM m (Maybe (ExpressionU m a))
+    ConvertM m (Maybe (ExpressionU v m a))
 convertGetFieldParam (V.GetField recExpr tag) exprPl =
     do
         tagParamInfos <- Lens.view (ConvertM.scScopeInfo . ConvertM.siTagParamInfos)
@@ -43,7 +43,7 @@ convertGetFieldNonParam ::
     (Monad m, Monoid a) =>
     V.GetField # Ann (Input.Payload m a) ->
     Input.Payload m a # V.Term ->
-    ConvertM m (ExpressionU m a)
+    ConvertM m (ExpressionU v m a)
 convertGetFieldNonParam (V.GetField recExpr tag) exprPl =
     GetField
     <$> ConvertM.convertSubexpression recExpr
@@ -66,7 +66,7 @@ convert ::
     (Monad m, Monoid a) =>
     V.GetField # Ann (Input.Payload m a) ->
     Input.Payload m a # V.Term ->
-    ConvertM m (ExpressionU m a)
+    ConvertM m (ExpressionU v m a)
 convert gf pl =
     convertGetFieldParam gf pl
     >>= maybe (convertGetFieldNonParam gf pl) pure

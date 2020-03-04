@@ -1,3 +1,4 @@
+{-# LANGUAGE TypeFamilies #-}
 module Lamdu.GUI.Expr.HoleEdit.ValTerms
     ( expr
     , binder
@@ -41,17 +42,19 @@ ofName (Name.NameTag x) =
         Name.TagText displayName textCollision = x ^. Name.tnDisplayText
 
 expr ::
-    ( Has (Texts.Code Text) env
+    ( v ~ EvaluationScopes Name i
+    , Has (Texts.Code Text) env
     , Has (Texts.CodeUI Text) env
     ) =>
-    env -> Annotated a # Term Name i o -> [Text]
+    env -> Annotated a # Term v Name i o -> [Text]
 expr env = ofBody env . (^. hVal)
 
 ofBody ::
     ( Has (Texts.Code Text) env
     , Has (Texts.CodeUI Text) env
+    , v ~ EvaluationScopes Name i
     ) =>
-    env -> Term Name i o # Annotated a -> [Text]
+    env -> Term v Name i o # Annotated a -> [Text]
 ofBody env =
     \case
     BodyLam {} ->
@@ -117,6 +120,7 @@ ofBody env =
 binder ::
     ( Has (Texts.Code Text) env
     , Has (Texts.CodeUI Text) env
+    , v ~ EvaluationScopes Name i
     ) =>
     env -> Binder v Name i o # Annotated a -> [Text]
 binder env BinderLet{} = [env ^. has . Texts.let_]
@@ -168,7 +172,8 @@ allowedFragmentSearchTerm searchTerm =
 -- the search term is a remainder and which belongs inside the hole
 -- result expr
 getSearchStringRemainder ::
-    SearchMenu.ResultsContext -> Term name i o # Ann a -> Text
+    v ~ EvaluationScopes name i =>
+    SearchMenu.ResultsContext -> Term v name i o # Ann a -> Text
 getSearchStringRemainder ctx holeResult
     | isA _BodyInject = ""
       -- NOTE: This is wrong for operator search terms like ".." which
@@ -185,7 +190,7 @@ getSearchStringRemainder ctx holeResult
         fragmentExpr = _BodyFragment . fExpr
         isA x = any (`Lens.has` holeResult) [x, fragmentExpr . hVal . x]
 
-verifyInjectSuffix :: Text -> Term name i o f -> Bool
+verifyInjectSuffix :: Text -> Term v name i o f -> Bool
 verifyInjectSuffix searchTerm x =
     case suffix of
     Just ':' | Lens.has (injectContent . _InjectNullary) x -> False

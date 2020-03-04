@@ -70,21 +70,21 @@ type Body e name i o a = e name i o # Annotated (Payload name i o a)
 
 data AnnotatedArg name i o k = AnnotatedArg
     { _aaTag :: Tag name
-    , _aaExpr :: k :# Term name i o
+    , _aaExpr :: k :# Term (EvaluationScopes name i) name i o
     } deriving Generic
 
 -- TODO: func + specialArgs into a single sum type so that field order
 -- matches gui order, no need for special traversal code
 data LabeledApply name i o k = LabeledApply
     { _aFunc :: k :# Lens.Const (BinderVarRef name o)
-    , _aSpecialArgs :: Meta.SpecialArgs (k :# Term name i o)
+    , _aSpecialArgs :: Meta.SpecialArgs (k :# Term (EvaluationScopes name i) name i o)
     , _aAnnotatedArgs :: [AnnotatedArg name i o k]
     , _aPunnedArgs :: [k :# Lens.Const (GetVar name o)]
     } deriving Generic
 
 data InjectContent name i o k
     = InjectNullary (k :# Lens.Const (NullaryVal name i o))
-    | InjectVal (k :# Term name i o)
+    | InjectVal (k :# Term (EvaluationScopes name i) name i o)
     deriving Generic
 
 data Inject name i o f = Inject
@@ -93,7 +93,7 @@ data Inject name i o f = Inject
     } deriving Generic
 
 data GetField name i o k = GetField
-    { _gfRecord :: k :# Term name i o
+    { _gfRecord :: k :# Term (EvaluationScopes name i) name i o
     , _gfTag :: TagRef name i o
     } deriving Generic
 
@@ -106,7 +106,7 @@ data Lambda v name i o f = Lambda
 -- | An expression marked for transformation.
 -- Holds an expression to be transformed but acts like a hole.
 data Fragment v name i o k = Fragment
-    { _fExpr :: k :# Term name i o
+    { _fExpr :: k :# Term v name i o
     , _fHeal :: o EntityId
     , _fTypeMismatch :: Maybe (Annotated EntityId # Type name)
     , _fOptions :: i [HoleOption v name i o]
@@ -136,24 +136,24 @@ data Hole v name i o = Hole
     } deriving Generic
 
 data Else name i o f
-    = SimpleElse (Term name i o f)
+    = SimpleElse (Term (EvaluationScopes name i) name i o f)
     | ElseIf (IfElse name i o f)
     deriving Generic
 
 data IfElse name i o k = IfElse
-    { _iIf :: k :# Term name i o
-    , _iThen :: k :# Term name i o
+    { _iIf :: k :# Term (EvaluationScopes name i) name i o
+    , _iThen :: k :# Term (EvaluationScopes name i) name i o
     , _iElse :: k :# Else name i o
     } deriving Generic
 
 data CompositeItem name i o k = CompositeItem
     { _ciDelete :: o EntityId
     , _ciTag :: TagRef name i o
-    , _ciExpr :: k :# Term name i o
+    , _ciExpr :: k :# Term (EvaluationScopes name i) name i o
     } deriving Generic
 
 data CompositeTail name i o k
-    = OpenComposite (OpenCompositeActions o) (k :# Term name i o)
+    = OpenComposite (OpenCompositeActions o) (k :# Term (EvaluationScopes name i) name i o)
     | ClosedComposite (ClosedCompositeActions o)
     deriving Generic
 
@@ -166,7 +166,7 @@ data Composite name i o k = Composite
     } deriving Generic
 
 data CaseArg name i o k = CaseArg
-    { _caVal :: k :# Term name i o
+    { _caVal :: k :# Term (EvaluationScopes name i) name i o
     , _caToLambdaCase :: o EntityId
     } deriving Generic
 
@@ -185,11 +185,11 @@ data Nominal v name i o k = Nominal
     , _nVal :: k :# Binder v name i o
     } deriving Generic
 
-data Term name i o k
-    = BodyLam (Lambda (EvaluationScopes name i) name i o k)
-    | BodySimpleApply (App (Term name i o) k)
+data Term v name i o k
+    = BodyLam (Lambda v name i o k)
+    | BodySimpleApply (App (Term v name i o) k)
     | BodyLabeledApply (LabeledApply name i o k)
-    | BodyHole (Hole (EvaluationScopes name i) name i o)
+    | BodyHole (Hole v name i o)
     | BodyLiteral (Literal (Property o))
     | BodyRecord (Composite name i o k)
     | BodyGetField (GetField name i o k)
@@ -197,9 +197,9 @@ data Term name i o k
     | BodyIfElse (IfElse name i o k)
     | BodyInject (Inject name i o k)
     | BodyGetVar (GetVar name o)
-    | BodyToNom (Nominal (EvaluationScopes name i) name i o k)
+    | BodyToNom (Nominal v name i o k)
     | BodyFromNom (TId name)
-    | BodyFragment (Fragment (EvaluationScopes name i) name i o k)
+    | BodyFragment (Fragment v name i o k)
     | BodyPlaceHolder -- Used for hole results, shown as "★"
     deriving Generic
 
@@ -220,7 +220,7 @@ data Let v name i o k = Let
 -- * Let-item/redex: "let x = y in [[THIS]]"
 data Binder v name i o f
     = BinderLet (Let v name i o f)
-    | BinderTerm (Term name i o f)
+    | BinderTerm (Term v name i o f)
     deriving Generic
 
 data Function v name i o k = Function
@@ -281,7 +281,7 @@ instance RNodes (Assignment v name i o)
 instance RNodes (Binder v name i o)
 instance RNodes (Else name i o)
 instance RNodes (Function v name i o)
-instance RNodes (Term name i o)
+instance RNodes (Term v name i o)
 
 type Dep c name i o =
     ( (c (Assignment (EvaluationScopes name i) name i o) :: Constraint)
@@ -290,13 +290,13 @@ type Dep c name i o =
     , c (Const (NullaryVal name i o))
     , c (Const (GetVar name o))
     , c (Else name i o)
-    , c (Term name i o)
+    , c (Term (EvaluationScopes name i) name i o)
     )
 
 instance Dep c name i o => Recursively c (Assignment (EvaluationScopes name i) name i o)
 instance Dep c name i o => Recursively c (Binder (EvaluationScopes name i) name i o)
 instance Dep c name i o => Recursively c (Else name i o)
-instance Dep c name i o => Recursively c (Term name i o)
+instance Dep c name i o => Recursively c (Term (EvaluationScopes name i) name i o)
 
 instance (Dep c name i o, c (Function (EvaluationScopes name i) name i o)) =>
          Recursively c (Function (EvaluationScopes name i) name i o)
@@ -304,4 +304,4 @@ instance (Dep c name i o, c (Function (EvaluationScopes name i) name i o)) =>
 instance RTraversable (Assignment (EvaluationScopes name i) name i o)
 instance RTraversable (Binder (EvaluationScopes name i) name i o)
 instance RTraversable (Else name i o)
-instance RTraversable (Term name i o)
+instance RTraversable (Term (EvaluationScopes name i) name i o)

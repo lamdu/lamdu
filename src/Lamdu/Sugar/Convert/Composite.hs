@@ -68,7 +68,7 @@ convertExtend ::
     Monad m =>
     (T.Tag -> ValI m -> ValI m -> ExprIRef.ValBody m) ->
     (T.Tag -> ValI m -> T m (DataOps.CompositeExtendResult m)) ->
-    Annotated b # Term InternalName (T m) (T m) ->
+    Annotated b # Term (EvaluationScopes InternalName (T m)) InternalName (T m) (T m) ->
     Input.Payload m a # V.Term ->
     ExtendVal m (Input.Payload m a # V.Term) ->
     Composite InternalName (T m) (T m) # Annotated b ->
@@ -101,8 +101,8 @@ convertOneItemOpenComposite ::
     V.Leaf ->
     (T.Tag -> ValI m -> ValI m -> ExprIRef.ValBody m) ->
     (T.Tag -> ValI m -> T m (DataOps.CompositeExtendResult m)) ->
-    k # Term InternalName (T m) (T m) ->
-    k # Term InternalName (T m) (T m) ->
+    k # Term (EvaluationScopes InternalName (T m)) InternalName (T m) (T m) ->
+    k # Term (EvaluationScopes InternalName (T m)) InternalName (T m) (T m) ->
     Input.Payload m a # V.Term ->
     ExtendVal m (Input.Payload m a # V.Term) ->
     ConvertM m (Composite InternalName (T m) (T m) # k)
@@ -160,7 +160,8 @@ convertItem ::
     Monad m =>
     (T.Tag -> ValI m -> ValI m -> ExprIRef.ValBody m) ->
     HRef m # V.Term ->
-    EntityId -> Set T.Tag -> h # Term InternalName (T m) (T m) ->
+    EntityId -> Set T.Tag ->
+    h # Term (EvaluationScopes InternalName (T m)) InternalName (T m) (T m) ->
     -- Using tuple in place of shared RecExtend/Case structure (no such in lamdu-calculus)
     ExtendVal m (ValI m) ->
     ConvertM m (CompositeItem InternalName (T m) (T m) # h)
@@ -185,7 +186,8 @@ convertItem cons stored inst forbiddenTags exprS extendVal =
 
 type BodyPrism m a =
     Lens.Prism'
-    (Term InternalName (T m) (T m) # Annotated (ConvertPayload m a))
+    (Term (EvaluationScopes InternalName (T m)) InternalName (T m) (T m) #
+        Annotated (ConvertPayload m a))
     (Composite InternalName (T m) (T m) # Annotated (ConvertPayload m a))
 
 convert ::
@@ -193,9 +195,10 @@ convert ::
     (T.Tag -> ValI m -> T m (DataOps.CompositeExtendResult m)) ->
     V.Leaf ->
     (T.Tag -> ValI m -> ValI m -> ValBody m) -> BodyPrism m a ->
-    ExpressionU m a -> ExpressionU m a -> Input.Payload m a # V.Term ->
+    ExpressionU (EvaluationScopes InternalName (T m)) m a ->
+    ExpressionU (EvaluationScopes InternalName (T m)) m a -> Input.Payload m a # V.Term ->
     ExtendVal m (Input.Payload m a # V.Term) ->
-    ConvertM m (ExpressionU m a)
+    ConvertM m (ExpressionU (EvaluationScopes InternalName (T m)) m a)
 convert op empty cons prism valS restS exprPl extendV =
     Lens.view (ConvertM.scConfig . Config.sugarsEnabled . Config.composite) >>=
     \case

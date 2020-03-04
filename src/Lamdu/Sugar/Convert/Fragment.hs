@@ -67,7 +67,7 @@ mkOptions ::
     ConvertM.PositionInfo ->
     ConvertM.Context m ->
     Ann (Input.Payload m a) # V.Term ->
-    Ann pl # Term name i o ->
+    Ann pl # Term v name i o ->
     Input.Payload m a # V.Term ->
     ConvertM m (T m [HoleOption (EvaluationScopes InternalName (T m)) InternalName (T m) (T m)])
 mkOptions posInfo sugarContext argI argS exprPl =
@@ -132,12 +132,12 @@ checkTypeMatch x y =
             & runPureInfer V.emptyScope ctx
 
 convertAppliedHole ::
-    (Monad m, Monoid a) =>
+    (Monad m, Monoid a, v ~ EvaluationScopes InternalName (T m)) =>
     ConvertM.PositionInfo ->
     V.App V.Term # Ann (Input.Payload m a) ->
     Input.Payload m a # V.Term ->
-    ExpressionU m a ->
-    MaybeT (ConvertM m) (ExpressionU m a)
+    ExpressionU v m a ->
+    MaybeT (ConvertM m) (ExpressionU v m a)
 convertAppliedHole posInfo app@(V.App funcI argI) exprPl argS =
     do
         Lens.view (ConvertM.scConfig . Config.sugarsEnabled . Config.fragment) >>= guard

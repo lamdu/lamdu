@@ -30,7 +30,7 @@ text ::
     (Monad m, Monoid a) =>
     ToNom NominalId V.Term # Ann (Input.Payload m a) ->
     Input.Payload m a # V.Term ->
-    MaybeT (ConvertM m) (ExpressionU m a)
+    MaybeT (ConvertM m) (ExpressionU v m a)
 text (ToNom tid c@(Ann litPl bod)) toNomPl =
     do
         Lens.view (ConvertM.scConfig . Config.sugarsEnabled . Config.literalText) >>= guard

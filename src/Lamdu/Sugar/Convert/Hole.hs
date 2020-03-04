@@ -92,7 +92,7 @@ type ResultGen m = StateT InferState (ListT (T m))
 convert ::
     (Monad m, Monoid a) =>
     ConvertM.PositionInfo -> Input.Payload m a # V.Term ->
-    ConvertM m (ExpressionU m a)
+    ConvertM m (ExpressionU (EvaluationScopes InternalName (T m)) m a)
 convert posInfo holePl =
     mkOptions posInfo holeResultProcessor holePl
     <&> Lens.mapped . Lens.mapped %~ snd

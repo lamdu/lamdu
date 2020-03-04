@@ -84,15 +84,17 @@ replBinder ::
     )
 replBinder = waRepl . replExpr . hVal
 
-replBody :: Lens.Traversal' (WorkArea name i o a) (Term name i o # Annotated a)
+replBody ::
+    Lens.Traversal' (WorkArea name i o a)
+    (Term (EvaluationScopes name i) name i o # Annotated a)
 replBody = replBinder . _BinderTerm
 
 replLet :: Lens.Traversal' (WorkArea name i o a) (Let (EvaluationScopes name i) name i o # Annotated a)
 replLet = replBinder . _BinderLet
 
 lamFirstParam ::
-    Lens.Traversal' (Term name i o a)
-    (FuncParam (Sugar.EvaluationScopes name i) name, ParamInfo name i o)
+    Lens.Traversal' (Term (EvaluationScopes name i) name i o a)
+    (FuncParam (EvaluationScopes name i) name, ParamInfo name i o)
 lamFirstParam = _BodyLam . lamFunc . fParams . _Params . Lens.ix 0
 
 testUnnamed :: Test

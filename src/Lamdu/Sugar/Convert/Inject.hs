@@ -21,7 +21,7 @@ convert ::
     (Monad m, Monoid a) =>
     V.Inject # Ann (Input.Payload m a) ->
     Input.Payload m a # V.Term ->
-    ConvertM m (ExpressionU m a)
+    ConvertM m (ExpressionU v m a)
 convert (V.Inject tag injected) exprPl =
     do
         protectedSetToVal <- ConvertM.typeProtectedSetToVal
