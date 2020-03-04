@@ -75,7 +75,7 @@ makeExprDefinition ::
     , Has (Texts.Navigation Text) env
     ) =>
     Sugar.Definition Name i o (Sugar.Payload Name i o ExprGui.Payload) ->
-    Sugar.DefinitionExpression Name i o
+    Sugar.DefinitionExpression (Sugar.EvaluationScopes Name i) Name i o
     (Sugar.Payload Name i o ExprGui.Payload) ->
     GuiM env i o (Responsive o)
 makeExprDefinition def bodyExpr =

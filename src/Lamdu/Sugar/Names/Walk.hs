@@ -490,8 +490,8 @@ withBinderParams (Params xs) = traverse (withFuncParam withParamInfo) xs <&> Par
 
 toDefExpr ::
     MonadNaming m =>
-    DefinitionExpression (OldName m) (IM m) o (Payload (OldName m) (IM m) o a) ->
-    m (DefinitionExpression (NewName m) (IM m) o (Payload (NewName m) (IM m) o a))
+    DefinitionExpression (EvaluationScopes (OldName m) (IM m)) (OldName m) (IM m) o (Payload (OldName m) (IM m) o a) ->
+    m (DefinitionExpression (EvaluationScopes (NewName m) (IM m)) (NewName m) (IM m) o (Payload (NewName m) (IM m) o a))
 toDefExpr (DefinitionExpression typ presMode content) =
     DefinitionExpression
     <$> toScheme typ

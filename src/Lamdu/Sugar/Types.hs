@@ -33,21 +33,21 @@ import           Lamdu.Sugar.Types.Type as Exported
 
 import           Lamdu.Prelude
 
-data DefinitionExpression name i o a = DefinitionExpression
+data DefinitionExpression v name i o a = DefinitionExpression
     { _deType :: Scheme name
     , _dePresentationMode :: Maybe (i (Property o Meta.PresentationMode))
-    , _deContent :: Annotated a # Assignment (EvaluationScopes name i) name i o
+    , _deContent :: Annotated a # Assignment v name i o
     } deriving Generic
 
 Lens.makeLenses ''DefinitionExpression
 
-instance Functor (DefinitionExpression name i o) where
+instance Functor (DefinitionExpression v name i o) where
     fmap f = deContent . hflipped %~ hmap (\_ -> Lens._Wrapped %~ f)
 
-instance Foldable (DefinitionExpression name i o) where
+instance Foldable (DefinitionExpression v name i o) where
     foldMap f = (^. deContent . hflipped . Lens.to (hfoldMap (\_ (Const x) -> f x)))
 
-instance Traversable (DefinitionExpression name i o) where
+instance Traversable (DefinitionExpression v name i o) where
     traverse f = deContent (htraverseFlipped (\_ -> Lens._Wrapped f))
 
 data DefinitionBuiltin name o = DefinitionBuiltin
@@ -57,7 +57,7 @@ data DefinitionBuiltin name o = DefinitionBuiltin
     } deriving Generic
 
 data DefinitionBody name i o a
-    = DefinitionBodyExpression (DefinitionExpression name i o a)
+    = DefinitionBodyExpression (DefinitionExpression (EvaluationScopes name i) name i o a)
     | DefinitionBodyBuiltin (DefinitionBuiltin name o)
     deriving (Functor, Foldable, Traversable, Generic)
 
