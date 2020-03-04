@@ -125,8 +125,8 @@ data HoleOption v name i o = HoleOption
       _hoResults :: ListT i (HoleResultScore, i (HoleResult v name i o))
     } deriving Generic
 
-data Hole name i o = Hole
-    { _holeOptions :: i [HoleOption (EvaluationScopes name i) name i o]
+data Hole v name i o = Hole
+    { _holeOptions :: i [HoleOption v name i o]
         -- outer "i" here is used to read index of globals
         -- inner "i" is used to type-check/sugar every val in the option
       -- TODO: Lifter from i to o?
@@ -189,7 +189,7 @@ data Term name i o k
     = BodyLam (Lambda (EvaluationScopes name i) name i o k)
     | BodySimpleApply (App (Term name i o) k)
     | BodyLabeledApply (LabeledApply name i o k)
-    | BodyHole (Hole name i o)
+    | BodyHole (Hole (EvaluationScopes name i) name i o)
     | BodyLiteral (Literal (Property o))
     | BodyRecord (Composite name i o k)
     | BodyGetField (GetField name i o k)

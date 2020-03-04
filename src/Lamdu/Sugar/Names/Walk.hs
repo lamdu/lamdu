@@ -327,8 +327,8 @@ toLabeledApply
 
 toHole ::
     MonadNaming m =>
-    Hole (OldName m) (IM m) o ->
-    m (Hole (NewName m) (IM m) o)
+    Hole (EvaluationScopes (OldName m) (IM m)) (OldName m) (IM m) o ->
+    m (Hole (EvaluationScopes (NewName m) (IM m)) (NewName m) (IM m) o)
 toHole hole =
     opRun
     <&>

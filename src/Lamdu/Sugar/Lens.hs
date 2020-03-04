@@ -130,9 +130,9 @@ holeOptionTransformExprs onExpr option =
 
 holeTransformExprs ::
     Monad i =>
-    (Annotated (Payload n0 i o ()) # Binder (EvaluationScopes n0 i) n0 i o ->
-        i (Annotated (Payload n1 i o ()) # Binder (EvaluationScopes n1 i) n1 i o)) ->
-    Hole n0 i o -> Hole n1 i o
+    (Annotated (Payload n0 i o ()) # Binder v0 n0 i o ->
+        i (Annotated (Payload n1 i o ()) # Binder v1 n1 i o)) ->
+    Hole v0 n0 i o -> Hole v1 n1 i o
 holeTransformExprs onExpr =
     holeOptions . Lens.mapped . traverse %~ holeOptionTransformExprs onExpr
 
