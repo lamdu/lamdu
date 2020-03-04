@@ -194,7 +194,7 @@ convertEvalResultsWith ::
     EvaluationScopes InternalName i
 convertEvalResultsWith entityId evalResults =
     evalResults
-    & Lens.mapped .> Lens.imapped %@~ fmap pure . convertVal . entityId
+    <&> Lens.imapped %@~ fmap pure . convertVal . entityId
     <&> nullToNothing
 
 results ::

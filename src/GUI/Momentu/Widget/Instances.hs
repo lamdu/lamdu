@@ -300,7 +300,7 @@ translateGeneric f pos w =
         translateEnter enter =
             enter
             & Lens.argument %~ FDir.translate (negate pos)
-            & Lens.mapped . enterResultRect . Rect.topLeft +~ pos
+            <&> enterResultRect . Rect.topLeft +~ pos
 
 translateFocusedGeneric ::
     (a -> b) -> Vector2 R ->
