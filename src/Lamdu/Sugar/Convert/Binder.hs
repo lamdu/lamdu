@@ -207,33 +207,37 @@ makeFunction chosenScopeProp params funcBody =
 makeAssignment ::
     (Monad m, Monoid a) =>
     MkProperty' (T m) (Maybe BinderParamScopeId) ->
-    ConventionalParams m ->
-    Ann (Input.Payload m a) # V.Term ->
-    Input.Payload m a # V.Term ->
+    BinderKind m -> V.Var -> Ann (Input.Payload m a) # V.Term ->
     ConvertM m
-    (Annotated (ConvertPayload m a) # Assignment InternalName (T m) (T m))
-makeAssignment chosenScopeProp params funcBody pl =
-    case params ^. cpParams of
-    Nothing ->
-        convertBinder funcBody
-        <&>
-        \(Ann (Const a) x) ->
-        AssignPlain (params ^. cpAddFirstParam) x
-        & BodyPlain
-        & Ann (Const a)
-    Just{} ->
-        do
-            funcS <- makeFunction chosenScopeProp params funcBody
-            nodeActions <- makeActions pl & localNewExtractDestPos pl
-            pure Ann
-                { _hAnn =
-                    Const ConvertPayload
-                    { _pInput =
-                        pl & Input.userData .~ mempty
-                    , _pActions = nodeActions
-                    }
-                , _hVal = BodyFunction funcS
-                }
+    ( Maybe (MkProperty' (T m) PresentationMode)
+    , Annotated (ConvertPayload m a) # Assignment InternalName (T m) (T m)
+    )
+makeAssignment chosenScopeProp binderKind defVar expr =
+    do
+        (mPresentationModeProp, params, funcBody, paramsUserData) <-
+            convertParams binderKind defVar expr
+        case params ^. cpParams of
+            Nothing ->
+                convertBinder funcBody
+                <&>
+                \(Ann (Const a) x) ->
+                AssignPlain (params ^. cpAddFirstParam) x
+                & BodyPlain
+                & Ann (Const a)
+            Just{} ->
+                do
+                    funcS <- makeFunction chosenScopeProp params funcBody
+                    nodeActions <- makeActions (expr ^. hAnn) & localNewExtractDestPos (expr ^. hAnn)
+                    pure Ann
+                        { _hAnn =
+                            Const ConvertPayload
+                            { _pInput = expr ^. hAnn & Input.userData .~ mempty
+                            , _pActions = nodeActions
+                            }
+                        , _hVal = BodyFunction funcS
+                        }
+            <&> annotation . pInput . Input.userData <>~ paramsUserData
+            <&> (,) mPresentationModeProp
 
 convertLam ::
     (Monad m, Monoid a) =>
@@ -385,14 +389,7 @@ convertAssignment binderKind defVar expr =
             & BodyPlain
             & Ann (Const a)
         )
-    True ->
-        do
-            (mPresentationModeProp, convParams, funcBody, paramsUserData) <-
-                convertParams binderKind defVar expr
-            makeAssignment (Anchors.assocScopeRef defVar) convParams
-                funcBody (expr ^. hAnn)
-                <&> annotation . pInput . Input.userData <>~ paramsUserData
-                <&> (,) mPresentationModeProp
+    True -> makeAssignment (Anchors.assocScopeRef defVar) binderKind defVar expr
 
 convertDefinitionBinder ::
     (Monad m, Monoid a) =>
