@@ -113,7 +113,9 @@ plus = arithmeticInfix2 "+"
 mul :: Infix2
 mul = arithmeticInfix2 "*"
 
-pane :: Sugar.Definition (Sugar.EvaluationScopes name i) name i Unit a -> Sugar.Pane name i Unit a
+pane ::
+    Sugar.Definition (Sugar.EvaluationScopes name i) name i Unit a ->
+    Sugar.Pane (Sugar.EvaluationScopes name i) name i Unit a
 pane body =
     Sugar.Pane
     { Sugar._paneBody = Sugar.PaneDefinition body

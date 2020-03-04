@@ -318,7 +318,8 @@ convertPane ::
     Property (T m) [Anchors.Pane dummy] ->
     Int -> Anchors.Pane m ->
     T m
-    (Pane InternalName (T m) (T m) (Payload InternalName (T m) (T m) [EntityId]))
+    (Pane (EvaluationScopes InternalName (T m)) InternalName (T m) (T m)
+        (Payload InternalName (T m) (T m) [EntityId]))
 convertPane env cp replEntityId (Property panes setPanes) i pane =
     convertPaneBody env cp pane
     <&> \body -> Pane
@@ -356,7 +357,7 @@ loadPanes ::
     ) =>
     env -> Anchors.CodeAnchors m -> EntityId ->
     T m
-    [Pane InternalName (T m) (T m)
+    [Pane (EvaluationScopes InternalName (T m)) InternalName (T m) (T m)
         (Payload InternalName (T m) (T m) [EntityId])]
 loadPanes env cp replEntityId =
     do

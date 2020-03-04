@@ -81,8 +81,8 @@ data PaneBody v name i o a
     | PaneTag (TagPane name o)
     deriving (Functor, Foldable, Traversable, Generic)
 
-data Pane name i o a = Pane
-    { _paneBody :: PaneBody (EvaluationScopes name i) name i o a
+data Pane v name i o a = Pane
+    { _paneBody :: PaneBody v name i o a
     , _paneClose :: o EntityId
     , _paneMoveDown :: Maybe (o ())
     , _paneMoveUp :: Maybe (o ())
@@ -106,7 +106,7 @@ instance Traversable (Repl name i o) where
     traverse f = replExpr (htraverseFlipped (\_ -> Lens._Wrapped f))
 
 data WorkArea name i o a = WorkArea
-    { _waPanes :: [Pane name i o a]
+    { _waPanes :: [Pane (EvaluationScopes name i) name i o a]
     , _waRepl :: Repl name i o a
     , _waGlobals :: i [NameRef name o]
     } deriving (Functor, Foldable, Traversable, Generic)

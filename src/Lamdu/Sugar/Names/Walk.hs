@@ -532,8 +532,8 @@ toPaneBody (PaneTag x) = toTagPane x <&> PaneTag
 
 toPane ::
     MonadNaming m =>
-    Pane (OldName m) (IM m) o (Payload (OldName m) (IM m) o a) ->
-    m (Pane (NewName m) (IM m) o (Payload (NewName m) (IM m) o a))
+    Pane (EvaluationScopes (OldName m) (IM m)) (OldName m) (IM m) o (Payload (OldName m) (IM m) o a) ->
+    m (Pane (EvaluationScopes (NewName m) (IM m)) (NewName m) (IM m) o (Payload (NewName m) (IM m) o a))
 toPane = paneBody toPaneBody
 
 toRepl ::
