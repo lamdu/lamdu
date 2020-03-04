@@ -488,10 +488,12 @@ withBinderParams ::
 withBinderParams (NullParam x) = withFuncParam (const pure) x <&> NullParam
 withBinderParams (Params xs) = traverse (withFuncParam withParamInfo) xs <&> Params
 
+type OldTop e m o a = e (EvaluationScopes (OldName m) (IM m)) (OldName m) (IM m) o (OldPayload m o a)
+type NewTop e m o a = e (EvaluationScopes (NewName m) (IM m)) (NewName m) (IM m) o (NewPayload m o a)
+
 toDefExpr ::
     MonadNaming m =>
-    DefinitionExpression (EvaluationScopes (OldName m) (IM m)) (OldName m) (IM m) o (OldPayload m o a) ->
-    m (DefinitionExpression (EvaluationScopes (NewName m) (IM m)) (NewName m) (IM m) o (NewPayload m o a))
+    OldTop DefinitionExpression m o a -> m (NewTop DefinitionExpression m o a)
 toDefExpr (DefinitionExpression typ presMode content) =
     DefinitionExpression
     <$> toScheme typ
@@ -499,18 +501,13 @@ toDefExpr (DefinitionExpression typ presMode content) =
     <*> toAssignment content
 
 toDefinitionBody ::
-    MonadNaming m =>
-    DefinitionBody (EvaluationScopes (OldName m) (IM m)) (OldName m) (IM m) o (OldPayload m o a) ->
-    m (DefinitionBody (EvaluationScopes (NewName m) (IM m)) (NewName m) (IM m) o (NewPayload m o a))
+    MonadNaming m => OldTop DefinitionBody m o a -> m (NewTop DefinitionBody m o a)
 toDefinitionBody (DefinitionBodyBuiltin bi) =
     bi & biType %%~ toScheme <&> DefinitionBodyBuiltin
 toDefinitionBody (DefinitionBodyExpression expr) =
     toDefExpr expr <&> DefinitionBodyExpression
 
-toDef ::
-    MonadNaming m =>
-    Definition (EvaluationScopes (OldName m) (IM m)) (OldName m) (IM m) o (OldPayload m o a) ->
-    m (Definition (EvaluationScopes (NewName m) (IM m)) (NewName m) (IM m) o (NewPayload m o a))
+toDef :: MonadNaming m => OldTop Definition m o a -> m (NewTop Definition m o a)
 toDef def@Definition{_drName, _drBody} =
     do
         -- NOTE: A global def binding is not considered a binder, as
@@ -523,33 +520,21 @@ toTagPane :: MonadNaming m => TagPane (OldName m) o -> m (TagPane (NewName m) o)
 toTagPane (TagPane tag i18n setSymbol setName) =
     toTagOf Tag tag <&> \x -> TagPane x i18n setSymbol setName
 
-toPaneBody ::
-    MonadNaming m =>
-    PaneBody (EvaluationScopes (OldName m) (IM m)) (OldName m) (IM m) o (OldPayload m o a) ->
-    m (PaneBody (EvaluationScopes (NewName m) (IM m)) (NewName m) (IM m) o (NewPayload m o a))
+toPaneBody :: MonadNaming m => OldTop PaneBody m o a -> m (NewTop PaneBody m o a)
 toPaneBody (PaneDefinition def) = toDef def <&> PaneDefinition
 toPaneBody (PaneTag x) = toTagPane x <&> PaneTag
 
-toPane ::
-    MonadNaming m =>
-    Pane (EvaluationScopes (OldName m) (IM m)) (OldName m) (IM m) o (OldPayload m o a) ->
-    m (Pane (EvaluationScopes (NewName m) (IM m)) (NewName m) (IM m) o (NewPayload m o a))
+toPane :: MonadNaming m => OldTop Pane m o a -> m (NewTop Pane m o a)
 toPane = paneBody toPaneBody
 
-toRepl ::
-    MonadNaming m =>
-    Repl (EvaluationScopes (OldName m) (IM m)) (OldName m) (IM m) o (OldPayload m o a) ->
-    m (Repl (EvaluationScopes (NewName m) (IM m)) (NewName m) (IM m) o (NewPayload m o a))
+toRepl :: MonadNaming m => OldTop Repl m o a -> m (NewTop Repl m o a)
 toRepl (Repl bod varInfo res) =
     Repl
     <$> toNode toBinder bod
     <*> pure varInfo
     <*> (traverse . Lens._Just . _EvalSuccess) toResVal res
 
-toWorkArea ::
-    MonadNaming m =>
-    WorkArea (EvaluationScopes (OldName m) (IM m)) (OldName m) (IM m) o (OldPayload m o a) ->
-    m (WorkArea (EvaluationScopes (NewName m) (IM m)) (NewName m) (IM m) o (NewPayload m o a))
+toWorkArea :: MonadNaming m => OldTop WorkArea m o a -> m (NewTop WorkArea m o a)
 toWorkArea WorkArea { _waPanes, _waRepl, _waGlobals } =
     do
         run <- opRun
