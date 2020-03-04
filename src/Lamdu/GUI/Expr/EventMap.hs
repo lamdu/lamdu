@@ -288,16 +288,21 @@ makeLiteralNumberEventMap prefix =
     Chars.digit
     (fmap goToLiteral . makeLiteral . Sugar.LiteralNum . Identity . read . (prefix <>) . (: []))
 
+makeLiteralTextEventMap ::
+    ( MonadReader env m, Monad o
+    , Has (MomentuTexts.Texts Text) env, Has (Texts.CodeUI Text) env
+    ) =>
+    m ((Sugar.Literal Identity -> o Sugar.EntityId) -> EventMap (o GuiState.Update))
+makeLiteralTextEventMap =
+    Lens.view id <&> E.toDoc <&>
+    \toDoc makeLiteral ->
+    E.charGroup Nothing
+    (toDoc [has . MomentuTexts.edit, has . Texts.literalText]) "'\""
+    (const (makeLiteral (Sugar.LiteralText (Identity "")) <&> goToLiteral))
+
 makeLiteralEventMap ::
     ( MonadReader env m, Monad o
     , Has (MomentuTexts.Texts Text) env, Has (Texts.CodeUI Text) env
     ) =>
     m ((Sugar.Literal Identity -> o Sugar.EntityId) -> EventMap (o GuiState.Update))
-makeLiteralEventMap =
-    (,) <$> (Lens.view id <&> E.toDoc) <*> makeLiteralNumberEventMap ""
-    <&>
-    \(toDoc, lit) makeLiteral ->
-    E.charGroup Nothing
-    (toDoc [has . MomentuTexts.edit, has . Texts.literalText]) "'\""
-    (const (makeLiteral (Sugar.LiteralText (Identity "")) <&> goToLiteral))
-    <> lit makeLiteral
+makeLiteralEventMap = (<>) <$> makeLiteralTextEventMap <*> makeLiteralNumberEventMap ""
