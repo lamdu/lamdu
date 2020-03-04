@@ -79,7 +79,7 @@ instance MarkAnnotations (Binder name i o) where
             & BinderLet
         )
 
-instance MarkAnnotations (Assignment name i o) where
+instance MarkAnnotations (Assignment v name i o) where
     markAnnotations (BodyPlain (AssignPlain a b)) =
         markAnnotations b
         & _2 %~ BodyPlain . AssignPlain a

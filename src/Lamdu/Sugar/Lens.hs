@@ -47,7 +47,7 @@ instance SugarExpr (Const (NullaryVal name i o))
 instance SugarExpr (Const (BinderVarRef name o)) where
     isUnfinished (Const x) = Lens.has binderVarRefUnfinished x
 
-instance SugarExpr (Assignment name i o) where
+instance SugarExpr (Assignment v name i o) where
     isUnfinished (BodyPlain x) = isUnfinished (x ^. apBody)
     isUnfinished BodyFunction{} = False
 
@@ -134,7 +134,7 @@ holeTransformExprs ::
 holeTransformExprs onExpr =
     holeOptions . Lens.mapped . traverse %~ holeOptionTransformExprs onExpr
 
-assignmentBodyAddFirstParam :: Lens' (Assignment name i o a) (AddFirstParam name i o)
+assignmentBodyAddFirstParam :: Lens' (Assignment v name i o a) (AddFirstParam name i o)
 assignmentBodyAddFirstParam f (BodyFunction x) = fAddFirstParam f x <&> BodyFunction
 assignmentBodyAddFirstParam f (BodyPlain x) = apAddFirstParam f x <&> BodyPlain
 

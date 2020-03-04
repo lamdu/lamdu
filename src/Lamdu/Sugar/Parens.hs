@@ -39,7 +39,7 @@ class AddParens expr where
     addToNode :: Annotated a # expr -> Annotated (ParenInfo, a) # expr
     addToNode (Ann (Const pl) x) = Ann (Const (ParenInfo 0 False, pl)) (addToBody x)
 
-instance HasPrecedence name => AddParens (Assignment name i o) where
+instance HasPrecedence name => AddParens (Assignment v name i o) where
     addToBody (BodyFunction x) = x & fBody %~ addToNode & BodyFunction
     addToBody (BodyPlain x) = x & apBody %~ addToBody & BodyPlain
 

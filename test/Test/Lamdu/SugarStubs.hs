@@ -139,7 +139,9 @@ mkTag var tag =
 def ::
     Annotated Sugar.EntityId # Sugar.Type InternalName ->
     UUID -> T.Tag ->
-    Annotated expr # Sugar.Assignment InternalName Identity Unit ->
+    Annotated expr #
+        Sugar.Assignment (Sugar.EvaluationScopes InternalName Identity)
+        InternalName Identity Unit ->
     Sugar.Definition InternalName Identity Unit expr
 def typ var tag body =
     Sugar.Definition
@@ -205,7 +207,7 @@ funcExpr params (Ann (Const ba) bx) =
 
 binderExpr ::
     [(UUID, T.Tag)] -> Expr ->
-    Sugar.Expr Sugar.Assignment InternalName Identity Unit ()
+    Sugar.Expr (Sugar.Assignment v) InternalName Identity Unit ()
 binderExpr params body = funcExpr params body & Sugar.BodyFunction & node
 
 expr ::

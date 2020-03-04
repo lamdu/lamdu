@@ -251,8 +251,8 @@ toBinderPlain AssignPlain{_apBody, _apAddFirstParam} =
 
 toAssignment ::
     MonadNaming m =>
-    Expr Assignment (OldName m) (IM m) o a ->
-    m (Expr Assignment (NewName m) (IM m) o a)
+    Expr (Assignment (EvaluationScopes (OldName m) (IM m))) (OldName m) (IM m) o a ->
+    m (Expr (Assignment (EvaluationScopes (NewName m) (IM m))) (NewName m) (IM m) o a)
 toAssignment =
     \case
     BodyPlain x -> toBinderPlain x <&> BodyPlain

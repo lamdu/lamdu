@@ -203,7 +203,7 @@ data Term name i o k
     deriving Generic
 
 data Let name i o k = Let
-    { _lValue :: k :# Assignment name i o -- "let foo = [[bar]] in x"
+    { _lValue :: k :# Assignment (EvaluationScopes name i) name i o -- "let foo = [[bar]] in x"
     , _lVarInfo :: VarInfo
     , _lUsages :: [EntityId]
     , _lName :: TagRef name i o -- let [[foo]] = bar in x
@@ -236,8 +236,8 @@ data AssignPlain name i o f = AssignPlain
     , _apBody :: Binder name i o f
     } deriving Generic
 
-data Assignment name i o f
-    = BodyFunction (Function (EvaluationScopes name i) name i o f)
+data Assignment v name i o f
+    = BodyFunction (Function v name i o f)
     | BodyPlain (AssignPlain name i o f)
     deriving Generic
 
@@ -276,14 +276,14 @@ traverse makeHTraversableAndBases
 
 -- TODO: Replace boilerplate below with TH
 
-instance RNodes (Assignment name i o)
+instance RNodes (Assignment (EvaluationScopes name i) name i o)
 instance RNodes (Binder name i o)
 instance RNodes (Else name i o)
 instance RNodes (Function v name i o)
 instance RNodes (Term name i o)
 
 type Dep c name i o =
-    ( (c (Assignment name i o) :: Constraint)
+    ( (c (Assignment (EvaluationScopes name i) name i o) :: Constraint)
     , c (Binder name i o)
     , c (Const (BinderVarRef name o))
     , c (Const (NullaryVal name i o))
@@ -292,14 +292,14 @@ type Dep c name i o =
     , c (Term name i o)
     )
 
-instance Dep c name i o => Recursively c (Assignment name i o)
+instance Dep c name i o => Recursively c (Assignment (EvaluationScopes name i) name i o)
 instance Dep c name i o => Recursively c (Binder name i o)
 instance Dep c name i o => Recursively c (Else name i o)
 instance Dep c name i o => Recursively c (Term name i o)
 
 instance (Dep c name i o, c (Function v name i o)) => Recursively c (Function v name i o)
 
-instance RTraversable (Assignment name i o)
+instance RTraversable (Assignment (EvaluationScopes name i) name i o)
 instance RTraversable (Binder name i o)
 instance RTraversable (Else name i o)
 instance RTraversable (Term name i o)
