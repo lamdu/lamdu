@@ -76,8 +76,8 @@ data ParamInfo name i o = ParamInfo
     , _piActions :: FuncParamActions name i o
     } deriving Generic
 
-data FuncParam name i = FuncParam
-    { _fpAnnotation :: Annotation (EvaluationScopes name i) name
+data FuncParam v name = FuncParam
+    { _fpAnnotation :: Annotation v name
     , _fpVarInfo :: VarInfo
     } deriving Generic
 
@@ -116,8 +116,8 @@ data BinderParams name i o
     = -- null param represents a lambda whose parameter's type is inferred
       -- to be the empty record.
       -- This is often used to represent "deferred execution"
-      NullParam (FuncParam name i, NullParamActions o)
-    | Params [(FuncParam name i, ParamInfo name i o)]
+      NullParam (FuncParam (EvaluationScopes name i) name, NullParamActions o)
+    | Params [(FuncParam (EvaluationScopes name i) name, ParamInfo name i o)]
     deriving Generic
 
 data VarInfo

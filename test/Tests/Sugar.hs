@@ -86,7 +86,9 @@ replBody = replBinder . _BinderTerm
 replLet :: Lens.Traversal' (WorkArea name i o a) (Let name i o # Annotated a)
 replLet = replBinder . _BinderLet
 
-lamFirstParam :: Lens.Traversal' (Term name i o a) (FuncParam name i, ParamInfo name i o)
+lamFirstParam ::
+    Lens.Traversal' (Term name i o a)
+    (FuncParam (Sugar.EvaluationScopes name i) name, ParamInfo name i o)
 lamFirstParam = _BodyLam . lamFunc . fParams . _Params . Lens.ix 0
 
 testUnnamed :: Test

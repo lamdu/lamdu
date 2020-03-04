@@ -91,7 +91,9 @@ instance MonadTransaction m i => Order i name o (Sugar.Function name i o) where
         & (Sugar.fParams . Sugar._Params) orderParams
         >>= Sugar.fBody orderNode
 
-orderParams :: MonadTransaction m i => OrderT i [(Sugar.FuncParam name i, Sugar.ParamInfo name i o)]
+orderParams ::
+    MonadTransaction m i =>
+    OrderT i [(Sugar.FuncParam v name, Sugar.ParamInfo name i o)]
 orderParams xs =
     xs
     & (Lens.traversed . _1 . Sugar.fpAnnotation . Sugar._AnnotationType) orderType
