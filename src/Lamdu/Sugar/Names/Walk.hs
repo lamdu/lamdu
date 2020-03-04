@@ -207,8 +207,8 @@ toNode toV (Ann (Const pl) v) =
 
 toLet ::
     MonadNaming m =>
-    Body Let (OldName m) (IM m) o a ->
-    m (Body Let (NewName m) (IM m) o a)
+    Body (Let (EvaluationScopes (OldName m) (IM m))) (OldName m) (IM m) o a ->
+    m (Body (Let (EvaluationScopes (NewName m) (IM m))) (NewName m) (IM m) o a)
 toLet let_@Let{_lName, _lVarInfo, _lBody, _lValue} =
     do
         (_lName, _lBody) <-

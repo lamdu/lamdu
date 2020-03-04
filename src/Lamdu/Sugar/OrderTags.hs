@@ -83,7 +83,7 @@ instance MonadTransaction m i => Order i name o (Sugar.Lambda v name i o)
 instance MonadTransaction m i => Order i name o (Lens.Const a)
 instance MonadTransaction m i => Order i name o (Sugar.Else name i o)
 instance MonadTransaction m i => Order i name o (Sugar.IfElse name i o)
-instance MonadTransaction m i => Order i name o (Sugar.Let name i o)
+instance MonadTransaction m i => Order i name o (Sugar.Let v name i o)
 
 instance MonadTransaction m i => Order i name o (Sugar.Function v name i o) where
     order x =

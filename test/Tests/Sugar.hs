@@ -83,7 +83,7 @@ replBinder = waRepl . replExpr . hVal
 replBody :: Lens.Traversal' (WorkArea name i o a) (Term name i o # Annotated a)
 replBody = replBinder . _BinderTerm
 
-replLet :: Lens.Traversal' (WorkArea name i o a) (Let name i o # Annotated a)
+replLet :: Lens.Traversal' (WorkArea name i o a) (Let (EvaluationScopes name i) name i o # Annotated a)
 replLet = replBinder . _BinderLet
 
 lamFirstParam ::
@@ -488,7 +488,7 @@ testCreateLetInLetVal =
         theLet ::
             Lens.Traversal'
             (WorkArea name i o a)
-            (Let name i o # Annotated a)
+            (Let (EvaluationScopes name i) name i o # Annotated a)
         theLet = replBody . _BodyLam . lamFunc . fBody . hVal . _BinderLet
 
 testHoleTypeShown :: Test

@@ -202,8 +202,8 @@ data Term name i o k
     | BodyPlaceHolder -- Used for hole results, shown as "★"
     deriving Generic
 
-data Let name i o k = Let
-    { _lValue :: k :# Assignment (EvaluationScopes name i) name i o -- "let foo = [[bar]] in x"
+data Let v name i o k = Let
+    { _lValue :: k :# Assignment v name i o -- "let foo = [[bar]] in x"
     , _lVarInfo :: VarInfo
     , _lUsages :: [EntityId]
     , _lName :: TagRef name i o -- let [[foo]] = bar in x
@@ -218,7 +218,7 @@ data Let name i o k = Let
 -- * Definition or let item value: "x = [[THIS]]"
 -- * Let-item/redex: "let x = y in [[THIS]]"
 data Binder name i o f
-    = BinderLet (Let name i o f)
+    = BinderLet (Let (EvaluationScopes name i) name i o f)
     | BinderTerm (Term name i o f)
     deriving Generic
 
