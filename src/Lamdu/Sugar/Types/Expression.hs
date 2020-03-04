@@ -157,11 +157,11 @@ data CompositeTail v name i o k
     | ClosedComposite (ClosedCompositeActions o)
     deriving Generic
 
-data Composite name i o k = Composite
-    { _cItems :: [CompositeItem (EvaluationScopes name i) name i o k]
+data Composite v name i o k = Composite
+    { _cItems :: [CompositeItem v name i o k]
     , -- Punned items are like Haskell's NamedFieldPuns
       _cPunnedItems :: [k :# Lens.Const (GetVar name o)]
-    , _cTail :: CompositeTail (EvaluationScopes name i) name i o k
+    , _cTail :: CompositeTail v name i o k
     , _cAddItem :: TagReplace name i o EntityId
     } deriving Generic
 
@@ -177,7 +177,7 @@ data CaseKind name i o k
 
 data Case name i o k = Case
     { _cKind :: CaseKind name i o k
-    , _cBody :: Composite name i o k
+    , _cBody :: Composite (EvaluationScopes name i) name i o k
     } deriving Generic
 
 data Nominal v name i o k = Nominal
@@ -191,7 +191,7 @@ data Term v name i o k
     | BodyLabeledApply (LabeledApply v name i o k)
     | BodyHole (Hole v name i o)
     | BodyLiteral (Literal (Property o))
-    | BodyRecord (Composite name i o k)
+    | BodyRecord (Composite v name i o k)
     | BodyGetField (GetField v name i o k)
     | BodyCase (Case name i o k)
     | BodyIfElse (IfElse v name i o k)

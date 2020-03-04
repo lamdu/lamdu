@@ -366,8 +366,8 @@ toCompositeItem (CompositeItem del tag e) =
 
 toComposite ::
     MonadNaming m =>
-    Body Composite (OldName m) (IM m) o a ->
-    m (Body Composite (NewName m) (IM m) o a)
+    Body (Composite (EvaluationScopes (OldName m) (IM m))) (OldName m) (IM m) o a ->
+    m (Body (Composite (EvaluationScopes (NewName m) (IM m))) (NewName m) (IM m) o a)
 toComposite (Composite items punned tail_ addItem) =
     Composite
     <$> traverse toCompositeItem items

@@ -72,7 +72,7 @@ convert posInfo app@(V.App funcI argI) exprPl =
 validateDefParamsMatchArgs ::
     MonadPlus m =>
     V.Var ->
-    Composite InternalName i o # Ann a ->
+    Composite v InternalName i o # Ann a ->
     Deps ->
     m ()
 validateDefParamsMatchArgs var record frozenDeps =

@@ -71,8 +71,8 @@ convertExtend ::
     Annotated b # Term (EvaluationScopes InternalName (T m)) InternalName (T m) (T m) ->
     Input.Payload m a # V.Term ->
     ExtendVal m (Input.Payload m a # V.Term) ->
-    Composite InternalName (T m) (T m) # Annotated b ->
-    ConvertM m (Composite InternalName (T m) (T m) # Annotated b)
+    Composite (EvaluationScopes InternalName (T m)) InternalName (T m) (T m) # Annotated b ->
+    ConvertM m (Composite (EvaluationScopes InternalName (T m)) InternalName (T m) (T m) # Annotated b)
 convertExtend cons extendOp valS exprPl extendV restC =
     do
         itemS <-
@@ -105,7 +105,7 @@ convertOneItemOpenComposite ::
     k # Term (EvaluationScopes InternalName (T m)) InternalName (T m) (T m) ->
     Input.Payload m a # V.Term ->
     ExtendVal m (Input.Payload m a # V.Term) ->
-    ConvertM m (Composite InternalName (T m) (T m) # k)
+    ConvertM m (Composite (EvaluationScopes InternalName (T m)) InternalName (T m) (T m) # k)
 convertOneItemOpenComposite leaf cons extendOp valS restS exprPl extendV =
     Composite
     <$> ( convertItem cons
@@ -135,7 +135,7 @@ convertEmpty ::
     Monad m =>
     (T.Tag -> ValI m -> T m (DataOps.CompositeExtendResult m)) ->
     Input.Payload m a # V.Term ->
-    ConvertM m (Composite InternalName (T m) (T m) expr)
+    ConvertM m (Composite v InternalName (T m) (T m) expr)
 convertEmpty extendOp exprPl =
     do
         actions <-
@@ -188,7 +188,8 @@ type BodyPrism m a =
     Lens.Prism'
     (Term (EvaluationScopes InternalName (T m)) InternalName (T m) (T m) #
         Annotated (ConvertPayload m a))
-    (Composite InternalName (T m) (T m) # Annotated (ConvertPayload m a))
+    (Composite (EvaluationScopes InternalName (T m)) InternalName (T m) (T m) #
+        Annotated (ConvertPayload m a))
 
 convert ::
     (Monad m, Monoid a) =>
