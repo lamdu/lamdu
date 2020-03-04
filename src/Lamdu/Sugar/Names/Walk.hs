@@ -390,8 +390,8 @@ toInjectVal (InjectNullary n) = toNode (Lens._Wrapped (nullaryAddItem toTagRepla
 
 toInject ::
     MonadNaming m =>
-    Body Inject (OldName m) (IM m) o a ->
-    m (Body Inject (NewName m) (IM m) o a)
+    Body (Inject (EvaluationScopes (OldName m) (IM m))) (OldName m) (IM m) o a ->
+    m (Body (Inject (EvaluationScopes (NewName m) (IM m))) (NewName m) (IM m) o a)
 toInject (Inject t v) =
     Inject <$> toTagRefOf Tag t <*> toInjectVal v
 

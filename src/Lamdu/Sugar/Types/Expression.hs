@@ -87,9 +87,9 @@ data InjectContent v name i o k
     | InjectVal (k :# Term v name i o)
     deriving Generic
 
-data Inject name i o f = Inject
+data Inject v name i o f = Inject
     { _iTag :: TagRef name i o
-    , _iContent :: InjectContent (EvaluationScopes name i) name i o f
+    , _iContent :: InjectContent v name i o f
     } deriving Generic
 
 data GetField name i o k = GetField
@@ -195,7 +195,7 @@ data Term v name i o k
     | BodyGetField (GetField name i o k)
     | BodyCase (Case name i o k)
     | BodyIfElse (IfElse name i o k)
-    | BodyInject (Inject name i o k)
+    | BodyInject (Inject v name i o k)
     | BodyGetVar (GetVar name o)
     | BodyToNom (Nominal v name i o k)
     | BodyFromNom (TId name)

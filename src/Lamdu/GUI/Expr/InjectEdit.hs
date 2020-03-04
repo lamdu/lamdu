@@ -144,7 +144,7 @@ make ::
     , Has (Texts.Name Text) env
     , Has (Texts.Navigation Text) env
     ) =>
-    Sugar.Expr Sugar.Inject Name i o ExprGui.Payload ->
+    Sugar.Expr (Sugar.Inject (Sugar.EvaluationScopes Name i)) Name i o ExprGui.Payload ->
     GuiM env i o (Responsive o)
 make (Ann (Const pl) (Sugar.Inject tag mVal)) =
     ( case mVal of
