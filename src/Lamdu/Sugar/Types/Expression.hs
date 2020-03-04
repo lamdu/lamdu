@@ -82,14 +82,14 @@ data LabeledApply v name i o k = LabeledApply
     , _aPunnedArgs :: [k :# Lens.Const (GetVar name o)]
     } deriving Generic
 
-data InjectContent name i o k
+data InjectContent v name i o k
     = InjectNullary (k :# Lens.Const (NullaryVal name i o))
-    | InjectVal (k :# Term (EvaluationScopes name i) name i o)
+    | InjectVal (k :# Term v name i o)
     deriving Generic
 
 data Inject name i o f = Inject
     { _iTag :: TagRef name i o
-    , _iContent :: InjectContent name i o f
+    , _iContent :: InjectContent (EvaluationScopes name i) name i o f
     } deriving Generic
 
 data GetField name i o k = GetField

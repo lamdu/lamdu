@@ -383,8 +383,8 @@ toCase (Case k c) = Case <$> (_CaseWithArg . caVal) toExpression k <*> toComposi
 
 toInjectVal ::
     MonadNaming m =>
-    Body InjectContent (OldName m) (IM m) o a ->
-    m (Body InjectContent (NewName m) (IM m) o a)
+    Body (InjectContent (EvaluationScopes (OldName m) (IM m))) (OldName m) (IM m) o a ->
+    m (Body (InjectContent (EvaluationScopes (NewName m) (IM m))) (NewName m) (IM m) o a)
 toInjectVal (InjectVal v) = toExpression v <&> InjectVal
 toInjectVal (InjectNullary n) = toNode (Lens._Wrapped (nullaryAddItem toTagReplace)) n <&> InjectNullary
 
