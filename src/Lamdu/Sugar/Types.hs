@@ -76,13 +76,13 @@ data TagPane name o = TagPane
     , _tpSetTexts :: LangId -> DataTag.TextsInLang -> o ()
     } deriving Generic
 
-data PaneBody name i o a
-    = PaneDefinition (Definition (EvaluationScopes name i) name i o a)
+data PaneBody v name i o a
+    = PaneDefinition (Definition v name i o a)
     | PaneTag (TagPane name o)
     deriving (Functor, Foldable, Traversable, Generic)
 
 data Pane name i o a = Pane
-    { _paneBody :: PaneBody name i o a
+    { _paneBody :: PaneBody (EvaluationScopes name i) name i o a
     , _paneClose :: o EntityId
     , _paneMoveDown :: Maybe (o ())
     , _paneMoveUp :: Maybe (o ())

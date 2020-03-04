@@ -269,8 +269,8 @@ convertPaneBody ::
     ) =>
     env -> Anchors.CodeAnchors m -> Anchors.Pane m ->
     T m
-    (PaneBody
-        InternalName (T m) (T m) (Payload InternalName (T m) (T m) [EntityId]))
+    (PaneBody (EvaluationScopes InternalName (T m)) InternalName (T m) (T m)
+        (Payload InternalName (T m) (T m) [EntityId]))
 convertPaneBody _ _ (Anchors.PaneTag tagId) =
     ExprIRef.readTagData tagId <&>
     \tagData ->

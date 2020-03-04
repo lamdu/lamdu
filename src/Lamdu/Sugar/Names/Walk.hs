@@ -525,8 +525,8 @@ toTagPane (TagPane tag i18n setSymbol setName) =
 
 toPaneBody ::
     MonadNaming m =>
-    PaneBody (OldName m) (IM m) o (Payload (OldName m) (IM m) o a) ->
-    m (PaneBody (NewName m) (IM m) o (Payload (NewName m) (IM m) o a))
+    PaneBody (EvaluationScopes (OldName m) (IM m)) (OldName m) (IM m) o (Payload (OldName m) (IM m) o a) ->
+    m (PaneBody (EvaluationScopes (NewName m) (IM m)) (NewName m) (IM m) o (Payload (NewName m) (IM m) o a))
 toPaneBody (PaneDefinition def) = toDef def <&> PaneDefinition
 toPaneBody (PaneTag x) = toTagPane x <&> PaneTag
 

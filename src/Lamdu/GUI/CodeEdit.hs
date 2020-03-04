@@ -156,7 +156,7 @@ exportPaneEventMap ::
     , Has Config env
     , Has (Texts.Collaboration Text) env
     ) =>
-    env -> ExportActions m -> Sugar.PaneBody name i o dummy ->
+    env -> ExportActions m -> Sugar.PaneBody v name i o dummy ->
     EventMap (IOTrans m GuiState.Update)
 exportPaneEventMap env theExportActions paneBody =
     case paneBody of
