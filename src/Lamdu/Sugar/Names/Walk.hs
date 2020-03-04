@@ -219,8 +219,8 @@ toLet let_@Let{_lName, _lVarInfo, _lBody, _lValue} =
 
 toBinder ::
     MonadNaming m =>
-    Body Binder (OldName m) (IM m) o a ->
-    m (Binder (NewName m) (IM m) o # Annotated (Payload (NewName m) (IM m) o a))
+    Body (Binder (EvaluationScopes (OldName m) (IM m))) (OldName m) (IM m) o a ->
+    m (Body (Binder (EvaluationScopes (NewName m) (IM m))) (NewName m) (IM m) o a)
 toBinder (BinderLet l) = toLet l <&> BinderLet
 toBinder (BinderTerm e) = toBody e <&> BinderTerm
 

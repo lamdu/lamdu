@@ -118,7 +118,7 @@ binder ::
     ( Has (Texts.Code Text) env
     , Has (Texts.CodeUI Text) env
     ) =>
-    env -> Binder Name i o # Annotated a -> [Text]
+    env -> Binder v Name i o # Annotated a -> [Text]
 binder env BinderLet{} = [env ^. has . Texts.let_]
 binder env (BinderTerm x) = ofBody env x
 

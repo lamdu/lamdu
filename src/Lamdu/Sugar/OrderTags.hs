@@ -105,7 +105,7 @@ instance MonadTransaction m i => Order i name o (Sugar.Assignment v name i o) wh
     order (Sugar.BodyPlain x) = Sugar.apBody order x <&> Sugar.BodyPlain
     order (Sugar.BodyFunction x) = order x <&> Sugar.BodyFunction
 
-instance MonadTransaction m i => Order i name o (Sugar.Binder name i o) where
+instance MonadTransaction m i => Order i name o (Sugar.Binder v name i o) where
     order (Sugar.BinderTerm x) = order x <&> Sugar.BinderTerm
     order (Sugar.BinderLet x) = order x <&> Sugar.BinderLet
 

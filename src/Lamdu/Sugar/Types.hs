@@ -89,7 +89,7 @@ data Pane name i o a = Pane
     } deriving (Functor, Foldable, Traversable, Generic)
 
 data Repl name i o a = Repl
-    { _replExpr :: Annotated a # Binder name i o
+    { _replExpr :: Annotated a # Binder (EvaluationScopes name i) name i o
     , _replVarInfo :: VarInfo
     , _replResult :: EvalCompletion name o
     } deriving Generic

@@ -58,7 +58,7 @@ instance SugarExpr (Else name i o) where
 instance SugarExpr (Function v name i o) where
     isForbiddenInLightLam = Lens.has (fParams . _Params)
 
-instance SugarExpr (Binder name i o) where
+instance SugarExpr (Binder v name i o) where
     isUnfinished (BinderTerm x) = isUnfinished x
     isUnfinished BinderLet{} = False
     isForbiddenInLightLam BinderLet{} = True
@@ -101,7 +101,7 @@ binderFuncParamActions f (Params ps) = (traverse . _2 . piActions) f ps <&> Para
 
 binderResultExpr ::
     Lens.IndexedLens' (Term name i o # Annotated ())
-    (Annotated a # Binder name i o) a
+    (Annotated a # Binder v name i o) a
 binderResultExpr f (Ann (Const pl) x) =
     case x of
     BinderTerm e ->
@@ -117,8 +117,8 @@ binderResultExpr f (Ann (Const pl) x) =
 
 holeOptionTransformExprs ::
     Monad i =>
-    (Annotated (Payload n0 i o ()) # Binder n0 i o ->
-        i (Annotated (Payload n1 i o ()) # Binder n1 i o)) ->
+    (Annotated (Payload n0 i o ()) # Binder (EvaluationScopes n0 i) n0 i o ->
+        i (Annotated (Payload n1 i o ()) # Binder (EvaluationScopes n1 i) n1 i o)) ->
     HoleOption n0 i o -> HoleOption n1 i o
 holeOptionTransformExprs onExpr option =
     option
@@ -128,8 +128,8 @@ holeOptionTransformExprs onExpr option =
 
 holeTransformExprs ::
     Monad i =>
-    (Annotated (Payload n0 i o ()) # Binder n0 i o ->
-        i (Annotated (Payload n1 i o ()) # Binder n1 i o)) ->
+    (Annotated (Payload n0 i o ()) # Binder (EvaluationScopes n0 i) n0 i o ->
+        i (Annotated (Payload n1 i o ()) # Binder (EvaluationScopes n1 i) n1 i o)) ->
     Hole n0 i o -> Hole n1 i o
 holeTransformExprs onExpr =
     holeOptions . Lens.mapped . traverse %~ holeOptionTransformExprs onExpr

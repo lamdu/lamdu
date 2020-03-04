@@ -77,7 +77,11 @@ testSugarActions ::
 testSugarActions program actions =
     Env.make >>= testSugarActionsWith program actions
 
-replBinder :: Lens.Traversal' (WorkArea name i o a) (Binder name i o # Annotated a)
+replBinder ::
+    Lens.Traversal' (WorkArea name i o a)
+    ( Binder (EvaluationScopes name i) name i o #
+        Annotated a
+    )
 replBinder = waRepl . replExpr . hVal
 
 replBody :: Lens.Traversal' (WorkArea name i o a) (Term name i o # Annotated a)

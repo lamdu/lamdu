@@ -46,8 +46,8 @@ instance HasPrecedence name => AddParens (Assignment v name i o) where
 addToBinderWith ::
     HasPrecedence name =>
     MinOpPrec ->
-    Annotated a # Binder name i o ->
-    Annotated (ParenInfo, a) # Binder name i o
+    Annotated a # Binder v name i o ->
+    Annotated (ParenInfo, a) # Binder v name i o
 addToBinderWith minOpPrec (Ann (Const pl) x) =
     addToBody x
     & Ann (Const (ParenInfo minOpPrec False, pl))
@@ -59,7 +59,7 @@ instance HasPrecedence name => AddParens (Else name i o) where
 instance HasPrecedence name => AddParens (IfElse name i o) where
     addToBody = hmap (Proxy @AddParens #> addToNode)
 
-instance HasPrecedence name => AddParens (Binder name i o) where
+instance HasPrecedence name => AddParens (Binder v name i o) where
     addToBody (BinderTerm x) = addToBody x & BinderTerm
     addToBody (BinderLet x) =
         hmap (Proxy @AddParens #> addToNode) x & BinderLet

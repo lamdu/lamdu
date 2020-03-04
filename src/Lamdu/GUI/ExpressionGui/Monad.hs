@@ -80,7 +80,7 @@ data Askable env i o = Askable
         Sugar.Expr Sugar.Term Name i o ExprGui.Payload ->
         GuiM env i o (Responsive o)
     , _aMakeBinder ::
-        Sugar.Expr Sugar.Binder Name i o ExprGui.Payload ->
+        Sugar.Expr (Sugar.Binder (Sugar.EvaluationScopes Name i)) Name i o ExprGui.Payload ->
         GuiM env i o (Responsive o)
     , _aGuiAnchors :: Anchors.GuiAnchors i o
     , _aDepthLeft :: Int
@@ -185,7 +185,7 @@ makeSubexpression = make aMakeSubexpression
 
 makeBinder ::
     Monad i =>
-    Sugar.Expr Sugar.Binder Name i o ExprGui.Payload ->
+    Sugar.Expr (Sugar.Binder (Sugar.EvaluationScopes Name i)) Name i o ExprGui.Payload ->
     GuiM env i o (Responsive.Responsive o)
 makeBinder = make aMakeBinder
 
@@ -203,7 +203,7 @@ run ::
     (T.Tag -> MkProperty' o Text) ->
     (Sugar.Expr Sugar.Term Name i o ExprGui.Payload ->
         GuiM env i o (Responsive o)) ->
-    (Sugar.Expr Sugar.Binder Name i o ExprGui.Payload ->
+    (Sugar.Expr (Sugar.Binder (Sugar.EvaluationScopes Name i)) Name i o ExprGui.Payload ->
         GuiM env i o (Responsive o)) ->
     Anchors.GuiAnchors i o ->
     env -> GuiM env i o a -> i a

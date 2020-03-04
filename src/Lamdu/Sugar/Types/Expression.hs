@@ -113,13 +113,13 @@ data Fragment name i o k = Fragment
     } deriving Generic
 
 data HoleResult name i o = HoleResult
-    { _holeResultConverted :: Expr Binder name i o ()
+    { _holeResultConverted :: Expr (Binder (EvaluationScopes name i)) name i o ()
     , _holeResultPick :: o ()
     } deriving Generic
 
 data HoleOption name i o = HoleOption
     { _hoEntityId :: EntityId
-    , _hoSugaredBaseExpr :: i (Expr Binder name i o ())
+    , _hoSugaredBaseExpr :: i (Expr (Binder (EvaluationScopes name i)) name i o ())
     , -- A group in the hole results based on this option
       _hoResults :: ListT i (HoleResultScore, i (HoleResult name i o))
     } deriving Generic
@@ -181,7 +181,7 @@ data Case name i o k = Case
 
 data Nominal name i o k = Nominal
     { _nTId :: TId name
-    , _nVal :: k :# Binder name i o
+    , _nVal :: k :# Binder (EvaluationScopes name i) name i o
     } deriving Generic
 
 data Term name i o k
@@ -208,7 +208,7 @@ data Let v name i o k = Let
     , _lUsages :: [EntityId]
     , _lName :: TagRef name i o -- let [[foo]] = bar in x
     , _lDelete :: o ()
-    , _lBody :: k :# Binder name i o -- "let foo = bar in [[x]]"
+    , _lBody :: k :# Binder v name i o -- "let foo = bar in [[x]]"
     } deriving Generic
 
 -- An expression with 0 or more let items,
@@ -217,15 +217,15 @@ data Let v name i o k = Let
 -- * ToNom: "«X [[THIS]]"
 -- * Definition or let item value: "x = [[THIS]]"
 -- * Let-item/redex: "let x = y in [[THIS]]"
-data Binder name i o f
-    = BinderLet (Let (EvaluationScopes name i) name i o f)
+data Binder v name i o f
+    = BinderLet (Let v name i o f)
     | BinderTerm (Term name i o f)
     deriving Generic
 
 data Function v name i o k = Function
     { _fChosenScopeProp :: i (Property o (Maybe BinderParamScopeId))
     , _fParams :: BinderParams v name i o
-    , _fBody :: k :# Binder name i o
+    , _fBody :: k :# Binder v name i o
     , _fAddFirstParam :: AddFirstParam name i o
     , -- The scope inside a lambda
       _fBodyScopes :: ParamScopes
@@ -233,7 +233,7 @@ data Function v name i o k = Function
 
 data AssignPlain name i o f = AssignPlain
     { _apAddFirstParam :: AddFirstParam name i o
-    , _apBody :: Binder name i o f
+    , _apBody :: Binder (EvaluationScopes name i) name i o f
     } deriving Generic
 
 data Assignment v name i o f
@@ -276,15 +276,15 @@ traverse makeHTraversableAndBases
 
 -- TODO: Replace boilerplate below with TH
 
-instance RNodes (Assignment (EvaluationScopes name i) name i o)
-instance RNodes (Binder name i o)
+instance RNodes (Assignment v name i o)
+instance RNodes (Binder v name i o)
 instance RNodes (Else name i o)
 instance RNodes (Function v name i o)
 instance RNodes (Term name i o)
 
 type Dep c name i o =
     ( (c (Assignment (EvaluationScopes name i) name i o) :: Constraint)
-    , c (Binder name i o)
+    , c (Binder (EvaluationScopes name i) name i o)
     , c (Const (BinderVarRef name o))
     , c (Const (NullaryVal name i o))
     , c (Const (GetVar name o))
@@ -293,13 +293,14 @@ type Dep c name i o =
     )
 
 instance Dep c name i o => Recursively c (Assignment (EvaluationScopes name i) name i o)
-instance Dep c name i o => Recursively c (Binder name i o)
+instance Dep c name i o => Recursively c (Binder (EvaluationScopes name i) name i o)
 instance Dep c name i o => Recursively c (Else name i o)
 instance Dep c name i o => Recursively c (Term name i o)
 
-instance (Dep c name i o, c (Function v name i o)) => Recursively c (Function v name i o)
+instance (Dep c name i o, c (Function (EvaluationScopes name i) name i o)) =>
+         Recursively c (Function (EvaluationScopes name i) name i o)
 
 instance RTraversable (Assignment (EvaluationScopes name i) name i o)
-instance RTraversable (Binder name i o)
+instance RTraversable (Binder (EvaluationScopes name i) name i o)
 instance RTraversable (Else name i o)
 instance RTraversable (Term name i o)

@@ -70,7 +70,7 @@ markNodeAnnotations (Ann (Const pl) x) =
 class MarkAnnotations (t :: AHyperType -> *) where
     markAnnotations :: t # Annotated a -> (ShowAnnotation, t # Annotated (ShowAnnotation, a))
 
-instance MarkAnnotations (Binder name i o) where
+instance MarkAnnotations (Binder v name i o) where
     markAnnotations (BinderTerm body) =
         markBodyAnnotations body & _2 %~ BinderTerm
     markAnnotations (BinderLet let_) =
