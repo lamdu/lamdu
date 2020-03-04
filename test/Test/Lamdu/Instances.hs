@@ -282,7 +282,6 @@ instance NFData Name.Collision
 instance NFData Name.TagName
 instance NFData Name.TagText
 instance NFData ShowAnnotation
-instance NFData Sugar.BinderBodyScope
 instance NFData Sugar.BinderMode
 instance NFData Sugar.BinderParamScopeId
 instance NFData Sugar.CompiledErrorType

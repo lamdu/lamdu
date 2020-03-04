@@ -17,7 +17,6 @@ module Lamdu.Sugar.Types.Parts
       ExtractDestination(..)
     , -- Binders
       BinderParams(..), _NullParam, _Params
-    , BinderBodyScope(..)
     , FuncParam(..), fpAnnotation, fpVarInfo
     , FuncParamActions(..), fpAddNext, fpDelete, fpMOrderBefore, fpMOrderAfter
     , NullParamActions(..), npDeleteLambda
@@ -119,14 +118,6 @@ data BinderParams name i o
       NullParam (FuncParam name i, NullParamActions o)
     | Params [(FuncParam name i, ParamInfo name i o)]
     deriving Generic
-
-data BinderBodyScope
-    = SameAsParentScope
-      -- ^ no binder params
-    | BinderBodyScope ParamScopes
-      -- ^ binder has params, use the map to get the param application
-      -- scopes
-    deriving (Generic, Eq)
 
 data VarInfo
     = VarNominal T.NominalId T.Tag

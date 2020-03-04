@@ -83,9 +83,6 @@ data ScopeCursor = ScopeCursor
     , sMNextParamScope :: Maybe Sugar.BinderParamScopeId
     }
 
-trivialScopeCursor :: Sugar.BinderParamScopeId -> ScopeCursor
-trivialScopeCursor x = ScopeCursor x Nothing Nothing
-
 scopeCursor :: Maybe Sugar.BinderParamScopeId -> [Sugar.BinderParamScopeId] -> Maybe ScopeCursor
 scopeCursor mChosenScope scopes =
     do
@@ -119,14 +116,10 @@ mkChosenScopeCursor ::
 mkChosenScopeCursor func =
     do
         mOuterScopeId <- GuiM.readMScopeId
-        case func ^. Sugar.fBodyScopes of
-            Sugar.SameAsParentScope ->
-                mOuterScopeId <&> fmap (trivialScopeCursor . Sugar.BinderParamScopeId) & pure
-            Sugar.BinderBodyScope assignmentBodyScope ->
-                readFunctionChosenScope func & GuiM.im
-                <&> \mChosenScope ->
-                liftA2 lookupMKey mOuterScopeId assignmentBodyScope
-                <&> (>>= scopeCursor mChosenScope)
+        readFunctionChosenScope func & GuiM.im <&>
+            \mChosenScope ->
+            liftA2 lookupMKey mOuterScopeId (func ^. Sugar.fBodyScopes)
+            <&> (>>= scopeCursor mChosenScope)
 
 makeScopeEventMap ::
     ( Has (Texts.Navigation Text) env

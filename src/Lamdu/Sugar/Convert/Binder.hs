@@ -22,7 +22,7 @@ import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Sugar.Config as Config
 import           Lamdu.Sugar.Convert.Binder.Float (makeFloatLetToOuterScope)
 import           Lamdu.Sugar.Convert.Binder.Inline (inlineLet)
-import           Lamdu.Sugar.Convert.Binder.Params (ConventionalParams(..), convertParams, convertLamParams, cpParams, cpAddFirstParam, mkVarInfo)
+import           Lamdu.Sugar.Convert.Binder.Params (ConventionalParams(..), convertLamParams, convertEmptyParams, convertNonEmptyParams, cpParams, cpAddFirstParam, mkVarInfo)
 import           Lamdu.Sugar.Convert.Binder.Redex (Redex(..))
 import qualified Lamdu.Sugar.Convert.Binder.Redex as Redex
 import           Lamdu.Sugar.Convert.Binder.Types (BinderKind(..))
@@ -212,32 +212,36 @@ makeAssignment ::
     ( Maybe (MkProperty' (T m) PresentationMode)
     , Annotated (ConvertPayload m a) # Assignment InternalName (T m) (T m)
     )
-makeAssignment chosenScopeProp binderKind defVar expr =
+makeAssignment chosenScopeProp binderKind defVar (Ann pl (V.BLam lam)) =
     do
-        (mPresentationModeProp, params, funcBody, paramsUserData) <-
-            convertParams binderKind defVar expr
-        case params ^. cpParams of
-            Nothing ->
-                convertBinder funcBody
-                <&>
-                \(Ann (Const a) x) ->
-                AssignPlain (params ^. cpAddFirstParam) x
+        convParams <- convertNonEmptyParams (Just presMode) binderKind lam pl
+        funcS <- makeFunction chosenScopeProp convParams (lam ^. V.tlOut)
+        nodeActions <- makeActions pl & localNewExtractDestPos pl
+        pure
+            ( presMode <$ convParams ^? cpParams . Lens._Just . _Params . Lens.ix 1
+            , Ann
+                { _hAnn =
+                    Const ConvertPayload
+                    { _pInput =
+                        pl & Input.userData .~
+                        hfoldMap (const (^. Input.userData)) (lam ^. V.tlInType . hflipped)
+                    , _pActions = nodeActions
+                    }
+                , _hVal = BodyFunction funcS
+                }
+            )
+    where
+        presMode = Anchors.assocPresentationMode defVar
+makeAssignment _chosenScopeProp binderKind _defVar expr =
+    do
+        addFirstParam <- convertEmptyParams binderKind expr
+        convertBinder expr <&>
+            \(Ann (Const a) x) ->
+            ( Nothing
+            , AssignPlain (AddInitialParam addFirstParam) x
                 & BodyPlain
                 & Ann (Const a)
-            Just{} ->
-                do
-                    funcS <- makeFunction chosenScopeProp params funcBody
-                    nodeActions <- makeActions (expr ^. hAnn) & localNewExtractDestPos (expr ^. hAnn)
-                    pure Ann
-                        { _hAnn =
-                            Const ConvertPayload
-                            { _pInput = expr ^. hAnn & Input.userData .~ mempty
-                            , _pActions = nodeActions
-                            }
-                        , _hVal = BodyFunction funcS
-                        }
-            <&> annotation . pInput . Input.userData <>~ paramsUserData
-            <&> (,) mPresentationModeProp
+            )
 
 convertLam ::
     (Monad m, Monoid a) =>

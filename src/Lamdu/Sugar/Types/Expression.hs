@@ -238,7 +238,7 @@ data Function name i o k = Function
     , _fBody :: k :# Binder name i o
     , _fAddFirstParam :: AddFirstParam name i o
     , -- The scope inside a lambda
-      _fBodyScopes :: BinderBodyScope
+      _fBodyScopes :: ParamScopes
     } deriving Generic
 
 data AssignPlain name i o f = AssignPlain

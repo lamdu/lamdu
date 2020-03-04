@@ -1,7 +1,7 @@
 {-# LANGUAGE TemplateHaskell, TupleSections, TypeFamilies, TypeApplications #-}
 module Lamdu.Sugar.Convert.Binder.Params
     ( ConventionalParams(..), cpParams, cpAddFirstParam
-    , convertParams, convertLamParams
+    , convertLamParams, convertNonEmptyParams, convertEmptyParams
     , mkStoredLam, makeDeleteLambda
     , convertBinderToFunction
     , convertToRecordParams
@@ -58,7 +58,7 @@ data ConventionalParams m = ConventionalParams
     , _cpParamInfos :: Map T.Tag ConvertM.TagFieldParam
     , _cpParams :: Maybe (BinderParams InternalName (T m) (T m))
     , _cpAddFirstParam :: AddFirstParam InternalName (T m) (T m)
-    , cpScopes :: BinderBodyScope
+    , cpScopes :: ParamScopes
     , cpMLamParam :: Maybe ({- lambda's -}EntityId, V.Var)
     }
 Lens.makeLenses ''ConventionalParams
@@ -452,7 +452,7 @@ convertRecordParams mPresMode binderKind fieldParams lam@(V.TypedLam param _ _) 
             , _cpParamInfos = fieldParams <&> mkParInfo & mconcat
             , _cpParams = Params params & Just
             , _cpAddFirstParam = PrependParam addFirstSelection
-            , cpScopes = BinderBodyScope $ mkCpScopesOfLam lamPl
+            , cpScopes = mkCpScopesOfLam lamPl
             , cpMLamParam = Just (entityId, param)
             }
     where
@@ -696,7 +696,7 @@ convertNonRecordParam binderKind lam@(V.TypedLam param _ _) lamExprPl =
                 if oldParam == Anchors.anonTag
                 then NeedToPickTagToAddFirst (EntityId.ofTaggedEntity param oldParam)
                 else PrependParam addFirstSelection
-            , cpScopes = BinderBodyScope $ mkCpScopesOfLam lamExprPl
+            , cpScopes = mkCpScopesOfLam lamExprPl
             , cpMLamParam = Just (lamExprPl ^. Input.entityId, param)
             }
     where
@@ -719,9 +719,6 @@ isParamAlwaysUsedWithGetField (V.TypedLam param _paramTyp bod) =
                 & and
 
 -- Post process param add and delete actions to detach lambda.
--- This isn't done for all actions as some already perform this function.
--- TODO: clean up responsibilities - make it clear why some actions already
--- take care of wrapping and some don't.
 postProcessActions ::
     Monad m => T m () -> ConventionalParams m -> ConventionalParams m
 postProcessActions post x
@@ -763,6 +760,7 @@ convertNonEmptyParams mPresMode binderKind lambda lambdaPl =
             Lens.view (ConvertM.scScopeInfo . ConvertM.siTagParamInfos)
             <&> Map.keysSet
         sugarParamsRecord <- Lens.view (ConvertM.scConfig . Config.sugarsEnabled . Config.parametersRecord)
+        postProcess <- ConvertM.postProcessAssert
         case lambdaPl ^. Input.inferredType . _Pure of
             T.TFun (FuncType (Pure (T.TRecord composite)) _)
                 | sugarParamsRecord
@@ -779,6 +777,7 @@ convertNonEmptyParams mPresMode binderKind lambda lambdaPl =
                         convertNonRecordParam binderKind lambda lambdaPl
                         <&> cpParamInfos <>~ (fieldParams & map mkCollidingInfo & mconcat)
             _ -> convertNonRecordParam binderKind lambda lambdaPl
+            <&> postProcessActions postProcess
     where
         param = lambda ^. V.tlIn
         mkCollidingInfo fp = mkParamInfo param fp <&> ConvertM.CollidingFieldParam
@@ -809,52 +808,14 @@ convertBinderToFunction mkArg binderKind x =
 
 convertEmptyParams ::
     Monad m =>
-    BinderKind m -> Ann (Input.Payload m a) # V.Term -> ConvertM m (ConventionalParams m)
+    BinderKind m -> Ann (Input.Payload m a) # V.Term -> ConvertM m (Transaction m EntityId)
 convertEmptyParams binderKind x =
     ConvertM.postProcessAssert
     <&>
     \postProcess ->
-    ConventionalParams
-    { cpTags = mempty
-    , _cpParamInfos = Map.empty
-    , _cpParams = Nothing
-    , _cpAddFirstParam =
-        do
-            (newParam, _) <-
-                x & hflipped %~ hmap (const (^. Input.stored))
-                & convertBinderToFunction DataOps.newHole binderKind
-            postProcess
-            EntityId.ofTaggedEntity newParam Anchors.anonTag & pure
-        & AddInitialParam
-    , cpScopes = SameAsParentScope
-    , cpMLamParam = Nothing
-    }
-
-convertParams ::
-    (Monad m, Monoid a) =>
-    BinderKind m -> V.Var -> Ann (Input.Payload m a) # V.Term ->
-    ConvertM m
-    ( Maybe (MkProperty' (T m) PresentationMode)
-    , ConventionalParams m
-    , Ann (Input.Payload m a) # V.Term
-    , a
-    )
-convertParams binderKind defVar expr =
     do
-        postProcess <- ConvertM.postProcessAssert
-        case expr ^. hVal of
-            V.BLam lambda ->
-                convertNonEmptyParams (Just presMode) binderKind lambda (expr ^. hAnn)
-                <&>
-                \convParams ->
-                ( mPresMode convParams
-                , convParams
-                , lambda ^. V.tlOut
-                , hfoldMap (const (^. Input.userData)) (lambda ^. V.tlInType . hflipped)
-                )
-                where
-                    mPresMode convParams =
-                        presMode <$ convParams ^? cpParams . Lens._Just . _Params . Lens.ix 1
-                    presMode = Anchors.assocPresentationMode defVar
-            _ -> convertEmptyParams binderKind expr <&> (Nothing, , expr, mempty)
-            <&> _2 %~ postProcessActions postProcess
+        (newParam, _) <-
+            x & hflipped %~ hmap (const (^. Input.stored))
+            & convertBinderToFunction DataOps.newHole binderKind
+        postProcess
+        EntityId.ofTaggedEntity newParam Anchors.anonTag & pure

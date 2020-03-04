@@ -198,7 +198,7 @@ funcExpr ::
 funcExpr params (Ann (Const ba) bx) =
     Sugar.Function
     { Sugar._fChosenScopeProp = prop Nothing & pure
-    , Sugar._fBodyScopes = CurAndPrev mempty mempty & Sugar.BinderBodyScope
+    , Sugar._fBodyScopes = CurAndPrev mempty mempty
     , Sugar._fAddFirstParam = Sugar.PrependParam tagRefReplace
     , Sugar._fParams = params <&> mkFuncParam & Sugar.Params
     , Sugar._fBody = Ann (Const ba) (Sugar.BinderTerm bx)

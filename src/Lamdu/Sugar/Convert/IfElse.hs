@@ -55,10 +55,7 @@ convertIfElse setToVal caseBody =
                 of
                 Just (binder, innerIfElse) ->
                     ElseIf ElseIfContent
-                    { _eiScopes =
-                        case binder ^. fBodyScopes of
-                        SameAsParentScope -> error "lambda body should have scopes"
-                        BinderBodyScope x -> x <&> Lens.mapped %~ getScope
+                    { _eiScopes = binder ^. fBodyScopes <&> Lens.mapped %~ getScope
                     , _eiContent = innerIfElse
                     }
                     where
