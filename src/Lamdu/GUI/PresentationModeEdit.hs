@@ -41,7 +41,7 @@ make ::
     , Glue.HasTexts env
     ) =>
     Widget.Id ->
-    Sugar.BinderParams name i o ->
+    Sugar.BinderParams v name i o ->
     Property f Sugar.PresentationMode ->
     m (Align.TextWidget f)
 make myId (Sugar.Params params) prop =

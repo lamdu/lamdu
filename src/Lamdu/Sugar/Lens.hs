@@ -95,7 +95,7 @@ defSchemes :: Lens.Traversal' (Definition name i o expr) (Scheme name)
 defSchemes = drBody . defBodySchemes
 
 binderFuncParamActions ::
-    Lens.Traversal' (BinderParams name i o) (FuncParamActions name i o)
+    Lens.Traversal' (BinderParams v name i o) (FuncParamActions name i o)
 binderFuncParamActions _ (NullParam a) = pure (NullParam a)
 binderFuncParamActions f (Params ps) = (traverse . _2 . piActions) f ps <&> Params
 

@@ -224,7 +224,7 @@ data Binder name i o f
 
 data Function name i o k = Function
     { _fChosenScopeProp :: i (Property o (Maybe BinderParamScopeId))
-    , _fParams :: BinderParams name i o
+    , _fParams :: BinderParams (EvaluationScopes name i) name i o
     , _fBody :: k :# Binder name i o
     , _fAddFirstParam :: AddFirstParam name i o
     , -- The scope inside a lambda

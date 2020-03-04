@@ -54,7 +54,8 @@ type T = Transaction
 data ConventionalParams m = ConventionalParams
     { cpTags :: Set T.Tag
     , _cpParamInfos :: Map T.Tag ConvertM.TagFieldParam
-    , _cpParams :: Maybe (BinderParams InternalName (T m) (T m))
+    , _cpParams ::
+        Maybe (BinderParams (EvaluationScopes InternalName (T m)) InternalName (T m) (T m))
     , _cpAddFirstParam :: AddFirstParam InternalName (T m) (T m)
     , cpMLamParam :: Maybe ({- lambda's -}EntityId, V.Var)
     }

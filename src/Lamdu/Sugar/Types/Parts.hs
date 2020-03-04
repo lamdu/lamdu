@@ -112,12 +112,12 @@ data AddFirstParam name i o
     deriving Generic
 
 -- TODO: rename BinderParams -> Params
-data BinderParams name i o
+data BinderParams v name i o
     = -- null param represents a lambda whose parameter's type is inferred
       -- to be the empty record.
       -- This is often used to represent "deferred execution"
-      NullParam (FuncParam (EvaluationScopes name i) name, NullParamActions o)
-    | Params [(FuncParam (EvaluationScopes name i) name, ParamInfo name i o)]
+      NullParam (FuncParam v name, NullParamActions o)
+    | Params [(FuncParam v name, ParamInfo name i o)]
     deriving Generic
 
 data VarInfo

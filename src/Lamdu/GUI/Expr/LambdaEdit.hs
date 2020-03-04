@@ -116,7 +116,7 @@ mkLightLambda ::
     , Has (Texts.CodeUI Text) env
     , Glue.HasTexts env
     ) =>
-    Sugar.BinderParams a i o -> Widget.Id ->
+    Sugar.BinderParams v a i o -> Widget.Id ->
     f
     (Maybe (Responsive o) -> Maybe (Widget o) ->
      [Responsive o])

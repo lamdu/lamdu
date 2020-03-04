@@ -483,8 +483,8 @@ withFuncParam f (FuncParam pl varInfo, info) =
 
 withBinderParams ::
     MonadNaming m =>
-    BinderParams (OldName m) (IM m) o ->
-    CPS m (BinderParams (NewName m) (IM m) o)
+    BinderParams (EvaluationScopes (OldName m) (IM m)) (OldName m) (IM m) o ->
+    CPS m (BinderParams (EvaluationScopes (NewName m) (IM m)) (NewName m) (IM m) o)
 withBinderParams (NullParam x) = withFuncParam (const pure) x <&> NullParam
 withBinderParams (Params xs) = traverse (withFuncParam withParamInfo) xs <&> Params
 
