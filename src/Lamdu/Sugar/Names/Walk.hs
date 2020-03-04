@@ -337,8 +337,8 @@ toHole hole =
 
 toFragment ::
     MonadNaming m =>
-    Body Fragment (OldName m) (IM m) o a ->
-    m (Body Fragment (NewName m) (IM m) o a)
+    Body (Fragment (EvaluationScopes (OldName m) (IM m))) (OldName m) (IM m) o a ->
+    m (Body (Fragment (EvaluationScopes (NewName m) (IM m))) (NewName m) (IM m) o a)
 toFragment Fragment{_fExpr, _fHeal, _fTypeMismatch, _fOptions} =
     do
         newTypeMismatch <- Lens._Just toType _fTypeMismatch

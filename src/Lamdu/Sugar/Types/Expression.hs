@@ -105,11 +105,11 @@ data Lambda v name i o f = Lambda
 
 -- | An expression marked for transformation.
 -- Holds an expression to be transformed but acts like a hole.
-data Fragment name i o k = Fragment
+data Fragment v name i o k = Fragment
     { _fExpr :: k :# Term name i o
     , _fHeal :: o EntityId
     , _fTypeMismatch :: Maybe (Annotated EntityId # Type name)
-    , _fOptions :: i [HoleOption (EvaluationScopes name i) name i o]
+    , _fOptions :: i [HoleOption v name i o]
     } deriving Generic
 
 data HoleResult v name i o = HoleResult
@@ -199,7 +199,7 @@ data Term name i o k
     | BodyGetVar (GetVar name o)
     | BodyToNom (Nominal (EvaluationScopes name i) name i o k)
     | BodyFromNom (TId name)
-    | BodyFragment (Fragment name i o k)
+    | BodyFragment (Fragment (EvaluationScopes name i) name i o k)
     | BodyPlaceHolder -- Used for hole results, shown as "★"
     deriving Generic
 
