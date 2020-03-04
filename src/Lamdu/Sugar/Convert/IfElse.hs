@@ -22,7 +22,7 @@ convertIfElse ::
     Functor m =>
     (ValI m -> T m (ValI m)) ->
     Case InternalName (T m) (T m) # Annotated (ConvertPayload m a) ->
-    Maybe (IfElse InternalName (T m) (T m) # Annotated (ConvertPayload m a))
+    Maybe (IfElse (EvaluationScopes InternalName (T m)) InternalName (T m) (T m) # Annotated (ConvertPayload m a))
 convertIfElse setToVal caseBody =
     do
         arg <- caseBody ^? cKind . _CaseWithArg . caVal

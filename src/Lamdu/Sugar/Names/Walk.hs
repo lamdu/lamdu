@@ -416,8 +416,8 @@ toElse (ElseIf x) = toIfElse x <&> ElseIf
 
 toIfElse ::
     MonadNaming m =>
-    Body IfElse (OldName m) (IM m) o a ->
-    m (Body IfElse (NewName m) (IM m) o a)
+    Body (IfElse (EvaluationScopes (OldName m) (IM m))) (OldName m) (IM m) o a ->
+    m (Body (IfElse (EvaluationScopes (NewName m) (IM m))) (NewName m) (IM m) o a)
 toIfElse (IfElse i t e) =
     IfElse
     <$> toExpression i

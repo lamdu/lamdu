@@ -56,7 +56,7 @@ instance HasPrecedence name => AddParens (Else v name i o) where
     addToBody (SimpleElse expr) = addToBody expr & SimpleElse
     addToBody (ElseIf elseIf) = addToBody elseIf & ElseIf
 
-instance HasPrecedence name => AddParens (IfElse name i o) where
+instance HasPrecedence name => AddParens (IfElse v name i o) where
     addToBody = hmap (Proxy @AddParens #> addToNode)
 
 instance HasPrecedence name => AddParens (Binder v name i o) where
