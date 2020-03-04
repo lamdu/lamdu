@@ -112,8 +112,8 @@ data Fragment name i o k = Fragment
     , _fOptions :: i [HoleOption name i o]
     } deriving Generic
 
-data HoleResult name i o = HoleResult
-    { _holeResultConverted :: Expr (Binder (EvaluationScopes name i)) name i o ()
+data HoleResult v name i o = HoleResult
+    { _holeResultConverted :: Expr (Binder v) name i o ()
     , _holeResultPick :: o ()
     } deriving Generic
 
@@ -121,7 +121,8 @@ data HoleOption name i o = HoleOption
     { _hoEntityId :: EntityId
     , _hoSugaredBaseExpr :: i (Expr (Binder (EvaluationScopes name i)) name i o ())
     , -- A group in the hole results based on this option
-      _hoResults :: ListT i (HoleResultScore, i (HoleResult name i o))
+        -- TODO: HoleResult need not have actual eval results
+      _hoResults :: ListT i (HoleResultScore, i (HoleResult (EvaluationScopes name i) name i o))
     } deriving Generic
 
 data Hole name i o = Hole

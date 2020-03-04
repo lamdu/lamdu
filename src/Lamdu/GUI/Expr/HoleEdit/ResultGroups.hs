@@ -37,7 +37,7 @@ data Group i o = Group
     , _groupResults ::
         ListT i
         ( Sugar.HoleResultScore
-        , i (Sugar.HoleResult Name i o)
+        , i (Sugar.HoleResult (Sugar.EvaluationScopes Name i) Name i o)
         )
     }
 Lens.makeLenses ''Group
@@ -46,7 +46,7 @@ data Result i o = Result
     { _rScore :: Sugar.HoleResultScore
     , -- Warning: This action should be ran at most once!
       -- Running it more than once will cause inconsistencies.
-      rHoleResult :: i (Sugar.HoleResult Name i o)
+      rHoleResult :: i (Sugar.HoleResult (Sugar.EvaluationScopes Name i) Name i o)
         -- TODO: Unit monad instead of i o for Expression above?
     , rId :: WidgetId.Id
     }
@@ -66,7 +66,7 @@ Lens.makeLenses ''ResultGroup
 mResultGroupOf ::
     WidgetId.Id ->
     [ ( Sugar.HoleResultScore
-      , i (Sugar.HoleResult Name i o)
+      , i (Sugar.HoleResult (Sugar.EvaluationScopes Name i) Name i o)
       )
     ] ->
     Maybe (ResultGroup i o)
