@@ -157,7 +157,7 @@ makeAll ::
     , Has (Texts.Code Text) env
     , Has (Texts.CodeUI Text) env
     ) =>
-    [Sugar.HoleOption Name i o1] ->
+    [Sugar.HoleOption (Sugar.EvaluationScopes Name i) Name i o1] ->
     SearchMenu.ResultsContext ->
     GuiM env i o (Menu.OptionList (ResultGroup i o1))
 makeAll options ctx =
@@ -179,9 +179,7 @@ mkGroup ::
     , Has (Texts.Code Text) env
     , Has (Texts.CodeUI Text) env
     ) =>
-    env ->
-    Sugar.HoleOption Name i o ->
-    i (Group i o)
+    env -> Sugar.HoleOption (Sugar.EvaluationScopes Name i) Name i o -> i (Group i o)
 mkGroup env option =
     option ^. Sugar.hoSugaredBaseExpr
     <&>

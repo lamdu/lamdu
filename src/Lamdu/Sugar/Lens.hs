@@ -117,9 +117,11 @@ binderResultExpr f (Ann (Const pl) x) =
 
 holeOptionTransformExprs ::
     Monad i =>
-    (Annotated (Payload n0 i o ()) # Binder (EvaluationScopes n0 i) n0 i o ->
-        i (Annotated (Payload n1 i o ()) # Binder (EvaluationScopes n1 i) n1 i o)) ->
-    HoleOption n0 i o -> HoleOption n1 i o
+    ( Annotated (Payload n0 i o ()) # Binder v0 n0 i o ->
+        i (Annotated (Payload n1 i o ()) # Binder v1 n1 i o)
+    ) ->
+    HoleOption v0 n0 i o ->
+    HoleOption v1 n1 i o
 holeOptionTransformExprs onExpr option =
     option
     { _hoSugaredBaseExpr = option ^. hoSugaredBaseExpr >>= onExpr

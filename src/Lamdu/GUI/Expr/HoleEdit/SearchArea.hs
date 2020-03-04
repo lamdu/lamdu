@@ -165,7 +165,7 @@ make ::
     , SearchMenu.HasTexts env
     ) =>
     AnnotationMode ->
-    i [Sugar.HoleOption Name i o] ->
+    i [Sugar.HoleOption (Sugar.EvaluationScopes Name i) Name i o] ->
     Sugar.Payload Name i o ExprGui.Payload ->
     (Text -> Bool) -> WidgetIds ->
     GuiM env i o (Menu.Placement -> TextWidget o)

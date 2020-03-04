@@ -109,7 +109,7 @@ data Fragment name i o k = Fragment
     { _fExpr :: k :# Term name i o
     , _fHeal :: o EntityId
     , _fTypeMismatch :: Maybe (Annotated EntityId # Type name)
-    , _fOptions :: i [HoleOption name i o]
+    , _fOptions :: i [HoleOption (EvaluationScopes name i) name i o]
     } deriving Generic
 
 data HoleResult v name i o = HoleResult
@@ -117,16 +117,16 @@ data HoleResult v name i o = HoleResult
     , _holeResultPick :: o ()
     } deriving Generic
 
-data HoleOption name i o = HoleOption
+data HoleOption v name i o = HoleOption
     { _hoEntityId :: EntityId
-    , _hoSugaredBaseExpr :: i (Expr (Binder (EvaluationScopes name i)) name i o ())
+    , _hoSugaredBaseExpr :: i (Expr (Binder v) name i o ())
     , -- A group in the hole results based on this option
         -- TODO: HoleResult need not have actual eval results
-      _hoResults :: ListT i (HoleResultScore, i (HoleResult (EvaluationScopes name i) name i o))
+      _hoResults :: ListT i (HoleResultScore, i (HoleResult v name i o))
     } deriving Generic
 
 data Hole name i o = Hole
-    { _holeOptions :: i [HoleOption name i o]
+    { _holeOptions :: i [HoleOption (EvaluationScopes name i) name i o]
         -- outer "i" here is used to read index of globals
         -- inner "i" is used to type-check/sugar every val in the option
       -- TODO: Lifter from i to o?

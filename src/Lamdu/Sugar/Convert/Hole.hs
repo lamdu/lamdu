@@ -120,7 +120,7 @@ mkOption ::
     Monad m =>
     ConvertM.Context m -> ResultProcessor m ->
     Input.Payload m a # V.Term -> Val () ->
-    HoleOption InternalName (T m) (T m)
+    HoleOption (EvaluationScopes InternalName (T m)) InternalName (T m) (T m)
 mkOption sugarContext resultProcessor holePl x =
     HoleOption
     { _hoEntityId =
@@ -137,7 +137,7 @@ mkHoleSuggesteds ::
     Monad m =>
     ConvertM.Context m -> ResultProcessor m ->
     Input.Payload m a # V.Term ->
-    [(Val (), HoleOption InternalName (T m) (T m))]
+    [(Val (), HoleOption (EvaluationScopes InternalName (T m)) InternalName (T m) (T m))]
 mkHoleSuggesteds sugarContext resultProcessor holePl =
     holePl ^. Input.inferredTypeUVar
     & Completions.suggestForType
@@ -157,9 +157,9 @@ strip :: Recursively HFunctor h => Ann a # h -> Pure # h
 strip = unwrap (const (^. hVal))
 
 addWithoutDups ::
-    [(Val (), HoleOption i o a)] ->
-    [(Val (), HoleOption i o a)] ->
-    [(Val (), HoleOption i o a)]
+    [(Val (), HoleOption v i o a)] ->
+    [(Val (), HoleOption v i o a)] ->
+    [(Val (), HoleOption v i o a)]
 addWithoutDups new old
     | null nonHoleNew = old
     | otherwise = nonHoleNew ++ filter (not . equivalentToNew) old
@@ -216,7 +216,13 @@ mkOptions ::
     Monad m =>
     ConvertM.PositionInfo -> ResultProcessor m ->
     Input.Payload m a # V.Term ->
-    ConvertM m (T m [(Val (), HoleOption InternalName (T m) (T m))])
+    ConvertM m
+    ( T m
+        [ ( Val ()
+          , HoleOption (EvaluationScopes InternalName (T m)) InternalName (T m) (T m)
+          )
+        ]
+    )
 mkOptions posInfo resultProcessor holePl =
     Lens.view id
     <&>
