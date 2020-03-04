@@ -242,8 +242,8 @@ toFunction func@Function{_fParams, _fBody, _fAddFirstParam} =
 
 toBinderPlain ::
     MonadNaming m =>
-    Body AssignPlain (OldName m) (IM m) o a ->
-    m (Body AssignPlain (NewName m) (IM m) o a)
+    Body (AssignPlain (EvaluationScopes (OldName m) (IM m))) (OldName m) (IM m) o a ->
+    m (Body (AssignPlain (EvaluationScopes (NewName m) (IM m))) (NewName m) (IM m) o a)
 toBinderPlain AssignPlain{_apBody, _apAddFirstParam} =
     (\_apBody _apAddFirstParam -> AssignPlain{_apBody, _apAddFirstParam})
     <$> toBinder _apBody

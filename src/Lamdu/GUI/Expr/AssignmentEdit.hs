@@ -431,7 +431,7 @@ makePlainParts ::
     , TextEdit.HasTexts env
     , SearchMenu.HasTexts env
     ) =>
-    Sugar.Expr Sugar.AssignPlain Name i o ExprGui.Payload ->
+    Sugar.Expr (Sugar.AssignPlain (Sugar.EvaluationScopes Name i)) Name i o ExprGui.Payload ->
     Widget.Id ->
     GuiM env i o (Parts i o)
 makePlainParts (Ann (Const pl) assignPlain) delVarBackwardsId =

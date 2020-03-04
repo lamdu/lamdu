@@ -231,14 +231,14 @@ data Function v name i o k = Function
       _fBodyScopes :: ParamScopes
     } deriving Generic
 
-data AssignPlain name i o f = AssignPlain
+data AssignPlain v name i o f = AssignPlain
     { _apAddFirstParam :: AddFirstParam name i o
-    , _apBody :: Binder (EvaluationScopes name i) name i o f
+    , _apBody :: Binder v name i o f
     } deriving Generic
 
 data Assignment v name i o f
     = BodyFunction (Function v name i o f)
-    | BodyPlain (AssignPlain name i o f)
+    | BodyPlain (AssignPlain v name i o f)
     deriving Generic
 
 Lens.makeLenses ''AnnotatedArg
