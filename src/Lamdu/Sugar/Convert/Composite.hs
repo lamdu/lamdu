@@ -164,7 +164,7 @@ convertItem ::
     h # Term (EvaluationScopes InternalName (T m)) InternalName (T m) (T m) ->
     -- Using tuple in place of shared RecExtend/Case structure (no such in lamdu-calculus)
     ExtendVal m (ValI m) ->
-    ConvertM m (CompositeItem InternalName (T m) (T m) # h)
+    ConvertM m (CompositeItem (EvaluationScopes InternalName (T m)) InternalName (T m) (T m) # h)
 convertItem cons stored inst forbiddenTags exprS extendVal =
     do
         delItem <- deleteItem stored restI

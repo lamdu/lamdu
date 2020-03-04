@@ -357,8 +357,8 @@ toFragment Fragment{_fExpr, _fHeal, _fTypeMismatch, _fOptions} =
 
 toCompositeItem ::
     MonadNaming m =>
-    Body CompositeItem (OldName m) (IM m) o a ->
-    m (Body CompositeItem (NewName m) (IM m) o a)
+    Body (CompositeItem (EvaluationScopes (OldName m) (IM m))) (OldName m) (IM m) o a ->
+    m (Body (CompositeItem (EvaluationScopes (NewName m) (IM m))) (NewName m) (IM m) o a)
 toCompositeItem (CompositeItem del tag e) =
     CompositeItem del
     <$> toTagRefOf Tag tag

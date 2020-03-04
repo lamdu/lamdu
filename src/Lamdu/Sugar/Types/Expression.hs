@@ -146,10 +146,10 @@ data IfElse v name i o k = IfElse
     , _iElse :: k :# Else v name i o
     } deriving Generic
 
-data CompositeItem name i o k = CompositeItem
+data CompositeItem v name i o k = CompositeItem
     { _ciDelete :: o EntityId
     , _ciTag :: TagRef name i o
-    , _ciExpr :: k :# Term (EvaluationScopes name i) name i o
+    , _ciExpr :: k :# Term v name i o
     } deriving Generic
 
 data CompositeTail name i o k
@@ -158,7 +158,7 @@ data CompositeTail name i o k
     deriving Generic
 
 data Composite name i o k = Composite
-    { _cItems :: [CompositeItem name i o k]
+    { _cItems :: [CompositeItem (EvaluationScopes name i) name i o k]
     , -- Punned items are like Haskell's NamedFieldPuns
       _cPunnedItems :: [k :# Lens.Const (GetVar name o)]
     , _cTail :: CompositeTail name i o k
