@@ -138,7 +138,7 @@ makeInferredTypeAnnotation ::
     , Spacer.HasStdSpacing env, Has (Texts.Name Text) env, Glue.HasTexts env
     , Has (Texts.Code Text) env
     ) =>
-    Sugar.Annotation Name i -> AnimId -> m View
+    Sugar.Annotation v Name -> AnimId -> m View
 makeInferredTypeAnnotation ann animId =
     Annotation.addAnnotationBackground
     <*> TypeView.make (ann ^?! Sugar._AnnotationType)

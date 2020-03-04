@@ -46,9 +46,9 @@ import           Lamdu.Prelude
 data FuncApplyLimit = UnlimitedFuncApply | AtMostOneFuncApply
     deriving (Eq, Ord, Generic)
 
-data Annotation name i
+data Annotation v name
     = AnnotationType (Annotated EntityId # Type name)
-    | AnnotationVal (EvaluationScopes name i)
+    | AnnotationVal v
     | AnnotationNone
     deriving Generic
 
@@ -77,7 +77,7 @@ data ParamInfo name i o = ParamInfo
     } deriving Generic
 
 data FuncParam name i = FuncParam
-    { _fpAnnotation :: Annotation name i
+    { _fpAnnotation :: Annotation (EvaluationScopes name i) name
     , _fpVarInfo :: VarInfo
     } deriving Generic
 
@@ -126,7 +126,7 @@ data VarInfo
     deriving (Generic, Eq)
 
 data Payload name i o a = Payload
-    { _plAnnotation :: Annotation name i
+    { _plAnnotation :: Annotation (EvaluationScopes name i) name
     , _plNeverShrinkTypeAnnotations :: Bool
     , _plActions :: NodeActions name i o
     , _plEntityId :: EntityId

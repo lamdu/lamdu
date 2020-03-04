@@ -308,7 +308,7 @@ maybeAddAnnotationWith ::
     , Has (Texts.Code Text) env, Has (Texts.Name Text) env
     ) =>
     EvalAnnotationOptions -> PostProcessAnnotation (GuiM env i o) ->
-    Sugar.Annotation Name i ->
+    Sugar.Annotation (Sugar.EvaluationScopes Name i) Name ->
     GuiM env i o (Widget o -> Widget o)
 maybeAddAnnotationWith opt postProcessAnnotation ann =
     case ann of
@@ -335,7 +335,8 @@ maybeAddAnnotation ::
     ( Monad i, Monad o, Glue.HasTexts env, Has (Texts.Code Text) env
     , Has (Texts.Name Text) env
     ) =>
-    PostProcessAnnotation (GuiM env i o) -> Sugar.Annotation Name i ->
+    PostProcessAnnotation (GuiM env i o) ->
+    Sugar.Annotation (Sugar.EvaluationScopes Name i) Name ->
     GuiM env i o (Widget o -> Widget o)
 maybeAddAnnotation = maybeAddAnnotationWith NormalEvalAnnotation
 

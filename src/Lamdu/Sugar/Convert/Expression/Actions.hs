@@ -331,7 +331,7 @@ makeTypeAnnotation = convertType . EntityId.ofTypeOf
 makeAnnotation ::
     Monad m =>
     Ann.ShowAnnotation -> Input.Payload m a # V.Term ->
-    ConvertM m (Annotation InternalName (T m))
+    ConvertM m (Annotation (EvaluationScopes InternalName i) InternalName)
 makeAnnotation showAnn pl
     | showAnn ^. Ann.showTypeAlways = makeTypeAnnotationPl pl <&> AnnotationType
     | otherwise =

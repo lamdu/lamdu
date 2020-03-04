@@ -176,7 +176,10 @@ toValAnnotation evalRes =
     \run ->
     evalRes <&> traverse . traverse %~ (>>= run . toResVal)
 
-toAnnotation :: MonadNaming m => Annotation (OldName m) (IM m) -> m (Annotation (NewName m) (IM m))
+toAnnotation ::
+    MonadNaming m =>
+    Annotation (EvaluationScopes (OldName m) (IM m)) (OldName m) ->
+    m (Annotation (EvaluationScopes (NewName m) (IM m)) (NewName m))
 toAnnotation AnnotationNone = pure AnnotationNone
 toAnnotation (AnnotationType typ) = toType typ <&> AnnotationType
 toAnnotation (AnnotationVal x) = toValAnnotation x <&> AnnotationVal
