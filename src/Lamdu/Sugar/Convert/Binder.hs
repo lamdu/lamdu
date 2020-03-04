@@ -309,7 +309,7 @@ instance Recursive GetParam where
 instance GetParam (Const (BinderVarRef InternalName o)) where
 instance GetParam (Const (NullaryVal InternalName i o))
 
-instance GetParam (Else InternalName i o)
+instance GetParam (Else v InternalName i o)
 
 instance GetParam (Function v InternalName i o) where
 
@@ -360,7 +360,7 @@ markNodeLightParams paramNames =
     hVal %~ markLightParams paramNames
 
 instance MarkLightParams (Lens.Const a)
-instance MarkLightParams (Else InternalName i o)
+instance MarkLightParams (Else v InternalName i o)
 instance MarkLightParams (Let v InternalName i o)
 instance MarkLightParams (Function v InternalName i o)
 

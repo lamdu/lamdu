@@ -135,15 +135,15 @@ data Hole v name i o = Hole
       _holeMDelete :: Maybe (o EntityId)
     } deriving Generic
 
-data Else name i o f
-    = SimpleElse (Term (EvaluationScopes name i) name i o f)
+data Else v name i o f
+    = SimpleElse (Term v name i o f)
     | ElseIf (IfElse name i o f)
     deriving Generic
 
 data IfElse name i o k = IfElse
     { _iIf :: k :# Term (EvaluationScopes name i) name i o
     , _iThen :: k :# Term (EvaluationScopes name i) name i o
-    , _iElse :: k :# Else name i o
+    , _iElse :: k :# Else (EvaluationScopes name i) name i o
     } deriving Generic
 
 data CompositeItem name i o k = CompositeItem
@@ -279,7 +279,7 @@ traverse makeHTraversableAndBases
 
 instance RNodes (Assignment v name i o)
 instance RNodes (Binder v name i o)
-instance RNodes (Else name i o)
+instance RNodes (Else v name i o)
 instance RNodes (Function v name i o)
 instance RNodes (Term v name i o)
 
@@ -289,13 +289,13 @@ type Dep c name i o =
     , c (Const (BinderVarRef name o))
     , c (Const (NullaryVal name i o))
     , c (Const (GetVar name o))
-    , c (Else name i o)
+    , c (Else (EvaluationScopes name i) name i o)
     , c (Term (EvaluationScopes name i) name i o)
     )
 
 instance Dep c name i o => Recursively c (Assignment (EvaluationScopes name i) name i o)
 instance Dep c name i o => Recursively c (Binder (EvaluationScopes name i) name i o)
-instance Dep c name i o => Recursively c (Else name i o)
+instance Dep c name i o => Recursively c (Else (EvaluationScopes name i) name i o)
 instance Dep c name i o => Recursively c (Term (EvaluationScopes name i) name i o)
 
 instance (Dep c name i o, c (Function (EvaluationScopes name i) name i o)) =>
@@ -303,5 +303,5 @@ instance (Dep c name i o, c (Function (EvaluationScopes name i) name i o)) =>
 
 instance RTraversable (Assignment (EvaluationScopes name i) name i o)
 instance RTraversable (Binder (EvaluationScopes name i) name i o)
-instance RTraversable (Else name i o)
+instance RTraversable (Else (EvaluationScopes name i) name i o)
 instance RTraversable (Term (EvaluationScopes name i) name i o)

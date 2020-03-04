@@ -409,8 +409,8 @@ toNominal (Nominal t e) = Nominal <$> toTId t <*> toNode toBinder e
 
 toElse ::
     MonadNaming m =>
-    Body Else (OldName m) (IM m) o a ->
-    m (Body Else (NewName m) (IM m) o a)
+    Body (Else (EvaluationScopes (OldName m) (IM m))) (OldName m) (IM m) o a ->
+    m (Body (Else (EvaluationScopes (NewName m) (IM m))) (NewName m) (IM m) o a)
 toElse (SimpleElse x) = toBody x <&> SimpleElse
 toElse (ElseIf x) = toIfElse x <&> ElseIf
 

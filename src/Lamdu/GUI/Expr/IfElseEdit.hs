@@ -88,7 +88,7 @@ makeElse ::
     , Has (MomentuTexts.Texts Text) env
     ) =>
     AnimId ->
-    Sugar.Expr Sugar.Else Name i o ExprGui.Payload ->
+    Sugar.Expr (Sugar.Else (Sugar.EvaluationScopes Name i)) Name i o ExprGui.Payload ->
     GuiM env i o [Row (Responsive o)]
 makeElse parentAnimId (Ann (Const pl) (Sugar.SimpleElse expr)) =
     ( Row elseAnimId

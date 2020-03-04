@@ -231,7 +231,7 @@ instance FixReplaceParent (Term v name i o) where
         (hVal . typeMismatchPayloads %~ join setToExpr) .
         ((bodyIndex . fragmentAnnIndex) <. annotation %@~ setToExpr)
 
-instance FixReplaceParent (Else name i o) where
+instance FixReplaceParent (Else v name i o) where
     fixReplaceParent setToExpr =
         (hVal . _SimpleElse . typeMismatchPayloads %~ join setToExpr) .
         ((bodyIndex . Lens.filteredByIndex _SimpleElse . fragmentAnnIndex) <. annotation%@~ setToExpr)

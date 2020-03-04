@@ -51,7 +51,7 @@ instance SugarExpr (Assignment v name i o) where
     isUnfinished (BodyPlain x) = isUnfinished (x ^. apBody)
     isUnfinished BodyFunction{} = False
 
-instance SugarExpr (Else name i o) where
+instance SugarExpr (Else v name i o) where
     isUnfinished (SimpleElse x) = isUnfinished x
     isUnfinished ElseIf{} = False
 

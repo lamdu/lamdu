@@ -88,7 +88,7 @@ instance v ~ EvaluationScopes name i => MarkAnnotations (Assignment v name i o) 
         , function & fBody %~ markNodeAnnotations & BodyFunction
         )
 
-instance MarkAnnotations (Else name i o) where
+instance v ~ EvaluationScopes name i => MarkAnnotations (Else v name i o) where
     markAnnotations (SimpleElse body) =
         markBodyAnnotations body & _2 %~ SimpleElse
     markAnnotations (ElseIf elseIf) =

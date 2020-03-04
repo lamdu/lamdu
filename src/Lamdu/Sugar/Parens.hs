@@ -52,7 +52,7 @@ addToBinderWith minOpPrec (Ann (Const pl) x) =
     addToBody x
     & Ann (Const (ParenInfo minOpPrec False, pl))
 
-instance HasPrecedence name => AddParens (Else name i o) where
+instance HasPrecedence name => AddParens (Else v name i o) where
     addToBody (SimpleElse expr) = addToBody expr & SimpleElse
     addToBody (ElseIf elseIf) = addToBody elseIf & ElseIf
 
