@@ -170,13 +170,13 @@ data CaseArg v name i o k = CaseArg
     , _caToLambdaCase :: o EntityId
     } deriving Generic
 
-data CaseKind name i o k
+data CaseKind v name i o k
     = LambdaCase
-    | CaseWithArg (CaseArg (EvaluationScopes name i) name i o k)
+    | CaseWithArg (CaseArg v name i o k)
     deriving Generic
 
 data Case name i o k = Case
-    { _cKind :: CaseKind name i o k
+    { _cKind :: CaseKind (EvaluationScopes name i) name i o k
     , _cBody :: Composite (EvaluationScopes name i) name i o k
     } deriving Generic
 
