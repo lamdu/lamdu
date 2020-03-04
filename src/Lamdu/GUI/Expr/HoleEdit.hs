@@ -73,7 +73,7 @@ make (Ann (Const pl) (Const hole)) =
         env <- Lens.view id
         let (mkLitEventMap, delEventMap)
                 | searchTerm == "" =
-                    ( ExprEventMap.makeLiteralEventMap ?? pl ^. Sugar.plActions . Sugar.setToLiteral
+                    ( ExprEventMap.makeLiteralEventMap ?? pl ^. Sugar.plActions
                     , foldMap
                         (E.keysEventMapMovesCursor delKeys
                             (E.toDoc env

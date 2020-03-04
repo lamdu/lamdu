@@ -232,7 +232,6 @@ mkOptions posInfo resultProcessor holePl =
             , tags <&> (`V.BInjectP` V.BLeafP V.LHole)
             , nominalOptions
             , [ V.BLamP "NewLambda" Pruned (V.BLeafP V.LHole)
-              , V.BLeafP V.LRecEmpty
               , V.BLeafP V.LAbsurd
               ]
             , [ V.BLamP "NewLambda" Pruned (V.BLeafP V.LHole) `V.BAppP` V.BLeafP V.LHole

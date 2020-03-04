@@ -202,7 +202,7 @@ unicodeAlts haystack =
         extras '≥' = [">="]
         extras '≤' = ["<="]
         extras '≠' = ["/=", "!=", "<>"]
-        extras '⋲' = ["<{"]
+        extras '⋲' = ["<"]
         extras _ = []
 
 {-# NOINLINE fuzzyMaker #-}

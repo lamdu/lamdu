@@ -235,6 +235,7 @@ nodeActions =
     { Sugar._detach = Sugar.DetachAction Unit
     , Sugar._mSetToHole = Nothing
     , Sugar._setToLiteral = pure Unit
+    , Sugar._setToEmptyRecord = Unit
     , Sugar._extract = Unit
     , Sugar._mReplaceParent = Nothing
     , Sugar._wrapInRecord = tagRefReplace

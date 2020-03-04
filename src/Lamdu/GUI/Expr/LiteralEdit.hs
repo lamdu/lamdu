@@ -245,7 +245,7 @@ numEdit prop pl =
                 _ -> mempty
         newLiteralEvent <-
             if Text.null text
-            then makeLiteralEventMap ?? pl ^. Sugar.plActions . Sugar.setToLiteral
+            then makeLiteralEventMap ?? pl ^. Sugar.plActions
             else pure mempty
         TextEdit.make ?? empty ?? text ?? innerId
             <&> Align.tValue . Widget.eventMapMaker . Lens.mapped %~
