@@ -509,8 +509,8 @@ toDefinitionBody (DefinitionBodyExpression expr) =
 
 toDef ::
     MonadNaming m =>
-    Definition (OldName m) (IM m) o (Payload (OldName m) (IM m) o a) ->
-    m (Definition (NewName m) (IM m) o (Payload (NewName m) (IM m) o a))
+    Definition (EvaluationScopes (OldName m) (IM m)) (OldName m) (IM m) o (Payload (OldName m) (IM m) o a) ->
+    m (Definition (EvaluationScopes (NewName m) (IM m)) (NewName m) (IM m) o (Payload (NewName m) (IM m) o a))
 toDef def@Definition{_drName, _drBody} =
     do
         -- NOTE: A global def binding is not considered a binder, as

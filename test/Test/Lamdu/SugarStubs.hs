@@ -113,7 +113,7 @@ plus = arithmeticInfix2 "+"
 mul :: Infix2
 mul = arithmeticInfix2 "*"
 
-pane :: Sugar.Definition name i Unit a -> Sugar.Pane name i Unit a
+pane :: Sugar.Definition (Sugar.EvaluationScopes name i) name i Unit a -> Sugar.Pane name i Unit a
 pane body =
     Sugar.Pane
     { Sugar._paneBody = Sugar.PaneDefinition body
@@ -144,7 +144,7 @@ def ::
     Annotated expr #
         Sugar.Assignment (Sugar.EvaluationScopes InternalName Identity)
         InternalName Identity Unit ->
-    Sugar.Definition InternalName Identity Unit expr
+    Sugar.Definition (Sugar.EvaluationScopes InternalName Identity) InternalName Identity Unit expr
 def typ var tag body =
     Sugar.Definition
     { Sugar._drName = mkTag (Just var) tag

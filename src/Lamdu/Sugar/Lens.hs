@@ -91,7 +91,7 @@ defBodySchemes f (DefinitionBodyExpression de) =
     de & deType %%~ f
     <&> DefinitionBodyExpression
 
-defSchemes :: Lens.Traversal' (Definition name i o expr) (Scheme name)
+defSchemes :: Lens.Traversal' (Definition v name i o expr) (Scheme name)
 defSchemes = drBody . defBodySchemes
 
 binderFuncParamActions ::

@@ -61,12 +61,12 @@ data DefinitionBody v name i o a
     | DefinitionBodyBuiltin (DefinitionBuiltin name o)
     deriving (Functor, Foldable, Traversable, Generic)
 
-data Definition name i o a = Definition
+data Definition v name i o a = Definition
     { _drName :: TagRef name i o
     , _drDefI :: V.Var
     , _drDefinitionState :: Property o Meta.DefinitionState
     , _drEntityId :: EntityId
-    , _drBody :: DefinitionBody (EvaluationScopes name i) name i o a
+    , _drBody :: DefinitionBody v name i o a
     } deriving (Functor, Foldable, Traversable, Generic)
 
 data TagPane name o = TagPane
@@ -77,7 +77,7 @@ data TagPane name o = TagPane
     } deriving Generic
 
 data PaneBody name i o a
-    = PaneDefinition (Definition name i o a)
+    = PaneDefinition (Definition (EvaluationScopes name i) name i o a)
     | PaneTag (TagPane name o)
     deriving (Functor, Foldable, Traversable, Generic)
 

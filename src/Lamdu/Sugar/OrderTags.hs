@@ -138,7 +138,7 @@ orderNode (Ann (Const a) x) =
 
 orderDef ::
     MonadTransaction m i =>
-    OrderT i (Sugar.Definition name i o (Sugar.Payload name i o a))
+    OrderT i (Sugar.Definition v name i o (Sugar.Payload name i o a))
 orderDef def =
     def
     & (SugarLens.defSchemes . Sugar.schemeType) orderType
