@@ -397,8 +397,8 @@ toInject (Inject t v) =
 
 toGetField ::
     MonadNaming m =>
-    Body GetField (OldName m) (IM m) o a ->
-    m (Body GetField (NewName m) (IM m) o a)
+    Body (GetField (EvaluationScopes (OldName m) (IM m))) (OldName m) (IM m) o a ->
+    m (Body (GetField (EvaluationScopes (NewName m) (IM m))) (NewName m) (IM m) o a)
 toGetField (GetField r t) = GetField <$> toExpression r <*> toTagRefOf Tag t
 
 toNominal ::

@@ -92,8 +92,8 @@ data Inject v name i o f = Inject
     , _iContent :: InjectContent v name i o f
     } deriving Generic
 
-data GetField name i o k = GetField
-    { _gfRecord :: k :# Term (EvaluationScopes name i) name i o
+data GetField v name i o k = GetField
+    { _gfRecord :: k :# Term v name i o
     , _gfTag :: TagRef name i o
     } deriving Generic
 
@@ -192,7 +192,7 @@ data Term v name i o k
     | BodyHole (Hole v name i o)
     | BodyLiteral (Literal (Property o))
     | BodyRecord (Composite name i o k)
-    | BodyGetField (GetField name i o k)
+    | BodyGetField (GetField v name i o k)
     | BodyCase (Case name i o k)
     | BodyIfElse (IfElse name i o k)
     | BodyInject (Inject v name i o k)
