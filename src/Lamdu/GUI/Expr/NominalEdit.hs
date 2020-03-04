@@ -46,7 +46,7 @@ makeToNom ::
     , Has (Texts.Name Text) env
     , Has (Texts.Definitions Text) env
     ) =>
-    Sugar.Expr Sugar.Nominal Name i o ExprGui.Payload ->
+    Sugar.Expr (Sugar.Nominal (Sugar.EvaluationScopes Name i)) Name i o ExprGui.Payload ->
     GuiM env i o (Responsive o)
 makeToNom (Ann (Const pl) (Sugar.Nominal tid binder)) =
     do

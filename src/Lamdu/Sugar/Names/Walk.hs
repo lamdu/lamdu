@@ -403,8 +403,8 @@ toGetField (GetField r t) = GetField <$> toExpression r <*> toTagRefOf Tag t
 
 toNominal ::
     MonadNaming m =>
-    Body Nominal (OldName m) (IM m) o a ->
-    m (Body Nominal (NewName m) (IM m) o a)
+    Body (Nominal (EvaluationScopes (OldName m) (IM m))) (OldName m) (IM m) o a ->
+    m (Body (Nominal (EvaluationScopes (NewName m) (IM m))) (NewName m) (IM m) o a)
 toNominal (Nominal t e) = Nominal <$> toTId t <*> toNode toBinder e
 
 toElse ::

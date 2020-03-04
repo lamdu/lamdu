@@ -179,9 +179,9 @@ data Case name i o k = Case
     , _cBody :: Composite name i o k
     } deriving Generic
 
-data Nominal name i o k = Nominal
+data Nominal v name i o k = Nominal
     { _nTId :: TId name
-    , _nVal :: k :# Binder (EvaluationScopes name i) name i o
+    , _nVal :: k :# Binder v name i o
     } deriving Generic
 
 data Term name i o k
@@ -196,7 +196,7 @@ data Term name i o k
     | BodyIfElse (IfElse name i o k)
     | BodyInject (Inject name i o k)
     | BodyGetVar (GetVar name o)
-    | BodyToNom (Nominal name i o k)
+    | BodyToNom (Nominal (EvaluationScopes name i) name i o k)
     | BodyFromNom (TId name)
     | BodyFragment (Fragment name i o k)
     | BodyPlaceHolder -- Used for hole results, shown as "★"
