@@ -548,8 +548,8 @@ toRepl (Repl bod varInfo res) =
 
 toWorkArea ::
     MonadNaming m =>
-    WorkArea (OldName m) (IM m) o (Payload (OldName m) (IM m) o a) ->
-    m (WorkArea (NewName m) (IM m) o (Payload (NewName m) (IM m) o a))
+    WorkArea (EvaluationScopes (OldName m) (IM m)) (OldName m) (IM m) o (Payload (OldName m) (IM m) o a) ->
+    m (WorkArea (EvaluationScopes (NewName m) (IM m)) (NewName m) (IM m) o (Payload (NewName m) (IM m) o a))
 toWorkArea WorkArea { _waPanes, _waRepl, _waGlobals } =
     do
         run <- opRun

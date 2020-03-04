@@ -373,7 +373,7 @@ loadWorkArea ::
     ) =>
     env -> Anchors.CodeAnchors m ->
     T m
-    (WorkArea InternalName (T m) (T m)
+    (WorkArea (EvaluationScopes InternalName (T m)) InternalName (T m) (T m)
         (Payload InternalName (T m) (T m) [EntityId]))
 loadWorkArea env cp =
     do

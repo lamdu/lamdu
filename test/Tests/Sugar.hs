@@ -57,7 +57,7 @@ test =
 testSugarActionsWith ::
     HasCallStack =>
     FilePath ->
-    [WorkArea Name (T ViewM) (T ViewM)
+    [WorkArea (EvaluationScopes Name (T ViewM)) Name (T ViewM) (T ViewM)
         (Sugar.Payload Name (T ViewM) (T ViewM) (ParenInfo, [EntityId])) ->
         T ViewM a] ->
     Env ->
@@ -70,7 +70,7 @@ testSugarActionsWith program actions env =
 testSugarActions ::
     HasCallStack =>
     FilePath ->
-    [WorkArea Name (T ViewM) (T ViewM)
+    [WorkArea (EvaluationScopes Name (T ViewM)) Name (T ViewM) (T ViewM)
         (Sugar.Payload Name (T ViewM) (T ViewM) (ParenInfo, [EntityId])) ->
         T ViewM a] ->
     IO ()
@@ -78,23 +78,23 @@ testSugarActions program actions =
     Env.make >>= testSugarActionsWith program actions
 
 replBinder ::
-    Lens.Traversal' (WorkArea name i o a)
-    ( Binder (EvaluationScopes name i) name i o #
+    Lens.Traversal' (WorkArea v name i o a)
+    ( Binder v name i o #
         Annotated a
     )
 replBinder = waRepl . replExpr . hVal
 
 replBody ::
-    Lens.Traversal' (WorkArea name i o a)
-    (Term (EvaluationScopes name i) name i o # Annotated a)
+    Lens.Traversal' (WorkArea v name i o a)
+    (Term v name i o # Annotated a)
 replBody = replBinder . _BinderTerm
 
-replLet :: Lens.Traversal' (WorkArea name i o a) (Let (EvaluationScopes name i) name i o # Annotated a)
+replLet :: Lens.Traversal' (WorkArea v name i o a) (Let v name i o # Annotated a)
 replLet = replBinder . _BinderLet
 
 lamFirstParam ::
-    Lens.Traversal' (Term (EvaluationScopes name i) name i o a)
-    (FuncParam (EvaluationScopes name i) name, ParamInfo name i o)
+    Lens.Traversal' (Term v name i o a)
+    (FuncParam v name, ParamInfo name i o)
 lamFirstParam = _BodyLam . lamFunc . fParams . _Params . Lens.ix 0
 
 testUnnamed :: Test
@@ -428,7 +428,7 @@ setHoleToHole =
             | Lens.has setToHole workArea =
                 fail "hole has set to hole?"
             | otherwise = pure ()
-        setToHole :: Lens.Traversal' (WorkArea name i o (Payload name i o a)) (o EntityId)
+        setToHole :: Lens.Traversal' (WorkArea v name i o (Payload name i o a)) (o EntityId)
         setToHole =
             replBody . _BodyLam . lamFunc . fBody .
             hVal . _BinderLet . lValue .
@@ -464,7 +464,7 @@ testFloatToRepl =
                     (workArea ^?! innerLet . literalVal)
 
         innerLet ::
-            Lens.Traversal' (WorkArea name i o a) (Annotated a # Assignment (EvaluationScopes name i) name i o)
+            Lens.Traversal' (WorkArea v name i o a) (Annotated a # Assignment v name i o)
         innerLet = replLet . lBody . hVal . _BinderLet . lValue
         literalVal = hVal . _BodyPlain . apBody . _BinderTerm . _BodyLiteral . _LiteralNum . Property.pVal
 
@@ -493,8 +493,8 @@ testCreateLetInLetVal =
         --           ^^^^^^^^^^^^^^^^^^^
         theLet ::
             Lens.Traversal'
-            (WorkArea name i o a)
-            (Let (EvaluationScopes name i) name i o # Annotated a)
+            (WorkArea v name i o a)
+            (Let v name i o # Annotated a)
         theLet = replBody . _BodyLam . lamFunc . fBody . hVal . _BinderLet
 
 testHoleTypeShown :: Test

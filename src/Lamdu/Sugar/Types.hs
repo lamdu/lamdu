@@ -105,9 +105,9 @@ instance Foldable (Repl v name i o) where
 instance Traversable (Repl v name i o) where
     traverse f = replExpr (htraverseFlipped (\_ -> Lens._Wrapped f))
 
-data WorkArea name i o a = WorkArea
-    { _waPanes :: [Pane (EvaluationScopes name i) name i o a]
-    , _waRepl :: Repl (EvaluationScopes name i) name i o a
+data WorkArea v name i o a = WorkArea
+    { _waPanes :: [Pane v name i o a]
+    , _waRepl :: Repl v name i o a
     , _waGlobals :: i [NameRef name o]
     } deriving (Functor, Foldable, Traversable, Generic)
 

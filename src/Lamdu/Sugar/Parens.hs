@@ -22,8 +22,8 @@ type MinOpPrec = Prec
 
 addToWorkArea ::
     HasPrecedence name =>
-    WorkArea name i o a ->
-    WorkArea name i o (ParenInfo, a)
+    WorkArea v name i o a ->
+    WorkArea v name i o (ParenInfo, a)
 addToWorkArea w =
     w
     { _waRepl = w ^. waRepl & replExpr %~ addToNode

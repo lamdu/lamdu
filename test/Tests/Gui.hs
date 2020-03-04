@@ -61,8 +61,8 @@ test =
     ]
 
 replExpr ::
-    Lens.Traversal' (Sugar.WorkArea name i o a)
-    (Sugar.Term (Sugar.EvaluationScopes name i) name i o # Annotated a)
+    Lens.Traversal' (Sugar.WorkArea v name i o a)
+    (Sugar.Term v name i o # Annotated a)
 replExpr = Sugar.waRepl . Sugar.replExpr . hVal . Sugar._BinderTerm
 
 wideFocused :: Lens.Traversal' (Responsive f) (Widget.Surrounding -> Widget.Focused (f GuiState.Update))
@@ -129,7 +129,7 @@ applyEvent env virtCursor event =
 
 fromWorkArea ::
     Env -> Lens.ATraversal'
-    (Sugar.WorkArea Name (T ViewM) (T ViewM)
+    (Sugar.WorkArea (Sugar.EvaluationScopes Name (T ViewM)) Name (T ViewM) (T ViewM)
         (Sugar.Payload Name (T ViewM) (T ViewM) ExprGui.Payload)) a ->
     T ViewM a
 fromWorkArea env path =
@@ -213,11 +213,11 @@ testOpPrec =
         unless (workAreaEq workArea workArea') (fail "bad operator precedence")
 
 workAreaEq ::
-    forall a m.
+    forall a m v.
     Eq a =>
-    Sugar.WorkArea Name (T m) (T m)
+    Sugar.WorkArea v Name (T m) (T m)
     (Sugar.Payload Name (T m) (T m) a) ->
-    Sugar.WorkArea Name (T m) (T m)
+    Sugar.WorkArea v Name (T m) (T m)
     (Sugar.Payload Name (T m) (T m) a) ->
     Bool
 workAreaEq x y =
@@ -225,7 +225,7 @@ workAreaEq x y =
     where
         x' =
             unsafeCoerce x ::
-                Sugar.WorkArea Name Unit Unit
+                Sugar.WorkArea () Name Unit Unit
                 (Sugar.Payload Name Unit Unit a)
 
 testKeyboardDirAndBack ::
