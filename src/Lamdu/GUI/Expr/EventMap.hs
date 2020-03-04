@@ -54,7 +54,7 @@ defaultOptions =
 exprInfoFromPl ::
     Monad i =>
     GuiM env i o
-    (Sugar.Payload name i0 o0 ExprGui.Payload -> ExprInfo name i0 o0)
+    (Sugar.Payload v name i0 o0 ExprGui.Payload -> ExprInfo name i0 o0)
 exprInfoFromPl =
     (,)
     <$> GuiState.isSubCursor
@@ -80,7 +80,7 @@ add ::
     , Has (Texts.Definitions Text) env
     , Has (MomentuTexts.Texts Text) env
     ) =>
-    Options -> Sugar.Payload name i o ExprGui.Payload ->
+    Options -> Sugar.Payload v name i o ExprGui.Payload ->
     GuiM env i o (w o -> w o)
 add options pl = (exprInfoFromPl ?? pl) >>= addWith options
 

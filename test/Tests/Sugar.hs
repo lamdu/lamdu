@@ -58,7 +58,7 @@ testSugarActionsWith ::
     HasCallStack =>
     FilePath ->
     [WorkArea (EvaluationScopes Name (T ViewM)) Name (T ViewM) (T ViewM)
-        (Sugar.Payload Name (T ViewM) (T ViewM) (ParenInfo, [EntityId])) ->
+        (Sugar.Payload (EvaluationScopes Name (T ViewM)) Name (T ViewM) (T ViewM) (ParenInfo, [EntityId])) ->
         T ViewM a] ->
     Env ->
     IO ()
@@ -71,7 +71,7 @@ testSugarActions ::
     HasCallStack =>
     FilePath ->
     [WorkArea (EvaluationScopes Name (T ViewM)) Name (T ViewM) (T ViewM)
-        (Sugar.Payload Name (T ViewM) (T ViewM) (ParenInfo, [EntityId])) ->
+        (Sugar.Payload (EvaluationScopes Name (T ViewM)) Name (T ViewM) (T ViewM) (ParenInfo, [EntityId])) ->
         T ViewM a] ->
     IO ()
 testSugarActions program actions =
@@ -428,7 +428,7 @@ setHoleToHole =
             | Lens.has setToHole workArea =
                 fail "hole has set to hole?"
             | otherwise = pure ()
-        setToHole :: Lens.Traversal' (WorkArea v name i o (Payload name i o a)) (o EntityId)
+        setToHole :: Lens.Traversal' (WorkArea v name i o (Payload v name i o a)) (o EntityId)
         setToHole =
             replBody . _BodyLam . lamFunc . fBody .
             hVal . _BinderLet . lValue .

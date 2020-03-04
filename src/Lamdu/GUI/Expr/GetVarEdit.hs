@@ -361,7 +361,8 @@ make ::
     , Has (Texts.Code Text) env, Has (Texts.CodeUI Text) env
     , Has (Texts.Name Text) env, Grid.HasTexts env
     ) =>
-    Annotated (Sugar.Payload Name i o ExprGui.Payload) # Const (Sugar.GetVar Name o) ->
+    Annotated (Sugar.Payload (Sugar.EvaluationScopes Name i) Name i o ExprGui.Payload) #
+        Const (Sugar.GetVar Name o) ->
     GuiM env i o (Responsive o)
 make (Ann (Const pl) (Const getVar)) =
     makeNoActions getVar (WidgetIds.fromExprPayload pl) & stdWrap pl
@@ -372,7 +373,9 @@ makePunnedVars ::
     , Has (Texts.Code Text) env, Has (Texts.CodeUI Text) env
     , Has (Texts.Name Text) env, Grid.HasTexts env
     ) =>
-    [Annotated (Sugar.Payload Name i o ExprGui.Payload) # Const (Sugar.GetVar Name o)] ->
+    [ Annotated (Sugar.Payload (Sugar.EvaluationScopes Name i) Name i o ExprGui.Payload) #
+        Const (Sugar.GetVar Name o)
+    ] ->
     GuiM env i o (Responsive o)
 makePunnedVars args =
     do

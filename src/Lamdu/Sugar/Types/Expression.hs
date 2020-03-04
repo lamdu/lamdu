@@ -65,8 +65,8 @@ import           Lamdu.Sugar.Types.Type
 
 import           Lamdu.Prelude
 
-type Expr e name i o a = Annotated (Payload name i o a) # e name i o
-type Body e name i o a = e name i o # Annotated (Payload name i o a)
+type Expr e v name i o a = Annotated (Payload v name i o a) # e v name i o
+type Body e v name i o a = e v name i o # Annotated (Payload v name i o a)
 
 data AnnotatedArg v name i o k = AnnotatedArg
     { _aaTag :: Tag name
@@ -113,13 +113,13 @@ data Fragment v name i o k = Fragment
     } deriving Generic
 
 data HoleResult v name i o = HoleResult
-    { _holeResultConverted :: Expr (Binder v) name i o ()
+    { _holeResultConverted :: Expr Binder v name i o ()
     , _holeResultPick :: o ()
     } deriving Generic
 
 data HoleOption v name i o = HoleOption
     { _hoEntityId :: EntityId
-    , _hoSugaredBaseExpr :: i (Expr (Binder v) name i o ())
+    , _hoSugaredBaseExpr :: i (Expr Binder v name i o ())
     , -- A group in the hole results based on this option
         -- TODO: HoleResult need not have actual eval results
       _hoResults :: ListT i (HoleResultScore, i (HoleResult v name i o))

@@ -24,11 +24,9 @@ import           Lamdu.Prelude
 type T = Transaction
 
 makeLabeledApply ::
-    (Monad m, v ~ Sugar.EvaluationScopes InternalName (T m)) =>
+    Monad m =>
     Annotated (ConvertPayload m a) # Const (Sugar.BinderVarRef InternalName (T m)) ->
-    [ Sugar.AnnotatedArg (Sugar.EvaluationScopes InternalName (T m)) InternalName
-        (T m) (T m) #
-        Annotated (ConvertPayload m a)
+    [ Sugar.AnnotatedArg v InternalName (T m) (T m) # Annotated (ConvertPayload m a)
     ] ->
     [Annotated (ConvertPayload m a) # Const (Sugar.GetVar InternalName (T m))] ->
     Input.Payload m a # Term ->

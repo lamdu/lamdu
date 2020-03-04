@@ -66,7 +66,7 @@ applyResultLayout = (^. Responsive.rWide)
 makeWidget ::
     (Monad i, Monad o) =>
     Widget.Id ->
-    Sugar.Expr (Sugar.Binder (Sugar.EvaluationScopes Name i)) Name i o ExprGui.Payload ->
+    Sugar.Expr Sugar.Binder (Sugar.EvaluationScopes Name i) Name i o ExprGui.Payload ->
     GuiM env i o (TextWidget o)
 makeWidget resultId holeResultConverted =
     do
@@ -87,7 +87,7 @@ make ::
     SearchMenu.ResultsContext ->
     Widget.Id ->
     o () ->
-    Sugar.Expr (Sugar.Binder (Sugar.EvaluationScopes Name i)) Name i o ExprGui.Payload ->
+    Sugar.Expr Sugar.Binder (Sugar.EvaluationScopes Name i) Name i o ExprGui.Payload ->
     GuiM env i o (Menu.RenderedOption o)
 make ctx resultId pick holeResultConverted =
     (,) <$> Lens.view (has . MomentuTexts.choose) <*>

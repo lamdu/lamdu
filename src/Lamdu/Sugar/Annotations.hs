@@ -70,7 +70,7 @@ markNodeAnnotations (Ann (Const pl) x) =
 class MarkAnnotations (t :: AHyperType -> *) where
     markAnnotations :: t # Annotated a -> (ShowAnnotation, t # Annotated (ShowAnnotation, a))
 
-instance v ~ EvaluationScopes name i => MarkAnnotations (Binder v name i o) where
+instance MarkAnnotations (Binder v name i o) where
     markAnnotations (BinderTerm body) =
         markBodyAnnotations body & _2 %~ BinderTerm
     markAnnotations (BinderLet let_) =
@@ -79,7 +79,7 @@ instance v ~ EvaluationScopes name i => MarkAnnotations (Binder v name i o) wher
             & BinderLet
         )
 
-instance v ~ EvaluationScopes name i => MarkAnnotations (Assignment v name i o) where
+instance MarkAnnotations (Assignment v name i o) where
     markAnnotations (BodyPlain (AssignPlain a b)) =
         markAnnotations b
         & _2 %~ BodyPlain . AssignPlain a
@@ -88,7 +88,7 @@ instance v ~ EvaluationScopes name i => MarkAnnotations (Assignment v name i o) 
         , function & fBody %~ markNodeAnnotations & BodyFunction
         )
 
-instance v ~ EvaluationScopes name i => MarkAnnotations (Else v name i o) where
+instance MarkAnnotations (Else v name i o) where
     markAnnotations (SimpleElse body) =
         markBodyAnnotations body & _2 %~ SimpleElse
     markAnnotations (ElseIf elseIf) =
@@ -100,11 +100,10 @@ instance v ~ EvaluationScopes name i => MarkAnnotations (Else v name i o) where
 instance MarkAnnotations (Const a) where
     markAnnotations (Const x) = (neverShowAnnotations, Const x)
 
-instance v ~ EvaluationScopes name i => MarkAnnotations (Term v name i o) where
+instance MarkAnnotations (Term v name i o) where
     markAnnotations = markBodyAnnotations
 
 markBodyAnnotations ::
-    v ~ EvaluationScopes name i =>
     Term v name i o # Annotated a ->
     ( ShowAnnotation
     , Term v name i o # Annotated (ShowAnnotation, a)

@@ -42,8 +42,7 @@ ofName (Name.NameTag x) =
         Name.TagText displayName textCollision = x ^. Name.tnDisplayText
 
 expr ::
-    ( v ~ EvaluationScopes Name i
-    , Has (Texts.Code Text) env
+    ( Has (Texts.Code Text) env
     , Has (Texts.CodeUI Text) env
     ) =>
     env -> Annotated a # Term v Name i o -> [Text]
@@ -52,7 +51,6 @@ expr env = ofBody env . (^. hVal)
 ofBody ::
     ( Has (Texts.Code Text) env
     , Has (Texts.CodeUI Text) env
-    , v ~ EvaluationScopes Name i
     ) =>
     env -> Term v Name i o # Annotated a -> [Text]
 ofBody env =
@@ -120,7 +118,6 @@ ofBody env =
 binder ::
     ( Has (Texts.Code Text) env
     , Has (Texts.CodeUI Text) env
-    , v ~ EvaluationScopes Name i
     ) =>
     env -> Binder v Name i o # Annotated a -> [Text]
 binder env BinderLet{} = [env ^. has . Texts.let_]
@@ -171,9 +168,7 @@ allowedFragmentSearchTerm searchTerm =
 -- | Given a hole result sugared expression, determine which part of
 -- the search term is a remainder and which belongs inside the hole
 -- result expr
-getSearchStringRemainder ::
-    v ~ EvaluationScopes name i =>
-    SearchMenu.ResultsContext -> Term v name i o # Ann a -> Text
+getSearchStringRemainder :: SearchMenu.ResultsContext -> Term v name i o # Ann a -> Text
 getSearchStringRemainder ctx holeResult
     | isA _BodyInject = ""
       -- NOTE: This is wrong for operator search terms like ".." which

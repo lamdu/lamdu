@@ -35,7 +35,6 @@ module Lamdu.Sugar.Types.Parts
 import qualified Control.Lens as Lens
 import qualified Lamdu.Calc.Type as T
 import           Lamdu.Sugar.Internal.EntityId (EntityId)
-import           Lamdu.Sugar.Types.Eval
 import           Lamdu.Sugar.Types.Tag
 import           Lamdu.Sugar.Types.Type
 
@@ -125,8 +124,8 @@ data VarInfo
     | VarGeneric | VarFunction | VarRecord | VarVariant
     deriving (Generic, Eq)
 
-data Payload name i o a = Payload
-    { _plAnnotation :: Annotation (EvaluationScopes name i) name
+data Payload v name i o a = Payload
+    { _plAnnotation :: Annotation v name
     , _plNeverShrinkTypeAnnotations :: Bool
     , _plActions :: NodeActions name i o
     , _plEntityId :: EntityId

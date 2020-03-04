@@ -60,7 +60,7 @@ stdWrap ::
     , Has (Texts.Definitions Text) env
     , Glue.HasTexts env
     ) =>
-    Sugar.Payload Name i o ExprGui.Payload ->
+    Sugar.Payload (Sugar.EvaluationScopes Name i) Name i o ExprGui.Payload ->
     GuiM env i o (Responsive o) ->
     GuiM env i o (Responsive o)
 stdWrap pl act =
@@ -92,7 +92,7 @@ stdWrapParentExpr ::
     , Has (Texts.Name Text) env
     , Has (Texts.Navigation Text) env
     ) =>
-    Sugar.Payload Name i o ExprGui.Payload ->
+    Sugar.Payload (Sugar.EvaluationScopes Name i) Name i o ExprGui.Payload ->
     GuiM env i o (Responsive o) ->
     GuiM env i o (Responsive o)
 stdWrapParentExpr pl act =
@@ -100,7 +100,7 @@ stdWrapParentExpr pl act =
 
 takeFocusIfNeeded ::
     Monad i =>
-    Sugar.Payload name i o ExprGui.Payload ->
+    Sugar.Payload v name i o ExprGui.Payload ->
     GuiM env i o (Widget o -> Widget o)
 takeFocusIfNeeded pl =
     Lens.view GuiState.cursor

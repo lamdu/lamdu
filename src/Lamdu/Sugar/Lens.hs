@@ -100,8 +100,7 @@ binderFuncParamActions _ (NullParam a) = pure (NullParam a)
 binderFuncParamActions f (Params ps) = (traverse . _2 . piActions) f ps <&> Params
 
 binderResultExpr ::
-    Lens.IndexedLens' (Term (EvaluationScopes name i) name i o # Annotated ())
-    (Annotated a # Binder (EvaluationScopes name i) name i o) a
+    Lens.IndexedLens' (Term v name i o # Annotated ()) (Annotated a # Binder v name i o) a
 binderResultExpr f (Ann (Const pl) x) =
     case x of
     BinderTerm e ->
@@ -117,7 +116,7 @@ binderResultExpr f (Ann (Const pl) x) =
 
 holeOptionTransformExprs ::
     Monad i =>
-    (Expr (Binder v0) n0 i o () -> i (Expr (Binder v1) n1 i o ())) ->
+    (Expr Binder v0 n0 i o () -> i (Expr Binder v1 n1 i o ())) ->
     HoleOption v0 n0 i o ->
     HoleOption v1 n1 i o
 holeOptionTransformExprs onExpr option =
@@ -128,7 +127,7 @@ holeOptionTransformExprs onExpr option =
 
 holeTransformExprs ::
     Monad i =>
-    (Expr (Binder v0) n0 i o () -> i (Expr (Binder v1) n1 i o ())) ->
+    (Expr Binder v0 n0 i o () -> i (Expr Binder v1 n1 i o ())) ->
     Hole v0 n0 i o -> Hole v1 n1 i o
 holeTransformExprs onExpr =
     holeOptions . Lens.mapped . traverse %~ holeOptionTransformExprs onExpr

@@ -45,7 +45,8 @@ makeFunc ::
     , Has (Texts.Navigation Text) env
     ) =>
     GetVarEdit.Role ->
-    Annotated (Sugar.Payload Name i o ExprGui.Payload) # Const (Sugar.BinderVarRef Name o) ->
+    Annotated (Sugar.Payload (Sugar.EvaluationScopes Name i) Name i o ExprGui.Payload) #
+        Const (Sugar.BinderVarRef Name o) ->
     GuiM env i o (Responsive o)
 makeFunc role func =
     GetVarEdit.makeGetBinder role (func ^. hVal . Lens._Wrapped) myId
@@ -64,7 +65,7 @@ makeLabeled ::
     , Has (Texts.Name Text) env
     , Has (Texts.Navigation Text) env
     ) =>
-    Sugar.Expr (Sugar.LabeledApply (Sugar.EvaluationScopes Name i)) Name i o ExprGui.Payload ->
+    Sugar.Expr Sugar.LabeledApply (Sugar.EvaluationScopes Name i) Name i o ExprGui.Payload ->
     GuiM env i o (Responsive o)
 makeLabeled (Ann (Const pl) apply) =
     ExprEventMap.add ExprEventMap.defaultOptions pl <*>
@@ -91,7 +92,7 @@ makeLabeled (Ann (Const pl) apply) =
 
 makeArgRow ::
     (Monad i, Glue.HasTexts env, Has (Texts.Name Text) env) =>
-    Sugar.Body (Sugar.AnnotatedArg (Sugar.EvaluationScopes Name i)) Name i o ExprGui.Payload ->
+    Sugar.Body Sugar.AnnotatedArg (Sugar.EvaluationScopes Name i) Name i o ExprGui.Payload ->
     GuiM env i o (TaggedItem o)
 makeArgRow arg =
     do
@@ -113,7 +114,7 @@ addArgs ::
     , Has (Texts.Code Text) env, Has (Texts.CodeUI Text) env
     , Has (Texts.Name Text) env, Grid.HasTexts env
     ) =>
-    Sugar.Body (Sugar.LabeledApply (Sugar.EvaluationScopes Name i)) Name i o ExprGui.Payload ->
+    Sugar.Body Sugar.LabeledApply (Sugar.EvaluationScopes Name i) Name i o ExprGui.Payload ->
     Responsive o -> GuiM env i o (Responsive o)
 addArgs apply funcRow =
     do
@@ -141,7 +142,7 @@ makeSimple ::
     , Has (Texts.Name Text) env
     , Has (Texts.Navigation Text) env
     ) =>
-    Annotated (Sugar.Payload Name i o ExprGui.Payload) #
+    Annotated (Sugar.Payload (Sugar.EvaluationScopes Name i) Name i o ExprGui.Payload) #
         Sugar.App (Sugar.Term (Sugar.EvaluationScopes Name i) Name i o) ->
     GuiM env i o (Responsive o)
 makeSimple (Ann (Const pl) (Sugar.App func arg)) =

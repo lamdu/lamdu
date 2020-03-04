@@ -58,9 +58,9 @@ makeInject ::
     , Has (Texts.Name Text) env
     , Has (Texts.Navigation Text) env
     ) =>
-    Sugar.Expr (Sugar.Term (Sugar.EvaluationScopes Name i)) Name i o ExprGui.Payload ->
+    Sugar.Expr Sugar.Term (Sugar.EvaluationScopes Name i) Name i o ExprGui.Payload ->
     Sugar.TagRef Name i o ->
-    Sugar.Payload Name i o ExprGui.Payload ->
+    Sugar.Payload (Sugar.EvaluationScopes Name i) Name i o ExprGui.Payload ->
     GuiM env i o (Responsive o)
 makeInject val tag pl =
     do
@@ -104,9 +104,11 @@ makeNullaryInject ::
     , Has (Texts.Name Text) env
     , Has (Texts.Navigation Text) env
     ) =>
-    Annotated (Sugar.Payload Name i o ExprGui.Payload) # Const (Sugar.NullaryVal Name i o) ->
+    Annotated
+    (Sugar.Payload (Sugar.EvaluationScopes Name i) Name i o ExprGui.Payload) #
+        Const (Sugar.NullaryVal Name i o) ->
     Sugar.TagRef Name i o ->
-    Sugar.Payload Name i o ExprGui.Payload ->
+    Sugar.Payload (Sugar.EvaluationScopes Name i) Name i o ExprGui.Payload ->
     GuiM env i o (Responsive o)
 makeNullaryInject nullary tag pl =
     GuiState.isSubCursor ?? nullaryRecEntityId
@@ -144,7 +146,7 @@ make ::
     , Has (Texts.Name Text) env
     , Has (Texts.Navigation Text) env
     ) =>
-    Sugar.Expr (Sugar.Inject (Sugar.EvaluationScopes Name i)) Name i o ExprGui.Payload ->
+    Sugar.Expr Sugar.Inject (Sugar.EvaluationScopes Name i) Name i o ExprGui.Payload ->
     GuiM env i o (Responsive o)
 make (Ann (Const pl) (Sugar.Inject tag mVal)) =
     ( case mVal of

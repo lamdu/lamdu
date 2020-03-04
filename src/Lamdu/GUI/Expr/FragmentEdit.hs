@@ -63,7 +63,7 @@ make ::
     , Has (Texts.Navigation Text) env
     , SearchMenu.HasTexts env
     ) =>
-    Sugar.Expr (Sugar.Fragment (Sugar.EvaluationScopes Name i)) Name i o ExprGui.Payload ->
+    Sugar.Expr Sugar.Fragment (Sugar.EvaluationScopes Name i) Name i o ExprGui.Payload ->
     GuiM env i o (Responsive o)
 make (Ann (Const pl) fragment) =
     do

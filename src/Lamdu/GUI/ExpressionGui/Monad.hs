@@ -77,10 +77,10 @@ data Askable env i o = Askable
     , _aTheme :: Theme
     , _aAssocTagName :: T.Tag -> MkProperty' o Text
     , _aMakeSubexpression ::
-        Sugar.Expr (Sugar.Term (Sugar.EvaluationScopes Name i)) Name i o ExprGui.Payload ->
+        Sugar.Expr Sugar.Term (Sugar.EvaluationScopes Name i) Name i o ExprGui.Payload ->
         GuiM env i o (Responsive o)
     , _aMakeBinder ::
-        Sugar.Expr (Sugar.Binder (Sugar.EvaluationScopes Name i)) Name i o ExprGui.Payload ->
+        Sugar.Expr Sugar.Binder (Sugar.EvaluationScopes Name i) Name i o ExprGui.Payload ->
         GuiM env i o (Responsive o)
     , _aGuiAnchors :: Anchors.GuiAnchors i o
     , _aDepthLeft :: Int
@@ -165,8 +165,8 @@ instance MonadTransaction n i => MonadTransaction n (GuiM env i o) where
 make ::
     Monad i =>
     Lens.Getter (Askable env i o)
-        (Annotated (Sugar.Payload name i o a) # e -> GuiM env i o (Responsive.Responsive o)) ->
-    Annotated (Sugar.Payload name i o a) # e ->
+        (Annotated (Sugar.Payload v name i o a) # e -> GuiM env i o (Responsive.Responsive o)) ->
+    Annotated (Sugar.Payload v name i o a) # e ->
     GuiM env i o (Responsive.Responsive o)
 make sub expr =
     do
@@ -179,13 +179,13 @@ make sub expr =
 
 makeSubexpression ::
     Monad i =>
-    Sugar.Expr (Sugar.Term (Sugar.EvaluationScopes Name i)) Name i o ExprGui.Payload ->
+    Sugar.Expr Sugar.Term (Sugar.EvaluationScopes Name i) Name i o ExprGui.Payload ->
     GuiM env i o (Responsive.Responsive o)
 makeSubexpression = make aMakeSubexpression
 
 makeBinder ::
     Monad i =>
-    Sugar.Expr (Sugar.Binder (Sugar.EvaluationScopes Name i)) Name i o ExprGui.Payload ->
+    Sugar.Expr Sugar.Binder (Sugar.EvaluationScopes Name i) Name i o ExprGui.Payload ->
     GuiM env i o (Responsive.Responsive o)
 makeBinder = make aMakeBinder
 
@@ -201,9 +201,9 @@ run ::
     , Has Settings env, HasStyle env
     ) =>
     (T.Tag -> MkProperty' o Text) ->
-    (Sugar.Expr (Sugar.Term (Sugar.EvaluationScopes Name i)) Name i o ExprGui.Payload ->
+    (Sugar.Expr Sugar.Term (Sugar.EvaluationScopes Name i) Name i o ExprGui.Payload ->
         GuiM env i o (Responsive o)) ->
-    (Sugar.Expr (Sugar.Binder (Sugar.EvaluationScopes Name i)) Name i o ExprGui.Payload ->
+    (Sugar.Expr Sugar.Binder (Sugar.EvaluationScopes Name i) Name i o ExprGui.Payload ->
         GuiM env i o (Responsive o)) ->
     Anchors.GuiAnchors i o ->
     env -> GuiM env i o a -> i a

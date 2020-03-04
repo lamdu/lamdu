@@ -180,7 +180,7 @@ makePaneBodyEdit ::
     , Has LangId env, Has (Map LangId Text) env
     ) =>
     Sugar.Pane (Sugar.EvaluationScopes Name i) Name i o
-    (Sugar.Payload Name i o ExprGui.Payload) ->
+    (Sugar.Payload (Sugar.EvaluationScopes Name i) Name i o ExprGui.Payload) ->
     GuiM env i o (Responsive o)
 makePaneBodyEdit pane =
     case pane ^. Sugar.paneBody of
@@ -205,7 +205,7 @@ makePaneEdit ::
     (Monad m, Language.HasLanguage env) =>
     ExportActions m ->
     Sugar.Pane (Sugar.EvaluationScopes Name (T m)) Name (T m) (T m)
-    (Sugar.Payload Name (T m) (T m) ExprGui.Payload) ->
+    (Sugar.Payload (Sugar.EvaluationScopes Name (T m)) Name (T m) (T m) ExprGui.Payload) ->
     GuiM env (T m) (T m) (Responsive (IOTrans m))
 makePaneEdit theExportActions pane =
     do

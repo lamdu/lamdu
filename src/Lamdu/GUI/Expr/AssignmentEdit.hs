@@ -73,7 +73,7 @@ data Parts i o = Parts
     , pMScopesEdit :: Maybe (Widget o)
     , pBodyEdit :: Responsive o
     , pEventMap :: EventMap (o GuiState.Update)
-    , pMLamPayload :: Maybe (Sugar.Payload Name i o ExprGui.Payload)
+    , pMLamPayload :: Maybe (Sugar.Payload (Sugar.EvaluationScopes Name i) Name i o ExprGui.Payload)
     , pRhsId :: Widget.Id
     }
 
@@ -111,7 +111,7 @@ lookupMKey k m = k >>= (`Map.lookup` m)
 
 mkChosenScopeCursor ::
     Monad i =>
-    Sugar.Body (Sugar.Function v) Name i o ExprGui.Payload ->
+    Sugar.Body Sugar.Function v Name i o ExprGui.Payload ->
     GuiM env i o (CurAndPrev (Maybe ScopeCursor))
 mkChosenScopeCursor func =
     do
@@ -378,7 +378,7 @@ makeFunctionParts ::
     , Has (Texts.Navigation Text) env
     ) =>
     Sugar.FuncApplyLimit ->
-    Sugar.Expr (Sugar.Function (Sugar.EvaluationScopes Name i)) Name i o ExprGui.Payload ->
+    Sugar.Expr Sugar.Function (Sugar.EvaluationScopes Name i) Name i o ExprGui.Payload ->
     Widget.Id ->
     GuiM env i o (Parts i o)
 makeFunctionParts funcApplyLimit (Ann (Const pl) func) delVarBackwardsId =
@@ -431,7 +431,7 @@ makePlainParts ::
     , TextEdit.HasTexts env
     , SearchMenu.HasTexts env
     ) =>
-    Sugar.Expr (Sugar.AssignPlain (Sugar.EvaluationScopes Name i)) Name i o ExprGui.Payload ->
+    Sugar.Expr Sugar.AssignPlain (Sugar.EvaluationScopes Name i) Name i o ExprGui.Payload ->
     Widget.Id ->
     GuiM env i o (Parts i o)
 makePlainParts (Ann (Const pl) assignPlain) delVarBackwardsId =
@@ -457,7 +457,7 @@ makeParts ::
     , Has (Texts.Navigation Text) env
     ) =>
     Sugar.FuncApplyLimit ->
-    Sugar.Expr (Sugar.Assignment (Sugar.EvaluationScopes Name i)) Name i o ExprGui.Payload ->
+    Sugar.Expr Sugar.Assignment (Sugar.EvaluationScopes Name i) Name i o ExprGui.Payload ->
     Widget.Id ->
     GuiM env i o (Parts i o)
 makeParts funcApplyLimit (Ann (Const pl) assignmentBody) =
@@ -498,7 +498,7 @@ make ::
     ) =>
     Maybe (i (Property o Meta.PresentationMode)) ->
     Sugar.TagRef Name i o -> Lens.ALens' TextColors Draw.Color ->
-    Sugar.Expr (Sugar.Assignment (Sugar.EvaluationScopes Name i)) Name i o ExprGui.Payload ->
+    Sugar.Expr Sugar.Assignment (Sugar.EvaluationScopes Name i) Name i o ExprGui.Payload ->
     GuiM env i o (Responsive o)
 make pMode tag color assignment =
     makeParts Sugar.UnlimitedFuncApply assignment delParamDest

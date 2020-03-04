@@ -104,7 +104,7 @@ makeUnit ::
     , Has (Texts.Name Text) env
     , Grid.HasTexts env
     ) =>
-    Sugar.Payload Name i o ExprGui.Payload ->
+    Sugar.Payload (Sugar.EvaluationScopes Name i) Name i o ExprGui.Payload ->
     GuiM env i o (Responsive o)
 makeUnit pl =
     do
@@ -132,7 +132,7 @@ make ::
     , Has (Texts.Name Text) env
     , Has (Texts.Navigation Text) env
     ) =>
-    Sugar.Expr (Sugar.Composite (Sugar.EvaluationScopes Name i)) Name i o ExprGui.Payload ->
+    Sugar.Expr Sugar.Composite (Sugar.EvaluationScopes Name i) Name i o ExprGui.Payload ->
     GuiM env i o (Responsive o)
 make (Ann (Const pl) (Sugar.Composite [] [] Sugar.ClosedComposite{} addField)) =
     -- Ignore the ClosedComposite actions - it only has the open
@@ -227,7 +227,7 @@ makeAddFieldRow ::
     , Has (Texts.Name Text) env
     ) =>
     Sugar.TagReplace Name i o Sugar.EntityId ->
-    Sugar.Payload name i o ExprGui.Payload ->
+    Sugar.Payload v name i o ExprGui.Payload ->
     GuiM env i o (TaggedItem o)
 makeAddFieldRow addField pl =
     TagEdit.makeTagHoleEdit addField mkPickResult tagHoleId
@@ -255,7 +255,7 @@ makeFieldRow ::
     , Has (Texts.Name Text) env
     , Has (Texts.Navigation Text) env
     ) =>
-    Sugar.Body (Sugar.CompositeItem (Sugar.EvaluationScopes Name i)) Name i o ExprGui.Payload ->
+    Sugar.Body Sugar.CompositeItem (Sugar.EvaluationScopes Name i) Name i o ExprGui.Payload ->
     GuiM env i o (TaggedItem o)
 makeFieldRow (Sugar.CompositeItem delete tag fieldExpr) =
     do
@@ -280,7 +280,7 @@ separationBar theme animId width =
 makeOpenRecord ::
     (Monad i, Monad o, Glue.HasTexts env, Has (Texts.CodeUI Text) env) =>
     Sugar.OpenCompositeActions o ->
-    Sugar.Expr (Sugar.Term (Sugar.EvaluationScopes Name i)) Name i o ExprGui.Payload ->
+    Sugar.Expr Sugar.Term (Sugar.EvaluationScopes Name i) Name i o ExprGui.Payload ->
     Responsive o -> GuiM env i o (Responsive o)
 makeOpenRecord (Sugar.OpenCompositeActions close) rest fieldsGui =
     do

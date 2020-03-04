@@ -80,7 +80,7 @@ make ::
     , Has (Texts.Name Text) env
     , Has (Texts.Navigation Text) env
     ) =>
-    Sugar.Expr (Sugar.Case (Sugar.EvaluationScopes Name i)) Name i o ExprGui.Payload ->
+    Sugar.Expr Sugar.Case (Sugar.EvaluationScopes Name i) Name i o ExprGui.Payload ->
     GuiM env i o (Responsive o)
 make (Ann (Const pl) (Sugar.Case mArg (Sugar.Composite alts punned caseTail addAlt))) =
     do
@@ -144,7 +144,7 @@ makeAltRow ::
     , Has (Texts.Navigation Text) env
     ) =>
     Maybe Tag ->
-    Sugar.Body (Sugar.CompositeItem (Sugar.EvaluationScopes Name i)) Name i o
+    Sugar.Body Sugar.CompositeItem (Sugar.EvaluationScopes Name i) Name i o
     ExprGui.Payload ->
     GuiM env i o (TaggedItem o)
 makeAltRow mActiveTag (Sugar.CompositeItem delete tag altExpr) =
@@ -182,8 +182,10 @@ makeAltsWidget ::
     , Has (Grid.Texts Text) env
     ) =>
     Maybe Tag ->
-    [Sugar.Body (Sugar.CompositeItem (Sugar.EvaluationScopes Name i)) Name i o ExprGui.Payload] ->
-    [Annotated (Sugar.Payload Name i o ExprGui.Payload) # Const (Sugar.GetVar Name o)] ->
+    [Sugar.Body Sugar.CompositeItem (Sugar.EvaluationScopes Name i) Name i o ExprGui.Payload] ->
+    [ Annotated (Sugar.Payload (Sugar.EvaluationScopes Name i) Name i o ExprGui.Payload) #
+        Const (Sugar.GetVar Name o)
+    ] ->
     Sugar.TagReplace Name i o Sugar.EntityId ->
     Widget.Id ->
     GuiM env i o (Responsive o)
@@ -249,7 +251,7 @@ makeOpenCase ::
     , Grid.HasTexts env
     ) =>
     Sugar.OpenCompositeActions o ->
-    Sugar.Expr (Sugar.Term (Sugar.EvaluationScopes Name i)) Name i o ExprGui.Payload ->
+    Sugar.Expr Sugar.Term (Sugar.EvaluationScopes Name i) Name i o ExprGui.Payload ->
     AnimId -> Responsive o -> GuiM env i o (Responsive o)
 makeOpenCase actions rest animId altsGui =
     do

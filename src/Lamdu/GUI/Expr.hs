@@ -48,7 +48,7 @@ make ::
     , TextEdit.HasTexts env
     , SearchMenu.HasTexts env
     ) =>
-    Sugar.Expr (Sugar.Term (Sugar.EvaluationScopes Name i)) Name i o ExprGui.Payload ->
+    Sugar.Expr Sugar.Term (Sugar.EvaluationScopes Name i) Name i o ExprGui.Payload ->
     GuiM env i o (Responsive o)
 make e =
     makeEditor e & assignCursor
@@ -61,7 +61,7 @@ make e =
 
 placeHolder ::
     (Monad i, Applicative o) =>
-    Sugar.Payload name i o ExprGui.Payload ->
+    Sugar.Payload v name i o ExprGui.Payload ->
     GuiM env i o (Responsive o)
 placeHolder pl =
     (Widget.makeFocusableView ?? WidgetIds.fromExprPayload pl <&> fmap)
@@ -79,7 +79,7 @@ makeEditor ::
     , TextEdit.HasTexts env
     , SearchMenu.HasTexts env
     ) =>
-    Sugar.Expr (Sugar.Term (Sugar.EvaluationScopes Name i)) Name i o ExprGui.Payload ->
+    Sugar.Expr Sugar.Term (Sugar.EvaluationScopes Name i) Name i o ExprGui.Payload ->
     GuiM env i o (Responsive o)
 makeEditor (Ann (Const pl) body) =
     case body of

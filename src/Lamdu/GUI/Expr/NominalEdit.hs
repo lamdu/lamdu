@@ -46,7 +46,7 @@ makeToNom ::
     , Has (Texts.Name Text) env
     , Has (Texts.Definitions Text) env
     ) =>
-    Sugar.Expr (Sugar.Nominal (Sugar.EvaluationScopes Name i)) Name i o ExprGui.Payload ->
+    Sugar.Expr Sugar.Nominal (Sugar.EvaluationScopes Name i) Name i o ExprGui.Payload ->
     GuiM env i o (Responsive o)
 makeToNom (Ann (Const pl) (Sugar.Nominal tid binder)) =
     do
@@ -84,7 +84,8 @@ makeFromNom ::
     , Has (Texts.Name Text) env
     , Has (Texts.Definitions Text) env
     ) =>
-    Annotated (Sugar.Payload Name i o ExprGui.Payload) # Const (Sugar.TId Name) ->
+    Annotated (Sugar.Payload (Sugar.EvaluationScopes Name i) Name i o ExprGui.Payload) #
+        Const (Sugar.TId Name) ->
     GuiM env i o (Responsive o)
 makeFromNom (Ann (Const pl) (Const nom)) =
     mkNomLabel Texts.fromNom nom <&> Responsive.fromTextView

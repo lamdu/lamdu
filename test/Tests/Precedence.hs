@@ -13,7 +13,6 @@ import qualified Test.Lamdu.SugarStubs as Stub
 import           Test.Lamdu.Prelude
 
 infixArgs ::
-    v ~ Sugar.EvaluationScopes name i =>
     Lens.Traversal'
     (Annotated a # Sugar.Term v name i o)
     ( Annotated a # Sugar.Term v name i o
