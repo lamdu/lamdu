@@ -192,7 +192,7 @@ mkFuncParam (paramVar, paramTag) =
 
 funcExpr ::
     [(UUID, T.Tag)] -> Expr ->
-    Sugar.Function InternalName Identity Unit #
+    Sugar.Function v InternalName Identity Unit #
     Ann (Const (Sugar.Payload InternalName Identity Unit ()))
 funcExpr params (Ann (Const ba) bx) =
     Sugar.Function

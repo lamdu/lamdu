@@ -85,7 +85,7 @@ instance MonadTransaction m i => Order i name o (Sugar.Else name i o)
 instance MonadTransaction m i => Order i name o (Sugar.IfElse name i o)
 instance MonadTransaction m i => Order i name o (Sugar.Let name i o)
 
-instance MonadTransaction m i => Order i name o (Sugar.Function name i o) where
+instance MonadTransaction m i => Order i name o (Sugar.Function v name i o) where
     order x =
         x
         & (Sugar.fParams . Sugar._Params) orderParams

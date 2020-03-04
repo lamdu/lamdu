@@ -103,7 +103,7 @@ scopeCursor mChosenScope scopes =
             }
 
 readFunctionChosenScope ::
-    Functor i => Sugar.Function name i o expr -> i (Maybe Sugar.BinderParamScopeId)
+    Functor i => Sugar.Function v name i o expr -> i (Maybe Sugar.BinderParamScopeId)
 readFunctionChosenScope func = func ^. Sugar.fChosenScopeProp <&> Property.value
 
 lookupMKey :: Ord k => Maybe k -> Map k a -> Maybe a
@@ -111,7 +111,7 @@ lookupMKey k m = k >>= (`Map.lookup` m)
 
 mkChosenScopeCursor ::
     Monad i =>
-    Sugar.Body Sugar.Function Name i o ExprGui.Payload ->
+    Sugar.Body (Sugar.Function v) Name i o ExprGui.Payload ->
     GuiM env i o (CurAndPrev (Maybe ScopeCursor))
 mkChosenScopeCursor func =
     do
@@ -197,7 +197,7 @@ makeScopeNavEdit ::
     , Has (Texts.CodeUI Text) env
     , Glue.HasTexts env
     ) =>
-    Sugar.Function name i o expr -> Widget.Id -> ScopeCursor ->
+    Sugar.Function v name i o expr -> Widget.Id -> ScopeCursor ->
     GuiM env i o
     ( EventMap (o GuiState.Update)
     , Maybe (Widget o)
@@ -378,7 +378,7 @@ makeFunctionParts ::
     , Has (Texts.Navigation Text) env
     ) =>
     Sugar.FuncApplyLimit ->
-    Sugar.Expr Sugar.Function Name i o ExprGui.Payload ->
+    Sugar.Expr (Sugar.Function (Sugar.EvaluationScopes Name i)) Name i o ExprGui.Payload ->
     Widget.Id ->
     GuiM env i o (Parts i o)
 makeFunctionParts funcApplyLimit (Ann (Const pl) func) delVarBackwardsId =

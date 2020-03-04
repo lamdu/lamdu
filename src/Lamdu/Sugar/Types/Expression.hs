@@ -100,7 +100,7 @@ data GetField name i o k = GetField
 data Lambda name i o f = Lambda
     { _lamMode :: BinderMode
     , _lamApplyLimit :: FuncApplyLimit
-    , _lamFunc :: Function name i o f
+    , _lamFunc :: Function (EvaluationScopes name i) name i o f
     } deriving Generic
 
 -- | An expression marked for transformation.
@@ -222,9 +222,9 @@ data Binder name i o f
     | BinderTerm (Term name i o f)
     deriving Generic
 
-data Function name i o k = Function
+data Function v name i o k = Function
     { _fChosenScopeProp :: i (Property o (Maybe BinderParamScopeId))
-    , _fParams :: BinderParams (EvaluationScopes name i) name i o
+    , _fParams :: BinderParams v name i o
     , _fBody :: k :# Binder name i o
     , _fAddFirstParam :: AddFirstParam name i o
     , -- The scope inside a lambda
@@ -237,7 +237,7 @@ data AssignPlain name i o f = AssignPlain
     } deriving Generic
 
 data Assignment name i o f
-    = BodyFunction (Function name i o f)
+    = BodyFunction (Function (EvaluationScopes name i) name i o f)
     | BodyPlain (AssignPlain name i o f)
     deriving Generic
 
@@ -279,7 +279,7 @@ traverse makeHTraversableAndBases
 instance RNodes (Assignment name i o)
 instance RNodes (Binder name i o)
 instance RNodes (Else name i o)
-instance RNodes (Function name i o)
+instance RNodes (Function v name i o)
 instance RNodes (Term name i o)
 
 type Dep c name i o =
@@ -297,7 +297,7 @@ instance Dep c name i o => Recursively c (Binder name i o)
 instance Dep c name i o => Recursively c (Else name i o)
 instance Dep c name i o => Recursively c (Term name i o)
 
-instance (Dep c name i o, c (Function name i o)) => Recursively c (Function name i o)
+instance (Dep c name i o, c (Function v name i o)) => Recursively c (Function v name i o)
 
 instance RTraversable (Assignment name i o)
 instance RTraversable (Binder name i o)

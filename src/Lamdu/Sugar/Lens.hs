@@ -55,7 +55,7 @@ instance SugarExpr (Else name i o) where
     isUnfinished (SimpleElse x) = isUnfinished x
     isUnfinished ElseIf{} = False
 
-instance SugarExpr (Function name i o) where
+instance SugarExpr (Function v name i o) where
     isForbiddenInLightLam = Lens.has (fParams . _Params)
 
 instance SugarExpr (Binder name i o) where
