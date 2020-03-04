@@ -152,8 +152,8 @@ data CompositeItem v name i o k = CompositeItem
     , _ciExpr :: k :# Term v name i o
     } deriving Generic
 
-data CompositeTail name i o k
-    = OpenComposite (OpenCompositeActions o) (k :# Term (EvaluationScopes name i) name i o)
+data CompositeTail v name i o k
+    = OpenComposite (OpenCompositeActions o) (k :# Term v name i o)
     | ClosedComposite (ClosedCompositeActions o)
     deriving Generic
 
@@ -161,7 +161,7 @@ data Composite name i o k = Composite
     { _cItems :: [CompositeItem (EvaluationScopes name i) name i o k]
     , -- Punned items are like Haskell's NamedFieldPuns
       _cPunnedItems :: [k :# Lens.Const (GetVar name o)]
-    , _cTail :: CompositeTail name i o k
+    , _cTail :: CompositeTail (EvaluationScopes name i) name i o k
     , _cAddItem :: TagReplace name i o EntityId
     } deriving Generic
 
