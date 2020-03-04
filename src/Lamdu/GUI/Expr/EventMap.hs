@@ -9,6 +9,7 @@ module Lamdu.GUI.Expr.EventMap
 
 import qualified Control.Lens as Lens
 import qualified Data.Text as Text
+import qualified GUI.Momentu.Direction as Dir
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.I18N as MomentuTexts
@@ -303,18 +304,23 @@ makeLiteralTextEventMap =
 makeRecordEventMap ::
     ( MonadReader env m, Monad o
     , Has (MomentuTexts.Texts Text) env, Has (Texts.CodeUI Text) env
+    , Has Dir.Layout env
     ) =>
     m (o Sugar.EntityId -> EventMap (o GuiState.Update))
 makeRecordEventMap =
-    Lens.view id <&> E.toDoc <&>
-    \toDoc makeRec ->
+    Lens.view id <&>
+    \env makeRec ->
     E.charGroup Nothing
-    (toDoc [has . MomentuTexts.edit, has . Texts.record]) "{"
-    (const (makeRec <&> WidgetIds.fromEntityId <&> GuiState.updateCursor))
+    (E.toDoc env [has . MomentuTexts.edit, has . Texts.record])
+    ( case env ^. has of
+        Dir.LeftToRight -> "{"
+        Dir.RightToLeft -> "}"
+    ) (const (makeRec <&> WidgetIds.fromEntityId <&> GuiState.updateCursor))
 
 makeLiteralEventMap ::
     ( MonadReader env m, Monad o
     , Has (MomentuTexts.Texts Text) env, Has (Texts.CodeUI Text) env
+    , Has Dir.Layout env
     ) =>
     m (Sugar.NodeActions name i o -> EventMap (o GuiState.Update))
 makeLiteralEventMap =
