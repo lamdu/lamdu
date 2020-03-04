@@ -165,14 +165,14 @@ data Composite v name i o k = Composite
     , _cAddItem :: TagReplace name i o EntityId
     } deriving Generic
 
-data CaseArg name i o k = CaseArg
-    { _caVal :: k :# Term (EvaluationScopes name i) name i o
+data CaseArg v name i o k = CaseArg
+    { _caVal :: k :# Term v name i o
     , _caToLambdaCase :: o EntityId
     } deriving Generic
 
 data CaseKind name i o k
     = LambdaCase
-    | CaseWithArg (CaseArg name i o k)
+    | CaseWithArg (CaseArg (EvaluationScopes name i) name i o k)
     deriving Generic
 
 data Case name i o k = Case
