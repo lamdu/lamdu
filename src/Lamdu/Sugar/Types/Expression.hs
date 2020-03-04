@@ -300,18 +300,17 @@ type Dep c name i o =
     , c (Const (NullaryVal name i o))
     , c (Const (GetVar name o))
     , c (Else name i o)
-    , c (Function name i o)
     , c (Term name i o)
     )
 
 instance Dep c name i o => Recursively c (Assignment name i o)
 instance Dep c name i o => Recursively c (Binder name i o)
 instance Dep c name i o => Recursively c (Else name i o)
-instance Dep c name i o => Recursively c (Function name i o)
 instance Dep c name i o => Recursively c (Term name i o)
+
+instance (Dep c name i o, c (Function name i o)) => Recursively c (Function name i o)
 
 instance RTraversable (Assignment name i o)
 instance RTraversable (Binder name i o)
 instance RTraversable (Else name i o)
-instance RTraversable (Function name i o)
 instance RTraversable (Term name i o)
