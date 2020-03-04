@@ -157,6 +157,7 @@ makeSetToLiteral exprPl =
         update
         l <-
             x & hflipped %~ hmap (const (const (ExprIRef.WriteNew :*: Const ())))
+            & hAnn . _1 .~ ExprIRef.ExistingRef (exprPl ^. Input.stored . ExprIRef.iref)
             & ExprIRef.writeRecursively
             <&> (^. hAnn . _1)
         _ <- setToVal (exprPl ^. Input.stored) l
