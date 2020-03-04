@@ -19,10 +19,10 @@ import           Lamdu.Prelude
 type T = Transaction
 
 convertIfElse ::
-    Functor m =>
+    (Functor m, v ~ EvaluationScopes InternalName (T m)) =>
     (ValI m -> T m (ValI m)) ->
-    Case InternalName (T m) (T m) # Annotated (ConvertPayload m a) ->
-    Maybe (IfElse (EvaluationScopes InternalName (T m)) InternalName (T m) (T m) # Annotated (ConvertPayload m a))
+    Case v InternalName (T m) (T m) # Annotated (ConvertPayload m a) ->
+    Maybe (IfElse v InternalName (T m) (T m) # Annotated (ConvertPayload m a))
 convertIfElse setToVal caseBody =
     do
         arg <- caseBody ^? cKind . _CaseWithArg . caVal

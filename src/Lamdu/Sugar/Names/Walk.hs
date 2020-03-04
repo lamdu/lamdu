@@ -377,8 +377,8 @@ toComposite (Composite items punned tail_ addItem) =
 
 toCase ::
     MonadNaming m =>
-    Body Case (OldName m) (IM m) o a ->
-    m (Body Case (NewName m) (IM m) o a)
+    Body (Case (EvaluationScopes (OldName m) (IM m))) (OldName m) (IM m) o a ->
+    m (Body (Case (EvaluationScopes (NewName m) (IM m))) (NewName m) (IM m) o a)
 toCase (Case k c) = Case <$> (_CaseWithArg . caVal) toExpression k <*> toComposite c
 
 toInjectVal ::

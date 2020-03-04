@@ -74,9 +74,7 @@ instance MonadTransaction m i => Order i name o (Sugar.LabeledApply v name i o) 
         <*> pure punned
         >>= htraverse (Proxy @(Order i name o) #> orderNode)
 
-orderCase ::
-    MonadTransaction m i =>
-    OrderT i (Sugar.Body Sugar.Case name i o a)
+orderCase :: MonadTransaction m i => OrderT i (Sugar.Body (Sugar.Case v) name i o a)
 orderCase = Sugar.cBody orderRecord
 
 instance MonadTransaction m i => Order i name o (Sugar.Lambda v name i o)

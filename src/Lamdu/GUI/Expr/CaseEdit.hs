@@ -80,7 +80,7 @@ make ::
     , Has (Texts.Name Text) env
     , Has (Texts.Navigation Text) env
     ) =>
-    Sugar.Expr Sugar.Case Name i o ExprGui.Payload ->
+    Sugar.Expr (Sugar.Case (Sugar.EvaluationScopes Name i)) Name i o ExprGui.Payload ->
     GuiM env i o (Responsive o)
 make (Ann (Const pl) (Sugar.Case mArg (Sugar.Composite alts punned caseTail addAlt))) =
     do

@@ -175,9 +175,9 @@ data CaseKind v name i o k
     | CaseWithArg (CaseArg v name i o k)
     deriving Generic
 
-data Case name i o k = Case
-    { _cKind :: CaseKind (EvaluationScopes name i) name i o k
-    , _cBody :: Composite (EvaluationScopes name i) name i o k
+data Case v name i o k = Case
+    { _cKind :: CaseKind v name i o k
+    , _cBody :: Composite v name i o k
     } deriving Generic
 
 data Nominal v name i o k = Nominal
@@ -193,7 +193,7 @@ data Term v name i o k
     | BodyLiteral (Literal (Property o))
     | BodyRecord (Composite v name i o k)
     | BodyGetField (GetField v name i o k)
-    | BodyCase (Case name i o k)
+    | BodyCase (Case v name i o k)
     | BodyIfElse (IfElse v name i o k)
     | BodyInject (Inject v name i o k)
     | BodyGetVar (GetVar name o)
