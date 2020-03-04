@@ -500,8 +500,8 @@ toDefExpr (DefinitionExpression typ presMode content) =
 
 toDefinitionBody ::
     MonadNaming m =>
-    DefinitionBody (OldName m) (IM m) o (Payload (OldName m) (IM m) o a) ->
-    m (DefinitionBody (NewName m) (IM m) o (Payload (NewName m) (IM m) o a))
+    DefinitionBody (EvaluationScopes (OldName m) (IM m)) (OldName m) (IM m) o (Payload (OldName m) (IM m) o a) ->
+    m (DefinitionBody (EvaluationScopes (NewName m) (IM m)) (NewName m) (IM m) o (Payload (NewName m) (IM m) o a))
 toDefinitionBody (DefinitionBodyBuiltin bi) =
     bi & biType %%~ toScheme <&> DefinitionBodyBuiltin
 toDefinitionBody (DefinitionBodyExpression expr) =

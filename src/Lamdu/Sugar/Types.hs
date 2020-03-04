@@ -56,8 +56,8 @@ data DefinitionBuiltin name o = DefinitionBuiltin
     , _biType :: Scheme name
     } deriving Generic
 
-data DefinitionBody name i o a
-    = DefinitionBodyExpression (DefinitionExpression (EvaluationScopes name i) name i o a)
+data DefinitionBody v name i o a
+    = DefinitionBodyExpression (DefinitionExpression v name i o a)
     | DefinitionBodyBuiltin (DefinitionBuiltin name o)
     deriving (Functor, Foldable, Traversable, Generic)
 
@@ -66,7 +66,7 @@ data Definition name i o a = Definition
     , _drDefI :: V.Var
     , _drDefinitionState :: Property o Meta.DefinitionState
     , _drEntityId :: EntityId
-    , _drBody :: DefinitionBody name i o a
+    , _drBody :: DefinitionBody (EvaluationScopes name i) name i o a
     } deriving (Functor, Foldable, Traversable, Generic)
 
 data TagPane name o = TagPane
