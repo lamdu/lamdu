@@ -88,26 +88,26 @@ data Pane v name i o a = Pane
     , _paneMoveUp :: Maybe (o ())
     } deriving (Functor, Foldable, Traversable, Generic)
 
-data Repl name i o a = Repl
-    { _replExpr :: Annotated a # Binder (EvaluationScopes name i) name i o
+data Repl v name i o a = Repl
+    { _replExpr :: Annotated a # Binder v name i o
     , _replVarInfo :: VarInfo
     , _replResult :: EvalCompletion name o
     } deriving Generic
 
 Lens.makeLenses ''Repl
 
-instance Functor (Repl name i o) where
+instance Functor (Repl v name i o) where
     fmap f = replExpr %~ hflipped %~ hmap (\_ -> Lens._Wrapped %~ f)
 
-instance Foldable (Repl name i o) where
+instance Foldable (Repl v name i o) where
     foldMap f = (^. replExpr . hflipped . Lens.to (hfoldMap (\_ (Const x) -> f x)))
 
-instance Traversable (Repl name i o) where
+instance Traversable (Repl v name i o) where
     traverse f = replExpr (htraverseFlipped (\_ -> Lens._Wrapped f))
 
 data WorkArea name i o a = WorkArea
     { _waPanes :: [Pane (EvaluationScopes name i) name i o a]
-    , _waRepl :: Repl name i o a
+    , _waRepl :: Repl (EvaluationScopes name i) name i o a
     , _waGlobals :: i [NameRef name o]
     } deriving (Functor, Foldable, Traversable, Generic)
 

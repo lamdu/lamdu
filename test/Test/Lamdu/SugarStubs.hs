@@ -169,7 +169,7 @@ def typ var tag body =
 
 repl ::
     Annotated a # Sugar.Term (Sugar.EvaluationScopes name i) name i o ->
-    Sugar.Repl name i o a
+    Sugar.Repl (Sugar.EvaluationScopes name i) name i o a
 repl (Ann (Const pl) x) =
     Sugar.Repl
     { Sugar._replExpr = Ann (Const pl) (Sugar.BinderTerm x)

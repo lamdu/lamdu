@@ -538,8 +538,8 @@ toPane = paneBody toPaneBody
 
 toRepl ::
     MonadNaming m =>
-    Repl (OldName m) (IM m) o (Payload (OldName m) (IM m) o a) ->
-    m (Repl (NewName m) (IM m) o (Payload (NewName m) (IM m) o a))
+    Repl (EvaluationScopes (OldName m) (IM m)) (OldName m) (IM m) o (Payload (OldName m) (IM m) o a) ->
+    m (Repl (EvaluationScopes (NewName m) (IM m)) (NewName m) (IM m) o (Payload (NewName m) (IM m) o a))
 toRepl (Repl bod varInfo res) =
     Repl
     <$> toNode toBinder bod
