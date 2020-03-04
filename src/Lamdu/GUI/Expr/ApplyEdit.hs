@@ -64,7 +64,7 @@ makeLabeled ::
     , Has (Texts.Name Text) env
     , Has (Texts.Navigation Text) env
     ) =>
-    Sugar.Expr Sugar.LabeledApply Name i o ExprGui.Payload ->
+    Sugar.Expr (Sugar.LabeledApply (Sugar.EvaluationScopes Name i)) Name i o ExprGui.Payload ->
     GuiM env i o (Responsive o)
 makeLabeled (Ann (Const pl) apply) =
     ExprEventMap.add ExprEventMap.defaultOptions pl <*>
@@ -113,7 +113,7 @@ addArgs ::
     , Has (Texts.Code Text) env, Has (Texts.CodeUI Text) env
     , Has (Texts.Name Text) env, Grid.HasTexts env
     ) =>
-    Sugar.Body Sugar.LabeledApply Name i o ExprGui.Payload ->
+    Sugar.Body (Sugar.LabeledApply (Sugar.EvaluationScopes Name i)) Name i o ExprGui.Payload ->
     Responsive o -> GuiM env i o (Responsive o)
 addArgs apply funcRow =
     do

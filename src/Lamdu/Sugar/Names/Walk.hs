@@ -315,8 +315,8 @@ toAnnotatedArg (AnnotatedArg tag e) =
 
 toLabeledApply ::
     MonadNaming m =>
-    Body LabeledApply (OldName m) (IM m) o a ->
-    m (Body LabeledApply (NewName m) (IM m) o a)
+    Body (LabeledApply (EvaluationScopes (OldName m) (IM m))) (OldName m) (IM m) o a ->
+    m (Body (LabeledApply (EvaluationScopes (NewName m) (IM m))) (NewName m) (IM m) o a)
 toLabeledApply
     app@LabeledApply{_aFunc, _aSpecialArgs, _aAnnotatedArgs, _aPunnedArgs} =
     LabeledApply
@@ -446,7 +446,7 @@ toBody =
     BodyFragment     x -> x & toFragment <&> BodyFragment
     BodyPlaceHolder    -> pure BodyPlaceHolder
 
-funcSignature :: LabeledApply name i o a -> FunctionSignature
+funcSignature :: LabeledApply v name i o a -> FunctionSignature
 funcSignature apply =
     FunctionSignature
     { sSpecialArgs = apply ^. aSpecialArgs & void

@@ -91,7 +91,8 @@ validateDefParamsMatchArgs var record frozenDeps =
         guard (sFields == Map.keysSet (defArgs ^. freExtends))
 
 convertLabeled ::
-    (Monad m, Monoid a, Recursively HFoldable h) =>
+    ( Monad m, Monoid a, Recursively HFoldable h, v ~ EvaluationScopes InternalName (T m)
+    ) =>
     h # Ann (Input.Payload m a) ->
     ExpressionU v m a -> ExpressionU v m a -> Input.Payload m a # V.Term ->
     MaybeT (ConvertM m) (ExpressionU v m a)

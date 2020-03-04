@@ -84,10 +84,10 @@ addToExprWith ::
 addToExprWith minOpPrec = loopExpr minOpPrec (Precedence 0 0)
 
 bareInfix ::
-    Lens.Prism' (LabeledApply name i o # Annotated a)
-    ( Annotated a # Term  (EvaluationScopes name i) name i o
+    Lens.Prism' (LabeledApply v name i o # Annotated a)
+    ( Annotated a # Term v name i o
     , Annotated a # Const (BinderVarRef name o)
-    , Annotated a # Term (EvaluationScopes name i) name i o
+    , Annotated a # Term v name i o
     )
 bareInfix =
     Lens.prism' toLabeledApply fromLabeledApply

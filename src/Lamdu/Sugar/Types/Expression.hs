@@ -75,10 +75,10 @@ data AnnotatedArg v name i o k = AnnotatedArg
 
 -- TODO: func + specialArgs into a single sum type so that field order
 -- matches gui order, no need for special traversal code
-data LabeledApply name i o k = LabeledApply
+data LabeledApply v name i o k = LabeledApply
     { _aFunc :: k :# Lens.Const (BinderVarRef name o)
-    , _aSpecialArgs :: Meta.SpecialArgs (k :# Term (EvaluationScopes name i) name i o)
-    , _aAnnotatedArgs :: [AnnotatedArg (EvaluationScopes name i) name i o k]
+    , _aSpecialArgs :: Meta.SpecialArgs (k :# Term v name i o)
+    , _aAnnotatedArgs :: [AnnotatedArg v name i o k]
     , _aPunnedArgs :: [k :# Lens.Const (GetVar name o)]
     } deriving Generic
 
@@ -188,7 +188,7 @@ data Nominal v name i o k = Nominal
 data Term v name i o k
     = BodyLam (Lambda v name i o k)
     | BodySimpleApply (App (Term v name i o) k)
-    | BodyLabeledApply (LabeledApply name i o k)
+    | BodyLabeledApply (LabeledApply v name i o k)
     | BodyHole (Hole v name i o)
     | BodyLiteral (Literal (Property o))
     | BodyRecord (Composite name i o k)
