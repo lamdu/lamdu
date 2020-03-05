@@ -132,7 +132,7 @@ exprEvalRes nomsMap typ pl r =
         Pure (T.TFun (FuncType paramType _)) ->
             r ^. erAppliesOfLam . Lens.ix uuid
             <&> Lens.mapped . Lens.mapped %~ addTypes nomsMap paramType
-        _ | r ^. erAppliesOfLam & Map.null -> Map.empty
+        _ | r ^. erAppliesOfLam . Lens.ix uuid & Map.null -> Map.empty
             | otherwise -> error "Have non-empty erAppliesOfLam for non-function-type"
     }
     where
