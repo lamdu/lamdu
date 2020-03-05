@@ -22,9 +22,7 @@ module Lamdu.Sugar.Types.Expression
     , GetField(..), gfRecord, gfTag
     , Nominal(..), nTId, nVal
     -- Binders
-    , Let(..)
-        , lValue, lName, lUsages
-        , lDelete, lBodyScope, lBody, lVarInfo
+    , Let(..), lValue, lName, lUsages, lDelete, lBody, lVarInfo
     , Meta.SpecialArgs(..), Meta._Verbose, Meta._Operator
     , Meta.DefinitionState(..)
     , BinderParamScopeId(..), bParamScopeId
@@ -39,9 +37,8 @@ module Lamdu.Sugar.Types.Expression
     , Hole(..), holeOptions, holeMDelete
     , HoleResult(..), holeResultConverted, holeResultPick
     -- If/else
-    , ElseIfContent(..), eiScopes, eiContent
-    , Else(..), _SimpleElse, _ElseIf
     , IfElse(..), iIf, iThen, iElse
+    , Else(..), _SimpleElse, _ElseIf
     -- Record & Cases
     , Composite(..), cItems, cPunnedItems, cAddItem, cTail
     , CompositeItem(..), ciDelete, ciTag, ciExpr
@@ -137,15 +134,9 @@ data Hole name i o = Hole
       _holeMDelete :: Maybe (o EntityId)
     } deriving Generic
 
--- An "elif <cond>: <then>" clause in an IfElse expression and the subtree under it
-data ElseIfContent name i o f = ElseIfContent
-    { _eiScopes :: ChildScopes
-    , _eiContent :: IfElse name i o f
-    } deriving Generic
-
 data Else name i o f
     = SimpleElse (Term name i o f)
-    | ElseIf (ElseIfContent name i o f)
+    | ElseIf (IfElse name i o f)
     deriving Generic
 
 data IfElse name i o k = IfElse
@@ -217,7 +208,6 @@ data Let name i o k = Let
     , _lUsages :: [EntityId]
     , _lName :: TagRef name i o -- let [[foo]] = bar in x
     , _lDelete :: o ()
-    , _lBodyScope :: ChildScopes
     , _lBody :: k :# Binder name i o -- "let foo = bar in [[x]]"
     } deriving Generic
 
@@ -259,7 +249,6 @@ Lens.makePrisms ''CaseKind
 Lens.makeLenses ''Composite
 Lens.makeLenses ''CompositeItem
 Lens.makePrisms ''CompositeTail
-Lens.makeLenses ''ElseIfContent
 Lens.makeLenses ''Fragment
 Lens.makeLenses ''Function
 Lens.makeLenses ''GetField
@@ -280,7 +269,7 @@ Lens.makePrisms ''Term
 
 traverse makeHTraversableAndBases
     [ ''AnnotatedArg, ''Assignment, ''AssignPlain, ''Binder, ''Case, ''CaseArg
-    , ''CaseKind, ''Composite, ''CompositeItem, ''CompositeTail, ''Else, ''ElseIfContent
+    , ''CaseKind, ''Composite, ''CompositeItem, ''CompositeTail, ''Else
     , ''Fragment, ''Function, ''GetField, ''IfElse, ''Inject, ''InjectContent
     , ''LabeledApply, ''Lambda, ''Let, ''Nominal, ''Term
     ] <&> concat

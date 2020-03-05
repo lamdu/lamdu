@@ -6,7 +6,6 @@ module Lamdu.GUI.Expr.IfElseEdit
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
 import           Data.Functor.Compose (Compose(..))
-import qualified Data.Map as Map
 import           Data.Vector.Vector2 (Vector2(..))
 import           GUI.Momentu.Align (WithTextPos)
 import           GUI.Momentu.Animation (AnimId)
@@ -101,10 +100,8 @@ makeElse parentAnimId (Ann (Const pl) (Sugar.SimpleElse expr)) =
     <&> pure
     where
         elseAnimId = parentAnimId <> ["else"]
-makeElse _ (Ann pl (Sugar.ElseIf (Sugar.ElseIfContent scopes content))) =
+makeElse _ (Ann pl (Sugar.ElseIf content)) =
     do
-        mOuterScopeId <- GuiM.readMScopeId
-        let mInnerScope = lookupMKey <$> mOuterScopeId <*> scopes
         -- TODO: green evaluation backgrounds, "◗"?
         elseLabel <- grammar (label Texts.elseShort)
         letEventMap <-
@@ -115,12 +112,9 @@ makeElse _ (Ann pl (Sugar.ElseIf (Sugar.ElseIfContent scopes content))) =
                 )
             <*> makeElse animId (content ^. Sugar.iElse)
             & Reader.local (Element.animIdPrefix .~ animId)
-            & GuiM.withLocalMScopeId mInnerScope
     where
         animId = WidgetIds.fromEntityId entityId & Widget.toAnimId
         entityId = pl ^. Lens._Wrapped . Sugar.plEntityId
-        -- TODO: cleaner way to write this?
-        lookupMKey k m = k >>= (`Map.lookup` m)
 
 verticalRowRender ::
     ( Monad o, MonadReader env f, Spacer.HasStdSpacing env

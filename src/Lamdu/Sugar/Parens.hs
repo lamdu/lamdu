@@ -54,7 +54,7 @@ addToBinderWith minOpPrec (Ann (Const pl) x) =
 
 instance HasPrecedence name => AddParens (Else name i o) where
     addToBody (SimpleElse expr) = addToBody expr & SimpleElse
-    addToBody (ElseIf elseIf) = elseIf & eiContent %~ addToBody & ElseIf
+    addToBody (ElseIf elseIf) = addToBody elseIf & ElseIf
 
 instance HasPrecedence name => AddParens (IfElse name i o) where
     addToBody = hmap (Proxy @AddParens #> addToNode)

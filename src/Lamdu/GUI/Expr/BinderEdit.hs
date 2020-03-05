@@ -2,10 +2,8 @@ module Lamdu.GUI.Expr.BinderEdit
     ( make
     ) where
 
-import           Control.Applicative (liftA2)
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
-import qualified Data.Map as Map
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Glue ((/|/))
@@ -95,9 +93,6 @@ makeLetEdit item =
         bodyId = item ^. Sugar.lBody . annotation & WidgetIds.fromExprPayload
         binder = item ^. Sugar.lValue
 
-lookupMKey :: Ord k => Maybe k -> Map k a -> Maybe a
-lookupMKey k m = k >>= (`Map.lookup` m)
-
 make ::
     ( Monad i, Monad o
     , Grid.HasTexts env
@@ -129,13 +124,11 @@ make (Ann (Const pl) (Sugar.BinderLet l)) =
                     , has . CodeUI.letClause
                     , has . Texts.moveInwards
                     ]) . void)
-        mOuterScopeId <- GuiM.readMScopeId
-        let letBodyScope = liftA2 lookupMKey mOuterScopeId (l ^. Sugar.lBodyScope)
         Responsive.vboxSpaced
             <*>
             sequence
             [ makeLetEdit l <&> Widget.weakerEvents moveToInnerEventMap
-            , make body & GuiM.withLocalMScopeId letBodyScope
+            , make body
             ]
         & stdWrapParentExpr pl
         & Reader.local (Element.animIdPrefix .~ Widget.toAnimId myId)

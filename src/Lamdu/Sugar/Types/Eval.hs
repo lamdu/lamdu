@@ -2,7 +2,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 module Lamdu.Sugar.Types.Eval
     ( EvalScopes
-    , ChildScopes, ParamScopes, EvaluationScopes
+    , ParamScopes, EvaluationScopes
     , ScopeId
     , ER.EvalTypeError(..)
     , ER.CompiledErrorType(..)
@@ -76,11 +76,6 @@ data ResVal name = ResVal
     } deriving (Generic)
 
 type EvalScopes a = CurAndPrev (Map ScopeId a)
-
--- This is a mapping from a parent scope to the inner scope in:
--- * A redex lambda body (executed exactly once)
--- * Also used for if-else sugar where else-if scopes are executed no more than once
-type ChildScopes = EvalScopes ScopeId
 
 type ParamScopes = EvalScopes [BinderParamScopeId]
 

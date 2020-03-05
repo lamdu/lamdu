@@ -93,9 +93,7 @@ instance MarkAnnotations (Else name i o) where
         markBodyAnnotations body & _2 %~ SimpleElse
     markAnnotations (ElseIf elseIf) =
         ( neverShowAnnotations
-        , elseIf
-            & eiContent %~
-                hmap (Proxy @MarkAnnotations #> markNodeAnnotations)
+        , hmap (Proxy @MarkAnnotations #> markNodeAnnotations) elseIf
             & ElseIf
         )
 
@@ -184,7 +182,7 @@ markBodyAnnotations oldBody =
             & _BodyLam . lamFunc . fBody .
               SugarLens.binderResultExpr . nonHoleIndex . _1 .~ neverShowAnnotations
         onElse (SimpleElse x) = onHandler x & SimpleElse
-        onElse (ElseIf elseIf) = elseIf & eiContent %~ onIfElse & ElseIf
+        onElse (ElseIf elseIf) = onIfElse elseIf & ElseIf
         onIfElse x =
             x
             & iThen . hVal %~ onHandler

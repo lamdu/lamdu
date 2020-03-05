@@ -1,16 +1,19 @@
-{-# LANGUAGE TypeFamilies, TypeApplications, ScopedTypeVariables #-}
+{-# LANGUAGE TypeFamilies, TypeApplications, ScopedTypeVariables, FlexibleInstances #-}
 
 module Lamdu.Sugar.Convert.Expression.Actions
     ( subexprPayloads, addActionsWith, addActions, makeActions
     , makeTypeAnnotation, convertPayloads
     ) where
 
+import           Control.Applicative (liftA2)
 import qualified Control.Lens.Extended as Lens
+import           Data.CurAndPrev (CurAndPrev)
 import qualified Data.Map as Map
 import qualified Data.Property as Property
 import qualified Data.Set as Set
 import           Data.Text.Encoding (encodeUtf8)
 import           Hyper
+import           Hyper.Recurse (Recursive(..), recursively)
 import           Hyper.Type.AST.Nominal (ToNom(..), NominalDecl(..), NominalInst(..))
 import           Hyper.Type.AST.Row (RowExtend(..))
 import qualified Hyper.Type.AST.Scheme as S
@@ -306,6 +309,7 @@ addActionsWith userData exprPl bodyS =
                 Const ConvertPayload
                 { _pInput = exprPl & Input.userData .~ userData
                 , _pActions = actions
+                , _pScopeRedirects = mempty
                 }
             } & pure
 
@@ -346,27 +350,66 @@ makeAnnotation showAnn pl
             & AnnotationVal & pure
         _ -> pure AnnotationNone
 
+class FixScopes t where
+    fixBodyScopes :: CurAndPrev (Map ScopeId ScopeId) -> t # h -> t # h
+
+instance FixScopes (Assignment InternalName (T m) (T m)) where
+    fixBodyScopes r = _BodyFunction %~ fixBodyScopes r
+
+instance FixScopes (Binder InternalName (T m) (T m)) where
+    fixBodyScopes r = _BinderTerm %~ fixBodyScopes r
+
+instance FixScopes (Const a) where
+    fixBodyScopes _ = id
+
+instance FixScopes (Else InternalName (T m) (T m)) where
+    fixBodyScopes r = _SimpleElse %~ fixBodyScopes r
+
+instance FixScopes (Function InternalName (T m) (T m)) where
+    fixBodyScopes r = fBodyScopes %~ liftA2 redir r
+
+instance FixScopes (Term InternalName (T m) (T m)) where
+    fixBodyScopes r = _BodyLam . lamFunc %~ fixBodyScopes r
+
 convertPayloads ::
-    (Monad m, RTraversable h) =>
+    (Monad m, RTraversable h, Recursively FixScopes h) =>
     Annotated (Ann.ShowAnnotation, ConvertPayload m a) # h ->
     ConvertM m (Annotated (Payload InternalName (T m) (T m) a) # h)
-convertPayloads = htraverseFlipped (const (Lens._Wrapped convertPayload))
+convertPayloads = convertPayloadsH mempty
 
-convertPayload ::
-    Monad m =>
-    (Ann.ShowAnnotation, ConvertPayload m a) ->
-    ConvertM m (Payload InternalName (T m) (T m) a)
-convertPayload (showAnn, pl) =
-    makeAnnotation showAnn (pl ^. pInput)
-    <&>
-    \x ->
-    Payload
-    { _plAnnotation = x
-    , _plActions = pl ^. pActions
-    , _plNeverShrinkTypeAnnotations = showAnn ^. Ann.showTypeAlways
-    , _plEntityId = pl ^. pInput . Input.entityId
-    , _plData = pl ^. pInput . Input.userData
-    }
+convertPayloadsH ::
+    forall m h a.
+    (Monad m, RTraversable h, Recursively FixScopes h) =>
+    CurAndPrev (Map ScopeId ScopeId) ->
+    Annotated (Ann.ShowAnnotation, ConvertPayload m a) # h ->
+    ConvertM m (Annotated (Payload InternalName (T m) (T m) a) # h)
+convertPayloadsH parentRedirs (Ann (Const (showAnn, pl)) body) =
+    withDict (recurse (Proxy @(RTraversable h))) $
+    withDict (recursively (Proxy @(FixScopes h))) $
+    Ann
+    <$> (pl ^. pInput & Input.evalResults %~ liftA2 fixEvalResults redirs & makeAnnotation showAnn <&> mkPl <&> Const)
+    <*> htraverse
+        (Proxy @RTraversable #*# Proxy @(Recursively FixScopes) #> convertPayloadsH redirs)
+        (fixBodyScopes redirs body)
+    where
+        redirs =
+            ( (\p -> fmap (\x -> p ^. Lens.at x & fromMaybe x))
+                <$> parentRedirs
+                <*> pl ^. pScopeRedirects
+            ) <> parentRedirs
+        fixEvalResults r (Input.EvalResultsForExpr res apps) =
+            Input.EvalResultsForExpr (redir r res) (redir r apps)
+        mkPl x =
+            Payload
+            { _plAnnotation = x
+            , _plActions = pl ^. pActions
+            , _plNeverShrinkTypeAnnotations = showAnn ^. Ann.showTypeAlways
+            , _plEntityId = pl ^. pInput . Input.entityId
+            , _plData = pl ^. pInput . Input.userData
+            }
+
+redir :: Ord k => Map k k -> Map k v -> Map k v
+redir r = Map.mapKeys (\x -> r ^. Lens.at x & fromMaybe x)
 
 valFromLiteral ::
     Monad m =>

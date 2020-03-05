@@ -409,7 +409,7 @@ toElse ::
     Body Else (OldName m) (IM m) o a ->
     m (Body Else (NewName m) (IM m) o a)
 toElse (SimpleElse x) = toBody x <&> SimpleElse
-toElse (ElseIf x) = eiContent toIfElse x <&> ElseIf
+toElse (ElseIf x) = toIfElse x <&> ElseIf
 
 toIfElse ::
     MonadNaming m =>
