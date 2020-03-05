@@ -30,7 +30,7 @@ import           Lamdu.Prelude
 data EvalResultsForExpr = EvalResultsForExpr
     { _eResults :: Map ER.ScopeId (ER.Val (Pure # Type))
     , _eAppliesOfLam :: Map ER.ScopeId [(ER.ScopeId, ER.Val (Pure # Type))]
-    }
+    } deriving Show
 
 data Payload m a h = Payload
     { _entityId :: EntityId
