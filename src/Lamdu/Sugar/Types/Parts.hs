@@ -41,7 +41,8 @@ import           Lamdu.Sugar.Types.Type
 
 import           Lamdu.Prelude
 
--- Can a lambda be called more than once? (Used for scope selector presentations)
+-- Can a lambda be called more than once?
+-- Used to avoid showing scope selector presentations for case alternative lambdas.
 data FuncApplyLimit = UnlimitedFuncApply | AtMostOneFuncApply
     deriving (Eq, Ord, Generic)
 
