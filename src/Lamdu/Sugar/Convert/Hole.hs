@@ -62,7 +62,7 @@ import           Lamdu.Sugar.Annotations (neverShowAnnotations, alwaysShowAnnota
 import qualified Lamdu.Sugar.Config as Config
 import           Lamdu.Sugar.Convert.Binder (convertBinder)
 import qualified Lamdu.Sugar.Convert.Completions as Completions
-import           Lamdu.Sugar.Convert.Expression.Actions (addActions, convertPayload)
+import           Lamdu.Sugar.Convert.Expression.Actions (addActions, convertPayloads)
 import           Lamdu.Sugar.Convert.Hole.ResultScore (resultScore)
 import qualified Lamdu.Sugar.Convert.Hole.Suggest as Suggest
 import qualified Lamdu.Sugar.Convert.Input as Input
@@ -362,7 +362,7 @@ sugar sugarContext holePl v =
             ) & transaction
         convertBinder val
             <&> hflipped %~ hmap (const (Lens._Wrapped %~ (,) neverShowAnnotations))
-            >>= htraverseFlipped (const (Lens._Wrapped convertPayload))
+            >>= convertPayloads
             & ConvertM.run
                 (sugarContext
                     & ConvertM.scInferContext .~ inferCtx
@@ -512,7 +512,7 @@ mkResult preConversion updateDeps holePl x =
                         -- But that's only necessary for suggesting hole results?
                         -- And we are in a hole result here
                     (holePl ^. Input.localsInScope)
-            <&> (convertBinder >=> htraverseFlipped (const (Lens._Wrapped convertPayload)) . (hflipped %~ hmap (const (Lens._Wrapped %~ (,) showAnn))))
+            <&> (convertBinder >=> convertPayloads . (hflipped %~ hmap (const (Lens._Wrapped %~ (,) showAnn))))
             >>= ConvertM.run (sugarContext & ConvertM.scAnnotationsMode .~ Annotations.None)
             & Transaction.fork
             <&>

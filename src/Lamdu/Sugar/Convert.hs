@@ -38,7 +38,7 @@ import qualified Lamdu.Sugar.Convert.DefExpr as ConvertDefExpr
 import qualified Lamdu.Sugar.Convert.DefExpr.OutdatedDefs as OutdatedDefs
 import qualified Lamdu.Sugar.Convert.Eval as ConvertEval
 import qualified Lamdu.Sugar.Convert.Expression as ConvertExpr
-import           Lamdu.Sugar.Convert.Expression.Actions (convertPayload)
+import           Lamdu.Sugar.Convert.Expression.Actions (convertPayloads)
 import qualified Lamdu.Sugar.Convert.GetVar as ConvertGetVar
 import qualified Lamdu.Sugar.Convert.Input as Input
 import qualified Lamdu.Sugar.Convert.Load as Load
@@ -137,9 +137,7 @@ convertInferDefExpr env cp defType defExpr defI =
                 }
         ConvertDefExpr.convert
             defType (defExpr & Definition.expr .~ valInferred) defI
-            >>= (_DefinitionBodyExpression . deContent)
-                (htraverseFlipped (const (Lens._Wrapped convertPayload)) .
-                    markAnnotations (env ^. has))
+            >>= (_DefinitionBodyExpression . deContent) (convertPayloads . markAnnotations (env ^. has))
             & ConvertM.run context
     where
         cachedInfer = Cache.infer (env ^. has)
@@ -238,7 +236,7 @@ convertRepl env cp =
         expr <-
             convertBinder valInferred
             <&> markAnnotations (env ^. has)
-            >>= htraverseFlipped (const (Lens._Wrapped convertPayload))
+            >>= convertPayloads
             & ConvertM.run context
             >>= OrderTags.orderNode
         let replEntityId = expr ^. SugarLens.binderResultExpr . plEntityId

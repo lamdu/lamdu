@@ -1,8 +1,8 @@
 {-# LANGUAGE TypeFamilies, TypeApplications, ScopedTypeVariables #-}
 
 module Lamdu.Sugar.Convert.Expression.Actions
-    ( subexprPayloads, addActionsWith, addActions, makeActions, convertPayload
-    , makeTypeAnnotation
+    ( subexprPayloads, addActionsWith, addActions, makeActions
+    , makeTypeAnnotation, convertPayloads
     ) where
 
 import qualified Control.Lens.Extended as Lens
@@ -345,6 +345,12 @@ makeAnnotation showAnn pl
             & ConvertEval.results (EntityId.ofEvalOf (pl ^. Input.entityId))
             & AnnotationVal & pure
         _ -> pure AnnotationNone
+
+convertPayloads ::
+    (Monad m, RTraversable h) =>
+    Annotated (Ann.ShowAnnotation, ConvertPayload m a) # h ->
+    ConvertM m (Annotated (Payload InternalName (T m) (T m) a) # h)
+convertPayloads = htraverseFlipped (const (Lens._Wrapped convertPayload))
 
 convertPayload ::
     Monad m =>
