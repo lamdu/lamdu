@@ -22,7 +22,6 @@ import qualified Crypto.Hash.SHA256 as SHA256
 import qualified Data.Binary as Binary
 import           Data.Bits (xor)
 import qualified Data.ByteString.Extended as BS
-import           Data.CurAndPrev (CurAndPrev(..))
 import qualified Data.List.Class as ListClass
 import qualified Data.Map as Map
 import           Data.Property (MkProperty')
@@ -305,8 +304,6 @@ prepareUnstoredPayloads v =
                     HRef
                     (_F # IRef.unsafeFromUUID fakeStored)
                     (error "stored output of base expr used!")
-                , Input._evalResults =
-                    CurAndPrev Input.emptyEvalResults Input.emptyEvalResults
                 }
             }
             where
@@ -419,7 +416,6 @@ writeResult preConversion inferCtx holeStored inferredVal =
                 , Input._userData = a
                 , Input._inferRes = inferRes
                 , Input._inferScope = V.emptyScope -- TODO: HACK
-                , Input._evalResults = CurAndPrev noEval noEval
                 , Input._stored = stored
                 , Input._entityId = eId
                 , Input._localsInScope = []
@@ -427,7 +423,6 @@ writeResult preConversion inferCtx holeStored inferredVal =
             }
             where
                 eId = stored ^. ExprIRef.iref . _F & IRef.uuid & EntityId.EntityId
-        noEval = Input.EvalResultsForExpr Map.empty Map.empty
 
 detachValIfNeeded ::
     (a # V.Term) ->

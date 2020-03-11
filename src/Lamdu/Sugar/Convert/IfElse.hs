@@ -4,7 +4,6 @@
 module Lamdu.Sugar.Convert.IfElse (convertIfElse) where
 
 import qualified Control.Lens as Lens
-import qualified Data.Map as Map
 import           Hyper.Type.AST.Nominal (nId)
 import           Lamdu.Builtins.Anchors (boolTid, trueTag, falseTag)
 import qualified Lamdu.Calc.Type as T
@@ -49,21 +48,15 @@ convertIfElse setToVal caseBody =
             { _iIf = cond
             , _iThen = altTrue ^. ciExpr
             , _iElse =
-                case altFalse ^@?
-                     ciExpr . hVal . _BodyLam . lamFunc . Lens.selfIndex
-                     <. (fBody . hVal . _BinderTerm . _BodyIfElse)
+                case altFalse ^?
+                     ciExpr . hVal . _BodyLam . lamFunc .
+                     fBody . hVal . _BinderTerm . _BodyIfElse
                 of
-                Just (binder, innerIfElse) ->
+                Just innerIfElse ->
                     Ann
                     { _hVal = ElseIf innerIfElse
-                    , _hAnn =
-                        altFalse ^. ciExpr . annotation
-                        & pScopeRedirects .~ (binder ^. fBodyScopes <&> Map.fromList . map getScope . Map.toList)
-                        & Const
+                    , _hAnn = altFalse ^. ciExpr . annotation & Const
                     }
-                    where
-                        getScope (s, [d]) = (d ^. bParamScopeId, s)
-                        getScope _ = error "if-else evaluated more than once in same scope?"
                 Nothing ->
                     altFalse ^. ciExpr . hVal
                     & _BodyHole . holeMDelete ?~ elseDel

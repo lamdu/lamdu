@@ -10,7 +10,6 @@ import           Data.Monoid (Any(..))
 import           Data.Property (MkProperty')
 import qualified Data.Property as Property
 import qualified Data.Set as Set
-import           Data.Tuple (swap)
 import           Hyper
 import           Hyper.Recurse (Recursive(..), foldMapRecursive, proxyArgument, (##>>))
 import           Hyper.Type.Prune (Prune)
@@ -114,8 +113,6 @@ convertLet pl redex =
                     letBody
                     & annotation . pActions . mReplaceParent ?~
                         (letBody ^. annotation . pInput . Input.entityId <$ del)
-                    & annotation . pScopeRedirects .~
-                        (redex ^. Redex.bodyScope <&> Map.fromList . map swap . Map.toList)
                 , _lUsages = redex ^. Redex.paramRefs
                 }
             , _hAnn =
@@ -126,7 +123,6 @@ convertLet pl redex =
                         (redex ^. Redex.lamPl . Input.userData) <>
                         hfoldMap (const (^. Input.userData)) (redex ^. Redex.lam . V.tlInType . hflipped)
                 , _pActions = actions
-                , _pScopeRedirects = mempty
                 }
             }
     where
@@ -196,7 +192,7 @@ makeFunction chosenScopeProp params funcBody =
                 params ^?! cpParams . Lens._Just
             , _fChosenScopeProp = chosenScopeProp ^. Property.mkProperty
             , _fBody = assignmentBody
-            , _fBodyScopes = cpScopes params
+            , _fBodyScopes = mempty
             , _fAddFirstParam = params ^. cpAddFirstParam
             }
         addParams ctx =
@@ -229,7 +225,6 @@ makeAssignment chosenScopeProp binderKind defVar (Ann pl (V.BLam lam)) =
                         pl & Input.userData .~
                         hfoldMap (const (^. Input.userData)) (lam ^. V.tlInType . hflipped)
                     , _pActions = nodeActions
-                    , _pScopeRedirects = mempty
                     }
                 , _hVal = BodyFunction funcS
                 }

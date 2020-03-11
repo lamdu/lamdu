@@ -31,12 +31,10 @@ import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Data.Ops.Subexprs as SubExprs
-import qualified Lamdu.Eval.Results as ER
 import           Lamdu.Expr.IRef (ValI, HRef)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Sugar.Config as Config
 import           Lamdu.Sugar.Convert.Binder.Types (BinderKind(..))
-import qualified Lamdu.Sugar.Convert.Eval as ConvertEval
 import qualified Lamdu.Sugar.Convert.Input as Input
 import           Lamdu.Sugar.Convert.Monad (ConvertM)
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
@@ -58,7 +56,6 @@ data ConventionalParams m = ConventionalParams
     , _cpParamInfos :: Map T.Tag ConvertM.TagFieldParam
     , _cpParams :: Maybe (BinderParams InternalName (T m) (T m))
     , _cpAddFirstParam :: AddFirstParam InternalName (T m) (T m)
-    , cpScopes :: ParamScopes
     , cpMLamParam :: Maybe ({- lambda's -}EntityId, V.Var)
     }
 Lens.makeLenses ''ConventionalParams
@@ -66,7 +63,6 @@ Lens.makeLenses ''ConventionalParams
 data FieldParam = FieldParam
     { fpTag :: T.Tag
     , fpFieldType :: Pure # T.Type
-    , fpValue :: EvalScopes [(ScopeId, ER.Val (Pure # T.Type))]
     }
 
 data StoredLam m = StoredLam
@@ -202,11 +198,6 @@ addFieldParam =
                     RowExtend tag newArg argI
                         & V.BRecExtend & ExprIRef.newValI
         fixUsages addFieldToCall binderKind storedLam
-
-mkCpScopesOfLam :: Input.Payload m a # V.Term -> EvalScopes  [BinderParamScopeId]
-mkCpScopesOfLam lamPl =
-    lamPl ^. Input.evalResults <&> (^. Input.eAppliesOfLam) <&> (fmap . fmap) fst
-    <&> (fmap . map) BinderParamScopeId
 
 getFieldOnVar :: Lens.Traversal' (Pure # V.Term) (V.Var, T.Tag)
 getFieldOnVar =
@@ -452,7 +443,6 @@ convertRecordParams mPresMode binderKind fieldParams lam@(V.TypedLam param _ _) 
             , _cpParamInfos = fieldParams <&> mkParInfo & mconcat
             , _cpParams = Params params & Just
             , _cpAddFirstParam = PrependParam addFirstSelection
-            , cpScopes = mkCpScopesOfLam lamPl
             , cpMLamParam = Just (entityId, param)
             }
     where
@@ -474,10 +464,7 @@ convertRecordParams mPresMode binderKind fieldParams lam@(V.TypedLam param _ _) 
                 typeS <- convertType (EntityId.ofTypeOf paramEntityId) (fpFieldType fp)
                 pure
                     ( FuncParam
-                        { _fpAnnotation =
-                            fpValue fp
-                            & ConvertEval.param (EntityId.ofEvalOf paramEntityId)
-                            & AnnotationVal
+                        { _fpAnnotation = AnnotationVal mempty
                         , _fpVarInfo = mkVarInfo typeS
                         }
                     , paramInfo
@@ -641,10 +628,7 @@ mkFuncParam entityId lamExprPl info =
             case annMode of
             Annotations.None -> AnnotationNone
             Annotations.Types -> AnnotationType typS
-            Annotations.Evaluation ->
-                lamExprPl ^. Input.evalResults <&> (^. Input.eAppliesOfLam)
-                & ConvertEval.param (EntityId.ofEvalOf entityId)
-                & AnnotationVal
+            Annotations.Evaluation -> AnnotationVal mempty
         , _fpVarInfo = mkVarInfo typS
         }
     , info
@@ -696,7 +680,6 @@ convertNonRecordParam binderKind lam@(V.TypedLam param _ _) lamExprPl =
                 if oldParam == Anchors.anonTag
                 then NeedToPickTagToAddFirst (EntityId.ofTaggedEntity param oldParam)
                 else PrependParam addFirstSelection
-            , cpScopes = mkCpScopesOfLam lamExprPl
             , cpMLamParam = Just (lamExprPl ^. Input.entityId, param)
             }
     where
@@ -733,20 +716,6 @@ convertLamParams ::
     ConvertM m (ConventionalParams m)
 convertLamParams = convertNonEmptyParams Nothing BinderKindLambda
 
-makeFieldParam ::
-    Input.Payload m a # V.Term -> (T.Tag, Pure # T.Type) -> FieldParam
-makeFieldParam lambdaPl (tag, typeExpr) =
-    FieldParam
-    { fpTag = tag
-    , fpFieldType = typeExpr
-    , fpValue =
-        lambdaPl ^. Input.evalResults
-        <&> (^. Input.eAppliesOfLam)
-        <&> Lens.mapped . Lens.mapped . _2 %~ ER.extractField typeExpr tag
-        <&> Lens.mapped %~
-            filter (Lens.nullOf (_2 . hVal . ER._RError))
-    }
-
 convertNonEmptyParams ::
     Monad m =>
     Maybe (MkProperty' (T m) PresentationMode) ->
@@ -769,7 +738,7 @@ convertNonEmptyParams mPresMode binderKind lambda lambdaPl =
                 , List.isLengthAtLeast 2 fields
                 , isParamAlwaysUsedWithGetField lambda
                 , let myTags = fields <&> fst & Set.fromList
-                , let fieldParams = fields <&> makeFieldParam lambdaPl
+                , let fieldParams = fields <&> uncurry FieldParam
                 ->
                     if Set.null (tagsInOuterScope `Set.intersection` myTags)
                     then convertRecordParams mPresMode binderKind fieldParams lambda lambdaPl

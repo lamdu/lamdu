@@ -99,7 +99,6 @@ assertInferSuccess =
 convertInferDefExpr ::
     ( HasCallStack, Monad m
     , Has Debug.Monitors env
-    , Has (CurAndPrev EvalResults) env
     , Has Config env, Has Cache.Functions env, Has Annotations.Mode env
     ) =>
     env -> Anchors.CodeAnchors m ->
@@ -107,9 +106,6 @@ convertInferDefExpr ::
     T m (DefinitionBody InternalName (T m) (T m) (Payload InternalName (T m) (T m) [EntityId]))
 convertInferDefExpr env cp defType defExpr defI =
     do
-        Load.InferOut valInferred newInferContext <-
-            Load.inferDef cachedInfer (env ^. has) (env ^. has) defExpr defVar
-            <&> assertInferSuccess
         outdatedDefinitions <-
             OutdatedDefs.scan entityId defExpr setDefExpr postProcess
             <&> Lens.mapped . defTypeUseCurrent %~ (<* postProcess)
@@ -140,6 +136,9 @@ convertInferDefExpr env cp defType defExpr defI =
             >>= (_DefinitionBodyExpression . deContent) (convertPayloads . markAnnotations (env ^. has))
             & ConvertM.run context
     where
+        Load.InferOut valInferred newInferContext =
+            Load.inferDef cachedInfer (env ^. has) defExpr defVar
+            & assertInferSuccess
         cachedInfer = Cache.infer (env ^. has)
         postProcess = PostProcess.def cachedInfer (env ^. has) defI
         entityId = EntityId.ofBinder defVar
@@ -155,7 +154,6 @@ convertInferDefExpr env cp defType defExpr defI =
 convertDefBody ::
     ( HasCallStack, Monad m
     , Has Debug.Monitors env
-    , Has (CurAndPrev EvalResults) env
     , Has Config env, Has Cache.Functions env, Has Annotations.Mode env
     ) =>
     env -> Anchors.CodeAnchors m ->
@@ -192,9 +190,9 @@ convertRepl env cp =
     do
         defExpr <- ExprLoad.defExpr prop
         entityId <- Property.getP prop <&> (^. Definition.expr) <&> EntityId.ofValI
-        Load.InferOut valInferred newInferContext <-
-            Load.inferDefExpr cachedInfer (env ^. has) (env ^. has) defExpr
-            <&> assertInferSuccess
+        let Load.InferOut valInferred newInferContext =
+                Load.inferDefExpr cachedInfer (env ^. has) defExpr
+                & assertInferSuccess
         outdatedDefinitions <-
             OutdatedDefs.scan entityId defExpr (Property.setP prop) postProcess
         let context =
@@ -263,7 +261,6 @@ convertRepl env cp =
 convertPaneBody ::
     ( Monad m
     , Has Debug.Monitors env
-    , Has (CurAndPrev EvalResults) env
     , Has Config env, Has Cache.Functions env, Has Annotations.Mode env
     ) =>
     env -> Anchors.CodeAnchors m -> Anchors.Pane m ->
@@ -311,7 +308,6 @@ paneEntityId (Anchors.PaneTag tag) = EntityId.ofTagPane tag
 convertPane ::
     ( Monad m
     , Has Debug.Monitors env
-    , Has (CurAndPrev EvalResults) env
     , Has Config env, Has Cache.Functions env, Has Annotations.Mode env
     ) =>
     env -> Anchors.CodeAnchors m -> EntityId ->
@@ -352,7 +348,6 @@ convertPane env cp replEntityId (Property panes setPanes) i pane =
 loadPanes ::
     ( Monad m
     , Has Debug.Monitors env
-    , Has (CurAndPrev EvalResults) env
     , Has Config env, Has Cache.Functions env, Has Annotations.Mode env
     ) =>
     env -> Anchors.CodeAnchors m -> EntityId ->

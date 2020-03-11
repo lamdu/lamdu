@@ -17,7 +17,6 @@ import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Debug as Debug
-import qualified Lamdu.Eval.Results as EvalResults
 import           Lamdu.Expr.IRef (DefI, ValI, HRef)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Load as ExprLoad
@@ -49,9 +48,9 @@ def infer monitors defI =
             Definition.BodyBuiltin {} -> pure GoodExpr
             Definition.BodyExpr defExpr ->
                 ExprIRef.globalId defI
-                & Load.inferDef infer monitors (pure EvalResults.empty) defExpr
-                <&> (>>= makeScheme)
-                >>=
+                & Load.inferDef infer monitors defExpr
+                >>= makeScheme
+                &
                 \case
                 Left err -> BadExpr err & pure
                 Right scheme ->
@@ -76,8 +75,7 @@ expr infer monitors prop =
         defExprLoaded <- ExprLoad.defExpr prop
         -- TODO: This is code duplication with the above Load.inferCheckDef
         -- & functions inside Load itself
-        inferred <-
-            Load.inferDefExpr infer monitors (pure EvalResults.empty) defExprLoaded
+        let inferred = Load.inferDefExpr infer monitors defExprLoaded
         case inferred of
             Left err -> BadExpr err & pure
             Right _ ->

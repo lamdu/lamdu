@@ -4,15 +4,13 @@
 module Lamdu.Sugar.Convert.Input
     ( Payload(..)
         , varRefsOfLambda, entityId, inferRes, stored
-        , evalResults, userData, localsInScope, inferScope
+        , userData, localsInScope, inferScope
         , inferredType, inferredTypeUVar
-    , EvalResultsForExpr(..), eResults, eAppliesOfLam, emptyEvalResults
     , PreparePayloadInput(..), preparePayloads
     , SugarInput(..)
     ) where
 
 import qualified Control.Lens as Lens
-import           Data.CurAndPrev (CurAndPrev(..))
 import qualified Data.Map as Map
 import           Hyper
 import           Hyper.Infer (InferResult, inferResult)
@@ -21,16 +19,10 @@ import           Hyper.Unify.Binding (UVar)
 import           Hyper.Unify.Generalize (GTerm(..))
 import qualified Lamdu.Calc.Term as V
 import           Lamdu.Calc.Type (Type, Row)
-import qualified Lamdu.Eval.Results as ER
 import           Lamdu.Expr.IRef (HRef)
 import           Lamdu.Sugar.EntityId (EntityId)
 
 import           Lamdu.Prelude
-
-data EvalResultsForExpr = EvalResultsForExpr
-    { _eResults :: Map ER.ScopeId (ER.Val (Pure # Type))
-    , _eAppliesOfLam :: Map ER.ScopeId [(ER.ScopeId, ER.Val (Pure # Type))]
-    } deriving Show
 
 data Payload m a h = Payload
     { _entityId :: EntityId
@@ -38,13 +30,11 @@ data Payload m a h = Payload
     , _inferScope :: V.Scope # UVar
     , _localsInScope :: [V.Var]
     , _stored :: HRef m h
-    , _evalResults :: CurAndPrev EvalResultsForExpr
     , -- The GetVars of this lambda's var if this is a lambda
       _varRefsOfLambda :: [EntityId]
     , _userData :: a
     }
 
-Lens.makeLenses ''EvalResultsForExpr
 Lens.makeLenses ''Payload
 makeHTraversableAndBases ''Payload
 
@@ -53,9 +43,6 @@ inferredType = inferRes . inferResult . Lens._1
 
 inferredTypeUVar :: Lens' (Payload m a # V.Term) (UVar # Type)
 inferredTypeUVar = inferRes . inferResult . Lens._2
-
-emptyEvalResults :: EvalResultsForExpr
-emptyEvalResults = EvalResultsForExpr Map.empty Map.empty
 
 data PreparePayloadInput (pl :: HyperType) t = PreparePayloadInput
     { ppEntityId :: EntityId -- used to build a map from Var => EntityId of all getVars
