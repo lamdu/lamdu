@@ -12,10 +12,10 @@ import Control.Applicative (Alternative)
 import Control.Lens.Operators
 import Control.Lens.Tuple
 import Control.Monad.IO.Class (MonadIO(..))
-import Control.Monad.State (MonadState(..), modify)
+import Control.Monad.State (MonadState(..))
 import Control.Monad.Trans.Class (MonadTrans(..))
 import Control.Monad.Trans.State.Strict (StateT(..))
-import Control.Monad.Writer (MonadWriter(..), censor)
+import Control.Monad.Writer (MonadWriter(..))
 import Data.Functor.Identity (Identity(..))
 import Data.Monoid ((<>))
 
@@ -27,16 +27,8 @@ newtype WriterT w m a = WriterT { unWriterT :: StateT w m a }
 instance MonadState s m => MonadState s (WriterT w m) where state = lift . state
 instance (Monad m, Monoid w) => MonadWriter w (WriterT w m) where
     tell w = WriterT $ StateT $ \w0 -> let w' = w0 <> w in w' `seq` pure ((), w')
-    listen (WriterT (StateT act)) =
-        WriterT $ StateT $
-        \w0 -> act mempty <&> \(res, wInner) ->
-        let w1 = w0 <> wInner in w1 `seq` ((res, wInner), w1)
-    pass (WriterT act) =
-        do
-            (x, fw) <- act
-            modify fw
-            pure x
-        & WriterT
+    listen = mapWriter $ \(x, w) -> ((x, w), w)
+    pass = mapWriter $ \((x, censor), w) -> (x, censor w)
 instance MonadIO m => MonadIO (WriterT w m) where liftIO = lift . liftIO
 
 type Writer w = WriterT w Identity

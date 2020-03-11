@@ -5,8 +5,7 @@ module Control.Monad.Trans.FastRWS
     ( RWST, runRWST, rwst, execRWST
     , RWS , runRWS , rws , execRWS
     , mapRWS, mapRWST
-    , listen, censor, tell
-    , asks, local
+    , asks
     ) where
 
 import           Control.Applicative (Alternative(..))
@@ -58,12 +57,8 @@ instance Monad m => MonadReader.MonadReader r (RWST r w s m) where
 
 instance (Monoid w, Monad m) => MonadWriter.MonadWriter w (RWST r w s m) where
     tell = tell
-    listen = listen
-    pass (RWST act) =
-        RWST $ \r w0 s0 ->
-        act r mempty s0
-        <&> \((res, f), s1, w1) ->
-        (res, s1, w0 <> f w1)
+    listen = mapRWS $ \(x, s, w) -> ((x, w), s, w)
+    pass = mapRWS $ \((x, censor), s, w) -> (x, s, censor w)
 
 instance MonadTrans (RWST r w s) where
     lift act = RWST $ \_ w s -> act <&> (, s, w)
@@ -88,18 +83,6 @@ rwst act = RWST $ \r w s -> act r s <&> (_3 %~ (w <>))
 rws :: Monoid w => (r -> s -> (a, s, w)) -> RWS r w s a
 rws act = rwst $ \r s -> Identity $ act r s
 
-listen :: (Functor m, Monoid w) => RWST r w s m a -> RWST r w s m (a, w)
-listen (RWST act) =
-    RWST $ \r wPrev s0 ->
-    act r mempty s0 <&> \(res, s1, wInner) ->
-    let w = wPrev <> wInner
-    in w `seq` ((res, wInner), s1, w)
-
-censor ::
-    (Monoid w, Monoid w', Functor m) =>
-    (w -> w') -> RWST r w s m a -> RWST r w' s m a
-censor f = mapRWS (_3 %~ f)
-
 mapRWS ::
     (Monoid w, Monoid w', Functor m) =>
     ((a, s, w) -> (b, s, w')) -> RWST r w s m a -> RWST r w' s m b
@@ -115,6 +98,3 @@ tell w = RWST $ \_r wPrev s -> pure ((), s, wPrev <> w)
 
 asks :: Applicative m => (r -> a) -> RWST r w s m a
 asks f = RWST $ \r w s -> pure (f r, s, w)
-
-local :: (r -> r') -> RWST r' w s m a -> RWST r w s m a
-local f (RWST act) = RWST $ \r w s -> act (f r) w s

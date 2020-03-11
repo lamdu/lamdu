@@ -13,8 +13,8 @@ import qualified Control.Lens as Lens
 import           Control.Lens.Extended ((==>))
 import           Control.Monad.Reader (ReaderT(..), Reader, runReader, MonadReader(..))
 import qualified Control.Monad.Reader as Reader
+import qualified Control.Monad.Writer as Writer
 import           Control.Monad.Trans.FastWriter (Writer, runWriter, MonadWriter)
-import qualified Control.Monad.Trans.FastWriter as Writer
 import qualified Data.Char as Char
 import           Data.Coerce (coerce)
 import           Data.Foldable (fold)
