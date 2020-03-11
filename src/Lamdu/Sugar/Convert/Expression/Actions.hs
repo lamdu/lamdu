@@ -1,4 +1,4 @@
-{-# LANGUAGE TypeFamilies, TypeApplications, ScopedTypeVariables, FlexibleInstances #-}
+{-# LANGUAGE TypeFamilies, TypeApplications, ScopedTypeVariables #-}
 
 module Lamdu.Sugar.Convert.Expression.Actions
     ( subexprPayloads, addActionsWith, addActions, makeActions
@@ -353,22 +353,22 @@ makeAnnotation showAnn pl
 class FixScopes t where
     fixBodyScopes :: CurAndPrev (Map ScopeId ScopeId) -> t # h -> t # h
 
-instance FixScopes (Assignment InternalName (T m) (T m)) where
+instance FixScopes (Assignment name i o) where
     fixBodyScopes r = _BodyFunction %~ fixBodyScopes r
 
-instance FixScopes (Binder InternalName (T m) (T m)) where
+instance FixScopes (Binder name i o) where
     fixBodyScopes r = _BinderTerm %~ fixBodyScopes r
 
 instance FixScopes (Const a) where
     fixBodyScopes _ = id
 
-instance FixScopes (Else InternalName (T m) (T m)) where
+instance FixScopes (Else name i o) where
     fixBodyScopes r = _SimpleElse %~ fixBodyScopes r
 
-instance FixScopes (Function InternalName (T m) (T m)) where
+instance FixScopes (Function name i o) where
     fixBodyScopes r = fBodyScopes %~ liftA2 redir r
 
-instance FixScopes (Term InternalName (T m) (T m)) where
+instance FixScopes (Term name i o) where
     fixBodyScopes r = _BodyLam . lamFunc %~ fixBodyScopes r
 
 convertPayloads ::
