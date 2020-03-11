@@ -2,6 +2,7 @@
 
 module Lamdu.Sugar.Internal
     ( ConvertPayload(..), pInput, pActions
+    , EvalPrep(..), eType, eEvalId, eLambdas
     , InternalName(..), inTag, inContext
     , internalNameMatch
     , nameWithoutContext, nameWithContext, taggedName
@@ -32,6 +33,16 @@ data ConvertPayload m a = ConvertPayload
     { -- Stored of top-level subtree for sugar expression subtree
       _pInput :: Input.Payload m a # V.Term
     , _pActions :: NodeActions InternalName (T m) (T m)
+    }
+
+data EvalPrep = EvalPrep
+    { _eType :: Pure # T.Type
+    , _eEvalId :: UUID
+    , -- Identifiers of lambdas that were "swallowed by the sugar".
+      -- This happens in let-items (redexes) and in else-if clauses.
+      -- Their evaluation scopes are translated to the parent scope
+      -- which is exposed by the sugar.
+      _eLambdas :: [UUID]
     }
 
 -- | Tags have internal names.
@@ -92,4 +103,5 @@ replaceWith parentP replacerP =
         replacerI = replacerP ^. ExprIRef.iref
 
 Lens.makeLenses ''ConvertPayload
+Lens.makeLenses ''EvalPrep
 Lens.makeLenses ''InternalName

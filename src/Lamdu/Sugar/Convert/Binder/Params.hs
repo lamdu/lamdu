@@ -54,8 +54,7 @@ type T = Transaction
 data ConventionalParams m = ConventionalParams
     { cpTags :: Set T.Tag
     , _cpParamInfos :: Map T.Tag ConvertM.TagFieldParam
-    , _cpParams ::
-        Maybe (BinderParams (EvaluationScopes InternalName (T m)) InternalName (T m) (T m))
+    , _cpParams :: Maybe (BinderParams EvalPrep InternalName (T m) (T m))
     , _cpAddFirstParam :: AddFirstParam InternalName (T m) (T m)
     , cpMLamParam :: Maybe ({- lambda's -}EntityId, V.Var)
     }
@@ -463,9 +462,15 @@ convertRecordParams mPresMode binderKind fieldParams lam@(V.TypedLam param _ _) 
                     <*> fieldParamActions mPresMode binderKind tags fp storedLam
                 let paramEntityId = paramInfo ^. piTag . tagRefTag . tagInstance
                 typeS <- convertType (EntityId.ofTypeOf paramEntityId) (fpFieldType fp)
+                let EntityId.EntityId u = paramEntityId
                 pure
                     ( FuncParam
-                        { _fpAnnotation = AnnotationVal mempty
+                        { _fpAnnotation =
+                            AnnotationVal EvalPrep
+                            { _eType = fpFieldType fp
+                            , _eEvalId = u
+                            , _eLambdas = []
+                            }
                         , _fpVarInfo = mkVarInfo typeS
                         }
                     , paramInfo
@@ -618,7 +623,7 @@ mkVarInfo (Ann _ (TInst (TId name tid) _)) = VarNominal tid (name ^. inTag)
 mkFuncParam ::
     Monad m =>
     EntityId -> Input.Payload m a # V.Term -> info ->
-    ConvertM m (FuncParam (EvaluationScopes InternalName i) InternalName, info)
+    ConvertM m (FuncParam EvalPrep InternalName, info)
 mkFuncParam entityId lamExprPl info =
     (,)
     <$> Lens.view ConvertM.scAnnotationsMode
@@ -629,13 +634,19 @@ mkFuncParam entityId lamExprPl info =
             case annMode of
             Annotations.None -> AnnotationNone
             Annotations.Types -> AnnotationType typS
-            Annotations.Evaluation -> AnnotationVal mempty
+            Annotations.Evaluation ->
+                AnnotationVal EvalPrep
+                { _eType = typ
+                , _eEvalId = u
+                , _eLambdas = []
+                }
         , _fpVarInfo = mkVarInfo typS
         }
     , info
     )
     where
         typ = lamParamType lamExprPl
+        EntityId.EntityId u = entityId
 
 convertNonRecordParam ::
     Monad m => BinderKind m ->

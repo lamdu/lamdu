@@ -331,7 +331,7 @@ makeTypeAnnotation = convertType . EntityId.ofTypeOf
 makeAnnotation ::
     Monad m =>
     Ann.ShowAnnotation -> Input.Payload m a # V.Term ->
-    ConvertM m (Annotation (EvaluationScopes InternalName i) InternalName)
+    ConvertM m (Annotation EvalPrep InternalName)
 makeAnnotation showAnn pl
     | showAnn ^. Ann.showTypeAlways = makeTypeAnnotationPl pl <&> AnnotationType
     | otherwise =
@@ -340,19 +340,25 @@ makeAnnotation showAnn pl
         Annotations.Types | showAnn ^. Ann.showInTypeMode ->
             makeTypeAnnotationPl pl <&> AnnotationType
         Annotations.Evaluation | showAnn ^. Ann.showInEvalMode ->
-            AnnotationVal mempty & pure
+            AnnotationVal EvalPrep
+            { _eType = pl ^. Input.inferredType
+            , _eEvalId = u
+            , _eLambdas = []
+            } & pure
         _ -> pure AnnotationNone
+        where
+            EntityId.EntityId u = pl ^. Input.entityId
 
 convertPayloads ::
     (Monad m, RTraversable h) =>
     Annotated (Ann.ShowAnnotation, ConvertPayload m a) # h ->
-    ConvertM m (Annotated (Payload (EvaluationScopes InternalName i) InternalName (T m) (T m) a) # h)
+    ConvertM m (Annotated (Payload EvalPrep InternalName (T m) (T m) a) # h)
 convertPayloads = htraverseFlipped (const (Lens._Wrapped convertPayload))
 
 convertPayload ::
     Monad m =>
     (Ann.ShowAnnotation, ConvertPayload m a) ->
-    ConvertM m (Payload (EvaluationScopes InternalName i) InternalName (T m) (T m) a)
+    ConvertM m (Payload EvalPrep InternalName (T m) (T m) a)
 convertPayload (showAnn, pl) =
     makeAnnotation showAnn (pl ^. pInput)
     <&>

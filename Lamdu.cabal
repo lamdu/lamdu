@@ -437,6 +437,7 @@ Library
                   , Lamdu.Sugar.Convert.Text
                   , Lamdu.Sugar.Convert.Type
                   , Lamdu.Sugar.EntityId
+                  , Lamdu.Sugar.Eval
                   , Lamdu.Sugar.Internal
                   , Lamdu.Sugar.Internal.EntityId
                   , Lamdu.Sugar.Parens

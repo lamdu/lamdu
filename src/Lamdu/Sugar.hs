@@ -19,6 +19,7 @@ import qualified Lamdu.I18N.Name as Texts
 import           Lamdu.Name (Name)
 import qualified Lamdu.Sugar.Config as SugarConfig
 import qualified Lamdu.Sugar.Convert as SugarConvert
+import           Lamdu.Sugar.Eval (addEvaluationResults)
 import qualified Lamdu.Sugar.Names.Add as AddNames
 import qualified Lamdu.Sugar.Parens as AddParens
 import qualified Lamdu.Sugar.Types as Sugar
@@ -45,6 +46,7 @@ sugarWorkArea ::
             (Sugar.ParenInfo, [Sugar.EntityId])))
 sugarWorkArea getTagName env cp =
     SugarConvert.loadWorkArea env cp
+    >>= addEvaluationResults (env ^. has)
     >>= report .
         AddNames.addToWorkArea env
         (fmap getTagName . ExprIRef.readTagData)

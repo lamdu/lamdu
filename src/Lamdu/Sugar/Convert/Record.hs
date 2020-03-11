@@ -14,11 +14,8 @@ import           Lamdu.Sugar.Convert.Monad (ConvertM)
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
 import           Lamdu.Sugar.Internal
 import           Lamdu.Sugar.Types
-import           Revision.Deltum.Transaction (Transaction)
 
 import           Lamdu.Prelude
-
-type T = Transaction
 
 convertEmpty ::
     (Monad m, Monoid a) =>
@@ -32,7 +29,7 @@ convertExtend ::
     (Monad m, Monoid a) =>
     RowExtend T.Tag V.Term V.Term # Ann (Input.Payload m a) ->
     Input.Payload m a # V.Term ->
-    ConvertM m (ExpressionU (EvaluationScopes InternalName (T m)) m a)
+    ConvertM m (ExpressionU EvalPrep m a)
 convertExtend (RowExtend tag val rest) exprPl =
     do
         valS <- ConvertM.convertSubexpression val

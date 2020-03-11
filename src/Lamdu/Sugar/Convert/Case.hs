@@ -25,11 +25,8 @@ import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import qualified Lamdu.Sugar.Lens as SugarLens
 import           Lamdu.Sugar.Types
-import           Revision.Deltum.Transaction (Transaction)
 
 import           Lamdu.Prelude
-
-type T = Transaction
 
 -- This is mostly a copy&paste of the Convert.Record module, yuck! DRY
 -- with some abstraction?
@@ -53,7 +50,7 @@ convert ::
     (Monad m, Monoid a) =>
     RowExtend T.Tag V.Term V.Term # Ann (Input.Payload m a) ->
     Input.Payload m a # V.Term ->
-    ConvertM m (ExpressionU (EvaluationScopes InternalName (T m)) m a)
+    ConvertM m (ExpressionU EvalPrep m a)
 convert (RowExtend tag v rest) exprPl =
     do
         valS <-
@@ -72,10 +69,10 @@ convert (RowExtend tag v rest) exprPl =
         mkCase t c r = RowExtend t c r & V.BCase
 
 convertAppliedCase ::
-    (Monad m, Monoid a, v ~ EvaluationScopes InternalName (T m)) =>
+    (Monad m, Monoid a) =>
     V.App V.Term # Ann (Input.Payload m a) ->
-    ExpressionU v m a -> ExpressionU v m a -> Input.Payload m a # V.Term ->
-    MaybeT (ConvertM m) (ExpressionU v m a)
+    ExpressionU EvalPrep m a -> ExpressionU EvalPrep m a -> Input.Payload m a # V.Term ->
+    MaybeT (ConvertM m) (ExpressionU EvalPrep m a)
 convertAppliedCase (V.App _ arg) funcS argS exprPl =
     do
         Lens.view (ConvertM.scConfig . Config.sugarsEnabled . Config.caseWithArgument) >>= guard

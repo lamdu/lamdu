@@ -69,7 +69,7 @@ mkOptions ::
     Ann (Input.Payload m a) # V.Term ->
     Ann pl # Term v name i o ->
     Input.Payload m a # V.Term ->
-    ConvertM m (T m [HoleOption (EvaluationScopes InternalName (T m)) InternalName (T m) (T m)])
+    ConvertM m (T m [HoleOption EvalPrep InternalName (T m) (T m)])
 mkOptions posInfo sugarContext argI argS exprPl =
     Hole.mkOptions posInfo (fragmentResultProcessor topEntityId argI) exprPl
     <&> (pure fragmentOptions <>)
@@ -93,7 +93,7 @@ mkAppliedHoleSuggesteds ::
     ConvertM.Context m ->
     Ann (Input.Payload m a) # V.Term ->
     Input.Payload m a # V.Term ->
-    [(V.Val (), HoleOption (EvaluationScopes InternalName (T m)) InternalName (T m) (T m))]
+    [(V.Val (), HoleOption EvalPrep InternalName (T m) (T m))]
 mkAppliedHoleSuggesteds sugarContext argI exprPl =
     runStateT
     ( Suggest.termTransforms (exprPl ^. Input.inferScope) (WriteNew :*:) (^. _2)
@@ -132,12 +132,12 @@ checkTypeMatch x y =
             & runPureInfer V.emptyScope ctx
 
 convertAppliedHole ::
-    (Monad m, Monoid a, v ~ EvaluationScopes InternalName (T m)) =>
+    (Monad m, Monoid a) =>
     ConvertM.PositionInfo ->
     V.App V.Term # Ann (Input.Payload m a) ->
     Input.Payload m a # V.Term ->
-    ExpressionU v m a ->
-    MaybeT (ConvertM m) (ExpressionU v m a)
+    ExpressionU EvalPrep m a ->
+    MaybeT (ConvertM m) (ExpressionU EvalPrep m a)
 convertAppliedHole posInfo app@(V.App funcI argI) exprPl argS =
     do
         Lens.view (ConvertM.scConfig . Config.sugarsEnabled . Config.fragment) >>= guard
@@ -344,7 +344,7 @@ mkOptionFromFragment ::
     ConvertM.Context m ->
     Input.Payload m a # V.Term ->
     Ann (Write m :*: InferResult UVar) # V.Term ->
-    HoleOption (EvaluationScopes InternalName (T m)) InternalName (T m) (T m)
+    HoleOption EvalPrep InternalName (T m) (T m)
 mkOptionFromFragment sugarContext exprPl x =
     HoleOption
     { _hoEntityId =

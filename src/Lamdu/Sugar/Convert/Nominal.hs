@@ -14,18 +14,14 @@ import qualified Lamdu.Sugar.Convert.TId as ConvertTId
 import qualified Lamdu.Sugar.Convert.Text as ConvertText
 import           Lamdu.Sugar.Internal
 import           Lamdu.Sugar.Types
-import           Revision.Deltum.Transaction (Transaction)
 
 import           Lamdu.Prelude
 
-type T = Transaction
-
 convertToNom ::
-    ( Monad m, Monoid a
-    ) =>
+    (Monad m, Monoid a) =>
     ToNom NominalId V.Term # Ann (Input.Payload m a) ->
     Input.Payload m a # V.Term ->
-    ConvertM m (ExpressionU (EvaluationScopes InternalName (T m)) m a)
+    ConvertM m (ExpressionU EvalPrep m a)
 convertToNom t@(ToNom tid x) pl =
     do
         ConvertText.text t pl & justToLeft

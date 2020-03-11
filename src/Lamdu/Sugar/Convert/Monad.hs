@@ -113,7 +113,7 @@ data Context m = Context
     , scConvertSubexpression ::
         forall a. Monoid a =>
         PositionInfo -> Ann (Input.Payload m a) # V.Term ->
-        ConvertM m (ExpressionU (Sugar.EvaluationScopes InternalName (T m)) m a)
+        ConvertM m (ExpressionU EvalPrep m a)
     }
 Lens.makeLenses ''Context
 Lens.makePrisms ''TagFieldParam
@@ -179,7 +179,7 @@ local f (ConvertM act) = ConvertM $ Reader.local f act
 convertSubexpression ::
     (Monad m, Monoid a) =>
     Ann (Input.Payload m a) # V.Term ->
-    ConvertM m (ExpressionU (Sugar.EvaluationScopes InternalName (T m)) m a)
+    ConvertM m (ExpressionU EvalPrep m a)
 convertSubexpression exprI =
     do
         convertSub <- Lens.view (Lens.to scConvertSubexpression)

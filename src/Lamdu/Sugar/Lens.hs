@@ -9,11 +9,14 @@ module Lamdu.Sugar.Lens
     , binderResultExpr
     , holeTransformExprs, holeOptionTransformExprs
     , getVarName
+    , evalResults
     ) where
 
+import           Control.Lens (Traversal)
 import qualified Control.Lens as Lens
 import           Hyper
 import           Hyper.Recurse (Recursive(..), proxyArgument)
+import           Hyper.Type.AST.App (appChildren)
 import           Lamdu.Sugar.Types
 
 import           Lamdu.Prelude
@@ -140,3 +143,117 @@ getVarName :: Lens.Traversal' (GetVar a o) a
 getVarName f (GetParam x) = (pNameRef . nrName) f x <&> GetParam
 getVarName f (GetBinder x) = (bvNameRef . nrName) f x <&> GetBinder
 getVarName _ (GetParamsRecord x) = GetParamsRecord x & pure
+
+binderParamsFuncParams ::
+    Traversal
+    (BinderParams v0 name i o)
+    (BinderParams v1 name i o)
+    (FuncParam v0 name)
+    (FuncParam v1 name)
+binderParamsFuncParams f (NullParam x) = Lens._1 f x <&> NullParam
+binderParamsFuncParams f (Params x) = (traverse . Lens._1) f x <&> Params
+
+evalResults ::
+    (EvalResults e, Functor i) =>
+    Traversal (Expr e v0 name i o a) (Expr e v1 name i o a) v0 v1
+evalResults f (Ann a b) =
+    Ann
+    <$> (Lens._Wrapped . plAnnotation . _AnnotationVal) f a
+    <*> bodyEvalResults f b
+
+constEvalResults ::
+    Traversal
+    (Annotated (Payload v0 name i o a) # Const x)
+    (Annotated (Payload v1 name i o a) # Const x)
+    v0 v1
+constEvalResults f (Ann a (Const b)) =
+    (Lens._Wrapped . plAnnotation . _AnnotationVal) f a
+    <&> (`Ann` Const b)
+
+class EvalResults e where
+    bodyEvalResults ::
+        Functor i =>
+        Traversal (Body e v0 name i o a) (Body e v1 name i o a) v0 v1
+
+instance EvalResults Assignment where
+    bodyEvalResults f (BodyFunction x) = bodyEvalResults f x <&> BodyFunction
+    bodyEvalResults f (BodyPlain x) = (apBody . bodyEvalResults) f x <&> BodyPlain
+
+instance EvalResults Binder where
+    bodyEvalResults f (BinderLet x) = bodyEvalResults f x <&> BinderLet
+    bodyEvalResults f (BinderTerm x) = bodyEvalResults f x <&> BinderTerm
+
+instance EvalResults Composite where
+    bodyEvalResults f (Composite i p t a) =
+        Composite
+        <$> (traverse . ciExpr . evalResults) f i
+        <*> (traverse . constEvalResults) f p
+        <*> (_OpenComposite . _2 . evalResults) f t
+        <*> pure a
+
+instance EvalResults Else where
+    bodyEvalResults f (SimpleElse x) = bodyEvalResults f x <&> SimpleElse
+    bodyEvalResults f (ElseIf x) = bodyEvalResults f x <&> ElseIf
+
+instance EvalResults Function where
+    bodyEvalResults f x =
+        (,)
+        <$> (binderParamsFuncParams . fpAnnotation . _AnnotationVal) f (x ^. fParams)
+        <*> evalResults f (x ^. fBody)
+        <&> \(p, b) -> x { _fParams = p, _fBody = b }
+
+instance EvalResults IfElse where
+    bodyEvalResults f (IfElse i t e) =
+        IfElse
+        <$> evalResults f i
+        <*> evalResults f t
+        <*> evalResults f e
+
+instance EvalResults Let where
+    bodyEvalResults f x =
+        (,)
+        <$> evalResults f (x ^. lValue)
+        <*> evalResults f (x ^. lBody)
+        <&> \(v, b) -> x { _lValue = v, _lBody = b }
+
+instance EvalResults Term where
+    bodyEvalResults _ BodyPlaceHolder = pure BodyPlaceHolder
+    bodyEvalResults _ (BodyLiteral x) = BodyLiteral x & pure
+    bodyEvalResults _ (BodyGetVar x) = BodyGetVar x & pure
+    bodyEvalResults _ (BodyFromNom x) = BodyFromNom x & pure
+    bodyEvalResults f (BodyLam x) = (lamFunc . bodyEvalResults) f x <&> BodyLam
+    bodyEvalResults f (BodySimpleApply x) = (appChildren . evalResults) f x <&> BodySimpleApply
+    bodyEvalResults f (BodyIfElse x) = bodyEvalResults f x <&> BodyIfElse
+    bodyEvalResults f (BodyGetField x) = (gfRecord . evalResults) f x <&> BodyGetField
+    bodyEvalResults f (BodyRecord x) = bodyEvalResults f x <&> BodyRecord
+    bodyEvalResults f (BodyToNom x) = (nVal . evalResults) f x <&> BodyToNom
+    bodyEvalResults f (BodyInject x) =
+        iContent
+        ( \case
+            InjectNullary y -> constEvalResults f y <&> InjectNullary
+            InjectVal y -> evalResults f y <&> InjectVal
+        ) x <&> BodyInject
+    bodyEvalResults f (BodyCase (Case k b)) =
+        Case
+        <$> (_CaseWithArg . caVal . evalResults) f k
+        <*> bodyEvalResults f b
+        <&> BodyCase
+    bodyEvalResults f (BodyLabeledApply (LabeledApply u s a p)) =
+        LabeledApply
+        <$> constEvalResults f u
+        <*> (traverse . evalResults) f s
+        <*> (traverse . aaExpr . evalResults) f a
+        <*> (traverse . constEvalResults) f p
+        <&> BodyLabeledApply
+    bodyEvalResults _ (BodyHole x) =
+        -- TODO: This is a "cheat".
+        -- Should we solve it by hole results not having eval results?
+        x & holeOptions . Lens.mapped .~ []
+        & BodyHole & pure
+    bodyEvalResults f (BodyFragment x) =
+        evalResults f (x ^. fExpr) <&>
+        \e ->
+        BodyFragment x
+        { _fExpr = e
+        , _fOptions = x ^. fOptions <&> const [] -- "Cheat"
+        }
