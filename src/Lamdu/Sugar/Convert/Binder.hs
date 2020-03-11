@@ -281,7 +281,7 @@ convertLam lam exprPl =
 
 useNormalLambda ::
     Set InternalName ->
-    Function (EvaluationScopes InternalName i) InternalName i o # Annotated a -> Bool
+    Function v InternalName i o # Annotated a -> Bool
 useNormalLambda paramNames func
     | Set.size paramNames < 2 = True
     | otherwise =
@@ -327,7 +327,7 @@ instance GetParam (Term v InternalName i o) where
 
 allParamsUsed ::
     Set InternalName ->
-    Function (EvaluationScopes InternalName i) InternalName i o # Annotated a -> Bool
+    Function v InternalName i o # Annotated a -> Bool
 allParamsUsed paramNames func =
     Set.null (paramNames `Set.difference` usedParams)
     where
