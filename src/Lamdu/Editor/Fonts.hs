@@ -64,8 +64,8 @@ makeGetFonts configSampler subpixel =
                 atomicModifyIORef timeTillGc
                 (\ttl -> if ttl == 0 then (gcEvery, performGC) else (ttl-1, pure ()))
                 & join
-        fmap f . memoIO . uncurry $
-            \path fonts ->
+        fmap f . memoIO $
+            \(path, fonts) ->
             do
                 -- If we don't force full GC once in a while, these
                 -- fonts linger and are uncollected. They leak not
