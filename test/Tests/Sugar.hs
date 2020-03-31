@@ -45,6 +45,7 @@ test =
     , floatLetWithGlobalRef
     , testHoleTypeShown
     , testUnnamed
+    , testValidHoleResult
     , testGroup "insist-tests"
         [ testInsistFactorial
         , testInsistEq
@@ -502,3 +503,23 @@ testHoleTypeShown =
         x ^. annotation . plAnnotation
             & Lens.has _AnnotationType
             & assertBool "Expected to have type"
+
+-- Test for issue #497
+-- https://trello.com/c/OAeXOCMi/497-invalid-nullary-inject-suggested
+testValidHoleResult :: Test
+testValidHoleResult =
+    testCase "valid-hole-result" $
+    do
+        env <- Env.make
+        testProgram "nom-list.json" $
+            do
+                workArea <- convertWorkArea env
+                opts <-
+                    workArea ^?!
+                    replBody . _BodyToNom . nVal .
+                    hVal . _BinderTerm . _BodyHole .
+                    holeOptions
+                -- The bug occured in the first suggested result
+                (_, mkHoleResult) <- opts ^?! Lens.ix 0 . hoResults & List.runList <&> List.headL
+                holeResult <- mkHoleResult
+                holeResult ^. holeResultPick
