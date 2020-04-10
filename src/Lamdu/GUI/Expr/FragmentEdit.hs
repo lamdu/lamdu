@@ -120,7 +120,7 @@ make (Ann (Const pl) fragment) =
     where
         lineBelow color animId spacing ann =
             ann
-            & Element.setLayeredImage . Element.layers %~ (<> [line])
+            & Element.setLayeredImage . Element.layers . Lens.ix 0 %~ (<> line)
             where
                 line =
                     Anim.coloredRectangle animId color
