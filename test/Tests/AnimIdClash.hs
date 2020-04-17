@@ -81,9 +81,9 @@ testFragment =
                     , Sugar._fOptions = pure []
                     } & Stub.expr
                 )
-                & annotation . Sugar.plEntityId .~ fragEntityId
+                & annotation . _1 . Sugar.plEntityId .~ fragEntityId
                 & Stub.addNamesToExpr (env ^. has)
-                & hflipped %~ hmap (const (Lens._Wrapped . Sugar.plData .~ adhocPayload))
+                & hflipped %~ hmap (const (Lens._Wrapped . _2 .~ adhocPayload))
         let assocTagName _ = MkProperty Unit
         let gui =
                 ExpressionEdit.make expr

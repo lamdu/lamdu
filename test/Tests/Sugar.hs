@@ -58,7 +58,7 @@ testSugarActionsWith ::
     HasCallStack =>
     FilePath ->
     [WorkArea (EvaluationScopes Name (T ViewM)) Name (T ViewM) (T ViewM)
-        (Sugar.Payload (EvaluationScopes Name (T ViewM)) Name (T ViewM) (T ViewM) (ParenInfo, [EntityId])) ->
+        (Sugar.Payload (EvaluationScopes Name (T ViewM)) Name (T ViewM) (T ViewM), (ParenInfo, [EntityId])) ->
         T ViewM a] ->
     Env ->
     IO ()
@@ -71,7 +71,7 @@ testSugarActions ::
     HasCallStack =>
     FilePath ->
     [WorkArea (EvaluationScopes Name (T ViewM)) Name (T ViewM) (T ViewM)
-        (Sugar.Payload (EvaluationScopes Name (T ViewM)) Name (T ViewM) (T ViewM) (ParenInfo, [EntityId])) ->
+        (Sugar.Payload (EvaluationScopes Name (T ViewM)) Name (T ViewM) (T ViewM), (ParenInfo, [EntityId])) ->
         T ViewM a] ->
     IO ()
 testSugarActions program actions =
@@ -138,7 +138,7 @@ testReorderLets =
             replBody . _BodyLam . lamFunc . fBody .
             hVal . _BinderLet . lBody .
             hVal . _BinderLet . lValue .
-            annotation . plActions . extract
+            annotation . _1 . plActions . extract
 
 -- Test for issue #395
 -- https://trello.com/c/UvBdhzzl/395-extract-of-binder-body-with-let-items-may-cause-inference-failure
@@ -148,7 +148,7 @@ testExtract =
     & testCase "extract"
     where
         action =
-            replBody . _BodyLam . lamFunc . fBody . annotation . plActions .
+            replBody . _BodyLam . lamFunc . fBody . annotation . _1 . plActions .
             extract
 
 -- Test for issue #402
@@ -231,7 +231,7 @@ delInfixArg =
     & testCase "del-infix-arg"
     where
         argDel workArea =
-            workArea ^?! arg . annotation . plActions . mSetToHole . Lens._Just & void
+            workArea ^?! arg . annotation . _1 . plActions . mSetToHole . Lens._Just & void
         holeDel workArea =
             workArea ^?! arg . hVal . _BodyHole . holeMDelete . Lens._Just & void
         arg = replBody . _BodyLabeledApply . aSpecialArgs . _Operator . _2
@@ -254,7 +254,7 @@ testExtractForRecursion =
         extractDef =
             waPanes . traverse . paneBody . _PaneDefinition .
             drBody . _DefinitionBodyExpression . deContent .
-            annotation . plActions . extract
+            annotation . _1 . plActions . extract
 
 testInsistFactorial :: Test
 testInsistFactorial =
@@ -409,12 +409,12 @@ testReplaceParent =
     where
         action =
             replBody . _BodyLam . lamFunc . fBody .
-            annotation . plActions . mReplaceParent . Lens._Just
+            annotation . _1 . plActions . mReplaceParent . Lens._Just
 
 floatLetWithGlobalRef :: Test
 floatLetWithGlobalRef =
     testSugarActions "let-with-global-reference.json"
-    [ (^?! replLet . lBody . hVal . _BinderLet . lValue . annotation . plActions . extract)
+    [ (^?! replLet . lBody . hVal . _BinderLet . lValue . annotation . _1 . plActions . extract)
     ]
     & testCase "float-let-with-global-ref"
 
@@ -428,11 +428,11 @@ setHoleToHole =
             | Lens.has setToHole workArea =
                 fail "hole has set to hole?"
             | otherwise = pure ()
-        setToHole :: Lens.Traversal' (WorkArea v name i o (Payload v name i o a)) (o EntityId)
+        setToHole :: Lens.Traversal' (WorkArea v name i o (Payload v name i o, a)) (o EntityId)
         setToHole =
             replBody . _BodyLam . lamFunc . fBody .
             hVal . _BinderLet . lValue .
-            annotation . plActions . mSetToHole . Lens._Just
+            annotation . _1 . plActions . mSetToHole . Lens._Just
 
 assertEq :: (Monad m, Show a, Eq a) => String -> a -> a -> m ()
 assertEq msg expected got
@@ -452,7 +452,7 @@ testFloatToRepl =
             do
                 workArea <- convertWorkArea env
                 assertLetVals workArea 1 2
-                void $ workArea ^?! innerLet . annotation . plActions . extract
+                void $ workArea ^?! innerLet . annotation . _1 . plActions . extract
                 newWorkArea <- convertWorkArea env
                 assertLetVals newWorkArea 2 1
     where
@@ -479,7 +479,7 @@ testCreateLetInLetVal =
                     workArea <- convertWorkArea env
                     _ <-
                         workArea ^?!
-                        theLet . lValue . annotation . plActions . mNewLet .
+                        theLet . lValue . annotation . _1 . plActions . mNewLet .
                         Lens._Just
                     newWorkArea <- convertWorkArea env
                     Lens.has
@@ -504,11 +504,11 @@ testHoleTypeShown =
         env <- Env.make <&> has .~ Annotations.None
         workArea <- testProgram "to-nom.json" (convertWorkArea env)
         let x = workArea ^?! replBody . _BodyToNom . nVal
-        putStrLn $ case x ^. annotation . plAnnotation of
+        putStrLn $ case x ^. annotation . _1 . plAnnotation of
             AnnotationType {} -> "Type"
             AnnotationVal {} -> "Val"
             AnnotationNone {} -> "None"
-        Lens.has (annotation . plAnnotation . _AnnotationType) x
+        Lens.has (annotation . _1 . plAnnotation . _AnnotationType) x
             & assertBool "Expected to have type"
 
 -- Test for issue #497

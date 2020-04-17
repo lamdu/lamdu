@@ -75,7 +75,7 @@ makeIfThen prefixLabel animId ifElse =
                      [has . MomentuTexts.edit, has . MomentuTexts.delete]
                  ) . fmap WidgetIds.fromEntityId)
                 (ifElse ^. Sugar.iElse . annotation .
-                 Sugar.plActions . Sugar.mReplaceParent)
+                 _1 . Sugar.plActions . Sugar.mReplaceParent)
         Row animId keyword
             (Widget.weakerEvents eventMap ifGui)
             (Widget.weakerEvents eventMap thenGui)
@@ -105,7 +105,7 @@ makeElse _ (Ann pl (Sugar.ElseIf content)) =
         -- TODO: green evaluation backgrounds, "◗"?
         elseLabel <- grammar (label Texts.elseShort)
         letEventMap <-
-            foldMap ExprEventMap.addLetEventMap (pl ^. Lens._Wrapped . Sugar.plActions . Sugar.mNewLet)
+            foldMap ExprEventMap.addLetEventMap (pl ^. Lens._Wrapped . _1 . Sugar.plActions . Sugar.mNewLet)
         (:)
             <$> ( makeIfThen elseLabel animId content
                   <&> Lens.mapped %~ Widget.weakerEvents letEventMap
@@ -114,7 +114,7 @@ makeElse _ (Ann pl (Sugar.ElseIf content)) =
             & Reader.local (Element.animIdPrefix .~ animId)
     where
         animId = WidgetIds.fromEntityId entityId & Widget.toAnimId
-        entityId = pl ^. Lens._Wrapped . Sugar.plEntityId
+        entityId = pl ^. Lens._Wrapped . _1 . Sugar.plEntityId
 
 verticalRowRender ::
     ( Monad o, MonadReader env f, Spacer.HasStdSpacing env
@@ -182,4 +182,4 @@ make (Ann (Const pl) ifElse) =
         <*> makeElse animId (ifElse ^. Sugar.iElse)
     ) & stdWrapParentExpr pl
     where
-        animId = WidgetIds.fromExprPayload pl & Widget.toAnimId
+        animId = pl ^. _1 & WidgetIds.fromExprPayload & Widget.toAnimId

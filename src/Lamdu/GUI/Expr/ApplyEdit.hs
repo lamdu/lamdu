@@ -45,7 +45,7 @@ makeFunc ::
     , Has (Texts.Navigation Text) env
     ) =>
     GetVarEdit.Role ->
-    Annotated (Sugar.Payload (Sugar.EvaluationScopes Name i) Name i o ExprGui.Payload) #
+    Annotated (Sugar.Payload (Sugar.EvaluationScopes Name i) Name i o, ExprGui.Payload) #
         Const (Sugar.BinderVarRef Name o) ->
     GuiM env i o (Responsive o)
 makeFunc role func =
@@ -54,7 +54,7 @@ makeFunc role func =
     & stdWrap pl
     where
         pl = func ^. annotation
-        myId = WidgetIds.fromExprPayload pl
+        myId = WidgetIds.fromExprPayload (pl ^. _1)
 
 makeLabeled ::
     ( Monad i, Monad o
@@ -69,7 +69,7 @@ makeLabeled ::
     GuiM env i o (Responsive o)
 makeLabeled (Ann (Const pl) apply) =
     ExprEventMap.add ExprEventMap.defaultOptions pl <*>
-    ( Wrap.parentDelegator (WidgetIds.fromExprPayload pl) <*>
+    ( Wrap.parentDelegator (WidgetIds.fromExprPayload (pl ^. _1)) <*>
         case apply ^. Sugar.aSpecialArgs of
         Sugar.Verbose -> makeFunc GetVarEdit.Normal func >>= wrap
         Sugar.Operator l r ->
@@ -86,7 +86,7 @@ makeLabeled (Ann (Const pl) apply) =
     )
     where
         wrap x =
-            (maybeAddAnnotationPl pl <&> (Widget.widget %~)) <*>
+            (maybeAddAnnotationPl (pl ^. _1) <&> (Widget.widget %~)) <*>
             addArgs apply x
         func = apply ^. Sugar.aFunc
 
@@ -142,7 +142,7 @@ makeSimple ::
     , Has (Texts.Name Text) env
     , Has (Texts.Navigation Text) env
     ) =>
-    Annotated (Sugar.Payload (Sugar.EvaluationScopes Name i) Name i o ExprGui.Payload) #
+    Annotated (Sugar.Payload (Sugar.EvaluationScopes Name i) Name i o, ExprGui.Payload) #
         Sugar.App (Sugar.Term (Sugar.EvaluationScopes Name i) Name i o) ->
     GuiM env i o (Responsive o)
 makeSimple (Ann (Const pl) (Sugar.App func arg)) =

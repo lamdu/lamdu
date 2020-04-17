@@ -75,7 +75,7 @@ makeGui afterDoc env =
     do
         workArea <- convertWorkArea env <&> (fmap . fmap) (uncurry ExprGui.Payload)
         let repl = workArea ^. Sugar.waRepl . Sugar.replExpr
-        let replExprId = repl ^. SugarLens.binderResultExpr & WidgetIds.fromExprPayload
+        let replExprId = repl ^. SugarLens.binderResultExpr . _1 & WidgetIds.fromExprPayload
         let assocTagName = DataOps.assocTagName env
         gui <-
             do
@@ -130,7 +130,7 @@ applyEvent env virtCursor event =
 fromWorkArea ::
     Env -> Lens.ATraversal'
     (Sugar.WorkArea (Sugar.EvaluationScopes Name (T ViewM)) Name (T ViewM) (T ViewM)
-        (Sugar.Payload (Sugar.EvaluationScopes Name (T ViewM)) Name (T ViewM) (T ViewM) ExprGui.Payload)) a ->
+        (Sugar.Payload (Sugar.EvaluationScopes Name (T ViewM)) Name (T ViewM) (T ViewM), ExprGui.Payload)) a ->
     T ViewM a
 fromWorkArea env path =
     convertWorkArea env <&> (fmap . fmap) (uncurry ExprGui.Payload)
@@ -183,7 +183,7 @@ testFragmentSize =
     do
         frag <-
             fromWorkArea baseEnv
-            (Sugar.waRepl . Sugar.replExpr . annotation)
+            (Sugar.waRepl . Sugar.replExpr . annotation . _1)
         guiCursorOnFrag <-
             baseEnv
             & cursor .~ WidgetIds.fromExprPayload frag
@@ -205,7 +205,7 @@ testOpPrec =
         holeId <-
             fromWorkArea baseEnv
             (replExpr . Sugar._BodyLam . Sugar.lamFunc .
-             Sugar.fBody . annotation . Sugar.plEntityId)
+             Sugar.fBody . annotation . _1 . Sugar.plEntityId)
             <&> WidgetIds.fromEntityId
         workArea <- convertWorkArea baseEnv
         _ <- applyEvent (baseEnv & cursor .~ holeId) dummyVirt (EventChar '&')
@@ -215,18 +215,14 @@ testOpPrec =
 workAreaEq ::
     forall a m v.
     Eq a =>
-    Sugar.WorkArea v Name (T m) (T m)
-    (Sugar.Payload v Name (T m) (T m) a) ->
-    Sugar.WorkArea v Name (T m) (T m)
-    (Sugar.Payload v Name (T m) (T m) a) ->
+    Sugar.WorkArea v Name (T m) (T m) (Sugar.Payload v Name (T m) (T m), a) ->
+    Sugar.WorkArea v Name (T m) (T m) (Sugar.Payload v Name (T m) (T m), a) ->
     Bool
 workAreaEq x y =
     x' == unsafeCoerce y
     where
         x' =
-            unsafeCoerce x ::
-                Sugar.WorkArea () Name Unit Unit
-                (Sugar.Payload () Name Unit Unit a)
+            unsafeCoerce x :: Sugar.WorkArea () Name Unit Unit (Sugar.Payload () Name Unit Unit, a)
 
 testKeyboardDirAndBack ::
     HasCallStack =>

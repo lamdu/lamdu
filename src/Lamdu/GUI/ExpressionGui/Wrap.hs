@@ -60,13 +60,13 @@ stdWrap ::
     , Has (Texts.Definitions Text) env
     , Glue.HasTexts env
     ) =>
-    Sugar.Payload (Sugar.EvaluationScopes Name i) Name i o ExprGui.Payload ->
+    (Sugar.Payload (Sugar.EvaluationScopes Name i) Name i o, ExprGui.Payload) ->
     GuiM env i o (Responsive o) ->
     GuiM env i o (Responsive o)
 stdWrap pl act =
     act
     >>> (takeFocusIfNeeded pl <&> (Widget.widget %~))
-    >>> (maybeAddAnnotationPl pl <&> (Widget.widget %~))
+    >>> (maybeAddAnnotationPl (pl ^. _1) <&> (Widget.widget %~))
     >>> ExprEventMap.add ExprEventMap.defaultOptions pl
     where
         a >>> f = f <*> a
@@ -92,15 +92,15 @@ stdWrapParentExpr ::
     , Has (Texts.Name Text) env
     , Has (Texts.Navigation Text) env
     ) =>
-    Sugar.Payload (Sugar.EvaluationScopes Name i) Name i o ExprGui.Payload ->
+    (Sugar.Payload (Sugar.EvaluationScopes Name i) Name i o, ExprGui.Payload) ->
     GuiM env i o (Responsive o) ->
     GuiM env i o (Responsive o)
 stdWrapParentExpr pl act =
-    parentDelegator (WidgetIds.fromExprPayload pl) <*> act & stdWrap pl
+    parentDelegator (WidgetIds.fromExprPayload (pl ^. _1)) <*> act & stdWrap pl
 
 takeFocusIfNeeded ::
     Monad i =>
-    Sugar.Payload v name i o ExprGui.Payload ->
+    (Sugar.Payload v name i o, ExprGui.Payload) ->
     GuiM env i o (Widget o -> Widget o)
 takeFocusIfNeeded pl =
     Lens.view GuiState.cursor
@@ -112,5 +112,5 @@ takeFocusIfNeeded pl =
     else widget
     where
         entityWidgetIds =
-            pl ^. Sugar.plEntityId : pl ^. Sugar.plData . ExprGui.plHiddenEntityIds
+            pl ^. _1 . Sugar.plEntityId : pl ^. _2 . ExprGui.plHiddenEntityIds
             <&> WidgetIds.fromEntityId

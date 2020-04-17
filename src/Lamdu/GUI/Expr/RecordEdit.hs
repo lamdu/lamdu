@@ -104,7 +104,7 @@ makeUnit ::
     , Has (Texts.Name Text) env
     , Grid.HasTexts env
     ) =>
-    Sugar.Payload (Sugar.EvaluationScopes Name i) Name i o ExprGui.Payload ->
+    (Sugar.Payload (Sugar.EvaluationScopes Name i) Name i o, ExprGui.Payload) ->
     GuiM env i o (Responsive o)
 makeUnit pl =
     do
@@ -119,7 +119,7 @@ makeUnit pl =
             <&> Responsive.fromWithTextPos
             & stdWrap pl
     where
-        myId = WidgetIds.fromExprPayload pl
+        myId = WidgetIds.fromExprPayload (pl ^. _1)
 
 make ::
     ( Monad i, Monad o
@@ -138,15 +138,15 @@ make (Ann (Const pl) (Sugar.Composite [] [] Sugar.ClosedComposite{} addField)) =
     -- Ignore the ClosedComposite actions - it only has the open
     -- action which is equivalent ot deletion on the unit record
     do
-        isAddField <- GuiState.isSubCursor ?? addFieldId (WidgetIds.fromExprPayload pl)
+        isAddField <- GuiState.isSubCursor ?? addFieldId (WidgetIds.fromExprPayload (pl ^. _1))
         if isAddField
             then
-                makeAddFieldRow addField pl <&> (:[]) >>= makeRecord pure
+                makeAddFieldRow addField (pl ^. _1) <&> (:[]) >>= makeRecord pure
                 & stdWrapParentExpr pl
             else makeUnit pl
 make (Ann (Const pl) (Sugar.Composite fields punned recordTail addField)) =
     do
-        addFieldEventMap <- mkAddFieldEventMap (WidgetIds.fromExprPayload pl)
+        addFieldEventMap <- mkAddFieldEventMap (WidgetIds.fromExprPayload (pl ^. _1))
         tailEventMap <-
             case recordTail of
             Sugar.ClosedComposite actions ->
@@ -160,14 +160,14 @@ make (Ann (Const pl) (Sugar.Composite fields punned recordTail addField)) =
                 GetVarEdit.makePunnedVars punned
                 <&> (\x -> [TaggedItem Nothing x Nothing])
         fieldGuis <- traverse makeFieldRow fields <&> (++ punnedGuis)
-        isAddField <- GuiState.isSubCursor ?? addFieldId (WidgetIds.fromExprPayload pl)
+        isAddField <- GuiState.isSubCursor ?? addFieldId (WidgetIds.fromExprPayload (pl ^. _1))
         addFieldGuis <-
             if isAddField
-            then makeAddFieldRow addField pl <&> (:[])
+            then makeAddFieldRow addField (pl ^. _1) <&> (:[])
             else pure []
         env <- Lens.view id
         let goToRecordEventMap =
-                WidgetIds.fromExprPayload pl & GuiState.updateCursor & pure & const
+                WidgetIds.fromExprPayload (pl ^. _1) & GuiState.updateCursor & pure & const
                 & E.charGroup Nothing
                 (E.toDoc env
                     [ has . MomentuTexts.navigation
@@ -227,7 +227,7 @@ makeAddFieldRow ::
     , Has (Texts.Name Text) env
     ) =>
     Sugar.TagReplace Name i o Sugar.EntityId ->
-    Sugar.Payload v name i o ExprGui.Payload ->
+    Sugar.Payload v name i o ->
     GuiM env i o (TaggedItem o)
 makeAddFieldRow addField pl =
     TagEdit.makeTagHoleEdit addField mkPickResult tagHoleId

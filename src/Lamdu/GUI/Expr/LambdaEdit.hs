@@ -178,7 +178,7 @@ make (Ann (Const pl) lam) =
             & stdWrapParentExpr pl
             <&> Widget.weakerEvents eventMap
     where
-        myId = WidgetIds.fromExprPayload pl
+        myId = WidgetIds.fromExprPayload (pl ^. _1)
         params = func ^. Sugar.fParams
         func = lam ^. Sugar.lamFunc
-        bodyId = func ^. Sugar.fBody . annotation . Sugar.plEntityId
+        bodyId = func ^. Sugar.fBody . annotation . _1 . Sugar.plEntityId

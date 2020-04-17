@@ -54,23 +54,23 @@ defaultOptions =
 exprInfoFromPl ::
     Monad i =>
     GuiM env i o
-    (Sugar.Payload v name i0 o0 ExprGui.Payload -> ExprInfo name i0 o0)
+    ((Sugar.Payload v name i0 o0, ExprGui.Payload) -> ExprInfo name i0 o0)
 exprInfoFromPl =
     (,)
     <$> GuiState.isSubCursor
     <*> GuiM.isHoleResult
     <&> \(isSubCursor, isHoleResult) pl ->
-    let isSelected = WidgetIds.fromExprPayload pl & isSubCursor in
+    let isSelected = WidgetIds.fromExprPayload (pl ^. _1) & isSubCursor in
     ExprInfo
     { exprInfoIsHoleResult = isHoleResult
-    , exprInfoActions = pl ^. Sugar.plActions
+    , exprInfoActions = pl ^. _1 . Sugar.plActions
     , exprInfoMinOpPrec =
         -- Expression with parentheses intercepts all operations from inside it,
         -- But if it is itself selected then we're out of the parentheses,
         -- and its parents may take some operators.
-        if pl ^. Sugar.plData . ExprGui.plParenInfo . Sugar.piNeedParens && not isSelected
+        if pl ^. _2 . ExprGui.plParenInfo . Sugar.piNeedParens && not isSelected
         then 0
-        else pl ^. Sugar.plData . ExprGui.plParenInfo . Sugar.piMinOpPrec
+        else pl ^. _2 . ExprGui.plParenInfo . Sugar.piMinOpPrec
     , exprInfoIsSelected = isSelected
     }
 
@@ -80,7 +80,7 @@ add ::
     , Has (Texts.Definitions Text) env
     , Has (MomentuTexts.Texts Text) env
     ) =>
-    Options -> Sugar.Payload v name i o ExprGui.Payload ->
+    Options -> (Sugar.Payload v name i o, ExprGui.Payload) ->
     GuiM env i o (w o -> w o)
 add options pl = (exprInfoFromPl ?? pl) >>= addWith options
 

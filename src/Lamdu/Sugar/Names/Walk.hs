@@ -187,7 +187,7 @@ toAnnotation (AnnotationVal x) = toValAnnotation x <&> AnnotationVal
 type OldPayload m = Payload (EvaluationScopes (OldName m) (IM m)) (OldName m) (IM m)
 type NewPayload m = Payload (EvaluationScopes (NewName m) (IM m)) (NewName m) (IM m)
 
-toPayload :: MonadNaming m => OldPayload m o a -> m (NewPayload m o a)
+toPayload :: MonadNaming m => OldPayload m o -> m (NewPayload m o)
 toPayload payload@Payload{_plAnnotation, _plActions} =
     do
         _plAnnotation <- toAnnotation _plAnnotation
@@ -196,13 +196,13 @@ toPayload payload@Payload{_plAnnotation, _plActions} =
 
 toNode ::
     MonadNaming m =>
-    (ka # Annotated (OldPayload m o p) ->
-     m (kb # Annotated (NewPayload m o p))) ->
-    Annotated (OldPayload m o p) # ka ->
-    m (Annotated (NewPayload m o p) # kb)
+    (ka # Annotated (OldPayload m o, p) ->
+     m (kb # Annotated (NewPayload m o, p))) ->
+    Annotated (OldPayload m o, p) # ka ->
+    m (Annotated (NewPayload m o, p) # kb)
 toNode toV (Ann (Const pl) v) =
     Ann
-    <$> (toPayload pl <&> Const)
+    <$> (_1 toPayload pl <&> Const)
     <*> toV v
 
 toLet ::
@@ -488,8 +488,8 @@ withBinderParams ::
 withBinderParams (NullParam x) = withFuncParam (const pure) x <&> NullParam
 withBinderParams (Params xs) = traverse (withFuncParam withParamInfo) xs <&> Params
 
-type OldTop e m o a = e (EvaluationScopes (OldName m) (IM m)) (OldName m) (IM m) o (OldPayload m o a)
-type NewTop e m o a = e (EvaluationScopes (NewName m) (IM m)) (NewName m) (IM m) o (NewPayload m o a)
+type OldTop e m o a = e (EvaluationScopes (OldName m) (IM m)) (OldName m) (IM m) o (OldPayload m o, a)
+type NewTop e m o a = e (EvaluationScopes (NewName m) (IM m)) (NewName m) (IM m) o (NewPayload m o, a)
 
 toDefExpr ::
     MonadNaming m =>

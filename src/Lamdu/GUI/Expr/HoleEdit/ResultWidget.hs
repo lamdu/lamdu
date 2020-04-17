@@ -109,11 +109,11 @@ make ctx resultId pick holeResultConverted =
     }
     where
         holeResultId =
-            holeResultConverted ^. SugarLens.binderResultExpr . Sugar.plEntityId
+            holeResultConverted ^. SugarLens.binderResultExpr . _1 . Sugar.plEntityId
             & WidgetIds.fromEntityId
         mFirstHoleInside =
             holeResultConverted ^?
-            unfinishedPayloads . Sugar.plEntityId
+            unfinishedPayloads . _1 . Sugar.plEntityId
             <&> WidgetIds.fromEntityId
         pickResult =
             case mFirstHoleInside of

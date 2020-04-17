@@ -55,13 +55,13 @@ defRef var tag =
     }
 
 node ::
-    h # Annotated (Sugar.Payload v InternalName Identity Unit ()) ->
-    Annotated (Sugar.Payload v InternalName Identity Unit ()) # h
+    h # Annotated (Sugar.Payload v InternalName Identity Unit, ()) ->
+    Annotated (Sugar.Payload v InternalName Identity Unit, ()) # h
 node = Const payload & Ann
 
 labeledApplyFunc ::
     Sugar.BinderVarRef InternalName Unit ->
-    Annotated (Sugar.Payload v InternalName Identity Unit ()) #
+    Annotated (Sugar.Payload v InternalName Identity Unit, ()) #
     Const (Sugar.BinderVarRef InternalName Unit)
 labeledApplyFunc = node . Const
 
@@ -224,15 +224,16 @@ numType =
     Sugar.TInst (Sugar.TId (taggedEntityName "numTid" "num") "num") mempty
     & Ann (Const "dummy")
 
-payload :: Sugar.Payload v InternalName Identity Unit ()
+payload :: (Sugar.Payload v InternalName Identity Unit, ())
 payload =
-    Sugar.Payload
-    { Sugar._plAnnotation = Sugar.AnnotationNone
-    , Sugar._plNeverShrinkTypeAnnotations = False
-    , Sugar._plEntityId = "dummy"
-    , Sugar._plActions = nodeActions
-    , Sugar._plData = ()
-    }
+    ( Sugar.Payload
+        { Sugar._plAnnotation = Sugar.AnnotationNone
+        , Sugar._plNeverShrinkTypeAnnotations = False
+        , Sugar._plEntityId = "dummy"
+        , Sugar._plActions = nodeActions
+        }
+    , ()
+    )
 
 nodeActions :: Sugar.NodeActions InternalName Identity Unit
 nodeActions =

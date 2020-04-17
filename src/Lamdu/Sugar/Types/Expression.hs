@@ -65,8 +65,8 @@ import           Lamdu.Sugar.Types.Type
 
 import           Lamdu.Prelude
 
-type Expr e v name i o a = Annotated (Payload v name i o a) # e v name i o
-type Body e v name i o a = e v name i o # Annotated (Payload v name i o a)
+type Expr e v name i o a = Annotated (Payload v name i o, a) # e v name i o
+type Body e v name i o a = e v name i o # Annotated (Payload v name i o, a)
 
 data AnnotatedArg v name i o k = AnnotatedArg
     { _aaTag :: Tag name

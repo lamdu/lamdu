@@ -165,8 +165,8 @@ instance MonadTransaction n i => MonadTransaction n (GuiM env i o) where
 make ::
     Monad i =>
     Lens.Getter (Askable env i o)
-        (Annotated (Sugar.Payload v name i o a) # e -> GuiM env i o (Responsive.Responsive o)) ->
-    Annotated (Sugar.Payload v name i o a) # e ->
+        (Annotated (Sugar.Payload v name i o, a) # e -> GuiM env i o (Responsive.Responsive o)) ->
+    Annotated (Sugar.Payload v name i o, a) # e ->
     GuiM env i o (Responsive.Responsive o)
 make sub expr =
     do
@@ -175,7 +175,7 @@ make sub expr =
     & advanceDepth (pure . Responsive.fromTextView)
     & Reader.local (Element.animIdPrefix .~ animId)
     where
-        animId = expr ^. annotation & WidgetIds.fromExprPayload & toAnimId
+        animId = expr ^. annotation . _1 & WidgetIds.fromExprPayload & toAnimId
 
 makeSubexpression ::
     Monad i =>

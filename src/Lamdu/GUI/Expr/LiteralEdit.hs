@@ -80,7 +80,7 @@ genericEdit ::
     ) =>
     LensLike' (Lens.Const TextEdit.Style) Style TextEdit.Style ->
     Property o a ->
-    Sugar.Payload v name i o ExprGui.Payload -> f (Responsive o)
+    Sugar.Payload v name i o -> f (Responsive o)
 genericEdit whichStyle prop pl =
     do
         editEventMap <-
@@ -148,7 +148,7 @@ textEdit ::
     , Monad o
     ) =>
     Property o Text ->
-    Sugar.Payload v name i o ExprGui.Payload ->
+    Sugar.Payload v name i o ->
     m (TextWidget o)
 textEdit prop pl =
     do
@@ -180,7 +180,7 @@ numEdit ::
     , GuiState.HasState env
     ) =>
     Property o Double ->
-    Sugar.Payload v name i o ExprGui.Payload ->
+    Sugar.Payload v name i o ->
     m (TextWidget o)
 numEdit prop pl =
     (withFd ?? myId) <*>
@@ -281,12 +281,14 @@ make ::
     , TextEdit.HasTexts env
     , Grid.HasTexts env
     ) =>
-    Annotated (Sugar.Payload (Sugar.EvaluationScopes Name i) Name i o ExprGui.Payload) #
+    Annotated (Sugar.Payload (Sugar.EvaluationScopes Name i) Name i o, ExprGui.Payload) #
         Const (Sugar.Literal (Property o)) ->
     GuiM env i o (Responsive o)
 make (Ann (Const pl) (Const lit)) =
     case lit of
-    Sugar.LiteralNum x -> numEdit x pl <&> Responsive.fromWithTextPos
-    Sugar.LiteralBytes x -> genericEdit Style.bytes x pl
-    Sugar.LiteralText x -> textEdit x pl <&> Responsive.fromWithTextPos
+    Sugar.LiteralNum x -> numEdit x p <&> Responsive.fromWithTextPos
+    Sugar.LiteralBytes x -> genericEdit Style.bytes x p
+    Sugar.LiteralText x -> textEdit x p <&> Responsive.fromWithTextPos
     & stdWrap pl
+    where
+        p = pl ^. _1

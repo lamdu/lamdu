@@ -73,7 +73,7 @@ data Parts i o = Parts
     , pMScopesEdit :: Maybe (Widget o)
     , pBodyEdit :: Responsive o
     , pEventMap :: EventMap (o GuiState.Update)
-    , pMLamPayload :: Maybe (Sugar.Payload (Sugar.EvaluationScopes Name i) Name i o ExprGui.Payload)
+    , pMLamPayload :: Maybe (Sugar.Payload (Sugar.EvaluationScopes Name i) Name i o, ExprGui.Payload)
     , pRhsId :: Widget.Id
     }
 
@@ -409,7 +409,7 @@ makeFunctionParts funcApplyLimit (Ann (Const pl) func) delVarBackwardsId =
               Just _ -> id
             & GuiM.withLocalMScopeId binderScopeId
     where
-        myId = WidgetIds.fromExprPayload pl
+        myId = WidgetIds.fromExprPayload (pl ^. _1)
         destId =
             case func ^. Sugar.fParams of
             Sugar.NullParam{} -> bodyId
@@ -418,8 +418,7 @@ makeFunctionParts funcApplyLimit (Ann (Const pl) func) delVarBackwardsId =
                 traverse . _2 . Sugar.piTag . Sugar.tagRefTag . Sugar.tagInstance
                 & WidgetIds.fromEntityId
         scopesNavId = Widget.joinId myId ["scopesNav"]
-        funcPl = func ^. Sugar.fBody . annotation
-        bodyId = WidgetIds.fromExprPayload funcPl
+        bodyId = func ^. Sugar.fBody . annotation . _1 & WidgetIds.fromExprPayload
 
 makePlainParts ::
     ( Monad i, Monad o
@@ -444,7 +443,7 @@ makePlainParts (Ann (Const pl) assignPlain) delVarBackwardsId =
             & GuiM.makeBinder
         Parts mParamsEdit Nothing rhs mempty Nothing myId & pure
     where
-        myId = WidgetIds.fromExprPayload pl
+        myId = WidgetIds.fromExprPayload (pl ^. _1)
 
 makeParts ::
     ( Monad i, Monad o
@@ -541,7 +540,7 @@ make pMode tag color assignment =
         & maybe id stdWrap mLamPl
         <&> Widget.weakerEvents eventMap
     where
-        myId = WidgetIds.fromExprPayload pl
+        myId = WidgetIds.fromExprPayload (pl ^. _1)
         delParamDest = tag ^. Sugar.tagRefTag . Sugar.tagInstance & WidgetIds.fromEntityId
         Ann (Const pl) assignmentBody = assignment
         presentationChoiceId = Widget.joinId myId ["presentation"]

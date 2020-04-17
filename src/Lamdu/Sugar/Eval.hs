@@ -159,17 +159,17 @@ addToNode ::
     Expr e (EvaluationScopes InternalName i) name i o a
 addToNode results (Ann a b) =
     Ann
-    { _hAnn = a & Lens._Wrapped %~ addToPayload results
+    { _hAnn = a & Lens._Wrapped . _1 %~ addToPayload results
     , _hVal = addToBody results i b
     }
     where
-        i = a ^. Lens._Wrapped . plEntityId
+        i = a ^. Lens._Wrapped . _1 . plEntityId
 
 addToPayload ::
     Applicative i =>
     AddEvalCtx ->
-    Payload EvalPrep name i o a ->
-    Payload (EvaluationScopes InternalName i) name i o a
+    Payload EvalPrep name i o ->
+    Payload (EvaluationScopes InternalName i) name i o
 addToPayload ctx a =
     a
     & plAnnotation . _AnnotationVal %~
@@ -186,17 +186,17 @@ addToPayload ctx a =
 addToConst ::
     Applicative i =>
     AddEvalCtx ->
-    Annotated (Payload EvalPrep name i o a) # Const x ->
-    Annotated (Payload (EvaluationScopes InternalName i) name i o a) # Const x
-addToConst r (Ann (Const pl) (Const x)) = Ann (Const (addToPayload r pl)) (Const x)
+    Annotated (Payload EvalPrep name i o, a) # Const x ->
+    Annotated (Payload (EvaluationScopes InternalName i) name i o, a) # Const x
+addToConst r (Ann (Const pl) (Const x)) = Ann (Const (pl & _1 %~ addToPayload r)) (Const x)
 
 addEvaluationResults ::
     (Applicative i, Monad m) =>
     CurAndPrev EvalResults ->
-    WorkArea EvalPrep name i o (Payload EvalPrep name i o a) ->
+    WorkArea EvalPrep name i o (Payload EvalPrep name i o, a) ->
     T m (
         WorkArea (EvaluationScopes InternalName i) name i o
-        (Payload (EvaluationScopes InternalName i) name i o a))
+        (Payload (EvaluationScopes InternalName i) name i o, a))
 addEvaluationResults r (WorkArea panes repl listGlobals) =
     makeNominalsMap (evalPreps ^.. traverse . eType . tIds) <&> AddEvalCtx r
     <&>

@@ -105,7 +105,7 @@ convertInferDefExpr ::
     Pure # T.Scheme -> Definition.Expr (Ann (HRef m) # V.Term) -> DefI m ->
     T m
     (DefinitionBody EvalPrep InternalName (T m) (T m)
-        (Payload EvalPrep InternalName (T m) (T m) [EntityId]))
+        (Payload EvalPrep InternalName (T m) (T m), [EntityId]))
 convertInferDefExpr env cp defType defExpr defI =
     do
         outdatedDefinitions <-
@@ -162,7 +162,7 @@ convertDefBody ::
     Definition.Definition (Ann (HRef m) # V.Term) (DefI m) ->
     T m
     (DefinitionBody EvalPrep InternalName (T m) (T m)
-        (Payload EvalPrep InternalName (T m) (T m) [EntityId]))
+        (Payload EvalPrep InternalName (T m) (T m), [EntityId]))
 convertDefBody env cp (Definition.Definition bod defType defI) =
     case bod of
     Definition.BodyBuiltin builtin -> convertDefIBuiltin defType builtin defI
@@ -188,7 +188,7 @@ convertRepl ::
     env -> Anchors.CodeAnchors m ->
     T m
     (Repl EvalPrep InternalName (T m) (T m)
-        (Payload EvalPrep InternalName (T m) (T m) [EntityId]))
+        (Payload EvalPrep InternalName (T m) (T m), [EntityId]))
 convertRepl env cp =
     do
         defExpr <- ExprLoad.defExpr prop
@@ -240,7 +240,7 @@ convertRepl env cp =
             >>= convertPayloads
             & ConvertM.run context
             >>= OrderTags.orderNode
-        let replEntityId = expr ^. SugarLens.binderResultExpr . plEntityId
+        let replEntityId = expr ^. SugarLens.binderResultExpr . _1 . plEntityId
         typS <- ConvertType.convertType (EntityId.ofTypeOf replEntityId) typ
         pure Repl
             { _replExpr = expr
@@ -269,7 +269,7 @@ convertPaneBody ::
     env -> Anchors.CodeAnchors m -> Anchors.Pane m ->
     T m
     (PaneBody EvalPrep InternalName (T m) (T m)
-        (Payload EvalPrep InternalName (T m) (T m) [EntityId]))
+        (Payload EvalPrep InternalName (T m) (T m), [EntityId]))
 convertPaneBody _ _ (Anchors.PaneTag tagId) =
     ExprIRef.readTagData tagId <&>
     \tagData ->
@@ -318,7 +318,7 @@ convertPane ::
     Int -> Anchors.Pane m ->
     T m
     (Pane EvalPrep InternalName (T m) (T m)
-        (Payload EvalPrep InternalName (T m) (T m) [EntityId]))
+        (Payload EvalPrep InternalName (T m) (T m), [EntityId]))
 convertPane env cp replEntityId (Property panes setPanes) i pane =
     convertPaneBody env cp pane
     <&> \body -> Pane
@@ -357,7 +357,7 @@ loadPanes ::
     env -> Anchors.CodeAnchors m -> EntityId ->
     T m
     [Pane EvalPrep InternalName (T m) (T m)
-        (Payload EvalPrep InternalName (T m) (T m) [EntityId])]
+        (Payload EvalPrep InternalName (T m) (T m), [EntityId])]
 loadPanes env cp replEntityId =
     do
         prop <- Anchors.panes cp ^. Property.mkProperty
@@ -373,12 +373,12 @@ loadWorkArea ::
     env -> Anchors.CodeAnchors m ->
     T m
     (WorkArea EvalPrep InternalName (T m) (T m)
-        (Payload EvalPrep InternalName (T m) (T m) [EntityId]))
+        (Payload EvalPrep InternalName (T m) (T m), [EntityId]))
 loadWorkArea env cp =
     do
         repl <- convertRepl env cp
         panes <-
-            repl ^. replExpr . SugarLens.binderResultExpr . plEntityId
+            repl ^. replExpr . SugarLens.binderResultExpr . _1 . plEntityId
             & loadPanes env cp
         pure WorkArea
             { _waRepl = repl

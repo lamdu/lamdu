@@ -127,7 +127,7 @@ make (Ann (Const pl) fragment) =
                     & Anim.scale (Vector2 (ann ^. Element.width) spacing)
                     & Anim.translate (Vector2 0 (ann ^. Element.height))
 
-        myId = WidgetIds.fromExprPayload pl
+        myId = WidgetIds.fromExprPayload (pl ^. _1)
         holeIds = WidgetIds.fragmentHoleId myId & HoleWidgetIds.makeFrom
         healEventMap keys env =
             fragment ^. Sugar.fHeal <&> WidgetIds.fromEntityId

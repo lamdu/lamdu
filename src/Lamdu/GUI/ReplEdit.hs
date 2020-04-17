@@ -73,7 +73,7 @@ extractEventMap ::
     ( Functor m
     , Has (MomentuTexts.Texts Text) env, Has (Texts.Definitions Text) env
     ) =>
-    env -> Sugar.Payload v name i (T m) a -> [MetaKey] -> EventMap (T m GuiState.Update)
+    env -> Sugar.Payload v name i (T m) -> [MetaKey] -> EventMap (T m GuiState.Update)
 extractEventMap env pl keys =
     pl ^. Sugar.plActions . Sugar.extract
     <&> ExprEventMap.extractCursor & E.keysEventMapMovesCursor keys doc
@@ -87,7 +87,7 @@ replEventMap ::
     , Has Config env, Has (MomentuTexts.Texts Text) env, Has (Texts.Definitions Text) env
     , Has (Texts.Collaboration Text) env
     ) =>
-    env -> ExportRepl m -> Sugar.Payload v name i (T m) a ->
+    env -> ExportRepl m -> Sugar.Payload v name i (T m) ->
     EventMap (IOTrans m GuiState.Update)
 replEventMap env (ExportRepl expRepl expFancy _execRepl) replExprPl =
     mconcat
@@ -243,7 +243,7 @@ make ::
     ) =>
     ExportRepl m ->
     Sugar.Repl (Sugar.EvaluationScopes Name (T m)) Name (T m) (T m)
-    (Sugar.Payload (Sugar.EvaluationScopes Name (T m)) Name (T m) (T m) ExprGui.Payload) ->
+    (Sugar.Payload (Sugar.EvaluationScopes Name (T m)) Name (T m) (T m), ExprGui.Payload) ->
     GuiM env (T m) (T m) (Responsive (IOTrans m))
 make expRepl (Sugar.Repl replExpr varInfo replResult) =
     do
@@ -273,5 +273,5 @@ make expRepl (Sugar.Repl replExpr varInfo replResult) =
             & GuiState.assignCursor WidgetIds.replId replExprId
     where
         replSymId = Widget.joinId WidgetIds.replId ["symbol"]
-        replExprPl = replExpr ^. SugarLens.binderResultExpr
+        replExprPl = replExpr ^. SugarLens.binderResultExpr . _1
         replExprId = WidgetIds.fromExprPayload replExprPl

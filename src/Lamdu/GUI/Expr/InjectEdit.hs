@@ -60,7 +60,7 @@ makeInject ::
     ) =>
     Sugar.Expr Sugar.Term (Sugar.EvaluationScopes Name i) Name i o ExprGui.Payload ->
     Sugar.TagRef Name i o ->
-    Sugar.Payload (Sugar.EvaluationScopes Name i) Name i o ExprGui.Payload ->
+    (Sugar.Payload (Sugar.EvaluationScopes Name i) Name i o, ExprGui.Payload) ->
     GuiM env i o (Responsive o)
 makeInject val tag pl =
     do
@@ -83,7 +83,7 @@ makeInject val tag pl =
             )
         & stdWrapParentExpr pl
     where
-        mReplaceParent = val ^. annotation . Sugar.plActions . Sugar.mReplaceParent
+        mReplaceParent = val ^. annotation . _1 . Sugar.plActions . Sugar.mReplaceParent
 
 emptyRec ::
     Annotated a # Const (Sugar.NullaryVal name i o) ->
@@ -105,10 +105,10 @@ makeNullaryInject ::
     , Has (Texts.Navigation Text) env
     ) =>
     Annotated
-    (Sugar.Payload (Sugar.EvaluationScopes Name i) Name i o ExprGui.Payload) #
+    (Sugar.Payload (Sugar.EvaluationScopes Name i) Name i o, ExprGui.Payload) #
         Const (Sugar.NullaryVal Name i o) ->
     Sugar.TagRef Name i o ->
-    Sugar.Payload (Sugar.EvaluationScopes Name i) Name i o ExprGui.Payload ->
+    (Sugar.Payload (Sugar.EvaluationScopes Name i) Name i o, ExprGui.Payload) ->
     GuiM env i o (Responsive o)
 makeNullaryInject nullary tag pl =
     GuiState.isSubCursor ?? nullaryRecEntityId
@@ -132,7 +132,7 @@ makeNullaryInject nullary tag pl =
                 & stdWrapParentExpr pl
     where
         nullaryRecEntityId =
-            nullary ^. annotation . Sugar.plEntityId
+            nullary ^. annotation . _1 . Sugar.plEntityId
             & WidgetIds.fromEntityId
 
 make ::

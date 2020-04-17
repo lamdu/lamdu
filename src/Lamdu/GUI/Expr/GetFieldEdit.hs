@@ -54,7 +54,7 @@ make (Ann (Const pl) (Sugar.GetField recExpr tag)) =
                 (E.toDoc env
                     [has . MomentuTexts.edit, has . MomentuTexts.delete])
         let delEventMap =
-                recExpr ^. annotation . Sugar.plActions . Sugar.mReplaceParent
+                recExpr ^. annotation . _1 . Sugar.plActions . Sugar.mReplaceParent
                 & foldMap mkDelEventMap
         tagEdit <-
             Styled.grammar (Label.make ".")

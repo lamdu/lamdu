@@ -64,7 +64,7 @@ make ::
     , TextEdit.HasTexts env
     , SearchMenu.HasTexts env
     ) =>
-    Annotated (Sugar.Payload (Sugar.EvaluationScopes Name i) Name i o ExprGui.Payload) #
+    Annotated (Sugar.Payload (Sugar.EvaluationScopes Name i) Name i o, ExprGui.Payload) #
         Const (Sugar.Hole (Sugar.EvaluationScopes Name i) Name i o) ->
     GuiM env i o (Responsive o)
 make (Ann (Const pl) (Const hole)) =
@@ -74,7 +74,7 @@ make (Ann (Const pl) (Const hole)) =
         env <- Lens.view id
         let (mkLitEventMap, delEventMap)
                 | searchTerm == "" =
-                    ( ExprEventMap.makeLiteralEventMap ?? pl ^. Sugar.plActions
+                    ( ExprEventMap.makeLiteralEventMap ?? pl ^. _1 . Sugar.plActions
                     , foldMap
                         (E.keysEventMapMovesCursor delKeys
                             (E.toDoc env
@@ -83,7 +83,7 @@ make (Ann (Const pl) (Const hole)) =
                         (hole ^. Sugar.holeMDelete)
                     )
                 | searchTerm == "-" =
-                    ( ExprEventMap.makeLiteralNumberEventMap "-" ?? pl ^. Sugar.plActions . Sugar.setToLiteral
+                    ( ExprEventMap.makeLiteralNumberEventMap "-" ?? pl ^. _1 . Sugar.plActions . Sugar.setToLiteral
                     , mempty
                     )
                 | otherwise = (mempty, mempty)
@@ -97,8 +97,8 @@ make (Ann (Const pl) (Const hole)) =
             <&> Responsive.fromWithTextPos
     where
         searchMenuId = hidOpen widgetIds
-        widgetIds = pl ^. Sugar.plEntityId & HoleWidgetIds.make
+        widgetIds = pl ^. _1 . Sugar.plEntityId & HoleWidgetIds.make
         options =
             ExprEventMap.defaultOptions
-            { ExprEventMap.addOperatorSetHoleState = Just (pl ^. Sugar.plEntityId)
+            { ExprEventMap.addOperatorSetHoleState = Just (pl ^. _1 . Sugar.plEntityId)
             }

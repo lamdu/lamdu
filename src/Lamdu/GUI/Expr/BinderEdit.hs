@@ -65,7 +65,7 @@ makeLetEdit item =
                         , has . Definitions.extractToOuter
                         ])
                     . fmap ExprEventMap.extractCursor
-                ) (item ^? Sugar.lValue . annotation . Sugar.plActions . Sugar.extract)
+                ) (item ^? Sugar.lValue . annotation . _1 . Sugar.plActions . Sugar.extract)
                 <>
                 E.keysEventMapMovesCursor (Config.delKeys env)
                 (E.toDoc env
@@ -90,7 +90,7 @@ makeLetEdit item =
                     <&> Widget.weakerEvents eventMap
                     <&> Element.padAround (env ^. has . Theme.letItemPadding))
     where
-        bodyId = item ^. Sugar.lBody . annotation & WidgetIds.fromExprPayload
+        bodyId = item ^. Sugar.lBody . annotation . _1 & WidgetIds.fromExprPayload
         binder = item ^. Sugar.lValue
 
 make ::
@@ -115,7 +115,7 @@ make (Ann (Const pl) (Sugar.BinderLet l)) =
         let moveToInnerEventMap =
                 body
                 ^? hVal . Sugar._BinderLet
-                . Sugar.lValue . annotation . Sugar.plActions
+                . Sugar.lValue . annotation . _1 . Sugar.plActions
                 . Sugar.extract
                 & foldMap
                 (E.keysEventMap (env ^. has . Config.moveLetInwardKeys)
@@ -133,5 +133,5 @@ make (Ann (Const pl) (Sugar.BinderLet l)) =
         & stdWrapParentExpr pl
         & Reader.local (Element.animIdPrefix .~ Widget.toAnimId myId)
     where
-        myId = WidgetIds.fromExprPayload pl
+        myId = WidgetIds.fromExprPayload (pl ^. _1)
         body = l ^. Sugar.lBody

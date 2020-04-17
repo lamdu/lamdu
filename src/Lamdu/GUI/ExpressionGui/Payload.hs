@@ -21,8 +21,8 @@ data Payload = Payload
 Lens.makeLenses ''Payload
 
 -- | Just myId or Nothing depending on whether parens are needed
-mParensId :: Sugar.Payload v name i o Payload -> Maybe AnimId
+mParensId :: (Sugar.Payload v name i o, Payload) -> Maybe AnimId
 mParensId pl
-    | pl ^. Sugar.plData . plParenInfo . Sugar.piNeedParens =
-          WidgetIds.fromExprPayload pl & WidgetId.toAnimId & Just
+    | pl ^. _2 . plParenInfo . Sugar.piNeedParens =
+          pl ^. _1 & WidgetIds.fromExprPayload & WidgetId.toAnimId & Just
     | otherwise = Nothing

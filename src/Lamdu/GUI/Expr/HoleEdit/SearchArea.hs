@@ -81,7 +81,7 @@ fdConfig env = FocusDelegator.Config
 
 makeRenderedResult ::
     (Monad i, Monad o, Has (MomentuTexts.Texts Text) env) =>
-    Sugar.Payload v name i o ExprGui.Payload -> SearchMenu.ResultsContext ->
+    ExprGui.Payload -> SearchMenu.ResultsContext ->
     Result i o ->
     GuiM env i o (Menu.RenderedOption o)
 makeRenderedResult pl ctx result =
@@ -90,7 +90,7 @@ makeRenderedResult pl ctx result =
         -- Running it more than once caused a horrible bug (bugfix: 848b6c4407)
         res <- rHoleResult result & GuiM.im
         res ^. Sugar.holeResultConverted
-            & postProcessSugar (pl ^. Sugar.plData . ExprGui.plParenInfo . Sugar.piMinOpPrec)
+            & postProcessSugar (pl ^. ExprGui.plParenInfo . Sugar.piMinOpPrec)
             & ResultWidget.make ctx (rId result)
                 (res ^. Sugar.holeResultPick)
 
@@ -111,7 +111,7 @@ postProcessSugar minOpPrec binder =
 
 makeResultOption ::
     (Monad i, Monad o, Has (MomentuTexts.Texts Text) env) =>
-    Sugar.Payload v name i o ExprGui.Payload -> SearchMenu.ResultsContext ->
+    ExprGui.Payload -> SearchMenu.ResultsContext ->
     ResultGroup i o -> Menu.Option (GuiM env i o) o
 makeResultOption pl ctx results =
     Menu.Option
@@ -166,7 +166,7 @@ make ::
     ) =>
     AnnotationMode ->
     i [Sugar.HoleOption (Sugar.EvaluationScopes Name i) Name i o] ->
-    Sugar.Payload (Sugar.EvaluationScopes Name i) Name i o ExprGui.Payload ->
+    (Sugar.Payload (Sugar.EvaluationScopes Name i) Name i o, ExprGui.Payload) ->
     (Text -> Bool) -> WidgetIds ->
     GuiM env i o (Menu.Placement -> TextWidget o)
 make annMode mkOptions pl allowedTerms widgetIds =
@@ -191,7 +191,7 @@ make annMode mkOptions pl allowedTerms widgetIds =
                         WithoutAnnotation -> pure Element.empty
                         WithAnnotation ->
                             Annotation.annotationSpacer
-                            /-/ makeInferredTypeAnnotation (pl ^. Sugar.plAnnotation) animId
+                            /-/ makeInferredTypeAnnotation (pl ^. _1 . Sugar.plAnnotation) animId
                     options <- GuiM.im mkOptions
                     -- ideally the fdWrap would be "inside" the
                     -- type-view addition and stdWrap, but it's not
@@ -219,7 +219,7 @@ make annMode mkOptions pl allowedTerms widgetIds =
         maybeAddAnn =
             case annMode of
             WithoutAnnotation -> pure id
-            WithAnnotation -> maybeAddAnnotationPl pl <&> (Align.tValue %~)
+            WithAnnotation -> maybeAddAnnotationPl (pl ^. _1) <&> (Align.tValue %~)
         makeTerm mPickFirst =
             do
                 theme <- Lens.view (has . Theme.hole)
@@ -244,6 +244,6 @@ make annMode mkOptions pl allowedTerms widgetIds =
             }
         filteredOptions opts ctx =
             ResultGroups.makeAll opts ctx
-            <&> Lens.mapped %~ makeResultOption pl ctx
+            <&> Lens.mapped %~ makeResultOption (pl ^. _2) ctx
             <&> Lens.mapped . Menu.optionWidgets . Align.tValue . Widget.eventMapMaker . Lens.mapped %~
                 filterSearchTermEvents allowedTerms (ctx ^. SearchMenu.rSearchTerm)

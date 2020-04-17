@@ -42,17 +42,17 @@ type T = Transaction
 data IsHidden = NotHidden | Hidden deriving (Show)
 
 allEntityIds ::
-    WorkArea v name i o (Sugar.Payload v name i o (t, [EntityId])) ->
+    WorkArea v name i o (Sugar.Payload v name i o, (t, [EntityId])) ->
     [(EntityId, IsHidden)]
 allEntityIds workArea =
-    (pls ^.. Lens.folded . plData . _2 . Lens.folded
+    (pls ^.. Lens.folded . _2 . _2 . Lens.folded
      <&> (, Hidden))
-    <> (pls ^.. Lens.folded . plEntityId <&> (, NotHidden))
+    <> (pls ^.. Lens.folded . _1 . plEntityId <&> (, NotHidden))
     where
         pls = workArea ^.. traverse
 
 validateHiddenEntityIds ::
-    WorkArea v name i o (Sugar.Payload v name i o (t, [EntityId])) -> Either String ()
+    WorkArea v name i o (Sugar.Payload v name i o, (t, [EntityId])) -> Either String ()
 validateHiddenEntityIds workArea
     | Set.null hiddenAndExplicit = Right ()
     | otherwise =
@@ -60,9 +60,9 @@ validateHiddenEntityIds workArea
         & Left
     where
         pls = workArea ^.. traverse
-        explicitEntityIds = pls ^.. Lens.folded . plEntityId & Set.fromList
+        explicitEntityIds = pls ^.. Lens.folded . _1 . plEntityId & Set.fromList
         hiddenEntityIds =
-            pls ^.. Lens.folded . plData . _2 . Lens.folded
+            pls ^.. Lens.folded . _2 . _2 . Lens.folded
             & Set.fromList
         hiddenAndExplicit = Set.intersection explicitEntityIds hiddenEntityIds
 
@@ -98,10 +98,10 @@ workAreaLowLevelLoad =
 validate ::
     (NFData v, NFData t, NFData name) =>
     WorkArea v name (T fa) (T fb)
-    (Sugar.Payload v name (T fa) (T fb) (t, [EntityId])) ->
+    (Sugar.Payload v name (T fa) (T fb), (t, [EntityId])) ->
     T ViewM
     (WorkArea v name (T fa) (T fb)
-        (Sugar.Payload v name (T fa) (T fb) (t, [EntityId])))
+        (Sugar.Payload v name (T fa) (T fb), (t, [EntityId])))
 validate workArea
     | Map.null duplicateEntityIds =
         do
@@ -134,8 +134,11 @@ convertWorkArea ::
     ) =>
     env ->
     T ViewM
-    (WorkArea (EvaluationScopes Name (T ViewM)) Name (T ViewM) (T ViewM)
-        (Sugar.Payload (EvaluationScopes Name (T ViewM)) Name (T ViewM) (T ViewM) (ParenInfo, [EntityId])))
+    ( WorkArea (EvaluationScopes Name (T ViewM)) Name (T ViewM) (T ViewM)
+        ( Sugar.Payload (EvaluationScopes Name (T ViewM)) Name (T ViewM) (T ViewM)
+        , (ParenInfo, [EntityId])
+        )
+    )
 convertWorkArea env =
     sugarWorkArea (Tag.getTagName env) env codeAnchors
     >>= validate

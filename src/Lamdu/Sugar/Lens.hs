@@ -158,16 +158,16 @@ evalResults ::
     Traversal (Expr e v0 name i o a) (Expr e v1 name i o a) v0 v1
 evalResults f (Ann a b) =
     Ann
-    <$> (Lens._Wrapped . plAnnotation . _AnnotationVal) f a
+    <$> (Lens._Wrapped . Lens._1 . plAnnotation . _AnnotationVal) f a
     <*> bodyEvalResults f b
 
 constEvalResults ::
     Traversal
-    (Annotated (Payload v0 name i o a) # Const x)
-    (Annotated (Payload v1 name i o a) # Const x)
+    (Annotated (Payload v0 name i o, a) # Const x)
+    (Annotated (Payload v1 name i o, a) # Const x)
     v0 v1
 constEvalResults f (Ann a (Const b)) =
-    (Lens._Wrapped . plAnnotation . _AnnotationVal) f a
+    (Lens._Wrapped . Lens._1 . plAnnotation . _AnnotationVal) f a
     <&> (`Ann` Const b)
 
 class EvalResults e where

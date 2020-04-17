@@ -352,24 +352,25 @@ makeAnnotation showAnn pl
 convertPayloads ::
     (Monad m, RTraversable h) =>
     Annotated (Ann.ShowAnnotation, ConvertPayload m a) # h ->
-    ConvertM m (Annotated (Payload EvalPrep InternalName (T m) (T m) a) # h)
+    ConvertM m (Annotated (Payload EvalPrep InternalName (T m) (T m), a) # h)
 convertPayloads = htraverseFlipped (const (Lens._Wrapped convertPayload))
 
 convertPayload ::
     Monad m =>
     (Ann.ShowAnnotation, ConvertPayload m a) ->
-    ConvertM m (Payload EvalPrep InternalName (T m) (T m) a)
+    ConvertM m (Payload EvalPrep InternalName (T m) (T m), a)
 convertPayload (showAnn, pl) =
     makeAnnotation showAnn (pl ^. pInput)
     <&>
     \x ->
-    Payload
-    { _plAnnotation = x
-    , _plActions = pl ^. pActions
-    , _plNeverShrinkTypeAnnotations = showAnn ^. Ann.showTypeAlways
-    , _plEntityId = pl ^. pInput . Input.entityId
-    , _plData = pl ^. pInput . Input.userData
-    }
+    ( Payload
+        { _plAnnotation = x
+        , _plActions = pl ^. pActions
+        , _plNeverShrinkTypeAnnotations = showAnn ^. Ann.showTypeAlways
+        , _plEntityId = pl ^. pInput . Input.entityId
+        }
+    , pl ^. pInput . Input.userData
+    )
 
 valFromLiteral ::
     Monad m =>

@@ -89,7 +89,7 @@ make (Ann (Const pl) (Sugar.Case mArg (Sugar.Composite alts punned caseTail addA
             case mArg of
             Sugar.LambdaCase -> pure Nothing
             Sugar.CaseWithArg arg ->
-                Annotation.evaluationResult (arg ^. Sugar.caVal . annotation)
+                Annotation.evaluationResult (arg ^. Sugar.caVal . annotation . _1)
                 <&> (>>= (^? Sugar.resBody . Sugar._RInject . Sugar.riTag))
         altsGui <-
             makeAltsWidget (mActiveTag <&> (^. Sugar.tagVal)) alts punned addAlt altsId
@@ -107,7 +107,7 @@ make (Ann (Const pl) (Sugar.Case mArg (Sugar.Composite alts punned caseTail addA
             Sugar.LambdaCase ->
                 do
                     header <- grammar (label Texts.lam) /|/ makeCaseLabel
-                    (Annotation.maybeAddAnnotationPl pl <&> (Widget.widget %~)) <*>
+                    (Annotation.maybeAddAnnotationPl (pl ^. _1) <&> (Widget.widget %~)) <*>
                         ( Styled.addValFrame <*>
                             (Options.boxSpaced ?? Options.disambiguationNone ?? [header, altsGui]))
             Sugar.CaseWithArg (Sugar.CaseArg arg toLambdaCase) ->
@@ -117,7 +117,7 @@ make (Ann (Const pl) (Sugar.Case mArg (Sugar.Composite alts punned caseTail addA
                         sequenceA
                         [ GuiM.makeSubexpression arg
                             <&> Widget.weakerEvents (toLambdaCaseEventMap env toLambdaCase)
-                        , (Annotation.maybeAddAnnotationPl pl <&> (Widget.widget %~)) <*>
+                        , (Annotation.maybeAddAnnotationPl (pl ^. _1) <&> (Widget.widget %~)) <*>
                             (Styled.addValFrame <*> (Responsive.vboxSpaced ?? [header, altsGui]))
                         ]
             <&> Widget.weakerEvents addAltEventMap
@@ -126,7 +126,7 @@ make (Ann (Const pl) (Sugar.Case mArg (Sugar.Composite alts punned caseTail addA
         wrap x =
             ExprEventMap.add ExprEventMap.defaultOptions pl <*>
             (Wrap.parentDelegator myId <*> x)
-        myId = WidgetIds.fromExprPayload pl
+        myId = WidgetIds.fromExprPayload (pl ^. _1)
         headerId = Widget.joinId myId ["header"]
         altsId = Widget.joinId myId ["alts"]
         makeCaseLabel =
@@ -183,7 +183,7 @@ makeAltsWidget ::
     ) =>
     Maybe Tag ->
     [Sugar.Body Sugar.CompositeItem (Sugar.EvaluationScopes Name i) Name i o ExprGui.Payload] ->
-    [ Annotated (Sugar.Payload (Sugar.EvaluationScopes Name i) Name i o ExprGui.Payload) #
+    [ Annotated (Sugar.Payload (Sugar.EvaluationScopes Name i) Name i o, ExprGui.Payload) #
         Const (Sugar.GetVar Name o)
     ] ->
     Sugar.TagReplace Name i o Sugar.EntityId ->
