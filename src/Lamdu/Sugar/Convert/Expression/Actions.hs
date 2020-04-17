@@ -73,7 +73,7 @@ mkExtractToDef exprPl =
                 >>= S.saveScheme
                 & runPureInfer @(V.Scope # UVar) V.emptyScope (ctx ^. ConvertM.scInferContext)
                 & Lens._Left %~ (\x -> x :: Pure # T.TypeError)
-                & (^?! Lens._Right . Lens._1)
+                & (^?! Lens._Right . _1)
         let deps = ctx ^. ConvertM.scFrozenDeps . Property.pVal
         newDefI <-
             Definition.Definition

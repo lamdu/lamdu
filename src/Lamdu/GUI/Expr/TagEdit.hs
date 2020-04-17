@@ -178,7 +178,7 @@ makeOptions tagRefReplace mkPickResult ctx
                 <&> (Fuzzy.memoableMake fuzzyMaker ?? searchTerm)
                 & GuiM.im
             let nonFuzzyResults =
-                    results ^? Lens.ix 0 . Lens._1 . Fuzzy.isFuzzy
+                    results ^? Lens.ix 0 . _1 . Fuzzy.isFuzzy
                     & any not
             addNewTag <- makeAddNewTag tagRefReplace
             let maybeAddNewTagOption

@@ -8,7 +8,6 @@ module Lamdu.Cache
     , make, FencedCache.Cache, FencedCache.fence
     ) where
 
-import qualified Control.Lens as Lens
 import           Control.Monad.RWS (RWST(..))
 import           Data.Cache.Fenced (Decl, function)
 import qualified Data.Cache.Fenced as FencedCache
@@ -58,7 +57,7 @@ rZipMatch (Ann a0 b0) (Ann a1 b1) =
 -- payload and cover it after
 infer :: forall a. Functions -> InferFunc a
 infer funcs defExpr =
-    fmap (Lens._1 %~ unvoid) . PureInfer . RWST $
+    fmap (_1 %~ unvoid) . PureInfer . RWST $
     \env s ->
     inferMemoized funcs (defExpr <&> hflipped %~ hmap (const (const (Const ()))), env, s)
     <&> \(iterm, topLevelScope, s') -> ((iterm, topLevelScope), s', ())
@@ -76,7 +75,7 @@ memoableInfer (expr, env, state) =
     unmemoizedInfer expr & runPureInfer env state
     <&>
     \((resTerm, topLevelScope), newState) ->
-    ( resTerm & hflipped %~ hmap (const (^. Lens._2))
+    ( resTerm & hflipped %~ hmap (const (^. _2))
     , topLevelScope
     , newState
     )

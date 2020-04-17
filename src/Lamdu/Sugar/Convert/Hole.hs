@@ -186,7 +186,7 @@ getNominals :: Monad m => ConvertM.Context m -> T m [(T.NominalId, Pure # Nomina
 getNominals sugarContext =
     getListing Anchors.tids sugarContext
     >>= traverse (\nomId -> (,) nomId <$> Load.nominal nomId)
-    <&> map (Lens.sequenceAOf Lens._2) <&> (^.. traverse . Lens._Just)
+    <&> map (Lens.sequenceAOf _2) <&> (^.. traverse . Lens._Just)
 
 getGlobals :: Monad m => ConvertM.Context m -> T m [DefI m]
 getGlobals sugarContext =

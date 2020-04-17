@@ -3,7 +3,6 @@ module Lamdu.Expr.Load
     ( def, defExpr, expr, nominal
     ) where
 
-import qualified Control.Lens as Lens
 import qualified Data.Property as Property
 import           Hyper
 import           Hyper.Type.AST.Nominal (NominalDecl)
@@ -25,7 +24,7 @@ expr (HRef valI writeRoot) =
     ExprIRef.readRecursively valI
     <&> hflipped %~ hmap (const (:*: Const ()))
     <&> ExprIRef.toHRefs writeRoot
-    <&> hflipped %~ hmap (const (^. Lens._1))
+    <&> hflipped %~ hmap (const (^. _1))
 
 defExprH ::
     Monad m =>

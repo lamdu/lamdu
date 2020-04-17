@@ -113,7 +113,7 @@ mkAppliedHoleSuggesteds sugarContext argI exprPl =
         p0 _ = Proxy
         onPl pl =
             ExistingRef (pl ^. Input.stored . iref) :*:
-            (pl ^. Input.inferRes & hflipped %~ hmap (const (^. Lens._2)))
+            (pl ^. Input.inferRes & hflipped %~ hmap (const (^. _2)))
         onSuggestion (sugg, newInferCtx) =
             ( sugg & hflipped %~ hmap (\_ _ -> Const ())
             , mkOptionFromFragment

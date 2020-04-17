@@ -86,7 +86,7 @@ instance AddEval Function where
                             ctx ^. evalResults
                             <&> (^. erAppliesOfLam . Lens.at u)
                             <&> fromMaybe mempty
-                            <&> Lens.mapped . Lens.mapped . Lens._2 %~
+                            <&> Lens.mapped . Lens.mapped . _2 %~
                                 addTypes (ctx ^. nominalsMap) (v ^. eType) .
                                 extractField () (info ^. piTag . tagRefTag . tagVal)
                             & ConvertEval.param (EntityId.ofEvalOf (info ^. piTag . tagRefTag . tagInstance))
@@ -96,14 +96,14 @@ instance AddEval Function where
         , _fBodyScopes =
             ctx ^. evalResults
             <&> (^. erAppliesOfLam . Lens.ix u)
-            <&> Lens.mapped . Lens.mapped %~ BinderParamScopeId . (^. Lens._1)
+            <&> Lens.mapped . Lens.mapped %~ BinderParamScopeId . (^. _1)
         }
         where
             appliesOfLam v =
                 ctx ^. evalResults
                 <&> (^. erAppliesOfLam . Lens.at u)
                 <&> fromMaybe mempty
-                <&> Lens.mapped . Lens.mapped . Lens._2 %~ addTypes (ctx ^. nominalsMap) (v ^. eType)
+                <&> Lens.mapped . Lens.mapped . _2 %~ addTypes (ctx ^. nominalsMap) (v ^. eType)
             EntityId u = i
 
 
@@ -150,7 +150,7 @@ instance AddEval Term where
             n = addToNode r
             addToHoleOption (HoleOption hi e s) =
                 HoleOption hi (e <&> addToNode r)
-                (s <&> Lens._2 . Lens.mapped . holeResultConverted %~ addToNode r)
+                (s <&> _2 . Lens.mapped . holeResultConverted %~ addToNode r)
 
 addToNode ::
     (AddEval e, Applicative i) =>

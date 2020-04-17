@@ -125,7 +125,7 @@ holeOptionTransformExprs ::
 holeOptionTransformExprs onExpr option =
     option
     { _hoSugaredBaseExpr = option ^. hoSugaredBaseExpr >>= onExpr
-    , _hoResults = option ^. hoResults <&> Lens._2 %~ (>>= holeResultConverted onExpr)
+    , _hoResults = option ^. hoResults <&> _2 %~ (>>= holeResultConverted onExpr)
     }
 
 holeTransformExprs ::
@@ -150,8 +150,8 @@ binderParamsFuncParams ::
     (BinderParams v1 name i o)
     (FuncParam v0 name)
     (FuncParam v1 name)
-binderParamsFuncParams f (NullParam x) = Lens._1 f x <&> NullParam
-binderParamsFuncParams f (Params x) = (traverse . Lens._1) f x <&> Params
+binderParamsFuncParams f (NullParam x) = _1 f x <&> NullParam
+binderParamsFuncParams f (Params x) = (traverse . _1) f x <&> Params
 
 evalResults ::
     (EvalResults e, Functor i) =>

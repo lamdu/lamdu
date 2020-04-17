@@ -40,8 +40,8 @@ migrateNomParams ::
     Aeson.Value -> Either Text Aeson.Value
 migrateNomParams nomsMap nomParams (Aeson.Object obj) =
     HashMap.toList obj
-    & (traverse . Lens._1) (migrateNomParam nomParams)
-    >>= (traverse . Lens._2) (migrateVal nomsMap)
+    & (traverse . _1) (migrateNomParam nomParams)
+    >>= (traverse . _2) (migrateVal nomsMap)
     <&> HashMap.fromList
     <&> Aeson.Object
 migrateNomParams _ _ _ = Left "malformed nomParams"
@@ -134,7 +134,7 @@ extraNoms =
     , -- IO
         ("42493a494f0000000000000000000000", [eff])
     ]
-    <&> Lens._2 %~ Map.fromList . map (join (,))
+    <&> _2 %~ Map.fromList . map (join (,))
     & Map.fromList
     where
         value = "42493a76616c00000000000000000000"

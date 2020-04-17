@@ -90,7 +90,7 @@ termTransformsWithoutSplit srcScope mkPl getInferred src =
                 | Lens.nullOf (hVal . V._BToNom) src ->
                     do
                         fromNomRes <- V.LFromNom name & V.BLeaf & inferBody
-                        let fromNomTyp = fromNomRes ^. Lens._2 . _ANode
+                        let fromNomTyp = fromNomRes ^. _2 . _ANode
                         resultType <- newUnbound
                         _ <- FuncType s1 resultType & T.TFun & newTerm >>= unify fromNomTyp
                         V.App (mkResult fromNomTyp (V.BLeaf (V.LFromNom name))) src

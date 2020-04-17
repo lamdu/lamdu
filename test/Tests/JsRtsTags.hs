@@ -18,7 +18,7 @@ test =
     do
         freshDbTags <-
             readFreshDb
-            <&> (^.. traverse . JsonCodec._EntityTag . Lens._2 . tagTexts
+            <&> (^.. traverse . JsonCodec._EntityTag . _2 . tagTexts
                  . Lens.ix (LangId "english") . name)
             <&> Set.fromList
         rtsConfig <- readDataFile "js/export/rtsConfig.js"
@@ -28,8 +28,8 @@ test =
         let nameMap =
                 nameMapItemTxts
                 <&> break (== ':')
-                <&> Lens._1 %~ fromString . dropWhile (== ' ') . dropWhile (== '\n')
-                <&> Lens._2 %~
+                <&> _1 %~ fromString . dropWhile (== ' ') . dropWhile (== '\n')
+                <&> _2 %~
                     fromString . takeWhile (/= '\'') .
                     dropWhile (== '\'') . dropWhile (== ' ') . tail
                 & filter ((/= "data") . fst)

@@ -44,7 +44,7 @@ convert defType defExpr defI =
                 generalize (defExpr ^. Definition.expr . hAnn . Input.inferredTypeUVar)
                 >>= saveScheme
                 & runPureInfer @(V.Scope # UVar) V.emptyScope inferContext
-                & (^?! Lens._Right . Lens._1)
+                & (^?! Lens._Right . _1)
         unless (alphaEq defType inferredType) $
             fail $ "Def type mismatches its inferred type! " <> show (pPrint (defType, inferredType))
         defTypeS <- ConvertType.convertScheme (EntityId.currentTypeOf entityId) defType

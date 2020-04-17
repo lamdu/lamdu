@@ -164,7 +164,7 @@ convertParamsRecord param exprPl =
     { _prvFieldNames =
         exprPl
         ^.. Input.inferredType . _Pure . T._TRecord . T.flatRow
-        . freExtends . Lens.to Map.toList . traverse . Lens._1
+        . freExtends . Lens.to Map.toList . traverse . _1
         <&> nameWithContext param
     } <$ check
     where

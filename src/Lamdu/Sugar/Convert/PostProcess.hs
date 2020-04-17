@@ -38,7 +38,7 @@ makeScheme (Load.InferOut inferredVal inferContext) =
     generalize (inferredVal ^. hAnn . Input.inferredTypeUVar)
     >>= saveScheme
     & runPureInfer @(V.Scope # UVar) V.emptyScope inferContext
-    <&> (^. Lens._1)
+    <&> (^. _1)
 
 def :: Monad m => Load.InferFunc (HRef m) -> Debug.Monitors -> DefI m -> T m Result
 def infer monitors defI =

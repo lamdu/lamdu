@@ -106,7 +106,7 @@ readValAndAddProperties prop =
     ExprIRef.readRecursively (prop ^. ExprIRef.iref)
     <&> hflipped %~ hmap (const (:*: Const ()))
     <&> ExprIRef.toHRefs (prop ^. ExprIRef.setIref)
-    <&> hflipped %~ hmap (const (^. Lens._1))
+    <&> hflipped %~ hmap (const (^. _1))
 
 data InferOut m = InferOut
     { _irVal :: Ann (Input.Payload m [EntityId]) # V.Term
@@ -144,7 +144,7 @@ inferDef inferFunc monitors defExpr defVar =
         (inferredVal, scope) <-
             inferFunc defExpr
             & Reader.local (V.scopeVarTypes . Lens.at defVar ?~ MkHFlip (GMono defTv))
-        (inferredVal, scope) <$ unify defTv (inferredVal ^. hAnn . Lens._2 . inferResult)
+        (inferredVal, scope) <$ unify defTv (inferredVal ^. hAnn . _2 . inferResult)
     & runInferResult monitors
 
 inferDefExpr ::

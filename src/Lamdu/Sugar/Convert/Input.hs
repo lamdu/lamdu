@@ -39,10 +39,10 @@ Lens.makeLenses ''Payload
 makeHTraversableAndBases ''Payload
 
 inferredType :: Lens' (Payload m a # V.Term) (Pure # Type)
-inferredType = inferRes . inferResult . Lens._1
+inferredType = inferRes . inferResult . _1
 
 inferredTypeUVar :: Lens' (Payload m a # V.Term) (UVar # Type)
-inferredTypeUVar = inferRes . inferResult . Lens._2
+inferredTypeUVar = inferRes . inferResult . _2
 
 data PreparePayloadInput (pl :: HyperType) t = PreparePayloadInput
     { ppEntityId :: EntityId -- used to build a map from Var => EntityId of all getVars
@@ -95,7 +95,7 @@ instance SugarInput V.Term where
                 innerScope =
                     iScope
                     & V.scopeVarTypes . Lens.at var ?~
-                        _HFlip # GMono (t ^. hAnn . inferRes . inferResult . Lens._2)
+                        _HFlip # GMono (t ^. hAnn . inferRes . inferResult . _2)
         x -> hmap (Proxy @SugarInput #> initScopes iScope locals) x
         & Ann (pl & localsInScope <>~ locals & inferScope .~ iScope)
 

@@ -112,7 +112,7 @@ checkMissing whole part msg
 
 parseCabalDeps :: String -> Set String
 parseCabalDeps cabal =
-    scanl processLine (False, mempty) (lines cabal) ^. traverse . Lens._2
+    scanl processLine (False, mempty) (lines cabal) ^. traverse . _2
     where
         processLine (isDeps, _) line
             | buildDepsPrefix `isPrefixOf` line =

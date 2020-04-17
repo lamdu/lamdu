@@ -342,17 +342,17 @@ testInsistSubsets =
             hVal . _BodyLam . lamFunc . fBody .
             hVal . _BinderTerm . _BodyLabeledApply . aSpecialArgs . _Operator
         insist =
-            Lens.cloneTraversal consArgs . Lens._2 .
+            Lens.cloneTraversal consArgs . _2 .
             hVal . _BodyLam . lamFunc . fBody .
             hVal . _BinderLet . lBody .
-            hVal . _BinderTerm . _BodyLabeledApply . aSpecialArgs . _Operator . Lens._2 .
+            hVal . _BinderTerm . _BodyLabeledApply . aSpecialArgs . _Operator . _2 .
             hVal . _BodyLam . lamFunc . fBody .
-            hVal . _BinderTerm . _BodyLabeledApply . aSpecialArgs . _Operator . Lens._1 .
+            hVal . _BinderTerm . _BodyLabeledApply . aSpecialArgs . _Operator . _1 .
             hVal . _BodyFragment . fHeal
         verify workArea
             | Lens.has expected workArea = pure ()
             | otherwise = fail "fragment not created at expected position"
-        expected = Lens.cloneTraversal consArgs . Lens._1 . hVal . _BodyFragment
+        expected = Lens.cloneTraversal consArgs . _1 . hVal . _BodyFragment
 
 testLightLambda :: Test
 testLightLambda =

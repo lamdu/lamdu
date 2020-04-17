@@ -269,8 +269,8 @@ makeTagTexts env p1texts =
     where
         mkTagTexts fullText tags
             | isReserved env fullText || Map.size tags > 1 =
-                countMissing 0 Lens._2 (tags ^@.. Lens.itraversed)
-                <&> Lens._2 %~ tagText env fullText . Collision . either (Text.pack . show) id
+                countMissing 0 _2 (tags ^@.. Lens.itraversed)
+                <&> _2 %~ tagText env fullText . Collision . either (Text.pack . show) id
                 & Map.fromList
             | otherwise =
                 Lens.imap mkTagText tags
