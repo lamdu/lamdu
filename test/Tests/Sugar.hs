@@ -508,8 +508,7 @@ testHoleTypeShown =
             AnnotationType {} -> "Type"
             AnnotationVal {} -> "Val"
             AnnotationNone {} -> "None"
-        x ^. annotation . plAnnotation
-            & Lens.has _AnnotationType
+        Lens.has (annotation . plAnnotation . _AnnotationType) x
             & assertBool "Expected to have type"
 
 -- Test for issue #497
