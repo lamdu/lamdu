@@ -1,4 +1,4 @@
-{-# LANGUAGE TypeApplications, DisambiguateRecordFields, KindSignatures, FlexibleInstances, DefaultSignatures, DataKinds, TypeFamilies #-}
+{-# LANGUAGE TypeApplications, DisambiguateRecordFields, FlexibleInstances, DefaultSignatures, DataKinds, TypeFamilies #-}
 module Lamdu.Sugar.Convert.Binder
     ( convertDefinitionBinder, convertLam
     , convertBinder

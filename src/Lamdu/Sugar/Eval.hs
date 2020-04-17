@@ -174,12 +174,11 @@ addToPayload ctx a =
     a
     & plAnnotation . _AnnotationVal %~
         \v ->
-        ( ctx ^. evalResults
-            <&> (^. erExprValues . Lens.at u)
-            <&> fromMaybe mempty
-            <&> Lens.mapped %~ addTypes (ctx ^. nominalsMap) (v ^. eType)
-            & ConvertEval.results (EntityId.ofEvalOf i)
-        )
+        ctx ^. evalResults
+        <&> (^. erExprValues . Lens.at u)
+        <&> fromMaybe mempty
+        <&> Lens.mapped %~ addTypes (ctx ^. nominalsMap) (v ^. eType)
+        & ConvertEval.results (EntityId.ofEvalOf i)
     where
         EntityId u = i
         i = a ^. plEntityId

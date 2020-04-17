@@ -255,5 +255,5 @@ instance EvalResults Term where
         \e ->
         BodyFragment x
         { _fExpr = e
-        , _fOptions = x ^. fOptions <&> const [] -- "Cheat"
+        , _fOptions = [] <$ x ^. fOptions
         }
