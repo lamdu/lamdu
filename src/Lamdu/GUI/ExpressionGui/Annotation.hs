@@ -39,7 +39,6 @@ import qualified Lamdu.Config.Theme.ValAnnotation as ValAnnotation
 import qualified Lamdu.GUI.EvalView as EvalView
 import           Lamdu.GUI.ExpressionGui.Monad (GuiM)
 import qualified Lamdu.GUI.ExpressionGui.Monad as GuiM
-import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
 import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.GUI.TypeView as TypeView
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
@@ -254,7 +253,7 @@ maybeAddAnnotationPl ::
     ( Monad i, Monad o, Glue.HasTexts env, Has (Texts.Code Text) env
     , Has (Texts.Name Text) env
     ) =>
-    Sugar.Payload (Sugar.EvaluationScopes Name i) Name i o1 ExprGui.Payload -> GuiM env i o (Widget o -> Widget o)
+    Sugar.Payload (Sugar.EvaluationScopes Name i) Name i o1 a -> GuiM env i o (Widget o -> Widget o)
 maybeAddAnnotationPl pl =
     do
         postProcessAnnotation <-
@@ -270,7 +269,7 @@ maybeAddAnnotationPl pl =
 
 evaluationResult ::
     Monad i =>
-    Sugar.Payload (Sugar.EvaluationScopes name i) name i o ExprGui.Payload ->
+    Sugar.Payload (Sugar.EvaluationScopes name i) name i o a ->
     GuiM env i o (Maybe (Sugar.ResVal name))
 evaluationResult pl =
     do
