@@ -10,7 +10,8 @@ import           Hyper
 import           Hyper.Type.AST.Nominal (NominalDecl)
 import           Lamdu.Calc.Lens (tIds)
 import qualified Lamdu.Calc.Type as T
-import           Lamdu.Eval.Results (EvalResults, erExprValues, erAppliesOfLam, extractField)
+import qualified Lamdu.Data.Anchors as Anchors
+import           Lamdu.Eval.Results (EvalResults, erExprValues, erAppliesOfLam, erCompleted, extractField)
 import           Lamdu.Eval.Results.Process (addTypes)
 import qualified Lamdu.Sugar.Convert.Eval as ConvertEval
 import           Lamdu.Sugar.Convert.Load (makeNominalsMap)
@@ -192,12 +193,13 @@ addToConst r (Ann (Const pl) (Const x)) = Ann (Const (pl & _1 %~ addToPayload r)
 
 addEvaluationResults ::
     (Applicative i, Monad m) =>
+    Anchors.CodeAnchors m ->
     CurAndPrev EvalResults ->
-    WorkArea EvalPrep name i o (Payload EvalPrep name i o, a) ->
+    WorkArea EvalPrep name i (T m) (Payload EvalPrep name i (T m), a) ->
     T m (
-        WorkArea (EvaluationScopes InternalName i) name i o
-        (Payload (EvaluationScopes InternalName i) name i o, a))
-addEvaluationResults r (WorkArea panes repl listGlobals) =
+        WorkArea (EvaluationScopes InternalName i) name i (T m)
+        (Payload (EvaluationScopes InternalName i) name i (T m), a))
+addEvaluationResults cp r (WorkArea panes repl listGlobals) =
     makeNominalsMap (evalPreps ^.. traverse . eType . tIds) <&> AddEvalCtx r
     <&>
     \ctx ->
@@ -205,7 +207,10 @@ addEvaluationResults r (WorkArea panes repl listGlobals) =
     ( panes <&>
         paneBody . _PaneDefinition . drBody .
         _DefinitionBodyExpression . deContent %~ addToNode ctx)
-    (repl & replExpr %~ addToNode ctx)
+    ( repl
+        & replExpr %~ addToNode ctx
+        & replResult .~ (r <&> (^. erCompleted) & ConvertEval.completion cp)
+        )
     listGlobals
     where
         evalPreps =

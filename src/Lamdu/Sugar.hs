@@ -46,7 +46,7 @@ sugarWorkArea ::
             (Sugar.ParenInfo, [Sugar.EntityId])))
 sugarWorkArea getTagName env cp =
     SugarConvert.loadWorkArea env cp
-    >>= addEvaluationResults (env ^. has)
+    >>= addEvaluationResults cp (env ^. has)
     >>= report .
         AddNames.addToWorkArea env
         (fmap getTagName . ExprIRef.readTagData)

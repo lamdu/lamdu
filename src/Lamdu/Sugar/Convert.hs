@@ -5,7 +5,7 @@ module Lamdu.Sugar.Convert
 import           Control.Applicative ((<|>))
 import qualified Control.Lens as Lens
 import           Control.Monad.Transaction (MonadTransaction)
-import           Data.CurAndPrev (CurAndPrev)
+import           Data.CurAndPrev (CurAndPrev(..))
 import           Data.List.Extended (insertAt, removeAt)
 import           Data.Property (Property(Property))
 import qualified Data.Property as Property
@@ -19,8 +19,6 @@ import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Data.Tag as Tag
 import qualified Lamdu.Debug as Debug
-import           Lamdu.Eval.Results (EvalResults)
-import qualified Lamdu.Eval.Results as ER
 import           Lamdu.Expr.IRef (DefI, HRef)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Load as ExprLoad
@@ -30,7 +28,6 @@ import           Lamdu.Sugar.Convert.Binder (convertBinder)
 import           Lamdu.Sugar.Convert.Binder.Params (mkVarInfo)
 import qualified Lamdu.Sugar.Convert.DefExpr as ConvertDefExpr
 import qualified Lamdu.Sugar.Convert.DefExpr.OutdatedDefs as OutdatedDefs
-import qualified Lamdu.Sugar.Convert.Eval as ConvertEval
 import qualified Lamdu.Sugar.Convert.Expression as ConvertExpr
 import           Lamdu.Sugar.Convert.Expression.Actions (convertPayloads)
 import qualified Lamdu.Sugar.Convert.GetVar as ConvertGetVar
@@ -176,7 +173,6 @@ markAnnotations config
 convertRepl ::
     ( HasCallStack, Monad m
     , Has Debug.Monitors env
-    , Has (CurAndPrev EvalResults) env
     , Has Config env, Has Cache.Functions env, Has Annotations.Mode env
     ) =>
     env -> Anchors.CodeAnchors m ->
@@ -220,7 +216,7 @@ convertRepl env cp =
         pure Repl
             { _replExpr = expr
             , _replVarInfo = mkVarInfo typS
-            , _replResult = ConvertEval.completion cp (env ^. has <&> (^. ER.erCompleted))
+            , _replResult = CurAndPrev Nothing Nothing
             }
     where
         cachedInfer = Cache.infer (env ^. has)
@@ -336,7 +332,6 @@ loadPanes env cp replEntityId =
 loadWorkArea ::
     ( HasCallStack, Monad m
     , Has Debug.Monitors env
-    , Has (CurAndPrev EvalResults) env
     , Has Config env, Has Cache.Functions env, Has Annotations.Mode env
     ) =>
     env -> Anchors.CodeAnchors m ->
