@@ -1,4 +1,3 @@
-{-# LANGUAGE TypeApplications #-}
 module Lamdu.Sugar.Convert
     ( loadWorkArea, InternalName
     ) where
@@ -12,12 +11,8 @@ import           Data.Property (Property(Property))
 import qualified Data.Property as Property
 import qualified Data.Set as Set
 import           Hyper
-import           Hyper.Class.Infer.InferOf
-import           Hyper.Class.Nodes
-import           Hyper.Infer (InferOf)
 import qualified Lamdu.Annotations as Annotations
 import qualified Lamdu.Cache as Cache
-import qualified Lamdu.Calc.Lens as ExprLens
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Data.Anchors as Anchors
@@ -26,7 +21,6 @@ import qualified Lamdu.Data.Tag as Tag
 import qualified Lamdu.Debug as Debug
 import           Lamdu.Eval.Results (EvalResults)
 import qualified Lamdu.Eval.Results as ER
-import           Lamdu.Eval.Results.Process (addTypes)
 import           Lamdu.Expr.IRef (DefI, HRef)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Load as ExprLoad
@@ -215,25 +209,6 @@ convertRepl env cp =
                 , scConvertSubexpression = ConvertExpr.convert
                 }
         let typ = valInferred ^. hAnn . Input.inferredType
-        nomsMap <-
-            hfoldMap
-            ( Proxy @(Recursively (InferOfConstraint HFoldable)) #*#
-                Proxy @(Recursively (InferOfConstraint (HNodesHaveConstraint ExprLens.HasTIds))) #*#
-                \w ->
-                withDict (recursively (p0 w)) $
-                withDict (recursively (p1 w)) $
-                withDict (inferOfConstraint (Proxy @HFoldable) w) $
-                withDict (inferOfConstraint (Proxy @(HNodesHaveConstraint ExprLens.HasTIds)) w) $
-                withDict (hNodesHaveConstraint (Proxy @ExprLens.HasTIds) (p2 w)) $
-                hfoldMap
-                ( Proxy @ExprLens.HasTIds #> (^.. _1 . ExprLens.tIds)
-                ) . (^. Input.inferRes . hflipped)
-            ) (_HFlip # valInferred)
-            & Load.makeNominalsMap
-        let completion =
-                env ^. has
-                <&> (^. ER.erCompleted)
-                <&> Lens._Just . Lens._Right %~ addTypes nomsMap typ
         expr <-
             convertBinder valInferred
             <&> markAnnotations (env ^. has)
@@ -245,15 +220,9 @@ convertRepl env cp =
         pure Repl
             { _replExpr = expr
             , _replVarInfo = mkVarInfo typS
-            , _replResult = ConvertEval.completion cp completion
+            , _replResult = ConvertEval.completion cp (env ^. has <&> (^. ER.erCompleted))
             }
     where
-        p0 :: proxy h -> Proxy (InferOfConstraint HFoldable h)
-        p0 _ = Proxy
-        p1 :: proxy h -> Proxy (InferOfConstraint (HNodesHaveConstraint ExprLens.HasTIds) h)
-        p1 _ = Proxy
-        p2 :: proxy h -> Proxy (InferOf h)
-        p2 _ = Proxy
         cachedInfer = Cache.infer (env ^. has)
         postProcess = PostProcess.expr cachedInfer (env ^. has) prop
         prop = Anchors.repl cp

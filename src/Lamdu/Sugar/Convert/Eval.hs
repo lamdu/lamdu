@@ -216,7 +216,7 @@ param entityId evalResults =
 completion ::
     Monad m =>
     Anchors.CodeAnchors m ->
-    CurAndPrev (Maybe (Either (ER.EvalException UUID) ERV)) ->
+    CurAndPrev (Maybe (Either (ER.EvalException UUID) a)) ->
     EvalCompletion (T m)
 completion cp completions =
     completions <&> Lens._Just %~ f
