@@ -245,7 +245,7 @@ convertRepl env cp =
         pure Repl
             { _replExpr = expr
             , _replVarInfo = mkVarInfo typS
-            , _replResult = ConvertEval.completion cp replEntityId completion
+            , _replResult = ConvertEval.completion cp completion
             }
     where
         p0 :: proxy h -> Proxy (InferOfConstraint HFoldable h)

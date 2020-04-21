@@ -91,7 +91,7 @@ data Pane v name i o a = Pane
 data Repl v name i o a = Repl
     { _replExpr :: Annotated a # Binder v name i o
     , _replVarInfo :: VarInfo
-    , _replResult :: EvalCompletion name o
+    , _replResult :: EvalCompletion o
     } deriving Generic
 
 Lens.makeLenses ''Repl

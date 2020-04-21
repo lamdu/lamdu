@@ -204,7 +204,7 @@ resultWidget ::
     , Has (Texts.Navigation Text) env
     , Glue.HasTexts env
     ) =>
-    ExportRepl o -> Sugar.VarInfo -> CurPrevTag -> Sugar.EvalCompletionResult name (T o) ->
+    ExportRepl o -> Sugar.VarInfo -> CurPrevTag -> Sugar.EvalCompletionResult (T o) ->
     m (TextWidget (IOTrans o))
 resultWidget expRepl varInfo tag Sugar.EvalSuccess{} =
     do

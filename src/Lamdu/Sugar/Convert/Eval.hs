@@ -216,9 +216,9 @@ param entityId evalResults =
 completion ::
     Monad m =>
     Anchors.CodeAnchors m ->
-    EntityId -> CurAndPrev (Maybe (Either (ER.EvalException UUID) ERV)) ->
-    EvalCompletion InternalName (T m)
-completion cp entityId completions =
+    CurAndPrev (Maybe (Either (ER.EvalException UUID) ERV)) ->
+    EvalCompletion (T m)
+completion cp completions =
     completions <&> Lens._Just %~ f
     where
         f (Left (ER.EvalException errType position)) =
@@ -236,4 +236,4 @@ completion cp entityId completions =
                         & Anchors.PaneDefinition
                         & DataOps.newPane cp
                 }
-        f (Right x) = convertVal entityId x & EvalSuccess
+        f Right{} = EvalSuccess

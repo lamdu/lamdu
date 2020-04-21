@@ -528,11 +528,7 @@ toPane :: MonadNaming m => OldTop Pane m o a -> m (NewTop Pane m o a)
 toPane = paneBody toPaneBody
 
 toRepl :: MonadNaming m => OldTop Repl m o a -> m (NewTop Repl m o a)
-toRepl (Repl bod varInfo res) =
-    Repl
-    <$> toNode toBinder bod
-    <*> pure varInfo
-    <*> (traverse . Lens._Just . _EvalSuccess) toResVal res
+toRepl = replExpr (toNode toBinder)
 
 toWorkArea :: MonadNaming m => OldTop WorkArea m o a -> m (NewTop WorkArea m o a)
 toWorkArea WorkArea { _waPanes, _waRepl, _waGlobals } =

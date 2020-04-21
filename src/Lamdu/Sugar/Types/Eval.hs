@@ -94,12 +94,12 @@ data EvalException o = EvalException
     , _evalExceptionJumpTo :: Maybe (o EntityId)
     } deriving Generic
 
-data EvalCompletionResult name o
-    = EvalSuccess (ResVal name)
+data EvalCompletionResult o
+    = EvalSuccess
     | EvalError (EvalException o)
     deriving Generic
 
-type EvalCompletion name o = CurAndPrev (Maybe (EvalCompletionResult name o))
+type EvalCompletion o = CurAndPrev (Maybe (EvalCompletionResult o))
 
 Lens.makeLenses ''EvalException
 Lens.makeLenses ''ResInject
