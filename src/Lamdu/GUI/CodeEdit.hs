@@ -114,7 +114,7 @@ make cp gp width =
         theExportActions <- Lens.view has
         env <- Lens.view id
         workArea <-
-            sugarWorkArea (Tag.getTagName env) env cp
+            sugarWorkArea (Tag.getTagName env) env cp >>= (env ^. has &)
             <&> Lens.mapped . Lens.mapped %~ uncurry ExprGui.Payload
             & transaction
         gotoDefinition <-

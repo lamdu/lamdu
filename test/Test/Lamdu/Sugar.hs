@@ -141,6 +141,7 @@ convertWorkArea ::
     )
 convertWorkArea env =
     sugarWorkArea (Tag.getTagName env) env codeAnchors
+    >>= (env ^. has &)
     >>= validate
 
 testProgram :: FilePath -> T ViewM a -> IO a

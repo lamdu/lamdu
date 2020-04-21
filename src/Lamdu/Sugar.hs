@@ -34,19 +34,22 @@ sugarWorkArea ::
     , Has (Texts.Name Text) env
     , Has (Texts.Code Text) env
     , Has Debug.Monitors env
-    , Has (CurAndPrev EvalResults) env
     , Has SugarConfig.Config env
     , Has Cache.Functions env, Has Annotations.Mode env
     , Monad m
     ) =>
     (Tag -> (IsOperator, TextsInLang)) -> env -> Anchors.CodeAnchors m ->
     T m
-    (Sugar.WorkArea (Sugar.EvaluationScopes Name (T m)) Name (T m) (T m)
-        (Sugar.Payload (Sugar.EvaluationScopes Name (T m)) Name (T m) (T m),
-            (Sugar.ParenInfo, [Sugar.EntityId])))
+    ( CurAndPrev EvalResults ->
+        T m (Sugar.WorkArea (Sugar.EvaluationScopes Name (T m)) Name (T m) (T m)
+            (Sugar.Payload (Sugar.EvaluationScopes Name (T m)) Name (T m) (T m),
+                (Sugar.ParenInfo, [Sugar.EntityId])))
+    )
 sugarWorkArea getTagName env cp =
     SugarConvert.loadWorkArea env cp
-    >>= addEvaluationResults cp (env ^. has)
+    <&>
+    \workArea eval ->
+    addEvaluationResults cp eval workArea
     >>= report .
         AddNames.addToWorkArea env
         (fmap getTagName . ExprIRef.readTagData)
