@@ -85,12 +85,12 @@ type Ctx env =
     , Has (Sprites Sprite) env
     )
 
-layout ::
+make ::
     Ctx env =>
     [TitledSelection Folder.Theme] -> [TitledSelection Folder.Language] ->
-    Property IO Settings ->
-    ReaderT env (T DbM) (Widget (IOTrans DbM))
-layout themeNames langNames settingsProp =
+    Property IO Settings -> env ->
+    T DbM (Widget (IOTrans DbM))
+make themeNames langNames settingsProp env =
     do
         vcActions <-
             VersionControl.makeActions <&> VCActions.hoist IOTrans.liftTrans & lift
@@ -98,7 +98,6 @@ layout themeNames langNames settingsProp =
         fullSize <- Lens.view (has . MainLoop.eWindowSize)
         state <- Lens.view has
         let viewToDb x = x & IOTrans.trans %~ VersionControl.runEvent state
-        env <- Lens.view id
         (gotoDefinition, codeEdit) <-
             sugarWorkArea (Tag.getTagName env) env DbLayout.codeAnchors & lift
             >>= CodeEdit.make DbLayout.codeAnchors DbLayout.guiAnchors (fullSize ^. _1)
@@ -124,13 +123,5 @@ layout themeNames langNames settingsProp =
             <&> Widget.weakerEventsWithoutPreevents
                 (statusBar ^. StatusBar.globalEventMap <> quitEventMap
                     <> vcEventMap)
-
-make ::
-    Ctx env =>
-    [TitledSelection Folder.Theme] -> [TitledSelection Folder.Language] ->
-    Property IO Settings -> env ->
-    T DbM (Widget (IOTrans DbM))
-make themeNames langNames settingsProp env =
-    layout themeNames langNames settingsProp
     & GuiState.assignCursor mempty defaultCursor
     & (`runReaderT` env)
