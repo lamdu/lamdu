@@ -121,9 +121,9 @@ mkOption ::
     Monad m =>
     ConvertM.Context m -> ResultProcessor m ->
     Input.Payload m a # V.Term -> Val () ->
-    HoleOption EvalPrep InternalName (OnceT (T m)) (T m)
+    OnceT (T m) (HoleOption EvalPrep InternalName (OnceT (T m)) (T m))
 mkOption sugarContext resultProcessor holePl x =
-    HoleOption
+    pure HoleOption
     { _hoEntityId =
         x
         & ExprLens.valLeafs . V._LLiteral . V.primData .~ mempty
@@ -138,7 +138,7 @@ mkHoleSuggesteds ::
     Monad m =>
     ConvertM.Context m -> ResultProcessor m ->
     Input.Payload m a # V.Term ->
-    [(Val (), HoleOption EvalPrep InternalName (OnceT (T m)) (T m))]
+    OnceT (T m) [(Val (), HoleOption EvalPrep InternalName (OnceT (T m)) (T m))]
 mkHoleSuggesteds sugarContext resultProcessor holePl =
     holePl ^. Input.inferredTypeUVar
     & Completions.suggestForType
@@ -150,7 +150,8 @@ mkHoleSuggesteds sugarContext resultProcessor holePl =
     & assertSuccessfulInfer
     & fst
     <&> hflipped %~ hmap (const (const (Const ()))) -- TODO: "Avoid re-inferring known type here"
-    <&> \x -> (x, mkOption sugarContext resultProcessor holePl x)
+    & traverse
+        (\x -> mkOption sugarContext resultProcessor holePl x <&> (,) x)
     where
         inferCtx = sugarContext ^. ConvertM.scInferContext
 
@@ -223,9 +224,10 @@ mkOptions posInfo resultProcessor holePl =
     <&>
     \sugarContext ->
     do
-        nominalOptions <- getNominals sugarContext <&> mkNominalOptions
-        globals <- getGlobals sugarContext
-        tags <- getTags sugarContext
+        nominalOptions <- getNominals sugarContext & lift <&> mkNominalOptions
+        globals <- getGlobals sugarContext & lift
+        tags <- getTags sugarContext & lift
+        suggesteds <- mkHoleSuggesteds sugarContext resultProcessor holePl
         concat
             [ holePl ^. Input.localsInScope >>= getLocalScopeGetVars sugarContext
             , globals <&> V.BLeafP . V.LVar . ExprIRef.globalId
@@ -239,10 +241,8 @@ mkOptions posInfo resultProcessor holePl =
               ]
             ]
             <&> wrap (const (Ann (Const ()))) . (^. hPlain)
-            <&> (\x -> (x, mkOption sugarContext resultProcessor holePl x))
-            & addWithoutDups (mkHoleSuggesteds sugarContext resultProcessor holePl)
-            & pure
-    & lift
+            & traverse (\x -> mkOption sugarContext resultProcessor holePl x <&> (,) x)
+            <&> addWithoutDups suggesteds
 
 -- TODO: Generalize into a separate module?
 loadDeps :: Monad m => [V.Var] -> [T.NominalId] -> T m Deps

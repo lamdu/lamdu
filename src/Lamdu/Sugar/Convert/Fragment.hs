@@ -73,19 +73,18 @@ mkOptions ::
     ConvertM m (OnceT (T m) [HoleOption EvalPrep InternalName (OnceT (T m)) (T m)])
 mkOptions posInfo sugarContext argI argS exprPl =
     Hole.mkOptions posInfo (fragmentResultProcessor topEntityId argI) exprPl
-    <&> (pure fragmentOptions <>)
+    <&> (fragmentOptions <>)
     <&> Lens.mapped %~ Hole.addWithoutDups mkSuggested
     <&> Lens.mapped . Lens.mapped %~ snd
     where
         mkSuggested = mkAppliedHoleSuggesteds sugarContext argI exprPl
         fragmentOptions =
             [ App hole hole & V.BApp & Ann (Const ()) | Lens.nullOf (hVal . _BodyLam) argS ]
-            <&>
-            \x ->
-            ( x
-            , Hole.mkOption sugarContext
-                (fragmentResultProcessor topEntityId argI) exprPl x
-            )
+            & traverse
+                ( \x ->
+                    Hole.mkOption sugarContext (fragmentResultProcessor topEntityId argI) exprPl x
+                    <&> (,) x
+                )
         topEntityId = exprPl ^. Input.stored . iref & EntityId.ofValI
         hole = V.BLeaf V.LHole & Ann (Const ())
 
