@@ -31,9 +31,7 @@ import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
 import           Hyper.Type.AST.Scheme (Scheme(..), QVars(..))
-import qualified Lamdu.Annotations as Annotations
 import qualified Lamdu.Builtins.Anchors as Builtins
-import qualified Lamdu.Cache as Cache
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
 import           Lamdu.Config (Config)
@@ -43,8 +41,6 @@ import qualified Lamdu.Data.Anchors as Anchors
 import           Lamdu.Data.Definition (Definition(..))
 import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Data.Ops as DataOps
-import qualified Lamdu.Data.Tag as Tag
-import qualified Lamdu.Debug as Debug
 import qualified Lamdu.Eval.Results as EvalResults
 import qualified Lamdu.GUI.CodeEdit.GotoDefinition as GotoDefinition
 import qualified Lamdu.GUI.DefinitionEdit as DefinitionEdit
@@ -71,8 +67,6 @@ import qualified Lamdu.I18N.Navigation as Texts
 import           Lamdu.Name (Name)
 import           Lamdu.Settings (Settings)
 import           Lamdu.Style (HasStyle)
-import           Lamdu.Sugar (sugarWorkArea)
-import qualified Lamdu.Sugar.Config as SugarConfig
 import qualified Lamdu.Sugar.Types as Sugar
 import           Revision.Deltum.Transaction (Transaction)
 
@@ -92,29 +86,28 @@ type EvalResults = CurAndPrev EvalResults.EvalResults
 
 make ::
     ( MonadTransaction m n, MonadReader env n, Has Config env
-    , Has Cache.Functions env
-    , Has Debug.Monitors env
     , Has Theme env, GuiState.HasState env
-    , Has SugarConfig.Config env
     , Spacer.HasStdSpacing env
     , Has EvalResults env
     , Has (ExportActions m) env
     , Has Settings env, HasStyle env
     , Has Hover.Style env, Has Menu.Config env
     , Has SearchMenu.TermStyle env
-    , Has Annotations.Mode env
     , Element.HasAnimIdPrefix env
     , Language.HasLanguage env
-    , HasCallStack
     ) =>
     Anchors.CodeAnchors m -> Anchors.GuiAnchors (T m) (T m) -> Widget.R ->
+    ( EvalResults ->
+        T m (Sugar.WorkArea (Sugar.EvaluationScopes Name (T m)) Name (T m) (T m)
+            (Sugar.Payload (Sugar.EvaluationScopes Name (T m)) Name (T m) (T m), (Sugar.ParenInfo, [Sugar.EntityId])))
+    ) ->
     n (StatusBar.StatusWidget (IOTrans m), Widget (IOTrans m))
-make cp gp width =
+make cp gp width workAreaPreEval =
     do
         theExportActions <- Lens.view has
         env <- Lens.view id
         workArea <-
-            sugarWorkArea (Tag.getTagName env) env cp >>= (env ^. has &)
+            workAreaPreEval (env ^. has)
             <&> Lens.mapped . Lens.mapped %~ uncurry ExprGui.Payload
             & transaction
         gotoDefinition <-

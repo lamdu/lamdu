@@ -35,6 +35,7 @@ import qualified Lamdu.Config.Theme as Theme
 import           Lamdu.Config.Theme.Sprites (Sprites)
 import           Lamdu.Data.Db.Layout (DbM, ViewM)
 import qualified Lamdu.Data.Db.Layout as DbLayout
+import qualified Lamdu.Data.Tag as Tag
 import qualified Lamdu.Debug as Debug
 import qualified Lamdu.GUI.CodeEdit as CodeEdit
 import           Lamdu.GUI.IOTrans (IOTrans(..))
@@ -48,6 +49,7 @@ import qualified Lamdu.I18N.Language as Language
 import qualified Lamdu.I18N.StatusBar as Texts
 import           Lamdu.Settings (Settings)
 import           Lamdu.Style (HasStyle)
+import           Lamdu.Sugar (sugarWorkArea)
 import qualified Lamdu.Sugar.Config as SugarConfig
 import qualified Lamdu.VersionControl as VersionControl
 import qualified Lamdu.VersionControl.Actions as VCActions
@@ -96,8 +98,10 @@ layout themeNames langNames settingsProp =
         fullSize <- Lens.view (has . MainLoop.eWindowSize)
         state <- Lens.view has
         let viewToDb x = x & IOTrans.trans %~ VersionControl.runEvent state
+        env <- Lens.view id
         (gotoDefinition, codeEdit) <-
-            CodeEdit.make DbLayout.codeAnchors DbLayout.guiAnchors (fullSize ^. _1)
+            sugarWorkArea (Tag.getTagName env) env DbLayout.codeAnchors & lift
+            >>= CodeEdit.make DbLayout.codeAnchors DbLayout.guiAnchors (fullSize ^. _1)
             & Reader.mapReaderT VersionControl.runAction
             <&> _1 %~ StatusBar.hoist viewToDb
             <&> _2 . Widget.updates %~ viewToDb
