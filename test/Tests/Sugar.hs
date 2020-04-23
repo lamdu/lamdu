@@ -161,7 +161,9 @@ testInline =
         inline workArea =
             do
                 yOption <-
-                    letItem ^. lBody . hVal . _BinderTerm . _BodyHole
+                    workArea ^?!
+                    replBody . _BodyLam . lamFunc . fBody .
+                    hVal . _BinderLet . lBody . hVal . _BinderTerm . _BodyHole
                     . holeOptions
                     >>= findM isY
                     <&> fromMaybe (error "expected option")
@@ -178,10 +180,6 @@ testInline =
                     . _BodyGetVar . _GetBinder . bvInline . _InlineVar
                 pure ()
             where
-                letItem =
-                    workArea ^?!
-                    replBody . _BodyLam . lamFunc . fBody .
-                    hVal . _BinderLet
                 isY option =
                     option ^. hoSugaredBaseExpr
                     <&> Lens.has
