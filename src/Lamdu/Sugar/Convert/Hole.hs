@@ -14,8 +14,8 @@ module Lamdu.Sugar.Convert.Hole
 import           Control.Applicative (Alternative(..))
 import qualified Control.Lens as Lens
 import           Control.Monad (filterM)
-import           Control.Monad.ListT (ListT)
-import           Control.Monad.Once (OnceT, _OnceT)
+import           Control.Monad.ListT (ListT(..))
+import           Control.Monad.Once (OnceT, _OnceT, MonadOnce(..))
 import           Control.Monad.State (State, StateT(..), mapStateT, evalState, state)
 import qualified Control.Monad.State as State
 import           Control.Monad.Transaction (transaction)
@@ -29,6 +29,7 @@ import           Data.Property (MkProperty')
 import qualified Data.Property as Property
 import           Data.Semigroup (Endo)
 import qualified Data.Set as Set
+import           Data.Typeable (Typeable)
 import qualified Data.UUID as UUID
 import           Hyper
 import           Hyper.Infer
@@ -88,12 +89,13 @@ type Preconversion m a =
 type ResultGen m = StateT InferState (ListT (OnceT (T m)))
 
 convert ::
-    (Monad m, Monoid a) =>
+    (Monad m, Monoid a, Typeable m) =>
     ConvertM.PositionInfo -> Input.Payload m a # V.Term ->
     ConvertM m (ExpressionU EvalPrep m a)
 convert posInfo holePl =
     mkOptions posInfo holeResultProcessor holePl
     <&> Lens.mapped . Lens.mapped %~ snd
+    >>= ConvertM.convertOnce
     <&> (`Hole` Nothing) <&> BodyHole
     >>= addActions (Const ()) holePl
     <&> annotation . pActions . mSetToHole .~ Nothing
@@ -115,24 +117,25 @@ holeResultProcessor =
     }
 
 mkOption ::
-    Monad m =>
+    (Monad m, Typeable m) =>
     ConvertM.Context m -> ResultProcessor m ->
     Input.Payload m a # V.Term -> Val () ->
     OnceT (T m) (HoleOption EvalPrep InternalName (OnceT (T m)) (T m))
 mkOption sugarContext resultProcessor holePl x =
-    pure HoleOption
-    { _hoEntityId =
-        x
-        & ExprLens.valLeafs . V._LLiteral . V.primData .~ mempty
-        & show
-        & Random.randFunc
-        & EntityId.EntityId
-    , _hoSugaredBaseExpr = sugar sugarContext holePl x
-    , _hoResults = mkResults resultProcessor sugarContext holePl x
-    }
+    HoleOption entityId
+    <$> once (sugar sugarContext holePl x)
+    ?? mkResults resultProcessor sugarContext holePl x
+    where
+        entityId =
+            x
+            & ExprLens.valLeafs . V._LLiteral . V.primData .~ mempty
+            & show
+            & Random.randFunc
+            & EntityId.EntityId
+
 
 mkHoleSuggesteds ::
-    Monad m =>
+    (Monad m, Typeable m) =>
     ConvertM.Context m -> ResultProcessor m ->
     Input.Payload m a # V.Term ->
     OnceT (T m) [(Val (), HoleOption EvalPrep InternalName (OnceT (T m)) (T m))]
@@ -212,7 +215,7 @@ mkNominalOptions nominals =
             <&> V.BToNomP tid
 
 mkOptions ::
-    Monad m =>
+    (Monad m, Typeable m) =>
     ConvertM.PositionInfo -> ResultProcessor m ->
     Input.Payload m a # V.Term ->
     ConvertM m (OnceT (T m) [(Val (), HoleOption EvalPrep InternalName (OnceT (T m)) (T m))])
@@ -478,7 +481,7 @@ mkResultVals sugarContext scope seed =
         txn = lift . lift
 
 mkResult ::
-    Monad m =>
+    (Monad m, Typeable m) =>
     Preconversion m a -> T m () ->
     Input.Payload m b # V.Term ->
     Ann ((Const a :*: Write m) :*: InferResult UVar) # V.Term ->
@@ -503,6 +506,7 @@ mkResult preConversion updateDeps holePl x =
             <&> fmap convertPayloads
             >>= ConvertM.run sugarContext
             & _OnceT %~ mapStateT (fmap (\((fConverted, s), forkedChanges) -> ((fConverted, forkedChanges), s)) . Transaction.fork)
+            & once & join
             <&>
             ( \(fConverted, forkedChanges) ->
                 HoleResult
@@ -518,7 +522,7 @@ toStateT :: Applicative m => State s a -> StateT s m a
 toStateT = mapStateT $ \(Lens.Identity act) -> pure act
 
 toScoredResults ::
-    (Monad f, Monad m) =>
+    (Monad f, Monad m, Typeable m) =>
     a -> Preconversion m a -> ConvertM.Context m ->
     Input.Payload m dummy # V.Term ->
     StateT InferState f (Deps, Ann ((Const a :*: Write m) :*: InferResult UVar) # V.Term) ->
@@ -555,8 +559,18 @@ toScoredResults emptyPl preConversion sugarContext holePl act =
         p0 :: proxy h -> Proxy (InferOfConstraint HFunctor h)
         p0 _ = Proxy
 
+mapListItemTail :: (l a -> k a) -> ListClass.ListItem l a -> ListClass.ListItem k a
+mapListItemTail _ ListClass.Nil = ListClass.Nil
+mapListItemTail f (ListClass.Cons h t) = ListClass.Cons h (f t)
+
+mapListT ::
+    Functor m =>
+    (m (ListClass.ListItem (ListT n) a) -> n (ListClass.ListItem (ListT n) a)) ->
+    ListT m a -> ListT n a
+mapListT f (ListT l) = l <&> mapListItemTail (mapListT f) & f & ListT
+
 mkResults ::
-    Monad m =>
+    (Monad m, Typeable m) =>
     ResultProcessor m -> ConvertM.Context m ->
     Input.Payload m dummy # V.Term -> Val () ->
     ListT (OnceT (T m))
@@ -567,6 +581,7 @@ mkResults (ResultProcessor emptyPl postProcess preConversion) sugarContext holeP
     mkResultVals sugarContext (holePl ^. Input.inferScope) base
     >>= _2 %%~ postProcess
     & toScoredResults emptyPl preConversion sugarContext holePl
+    & mapListT (join . once)
 
 xorBS :: ByteString -> ByteString -> ByteString
 xorBS x y = BS.pack $ BS.zipWith xor x y

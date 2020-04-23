@@ -11,7 +11,7 @@ module Lamdu.Sugar.Convert.Fragment
 import qualified Control.Lens as Lens
 import           Control.Monad.Except (MonadError(..))
 import           Control.Monad.ListT (ListT)
-import           Control.Monad.Once (OnceT)
+import           Control.Monad.Once (OnceT, Typeable)
 import           Control.Monad.State (State, runState, StateT(..), mapStateT)
 import qualified Control.Monad.State as State
 import           Control.Monad.Trans.Maybe (MaybeT(..))
@@ -62,7 +62,7 @@ fragmentResultProcessor topEntityId fragment =
     }
 
 mkOptions ::
-    Monad m =>
+    (Monad m, Typeable m) =>
     ConvertM.PositionInfo ->
     ConvertM.Context m ->
     Ann (Input.Payload m a) # V.Term ->
@@ -87,7 +87,7 @@ mkOptions posInfo sugarContext argI argS exprPl =
         hole = V.BLeaf V.LHole & Ann (Const ())
 
 mkAppliedHoleSuggesteds ::
-    Monad m =>
+    (Monad m, Typeable m) =>
     ConvertM.Context m ->
     Ann (Input.Payload m a) # V.Term ->
     Input.Payload m a # V.Term ->
@@ -130,7 +130,7 @@ checkTypeMatch x y =
             & runPureInfer V.emptyScope ctx
 
 convertAppliedHole ::
-    (Monad m, Monoid a) =>
+    (Monad m, Typeable m, Monoid a) =>
     ConvertM.PositionInfo ->
     V.App V.Term # Ann (Input.Payload m a) ->
     Input.Payload m a # V.Term ->
@@ -336,7 +336,7 @@ mkResultValFragment inferred x =
         onPl i = i & _1 %~ (Const IsFragment :*:)
 
 mkOptionFromFragment ::
-    Monad m =>
+    (Monad m, Typeable m) =>
     ConvertM.Context m ->
     Input.Payload m a # V.Term ->
     Ann (Write m :*: InferResult UVar) # V.Term ->

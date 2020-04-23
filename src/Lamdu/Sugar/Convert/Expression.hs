@@ -3,6 +3,7 @@ module Lamdu.Sugar.Convert.Expression
     ) where
 
 import           Data.Property (Property(..))
+import           Data.Typeable (Typeable)
 import qualified Lamdu.Builtins.PrimVal as PrimVal
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Expr.IRef as ExprIRef
@@ -53,7 +54,7 @@ convertLiteralBytes ::
 convertLiteralBytes = convertLiteralCommon LiteralBytes PrimVal.Bytes
 
 convert ::
-    (Monad m, Monoid a) =>
+    (Monad m, Monoid a, Typeable m) =>
     ConvertM.PositionInfo -> Ann (Input.Payload m a) # V.Term ->
     ConvertM m (ExpressionU EvalPrep m a)
 convert _ (Ann pl (V.BLam x)) = ConvertBinder.convertLam x pl

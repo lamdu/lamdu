@@ -12,6 +12,7 @@ import qualified Data.Map as Map
 import           Data.Maybe.Extended (maybeToMPlus)
 import qualified Data.Property as Property
 import qualified Data.Set as Set
+import           Data.Typeable (Typeable)
 import           Hyper
 import           Hyper.Type.AST.FuncType (funcIn)
 import           Hyper.Type.AST.Row (freExtends, freRest)
@@ -36,7 +37,7 @@ import           Lamdu.Sugar.Types
 import           Lamdu.Prelude
 
 convert ::
-    (Monad m, Monoid a) =>
+    (Monad m, Typeable m, Monoid a) =>
     ConvertM.PositionInfo ->
     V.App V.Term # Ann (Input.Payload m a) ->
     Input.Payload m a # V.Term ->
