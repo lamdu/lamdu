@@ -36,6 +36,7 @@ import           Lamdu.Config.Theme.Fonts (Fonts(..))
 import qualified Lamdu.Config.Theme.Fonts as Fonts
 import           Lamdu.Data.Db.Layout (DbM)
 import qualified Lamdu.Data.Db.Layout as DbLayout
+import qualified Lamdu.Data.Tag as Tag
 import qualified Lamdu.Debug as Debug
 import           Lamdu.Editor.Exports (exportActions)
 import qualified Lamdu.Editor.Fonts as EditorFonts
@@ -53,6 +54,7 @@ import qualified Lamdu.Opts as Opts
 import           Lamdu.Settings (Settings(..))
 import qualified Lamdu.Settings as Settings
 import qualified Lamdu.Style.Make as MakeStyle
+import           Lamdu.Sugar (sugarWorkArea)
 import           Revision.Deltum.IRef (IRef)
 import           Revision.Deltum.Transaction (Transaction)
 import qualified Revision.Deltum.Transaction as Transaction
@@ -219,9 +221,10 @@ makeMainGui ::
     HasCallStack =>
     [TitledSelection Folder.Theme] -> [TitledSelection Folder.Language] ->
     (forall a. T DbLayout.DbM a -> IO a) ->
-    Env -> T DbLayout.DbM (Widget IO)
-makeMainGui themeNames langNames dbToIO env =
-    GUIMain.make themeNames langNames (env ^. Env.settings) env
+    Env -> GUIMain.Model DbLayout.ViewM ->
+    T DbLayout.DbM (Widget IO)
+makeMainGui themeNames langNames dbToIO env mkWorkArea =
+    GUIMain.make themeNames langNames (env ^. Env.settings) env mkWorkArea
     <&> Widget.updates %~
     \act ->
     act ^. ioTrans . Lens._Wrapped
@@ -275,7 +278,9 @@ makeRootWidget env perfMonitors db evaluator sample =
             Folder.getSelections (Proxy @Language)
             >>= traverse titledLangSelection
         let bgColor = env ^. Env.theme . Theme.backgroundColor
-        dbToIO $ makeMainGui themeNames langNames dbToIO env
+        sugarWorkArea (Tag.getTagName env) env DbLayout.codeAnchors
+            & makeMainGui themeNames langNames dbToIO env
+            & dbToIO
             <&> M.backgroundColor backgroundId bgColor
             <&> measureLayout
     where

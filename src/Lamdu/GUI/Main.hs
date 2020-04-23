@@ -1,6 +1,7 @@
 {-# LANGUAGE ConstraintKinds #-}
 module Lamdu.GUI.Main
     ( make
+    , CodeEdit.Model
     , CodeEdit.ExportRepl(..)
     , CodeEdit.ExportActions(..)
     , CodeEdit.EvalResults
@@ -35,7 +36,6 @@ import qualified Lamdu.Config.Theme as Theme
 import           Lamdu.Config.Theme.Sprites (Sprites)
 import           Lamdu.Data.Db.Layout (DbM, ViewM)
 import qualified Lamdu.Data.Db.Layout as DbLayout
-import qualified Lamdu.Data.Tag as Tag
 import qualified Lamdu.Debug as Debug
 import qualified Lamdu.GUI.CodeEdit as CodeEdit
 import           Lamdu.GUI.IOTrans (IOTrans(..))
@@ -49,7 +49,6 @@ import qualified Lamdu.I18N.Language as Language
 import qualified Lamdu.I18N.StatusBar as Texts
 import           Lamdu.Settings (Settings)
 import           Lamdu.Style (HasStyle)
-import           Lamdu.Sugar (sugarWorkArea)
 import qualified Lamdu.Sugar.Config as SugarConfig
 import qualified Lamdu.VersionControl as VersionControl
 import qualified Lamdu.VersionControl.Actions as VCActions
@@ -88,17 +87,16 @@ type Ctx env =
 make ::
     Ctx env =>
     [TitledSelection Folder.Theme] -> [TitledSelection Folder.Language] ->
-    Property IO Settings -> env ->
+    Property IO Settings -> env -> CodeEdit.Model ViewM ->
     T DbM (Widget (IOTrans DbM))
-make themeNames langNames settingsProp env =
+make themeNames langNames settingsProp env mkWorkArea =
     do
         vcActions <-
             VersionControl.makeActions <&> VCActions.hoist IOTrans.liftTrans & lift
         state <- Lens.view has
         let viewToDb x = x & IOTrans.trans %~ VersionControl.runEvent state
         (gotoDefinition, codeEdit) <-
-            sugarWorkArea (Tag.getTagName env) env DbLayout.codeAnchors & lift
-            >>= CodeEdit.make DbLayout.codeAnchors DbLayout.guiAnchors (fullSize ^. _1)
+            CodeEdit.make DbLayout.codeAnchors DbLayout.guiAnchors (fullSize ^. _1) mkWorkArea
             & Reader.mapReaderT VersionControl.runAction
             <&> _1 %~ StatusBar.hoist viewToDb
             <&> _2 . Widget.updates %~ viewToDb

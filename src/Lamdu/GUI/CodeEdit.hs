@@ -1,6 +1,7 @@
 {-# LANGUAGE NamedFieldPuns, DisambiguateRecordFields #-}
 module Lamdu.GUI.CodeEdit
     ( make
+    , Model
     , EvalResults
     , ReplEdit.ExportRepl(..), ExportActions(..)
 
@@ -84,6 +85,17 @@ data ExportActions m = ExportActions
 
 type EvalResults = CurAndPrev EvalResults.EvalResults
 
+type Model m =
+    T m
+    ( EvalResults ->
+        T m
+        ( Sugar.WorkArea (Sugar.EvaluationScopes Name (T m)) Name (T m) (T m)
+            (Sugar.Payload (Sugar.EvaluationScopes Name (T m)) Name (T m) (T m)
+            , (Sugar.ParenInfo, [Sugar.EntityId])
+            )
+        )
+    )
+
 make ::
     ( MonadTransaction m n, MonadReader env n, Has Config env
     , Has Theme env, GuiState.HasState env
@@ -96,18 +108,14 @@ make ::
     , Element.HasAnimIdPrefix env
     , Language.HasLanguage env
     ) =>
-    Anchors.CodeAnchors m -> Anchors.GuiAnchors (T m) (T m) -> Widget.R ->
-    ( EvalResults ->
-        T m (Sugar.WorkArea (Sugar.EvaluationScopes Name (T m)) Name (T m) (T m)
-            (Sugar.Payload (Sugar.EvaluationScopes Name (T m)) Name (T m) (T m), (Sugar.ParenInfo, [Sugar.EntityId])))
-    ) ->
+    Anchors.CodeAnchors m -> Anchors.GuiAnchors (T m) (T m) -> Widget.R -> Model m ->
     n (StatusBar.StatusWidget (IOTrans m), Widget (IOTrans m))
-make cp gp width workAreaPreEval =
+make cp gp width mkWorkArea =
     do
         theExportActions <- Lens.view has
         env <- Lens.view id
         workArea <-
-            workAreaPreEval (env ^. has)
+            mkWorkArea >>= (env ^. has &)
             <&> Lens.mapped . Lens.mapped %~ uncurry ExprGui.Payload
             & transaction
         gotoDefinition <-
