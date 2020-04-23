@@ -94,8 +94,6 @@ make themeNames langNames settingsProp env =
     do
         vcActions <-
             VersionControl.makeActions <&> VCActions.hoist IOTrans.liftTrans & lift
-        theTheme <- Lens.view has
-        fullSize <- Lens.view (has . MainLoop.eWindowSize)
         state <- Lens.view has
         let viewToDb x = x & IOTrans.trans %~ VersionControl.runEvent state
         (gotoDefinition, codeEdit) <-
@@ -109,15 +107,10 @@ make themeNames langNames settingsProp env =
             (fullSize ^. _1) vcActions
         let statusBarWidget = statusBar ^. StatusBar.widget . Align.tValue
 
-        versionControlCfg <- Lens.view (has . Config.versionControl)
-        vcEventMap <- VersionControlGUI.eventMap ?? versionControlCfg ?? vcActions
-
-        quitKeys <- Lens.view (has . Config.quitKeys)
-        quitTxt <- Lens.view (has . MainLoop.textQuit)
-        let quitEventMap = E.keysEventMap quitKeys (E.Doc [quitTxt]) (error "Quit")
+        vcEventMap <- VersionControlGUI.eventMap ?? env ^. has . Config.versionControl ?? vcActions
 
         pure statusBarWidget
-            /-/ Spacer.vspaceLines (theTheme ^. Theme.topPadding)
+            /-/ Spacer.vspaceLines (env ^. has . Theme.topPadding)
             /-/ pure codeEdit
             <&> Scroll.focusAreaInto fullSize
             <&> Widget.weakerEventsWithoutPreevents
@@ -125,3 +118,7 @@ make themeNames langNames settingsProp env =
                     <> vcEventMap)
     & GuiState.assignCursor mempty defaultCursor
     & (`runReaderT` env)
+    where
+        fullSize = env ^. has . MainLoop.eWindowSize
+        quitEventMap =
+            E.keysEventMap (env ^. has . Config.quitKeys) (E.Doc [env ^. has . MainLoop.textQuit]) (error "Quit")
