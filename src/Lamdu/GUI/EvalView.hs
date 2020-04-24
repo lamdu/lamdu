@@ -189,8 +189,8 @@ makeList (Sugar.ResList head_) =
             \case
             Dir.LeftToRight -> ("[", ", …]")
             Dir.RightToLeft -> ("]", "[… ,")
-        c <- Label.make postLabel <&> (^. Align.tValue)
-        Label.make preLabel /|/ makeInner head_
+        c <- (TextView.make ?? postLabel) <*> (Element.subAnimId ?? ["]"]) <&> (^. Align.tValue)
+        ((TextView.make ?? preLabel) <*> (Element.subAnimId ?? ["["])) /|/ makeInner head_
             >>= Align.tValue (hGlueAlign 1 ?? c)
     where
         hGlueAlign align l r =
