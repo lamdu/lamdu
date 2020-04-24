@@ -44,6 +44,7 @@ import qualified Lamdu.Data.Anchors as Anchors
 import           Lamdu.Data.Definition (Definition(..))
 import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Data.Ops as DataOps
+import           Lamdu.Data.Tag (Tag, IsOperator, TextsInLang, getTagName)
 import qualified Lamdu.Eval.Results as EvalResults
 import qualified Lamdu.GUI.CodeEdit.GotoDefinition as GotoDefinition
 import qualified Lamdu.GUI.DefinitionEdit as DefinitionEdit
@@ -87,9 +88,9 @@ data ExportActions m = ExportActions
 
 type EvalResults = CurAndPrev EvalResults.EvalResults
 
-type Model m =
+type Model env m =
     OnceT (T m)
-    ( EvalResults ->
+    ( (Tag -> (IsOperator, TextsInLang)) -> env ->
         OnceT (T m)
         ( Sugar.WorkArea (Sugar.EvaluationScopes Name (OnceT (T m))) Name (OnceT (T m)) (T m)
             (Sugar.Payload (Sugar.EvaluationScopes Name (OnceT (T m))) Name (OnceT (T m)) (T m)
@@ -102,7 +103,6 @@ make ::
     ( Has Config env
     , Has Theme env, GuiState.HasState env
     , Spacer.HasStdSpacing env
-    , Has EvalResults env
     , Has (ExportActions m) env
     , Has Settings env, HasStyle env
     , Has Hover.Style env, Has Menu.Config env
@@ -111,14 +111,14 @@ make ::
     , Language.HasLanguage env
     , Monad m
     ) =>
-    Anchors.CodeAnchors m -> Anchors.GuiAnchors (T m) (T m) -> Widget.R -> Model m ->
+    Anchors.CodeAnchors m -> Anchors.GuiAnchors (T m) (T m) -> Widget.R -> Model env m ->
     ReaderT env (OnceT (T m)) (StatusBar.StatusWidget (IOTrans m), Widget (IOTrans m))
 make cp gp width mkWorkArea =
     do
         theExportActions <- Lens.view has
         env <- Lens.view id
         workArea <-
-            mkWorkArea >>= (env ^. has &)
+            mkWorkArea >>= (\x -> x (getTagName env) env)
             <&> Lens.mapped . Lens.mapped %~ uncurry ExprGui.Payload
             & lift
         gotoDefinition <-

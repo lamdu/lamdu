@@ -143,7 +143,7 @@ convertWorkArea ::
         )
     )
 convertWorkArea env =
-    (sugarWorkArea (Tag.getTagName env) env codeAnchors >>= (env ^. has &)) ^. _OnceT
+    (sugarWorkArea env codeAnchors >>= \x -> x (Tag.getTagName env) env) ^. _OnceT
     & (`evalStateT` mempty)
     >>= validate
 

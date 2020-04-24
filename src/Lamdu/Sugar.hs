@@ -32,29 +32,30 @@ type T = Transaction
 
 sugarWorkArea ::
     ( HasCallStack
-    , Has (Texts.Name Text) env
-    , Has (Texts.Code Text) env
-    , Has Debug.Monitors env
-    , Has SugarConfig.Config env
-    , Has Cache.Functions env, Has Annotations.Mode env
+    , Has Debug.Monitors env0
+    , Has SugarConfig.Config env0
+    , Has Cache.Functions env0, Has Annotations.Mode env0
+    , Has (Texts.Name Text) env1
+    , Has (Texts.Code Text) env1
+    , Has (CurAndPrev EvalResults) env1
     , Monad m
     ) =>
-    (Tag -> (IsOperator, TextsInLang)) -> env -> Anchors.CodeAnchors m ->
+    env0 -> Anchors.CodeAnchors m ->
     OnceT (T m)
-    ( CurAndPrev EvalResults ->
+    ( (Tag -> (IsOperator, TextsInLang)) -> env1 ->
         OnceT (T m) (Sugar.WorkArea (Sugar.EvaluationScopes Name (OnceT (T m))) Name (OnceT (T m)) (T m)
             (Sugar.Payload (Sugar.EvaluationScopes Name (OnceT (T m))) Name (OnceT (T m)) (T m),
                 (Sugar.ParenInfo, [Sugar.EntityId])))
     )
-sugarWorkArea getTagName env cp =
-    SugarConvert.loadWorkArea env cp
+sugarWorkArea env0 cp =
+    SugarConvert.loadWorkArea env0 cp
     <&>
-    \workArea eval ->
-    addEvaluationResults cp eval workArea & lift
+    \workArea getTagName env1 ->
+    addEvaluationResults cp (env1 ^. has) workArea & lift
     >>= report .
-        AddNames.addToWorkArea env
+        AddNames.addToWorkArea env1
         (fmap getTagName . (lift . ExprIRef.readTagData))
     <&> AddParens.addToWorkArea
     <&> Lens.mapped %~ \(parenInfo, pl) -> pl <&> (,) parenInfo
     where
-        Debug.EvaluatorM report = env ^. has . Debug.naming . Debug.mAction
+        Debug.EvaluatorM report = env0 ^. has . Debug.naming . Debug.mAction

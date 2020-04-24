@@ -90,7 +90,7 @@ type Ctx env =
 make ::
     Ctx env =>
     [TitledSelection Folder.Theme] -> [TitledSelection Folder.Language] ->
-    Property IO Settings -> env -> CodeEdit.Model ViewM ->
+    Property IO Settings -> env -> CodeEdit.Model env ViewM ->
     OnceT (T DbM) (Widget (IOTrans DbM))
 make themeNames langNames settingsProp env mkWorkArea =
     do

@@ -39,7 +39,6 @@ import           Lamdu.Config.Theme.Fonts (Fonts(..))
 import qualified Lamdu.Config.Theme.Fonts as Fonts
 import           Lamdu.Data.Db.Layout (DbM)
 import qualified Lamdu.Data.Db.Layout as DbLayout
-import qualified Lamdu.Data.Tag as Tag
 import qualified Lamdu.Debug as Debug
 import           Lamdu.Editor.Exports (exportActions)
 import qualified Lamdu.Editor.Fonts as EditorFonts
@@ -227,7 +226,7 @@ makeMainGui ::
     HasCallStack =>
     [TitledSelection Folder.Theme] -> [TitledSelection Folder.Language] ->
     (forall a. T DbLayout.DbM a -> IO a) ->
-    Env -> GUIMain.Model DbLayout.ViewM ->
+    Env -> GUIMain.Model Env DbLayout.ViewM ->
     OnceT (T DbLayout.DbM) (Widget IO)
 makeMainGui themeNames langNames dbToIO env mkWorkArea =
     GUIMain.make themeNames langNames (env ^. Env.settings) env mkWorkArea
@@ -272,7 +271,7 @@ titledThemeSelection (Selection lang) sel =
 
 data EditorCache = EditorCache
     { ecState :: OnceState
-    , ecMkWorkArea :: GUIMain.Model DbLayout.ViewM
+    , ecMkWorkArea :: GUIMain.Model Env DbLayout.ViewM
     , ecVer :: Version DbM
     }
 
@@ -287,7 +286,7 @@ initCache db env cacheRef =
             _ ->
                 do
                     (x, s) <-
-                        once (sugarWorkArea (Tag.getTagName env) env DbLayout.codeAnchors) ^. _OnceT
+                        once (sugarWorkArea env DbLayout.codeAnchors) ^. _OnceT
                         & (`runStateT` mempty)
                         & VersionControl.runAction
                         & DbLayout.runDbTransaction db
