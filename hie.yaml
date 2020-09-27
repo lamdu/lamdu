@@ -1,0 +1,10 @@
+cradle:
+  stack:
+    - path: "./src/main/Lamdu/Main.hs"
+      component: "Lamdu:exe:lamdu"
+
+    - path: "./test"
+      component: "Lamdu:test:Tests"
+
+    - path: "./src"
+      component: "Lamdu:lib"
