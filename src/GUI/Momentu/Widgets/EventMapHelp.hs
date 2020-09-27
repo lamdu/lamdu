@@ -125,7 +125,7 @@ groupTree = foldr step []
 
 -- We also rely on Map.toList returning a sorted list
 groupInputDocs :: [([Text], r)] -> [([Text], [r])]
-groupInputDocs = Map.toList . Map.fromListWith (++) . (Lens.traversed . _2 %~) (:[])
+groupInputDocs = Map.toList . Map.fromListWith (++) . (Lens.traversed . _2 %~ (:[]))
 
 makeShortcutKeyView ::
     ( MonadReader env m, Glue.HasTexts env, HasStyle env

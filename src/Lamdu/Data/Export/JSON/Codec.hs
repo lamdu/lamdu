@@ -632,7 +632,7 @@ decodeNamedTag obj =
 encodeTaggedLamVar ::
     Encoder (T.Tag, V.Var)
 encodeTaggedLamVar (tag, V.Var ident) =
-    encodeTagged "lamVar" (const mempty) ((tag, ident), ()) & Aeson.Object
+    encodeTagged "lamVar" mempty ((tag, ident), ()) & Aeson.Object
 
 decodeTaggedLamVar ::
     Aeson.Object -> AesonTypes.Parser (T.Tag, V.Var)

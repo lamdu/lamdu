@@ -137,7 +137,7 @@ combineStates env orientation order strollOrder (StateFocused f) (StateUnfocused
             Horizontal -> Rect.verticalRange
             Vertical   -> Rect.horizontalRange
         applyStrollPreference events =
-            -- | If the unfocused one has a stroll destination for us
+            -- If the unfocused one has a stroll destination for us
             -- Use it in each event that prefers the stroll position
             case u ^. uMStroll of
             Just (Semigroup.First fwd, _) | strollOrder == Forward ->

@@ -342,7 +342,7 @@ initialP2Env env (P1Out globals locals contexts tvs texts) =
         globals ^.. Lens.itraversed . Lens.asIndex
         & mapMaybe lookupText & Set.fromList
     , _p2TagsAbove = uncolliders globals
-        -- ^ all globals are "above" everything, and locals add up as
+        -- all globals are "above" everything, and locals add up as
         -- we descend
     , _p2Tags = top
     , _p2NameTexts = env ^. has

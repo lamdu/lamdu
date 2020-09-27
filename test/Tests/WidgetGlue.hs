@@ -73,7 +73,7 @@ toWidgetFocused :: Applicative f => FocusedWidget (Maybe Widget.Id) -> Widget f
 toWidgetFocused (FocusedLeaf size) =
     const Widget.Focused
     { Widget._fFocalAreas = [Rect (pure 0) size]
-    , Widget._fEventMap = const mempty
+    , Widget._fEventMap = mempty
     , Widget._fPreEvents = mempty
     , Widget._fMEnterPoint = Nothing
     , Widget._fLayers = mempty
