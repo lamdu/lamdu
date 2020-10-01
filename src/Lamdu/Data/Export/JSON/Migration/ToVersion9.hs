@@ -23,7 +23,7 @@ collectNominals obj =
         Nothing -> nomId ==> mempty & Right
         Just typeParams ->
             case Aeson.fromJSON typeParams of
-            Aeson.Error str -> fail str
+            Aeson.Error str -> Left (fromString str)
             Aeson.Success nomParams -> nomId ==> nomParams & Right
     Just _ -> Left "Malformed 'nom' id"
     Nothing -> Right mempty

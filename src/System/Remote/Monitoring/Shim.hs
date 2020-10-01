@@ -26,7 +26,7 @@ import           System.Metrics (Store)
 data Server
 
 start :: Word16 -> IO Server
-start = fail "Lamdu is compiled without ekg support. Rebuild it with the ekg cabal flag"
+start _ = fail "Lamdu is compiled without ekg support. Rebuild it with the ekg cabal flag"
 
 serverMetricStore :: Server -> Store
 serverMetricStore = error "absurd"
