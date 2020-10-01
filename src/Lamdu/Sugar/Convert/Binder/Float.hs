@@ -57,7 +57,7 @@ moveToGlobalScope =
             <&> (Load.inferDef infer (ctx ^. ConvertM.scDebugMonitors) ?? param)
         scheme <-
             case inferRes >>= makeScheme of
-            Left err -> fail ("extract to global scope failed inference: " ++ show (prettyShow err))
+            Left err -> error ("extract to global scope failed inference: " ++ show (prettyShow err))
             Right x -> pure x
         let defExprI = defExpr <&> (^. ExprIRef.iref)
         DataOps.newPublicDefinitionToIRef

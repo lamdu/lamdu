@@ -64,7 +64,7 @@ mostRecentAncestor aVersion bVersion
             LT -> (aVersion `mostRecentAncestor`) =<< upToDepth aDepth bVersion
             GT -> (`mostRecentAncestor` bVersion) =<< upToDepth bDepth aVersion
             EQ -> if aDepth == 0
-                        then fail "Two versions without common ancestor given"
+                        then error "Two versions without common ancestor given"
                         else join $ mostRecentAncestor <$> getParent aMbParentRef <*> getParent bMbParentRef
     where
         upToDepth depthToReach version = do
@@ -72,7 +72,7 @@ mostRecentAncestor aVersion bVersion
             if curDepth > depthToReach
                 then upToDepth depthToReach =<< getParent curMbParentRef
                 else pure version
-        getParent = maybe (fail "Non-0 depth must have a parent") pure
+        getParent = maybe (error "Non-0 depth must have a parent") pure
 
 walkUp ::
     (Monad m, Monoid a) =>
@@ -85,7 +85,7 @@ walkUp onVersion topRef bottomRef
         result <- onVersion versionD
         parent versionD
             & maybe
-                (fail "Invalid path given, hit top")
+                (error "Invalid path given, hit top")
                 (walkUp onVersion topRef)
             <&> mappend result
 
@@ -101,7 +101,7 @@ versionsBetween topRef = accumulateWalkUp []
             | topRef == curRef  = pure vs
             | otherwise         = do
                 versionD <- versionData curRef
-                maybe (fail "Invalid path given, hit top") (accumulateWalkUp (versionD:vs)) $
+                maybe (error "Invalid path given, hit top") (accumulateWalkUp (versionD:vs)) $
                     parent versionD
 
 walk ::

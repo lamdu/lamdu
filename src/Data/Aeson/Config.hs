@@ -41,11 +41,11 @@ load path =
     Writer.tell [path] *>
     liftIO (LBS.readFile path)
     <&> eitherDecode'
-    >>= either (fail . mappend msg) (imports (takeDirectory path))
+    >>= either (error . mappend msg) (imports (takeDirectory path))
     <&> fromJSON
     >>=
     \case
-    Error x -> fail (msg <> x)
+    Error x -> error (msg <> x)
     Success x -> pure x
     where
         msg = "Failed to parse config file contents at " ++ show path ++ ": "

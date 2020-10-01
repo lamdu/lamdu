@@ -273,14 +273,14 @@ importOne (Codec.EntityTag tagId tagData) = importTag tagId tagData
 importOne (Codec.EntityNominal mName nomId nom) = importNominal mName nomId nom
 importOne (Codec.EntityLamVar tag var) = importLamVar tag var
 importOne (Codec.EntitySchemaVersion _) =
-    fail "Only one schemaVersion allowed in beginning of document"
+    error "Only one schemaVersion allowed in beginning of document"
 
 importEntities :: [Codec.Entity] -> T ViewM ()
 importEntities (Codec.EntitySchemaVersion ver : entities) =
     if ver == Migration.currentVersion
     then traverse_ importOne entities
-    else "Unsupported schema version: " ++ show ver & fail
-importEntities _ = "Missing schema version"  & fail
+    else "Unsupported schema version: " ++ show ver & error
+importEntities _ = error "Missing schema version"
 
 fileImportAll :: FilePath -> IO (Version, T ViewM ())
 fileImportAll importPath =

@@ -47,7 +47,7 @@ convert defType defExpr defI =
                 & runPureInfer @(V.Scope # UVar) V.emptyScope inferContext
                 & (^?! Lens._Right . _1)
         unless (alphaEq defType inferredType) $
-            fail $ "Def type mismatches its inferred type! " <> show (pPrint (defType, inferredType))
+            error $ "Def type mismatches its inferred type! " <> show (pPrint (defType, inferredType))
         defTypeS <- ConvertType.convertScheme (EntityId.currentTypeOf entityId) defType
         DefinitionBodyExpression DefinitionExpression
             { _deType = defTypeS

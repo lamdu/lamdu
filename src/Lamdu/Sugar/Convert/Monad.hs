@@ -163,10 +163,10 @@ postProcessWith =
             postProcess >>=
                 \case
                 PostProcess.GoodExpr -> pure ()
-                PostProcess.BadExpr e -> fail ("postProcessWith onError failed: " <> prettyShow e)
+                PostProcess.BadExpr e -> error ("postProcessWith onError failed: " <> prettyShow e)
 
 postProcessAssert :: Monad m => ConvertM m (T m ())
-postProcessAssert = postProcessWith ?? (fail . prettyShow)
+postProcessAssert = postProcessWith ?? (error . prettyShow)
 
 run :: (HasCallStack, Monad m) => Context m -> ConvertM m a -> OnceT (T m) a
 run ctx (ConvertM action) =

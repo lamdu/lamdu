@@ -112,7 +112,7 @@ makeFocusedWidget ::
     HasCallStack =>
     String -> Env -> T ViewM (Widget.Focused (T ViewM GuiState.Update))
 makeFocusedWidget afterDoc env =
-    makeGui afterDoc env >>= either fail pure . focusedWidget
+    makeGui afterDoc env >>= either error pure . focusedWidget
 
 mApplyEvent ::
     Env -> VirtualCursor -> Event -> T ViewM (Maybe GuiState.Update)
@@ -201,7 +201,7 @@ testFragmentSize =
             & cursor .~ WidgetIds.fromExprPayload frag
             & makeGui ""
         guiCursorElseWhere <- makeGui "" baseEnv
-        unless (guiCursorOnFrag ^. sz == guiCursorElseWhere ^. sz) (fail "fragment size inconsistent")
+        unless (guiCursorOnFrag ^. sz == guiCursorElseWhere ^. sz) (error "fragment size inconsistent")
     where
         sz = Responsive.rWide . Align.tValue . Element.size
 
@@ -222,7 +222,7 @@ testOpPrec =
         workArea <- convertWorkArea baseEnv
         _ <- applyEvent (baseEnv & cursor .~ holeId) dummyVirt (EventChar '&')
         workArea' <- convertWorkArea baseEnv
-        unless (workAreaEq workArea workArea') (fail "bad operator precedence")
+        unless (workAreaEq workArea workArea') (error "bad operator precedence")
 
 workAreaEq ::
     forall a m v.
@@ -251,13 +251,13 @@ testKeyboardDirAndBack posEnv posVirt way back =
         (simpleKeyEvent back)
         >>=
         \case
-        Nothing -> fail (show baseInfo <> " can't move back with cursor keys")
+        Nothing -> error (show baseInfo <> " can't move back with cursor keys")
         Just updBack
             | Lens.anyOf (GuiState.uCursor . traverse)
               (`WidgetId.isSubId` (posEnv ^. cursor)) updBack & not ->
                 show baseInfo <> "moving back with cursor keys goes to different place: " <>
                 show (updBack ^. GuiState.uCursor)
-                & fail
+                & error
         Just{} -> pure ()
     where
         baseInfo =
@@ -305,7 +305,7 @@ testTabNavigation env virtCursor =
                         when (comparePositions p1 p0 /= expected) $
                             show (env ^. GuiState.cursor) <> ": " <> name <>
                             " did not move to expected direction"
-                            & fail
+                            & error
         traverse_ testDir dirs
     where
         pos = Widget.fFocalAreas . traverse
@@ -389,8 +389,8 @@ programTest baseEnv filename =
         let narrowSize =
                 (baseGui ^. Responsive.rNarrow) (Responsive.NarrowLayoutParams 0 False)
                 ^. Align.tValue . Widget.wSize
-        when (size ^. _1 < narrowSize ^. _1) (fail "wide size is narrower than narrow!")
-        w <- focusedWidget baseGui & either fail pure
+        when (size ^. _1 < narrowSize ^. _1) (error "wide size is narrower than narrow!")
+        w <- focusedWidget baseGui & either error pure
         case w ^. Widget.fMEnterPoint of
             Nothing ->
                 VirtualCursor (w ^?! Widget.fFocalAreas . Lens.ix 0)

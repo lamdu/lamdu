@@ -110,13 +110,13 @@ validate workArea
         do
             wallEntityIds <- workAreaLowLevelLoad <&> workAreaLowLevelEntityIds
             let missing = wallEntityIds `Set.difference` sugarEntityIdsSet
-            unless (Set.null missing) $ fail $
+            unless (Set.null missing) $ error $
                 show missing ++ " do not appear in any sugar entity ids"
             deepseq workArea -- make sure no "error" clauses are hiding within
                 (validateHiddenEntityIds workArea)
-                & either fail (\() -> pure workArea)
+                & either error (\() -> pure workArea)
     | otherwise =
-        fail ("duplicate entityIds: " <> show duplicateEntityIds)
+        error ("duplicate entityIds: " <> show duplicateEntityIds)
     where
         duplicateEntityIds =
             sugarEntityIds <&> _2 %~ (:[])

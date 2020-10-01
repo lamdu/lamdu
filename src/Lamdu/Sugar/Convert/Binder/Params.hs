@@ -192,7 +192,7 @@ addFieldParam =
                         RowExtend tag (_HCompose # fieldType) (_HCompose # (r ^. hAnn . ExprIRef.iref))
                         & ExprIRef.newValI
                         >>= r ^. hAnn . ExprIRef.setIref
-            _ -> fail "adding field to type that isn't a record!"
+            _ -> error "adding field to type that isn't a record!"
         let addFieldToCall argI =
                 do
                     newArg <- mkArg
@@ -267,7 +267,7 @@ delFieldParamAndFixCalls binderKind tags fp storedLam =
                 & ExprIRef.writeRecursively
                 <&> (^. hAnn . _1)
                 >>= r ^. hAnn . ExprIRef.setIref
-            (Just{}, Unpruned _) -> fail "removing field from type that isn't a record!"
+            (Just{}, Unpruned _) -> error "removing field from type that isn't a record!"
             (Nothing, _) ->
                 _HCompose # Pruned & ExprIRef.newValI
                 >>= storedParamType ^. hAnn . ExprIRef.setIref
@@ -391,7 +391,7 @@ setFieldParamTag mPresMode binderKind storedLam prevTagList prevTag =
                             else rest & _HCompose %~ changeField & RowExtend f t
                         ) & Ann a . (hcomposed _Unpruned . T._RExtend #)
                     changeField (Ann _ _) = error "expected field not preset!"
-            _ -> fail "changing field in type that isn't a record!"
+            _ -> error "changing field in type that isn't a record!"
         let fixArg argI (V.BRecExtend recExtend)
                 | recExtend ^. Row.eKey == prevTag =
                     argI <$

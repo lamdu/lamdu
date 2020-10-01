@@ -153,7 +153,7 @@ readUUIDMb nothingCase uuid =
 readUUID :: (Monad m, Binary a) => UUID -> T m a
 readUUID uuid = readUUIDMb failure uuid
     where
-        failure = fail $ "Inexistent uuid: " ++ show uuid ++ " referenced"
+        failure = error $ "Inexistent uuid: " ++ show uuid ++ " referenced"
 
 deleteIRef :: Monad m => IRef m a -> T m ()
 deleteIRef = delete . IRef.uuid

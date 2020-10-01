@@ -159,10 +159,10 @@ parseInject tag mData =
     } & Ann (Const ())
 
 (.:) :: Monad m => Json.FromJSON a => Json.Object -> Text -> m a
-obj .: tag = Json.parseEither (Json..: tag) obj & either fail pure
+obj .: tag = Json.parseEither (Json..: tag) obj & either error pure
 
 (.:?) :: Monad m => Json.FromJSON a => Json.Object -> Text -> m (Maybe a)
-obj .:? tag = Json.parseEither (Json..:? tag) obj & either fail pure
+obj .:? tag = Json.parseEither (Json..:? tag) obj & either error pure
 
 parseObj :: Json.Object -> Parse (ER.Val ())
 parseObj obj =
@@ -188,7 +188,7 @@ parseResult (Json.Object obj) =
                 Nothing -> pure ()
                 Just cacheId -> Lens.at cacheId ?= x
             pure x
-parseResult x = "Unsupported encoded JS output: " ++ show x & fail
+parseResult x = "Unsupported encoded JS output: " ++ show x & error
 
 fromDouble :: Double -> ER.Val ()
 fromDouble = Ann (Const ()) . ER.RPrimVal . PrimVal.fromKnown . PrimVal.Float
@@ -222,7 +222,7 @@ newScope obj =
     do
         arg <-
             case obj .: "arg" of
-            Nothing -> fail "Scope report missing arg"
+            Nothing -> error "Scope report missing arg"
             Just x -> parseResult x
         let apply = Map.singleton (ScopeId parentScope) [(ScopeId scope, arg)]
         let addApply Nothing = Just apply
@@ -236,14 +236,14 @@ newScope obj =
 completionSuccess :: Json.Object -> Parse (ER.Val ())
 completionSuccess obj =
     case obj .: "result" of
-    Nothing -> fail "Completion success report missing result"
+    Nothing -> error "Completion success report missing result"
     Just x -> parseResult x
 
 completionError ::
     Monad m => Json.Object -> m (ER.EvalException UUID)
 completionError obj =
     case obj .: "err" of
-    Nothing -> "Completion error report missing valid err: " ++ show obj & fail
+    Nothing -> "Completion error report missing valid err: " ++ show obj & error
     Just x ->
         ER.EvalException
         <$> do
@@ -259,7 +259,7 @@ completionError obj =
                 ?? parseUUID e
                 <&> Just
         )
-        & either fail pure
+        & either error pure
 
 processEvent ::
     IORef EvalResults -> Actions ->

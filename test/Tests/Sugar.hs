@@ -111,7 +111,7 @@ testUnnamed =
         verify workArea =
             case workArea ^?! replBody . _BodyGetVar . _GetBinder . bvNameRef . nrName of
             Unnamed{} -> pure ()
-            _ -> fail "Unexpected name"
+            _ -> error "Unexpected name"
 
 -- | Test for issue #374
 -- https://trello.com/c/CDLdSlj7/374-changing-tag-results-in-inference-error
@@ -194,7 +194,7 @@ testInline =
                         bvForm . _GetLet)
         verify workArea
             | Lens.has afterInline workArea = pure ()
-            | otherwise = fail "Expected inline result"
+            | otherwise = error "Expected inline result"
         afterInline =
             replBody . _BodyLam . lamFunc . fBody .
             hVal . _BinderTerm . _BodyLiteral . _LiteralNum
@@ -217,7 +217,7 @@ paramAnnotations =
         verify workArea =
             unless
             (Lens.allOf (replBody . lamFirstParam . _1 . fpAnnotation) (Lens.has _AnnotationNone) workArea)
-            (fail "parameter should not have type annotation")
+            (error "parameter should not have type annotation")
 
 delParam :: Test
 delParam =
@@ -227,7 +227,7 @@ delParam =
         action = replBody . lamFirstParam . _2 . piActions . fpDelete
         verify workArea
             | Lens.has afterDel workArea = pure ()
-            | otherwise = fail "Expected 5"
+            | otherwise = error "Expected 5"
         afterDel = replBody . _BodyLiteral . _LiteralNum
 
 delInfixArg :: Test
@@ -244,7 +244,7 @@ delInfixArg =
         arg = replBody . _BodyLabeledApply . aSpecialArgs . _Operator . _2
         verify workArea
             | Lens.has afterDel workArea = pure ()
-            | otherwise = fail "Expected 1"
+            | otherwise = error "Expected 1"
         afterDel = replBody . _BodyLiteral . _LiteralNum
 
 testExtractForRecursion :: Test
@@ -285,7 +285,7 @@ testInsistFactorial =
             hVal . _BodyLam . lamFunc . fBody .
             hVal . _BinderTerm . _BodyFragment . fHeal
         verify workArea
-            | Lens.has unexpected workArea = fail "fragment created at unexpected position"
+            | Lens.has unexpected workArea = error "fragment created at unexpected position"
             | otherwise = pure ()
         unexpected =
             Lens.cloneTraversal ifElse . iElse .
@@ -306,7 +306,7 @@ testInsistEq =
             hVal . _BodyFragment . fHeal
         verify workArea
             | Lens.has expected workArea = pure ()
-            | otherwise = fail "fragment not created at expected position"
+            | otherwise = error "fragment not created at expected position"
         expected =
             replBody . _BodyLabeledApply . aSpecialArgs . _Operator . _1 .
             hVal . _BodyFragment
@@ -325,7 +325,7 @@ testInsistIf =
             hVal . _BinderTerm . _BodyFragment . fHeal
         verify workArea
             | Lens.has expected workArea = pure ()
-            | otherwise = fail "fragment not created at expected position"
+            | otherwise = error "fragment not created at expected position"
         expected =
             replBody . _BodyIfElse . iElse .
             hVal . _SimpleElse . _BodyLam . lamFunc . fBody .
@@ -358,7 +358,7 @@ testInsistSubsets =
             hVal . _BodyFragment . fHeal
         verify workArea
             | Lens.has expected workArea = pure ()
-            | otherwise = fail "fragment not created at expected position"
+            | otherwise = error "fragment not created at expected position"
         expected = Lens.cloneTraversal consArgs . _1 . hVal . _BodyFragment
 
 testLightLambda :: Test
@@ -368,7 +368,7 @@ testLightLambda =
     where
         verify workArea
             | Lens.has expected workArea = pure ()
-            | otherwise = fail "Expected light lambda sugar!"
+            | otherwise = error "Expected light lambda sugar!"
         expected =
             replBody . _BodyLabeledApply . aAnnotatedArgs . traverse . aaExpr .
             hVal . _BodyLam . lamMode . _LightLambda
@@ -380,7 +380,7 @@ testNotALightLambda =
     where
         verify workArea
             | Lens.has expected workArea = pure ()
-            | otherwise = fail "Expected light lambda sugar!"
+            | otherwise = error "Expected light lambda sugar!"
         expected = replBody . _BodyLam . lamMode . _NormalBinder
 
 delDefParam :: Test
@@ -435,7 +435,7 @@ setHoleToHole =
         action workArea = workArea ^?! setToHole & void & lift
         verify workArea
             | Lens.has setToHole workArea =
-                fail "hole has set to hole?"
+                error "hole has set to hole?"
             | otherwise = pure ()
         setToHole :: Lens.Traversal' (WorkArea v name i o (Payload v name i o, a)) (o EntityId)
         setToHole =
@@ -450,7 +450,7 @@ assertEq msg expected got
           "Assertion failed: " ++ msg ++
           "\n  expected to be: " ++ show expected ++
           "\n  but was:        " ++ show got
-          & fail
+          & error
 
 testFloatToRepl :: Test
 testFloatToRepl =

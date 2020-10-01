@@ -74,7 +74,7 @@ undoN n db =
         undo =
             do
                 actions <- VersionControl.makeActions
-                fromMaybe (fail "Cannot undo any further") $ mUndo actions
+                fromMaybe (error "Cannot undo any further") $ mUndo actions
 
 importPath :: FilePath -> Transaction.Store DbM -> IO ()
 importPath path db =
