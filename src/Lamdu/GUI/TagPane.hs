@@ -8,7 +8,6 @@ import           Data.Binary.Extended (encodeS)
 import qualified Data.Char as Char
 import           Data.Property (Property(..), pVal)
 import qualified Data.Property as Property
-import           Data.Set (Set)
 import qualified Data.Set as Set
 import           GUI.Momentu.Align (TextWidget, Aligned(..), WithTextPos(..))
 import qualified GUI.Momentu.Align as Align

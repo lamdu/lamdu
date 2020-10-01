@@ -11,7 +11,7 @@ module Lamdu.Sugar.Names.Add
 import           Control.Lens (ALens)
 import qualified Control.Lens as Lens
 import           Control.Lens.Extended ((==>))
-import           Control.Monad.Reader (ReaderT(..), Reader, runReader, MonadReader(..))
+import           Control.Monad.Reader (ReaderT(..), Reader, runReader)
 import qualified Control.Monad.Reader as Reader
 import qualified Control.Monad.Writer as Writer
 import           Control.Monad.Trans.FastWriter (Writer, runWriter, MonadWriter)

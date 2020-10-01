@@ -11,13 +11,10 @@ import           Control.Lens.Extended ((==>))
 import           Data.Char (toLower)
 import           Data.List (sortOn)
 import           Data.MMap (MMap)
-import           Data.Semigroup (Semigroup)
 import qualified Data.Set as Set
-import           Data.Text (Text)
 import qualified Data.Text as Text
 import           Data.Vector ((!))
 import qualified Data.Vector as Vector
-import           Generic.Data (Generically(..))
 import qualified Text.EditDistance as EditDistance
 import           Text.PrettyPrint (($+$), (<+>))
 import qualified Text.PrettyPrint as Pretty

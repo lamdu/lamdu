@@ -35,7 +35,6 @@ import           Data.UUID.Types (UUID)
 import qualified Data.UUID.Utils as UUIDUtils
 import qualified Data.Vector as Vec
 import           Data.Word (Word8)
-import           Generic.Data (Generically(..))
 import           Hyper
 import           Hyper.Type.AST.Row (RowExtend(..))
 import qualified Lamdu.Builtins.PrimVal as PrimVal

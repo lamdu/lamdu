@@ -6,7 +6,6 @@ module Control.Monad.Unit
     ( Unit(..)
     ) where
 
-import Data.Semigroup (Semigroup)
 import Lamdu.Prelude
 
 data Unit a = Unit

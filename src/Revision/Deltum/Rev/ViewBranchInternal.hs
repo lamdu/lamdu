@@ -13,7 +13,6 @@ module Revision.Deltum.Rev.ViewBranchInternal
 where
 
 import qualified Control.Lens as Lens
-import           Data.Binary (Binary(..))
 import           Data.UUID.Types (UUID)
 import qualified Data.UUID.Utils as UUIDUtils
 import           Revision.Deltum.IRef (IRef)

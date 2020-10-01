@@ -9,7 +9,6 @@ import           Data.CurAndPrev (CurAndPrev(CurAndPrev))
 import           Data.Property (Property(..))
 import           Data.String (IsString(..))
 import           Data.UUID.Types (UUID)
-import           Hyper.Combinator.Ann (Annotated)
 import           Hyper.Type.AST.FuncType (FuncType(..))
 import           Hyper.Type.AST.Scheme (QVars(..))
 import qualified Lamdu.Calc.Term as V

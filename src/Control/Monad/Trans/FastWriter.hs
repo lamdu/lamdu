@@ -17,7 +17,6 @@ import Control.Monad.Trans.Class (MonadTrans(..))
 import Control.Monad.Trans.State.Strict (StateT(..))
 import Control.Monad.Writer (MonadWriter(..))
 import Data.Functor.Identity (Identity(..))
-import Data.Monoid ((<>))
 
 import Prelude
 

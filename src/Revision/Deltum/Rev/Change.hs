@@ -1,7 +1,6 @@
 module Revision.Deltum.Rev.Change (Key, Value, Change(..))
 where
 
-import Data.Binary (Binary)
 import Data.UUID.Types (UUID)
 
 import Lamdu.Prelude

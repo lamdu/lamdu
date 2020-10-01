@@ -22,7 +22,6 @@ import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
 import           Lamdu.Sugar.Convert.Hole.Suggest (termTransforms, termTransformsWithModify)
 import           Revision.Deltum.Transaction (Transaction)
-import           Test.HUnit (assertBool)
 
 import           Test.Lamdu.Prelude
 

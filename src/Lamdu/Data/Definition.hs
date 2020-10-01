@@ -8,7 +8,6 @@ module Lamdu.Data.Definition
     ) where
 
 import qualified Control.Lens as Lens
-import           Data.Binary (Binary(..))
 import           Data.Map.Extended (setMapIntersection)
 import qualified Data.Set as Set
 import qualified Data.Text as Text

@@ -2,7 +2,6 @@ module Lamdu.GUI.Expr.ApplyEdit
     ( makeSimple, makeLabeled
     ) where
 
-import           Control.Lens (Const)
 import qualified Control.Lens as Lens
 import           GUI.Momentu.Glue ((/|/))
 import qualified GUI.Momentu.Glue as Glue

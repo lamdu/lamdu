@@ -7,7 +7,6 @@ module Revision.Deltum.Rev.Version
     , walkUp, walkDown, versionsBetween, walk
     ) where
 
-import           Data.Binary (Binary(..))
 import           Revision.Deltum.IRef (IRef)
 import           Revision.Deltum.Rev.Change (Change(..), Key, Value)
 import           Revision.Deltum.Transaction (Transaction)

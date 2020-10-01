@@ -50,7 +50,6 @@ module Lamdu.Sugar.Types.Expression
 
 import qualified Control.Lens as Lens
 import           Control.Monad.ListT (ListT)
-import           Data.Kind (Constraint)
 import           Data.Property (Property)
 import           Hyper
 import           Hyper.Type.AST.App (App(..), appFunc, appArg)

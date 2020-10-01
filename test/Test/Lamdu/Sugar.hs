@@ -27,7 +27,7 @@ import qualified Lamdu.I18N.Code as Texts
 import           Lamdu.I18N.LangId (LangId)
 import qualified Lamdu.I18N.Name as Texts
 import           Lamdu.Name (Name)
-import           Lamdu.Sugar (sugarWorkArea, ParenInfo)
+import           Lamdu.Sugar (sugarWorkArea)
 import           Lamdu.Sugar.Config (Config(..))
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import           Lamdu.Sugar.Types as Sugar

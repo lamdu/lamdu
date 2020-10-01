@@ -8,8 +8,6 @@ module Data.Set.Ordered
 
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
-import           Data.Semigroup (Semigroup(..))
-import           GHC.Generics (Generic)
 
 import qualified Lamdu.Prelude as Prelude
 import           Lamdu.Prelude hiding (filter, null)

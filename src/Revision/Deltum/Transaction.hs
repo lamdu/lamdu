@@ -23,9 +23,8 @@ import           Control.Monad.Trans.Reader (ReaderT, runReaderT)
 import qualified Control.Monad.Trans.Reader as Reader
 import           Control.Monad.Trans.State (StateT, runStateT)
 import qualified Control.Monad.Trans.State as State
-import           Data.Binary.Extended (Binary, encodeS, decodeS)
+import           Data.Binary.Extended (encodeS, decodeS)
 import qualified Data.Map as Map
-import           Data.Maybe (fromMaybe, isJust)
 import qualified Data.Monoid as Monoid
 import           Data.Property (Property, MkProperty')
 import qualified Data.Property as Property
@@ -145,7 +144,7 @@ writeUUID :: (Monad m, Binary a) => UUID -> a -> T m ()
 writeUUID = insert
 
 uuidExists :: Monad m => UUID -> T m Bool
-uuidExists = fmap isJust . lookupBS
+uuidExists = fmap (Lens.has Lens._Just) . lookupBS
 
 readUUIDMb :: (Monad m, Binary a) => T m a -> UUID -> T m a
 readUUIDMb nothingCase uuid =

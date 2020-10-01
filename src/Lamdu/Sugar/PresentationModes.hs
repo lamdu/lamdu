@@ -3,7 +3,6 @@ module Lamdu.Sugar.PresentationModes
     ( makeLabeledApply
     ) where
 
-import           Control.Lens (Const)
 import qualified Control.Lens as Lens
 import           Control.Monad.Once (OnceT)
 import           Control.Monad.Transaction (getP)

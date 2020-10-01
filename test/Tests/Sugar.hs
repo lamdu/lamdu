@@ -9,14 +9,12 @@ import           Control.Monad.Once (OnceT, _OnceT)
 import           Control.Monad.State (evalStateT)
 import qualified Data.List.Class as List
 import qualified Data.Property as Property
-import           Hyper.Combinator.Ann (Annotated)
 import qualified Lamdu.Annotations as Annotations
 import qualified Lamdu.Calc.Term as V
 import           Lamdu.Data.Db.Layout (ViewM)
 import           Lamdu.Name (Name(..))
 import           Lamdu.Sugar.Types as Sugar
 import           Revision.Deltum.Transaction (Transaction)
-import           Test.HUnit (assertBool)
 import           Test.Lamdu.Env (Env)
 import qualified Test.Lamdu.Env as Env
 import           Test.Lamdu.Sugar (convertWorkArea, testProgram)
