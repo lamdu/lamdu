@@ -2,7 +2,7 @@ let config = {
     packageOverrides = pkgs: rec {
         haskell = pkgs.haskell // {
             packages = pkgs.haskell.packages // {
-                ghc865 = pkgs.haskell.packages.ghc865.override {
+                ghc884 = pkgs.haskell.packages.ghc884.override {
                     overrides = self: super: rec {
                         hsc2hs = pkgs.haskell.lib.unmarkBroken (haskell.lib.dontCheck super.hsc2hs);
                         freetype2 = self.callPackage ./nix/freetype2.nix {};
@@ -12,10 +12,10 @@ let config = {
                         hypertypes = self.callPackage ./nix/hypertypes.nix {};
                         lamdu-calculus = self.callPackage ./nix/lamdu-calculus.nix {};
                         nodejs-exec = self.callPackage ./nix/nodejs-exec.nix {};
-                        lens = self.callHackageDirect
-                            { pkg = "lens";
-                              ver = "4.18.1";
-                              sha256 = "01qbqs0hp3qw5lpqb75cirk75q6wz839dpbzcqaj9bld4ww1ahlz";
+                        language-ecmascript = self.callHackageDirect
+                            { pkg = "language-ecmascript";
+                              ver = "0.19.1.0";
+                              sha256 = "5a08ec4323f9e4818983de3805624aa80e2009e788c348febc7b";
                             } {};
                         testing-feat = self.callHackage "testing-feat" "1.1.0.0" {};
                         # aeson-diff = pkgs.haskell.lib.doJailbreak (self.callHackage "aeson-diff" "1.1.0.5" {});
@@ -28,10 +28,10 @@ let config = {
         };
     };
 };
-in with import (builtins.fetchTarball "https://github.com/NixOS/nixpkgs/archive/034bf58d343.tar.gz") {
+in with import (builtins.fetchTarball "https://github.com/NixOS/nixpkgs/archive/b3f8d3b80dd.tar.gz") {
     inherit config;
 };
 
 {
-lamdu = pkgs.haskell.packages.ghc865.callPackage ./nix/lamdu.nix {};
+lamdu = pkgs.haskell.packages.ghc884.callPackage ./nix/lamdu.nix {};
 }

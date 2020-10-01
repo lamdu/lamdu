@@ -14,7 +14,6 @@ import           Control.Exception (bracket_)
 import           Control.Lens.Operators
 import           Control.Lens.Tuple
 import           Control.Monad (unless)
-import           Control.Monad.Fail (MonadFail)
 import           Data.Foldable (traverse_)
 import           Data.Vector.Vector2 (Vector2(..))
 import           GHC.Stack (currentCallStack)

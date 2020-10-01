@@ -5,7 +5,7 @@ extra-deps:
 - bitmap-opengl-0.0.1.5
 - stb-image-0.2.1
 - unicode-properties-3.2.0.0
-- lens-4.18.1
+- language-ecmascript-0.19.1.0
 - github: lamdu/bindings-freetype-gl
   commit: abcb891cf2ed01edb2d02197ef2b354d6ff43db5
 - github: lamdu/lamdu-calculus
@@ -23,6 +23,6 @@ extra-deps:
 - github: lamdu/nodejs-exec
   commit: b42c7880973a6eed67dffcfb6641e84de07612f2
 
-resolver: nightly-2019-09-12
+resolver: lts-16.16
 
 allow-newer: true

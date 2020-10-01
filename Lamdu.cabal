@@ -135,7 +135,7 @@ Library
                   , aeson-pretty
                   , ansi-wl-pprint
                   , base >= 4.12
-                  , base-compat >= 0.8.2 && < 0.11
+                  , base-compat >= 0.8.2 && < 0.12
                   , base16-bytestring
                   , binary >= 0.7
                   , bytestring
@@ -148,7 +148,7 @@ Library
                   , filepath >= 1.1
                   , edit-distance
                   , generic-data >= 0.7
-                  , GLFW-b >= 3.2.1.0 && < 3.3
+                  , GLFW-b >= 3.3.0.0 && < 3.4
                   , graphics-drawingcombinators >= 1.7.1
                   , hashable
                   , lamdu-calculus >= 0.2

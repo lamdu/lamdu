@@ -9,7 +9,6 @@ module GUI.Momentu.Test
 -- import qualified GUI.Momentu.ModKey as ModKey
 import qualified Control.Lens as Lens
 import           GUI.Momentu.EventMap (EventMap)
-import           Control.Monad.Fail (MonadFail)
 import qualified GUI.Momentu.Main as Main
 import           GUI.Momentu.State (GUIState)
 import qualified GUI.Momentu.State as State

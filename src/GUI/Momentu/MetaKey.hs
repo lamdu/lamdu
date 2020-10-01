@@ -100,9 +100,9 @@ instance Aeson.ToJSON MetaKey where
 toGLFWModifiers :: ModifierKeys -> GLFW.ModifierKeys
 toGLFWModifiers (ModifierKeys cmd_ alt_ shift_ meta_)
     | SysInfo.os == "darwin" =
-        GLFW.ModifierKeys shift_ meta_ alt_ cmd_
+        GLFW.ModifierKeys shift_ meta_ alt_ cmd_ False False
     | otherwise =
-        GLFW.ModifierKeys shift_ cmd_ alt_ meta_
+        GLFW.ModifierKeys shift_ cmd_ alt_ meta_ False False
 
 toModKey :: MetaKey -> ModKey
 toModKey (MetaKey mods k) = ModKey (toGLFWModifiers mods) k
