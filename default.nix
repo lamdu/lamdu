@@ -15,7 +15,7 @@ let config = {
                         language-ecmascript = self.callHackageDirect
                             { pkg = "language-ecmascript";
                               ver = "0.19.1.0";
-                              sha256 = "5a08ec4323f9e4818983de3805624aa80e2009e788c348febc7b";
+                              sha256 = "lieoyqzd7hsidcmd3y4akyskvahcacphrdbur7v4ponezu74mvha";
                             } {};
                         testing-feat = self.callHackage "testing-feat" "1.1.0.0" {};
                         # aeson-diff = pkgs.haskell.lib.doJailbreak (self.callHackage "aeson-diff" "1.1.0.5" {});
