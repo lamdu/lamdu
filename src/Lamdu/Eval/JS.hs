@@ -147,22 +147,22 @@ parseBytes (Json.Array vals) =
     & BS.pack & PrimVal.Bytes & PrimVal.fromKnown & ER.RPrimVal & Ann (Const ())
 parseBytes _ = error "Bytes with non-array data"
 
-parseInject :: Text -> Maybe Json.Value -> Parse (ER.Val ())
+parseInject :: Text -> Either e Json.Value -> Parse (ER.Val ())
 parseInject tag mData =
     case mData of
-    Nothing -> Ann (Const ()) ER.RRecEmpty & pure
-    Just v -> parseResult v
+    Left{} -> Ann (Const ()) ER.RRecEmpty & pure
+    Right v -> parseResult v
     <&> \iv ->
     ER.RInject ER.Inject
     { ER._injectTag = parseHexNameBs tag & Identifier & Tag
     , ER._injectVal = iv
     } & Ann (Const ())
 
-(.:) :: Monad m => Json.FromJSON a => Json.Object -> Text -> m a
-obj .: tag = Json.parseEither (Json..: tag) obj & either error pure
+(.:) :: Json.FromJSON a => Json.Object -> Text -> Either String a
+obj .: tag = Json.parseEither (Json..: tag) obj
 
-(.:?) :: Monad m => Json.FromJSON a => Json.Object -> Text -> m (Maybe a)
-obj .:? tag = Json.parseEither (Json..:? tag) obj & either error pure
+(.:?) :: Json.FromJSON a => Json.Object -> Text -> Either String (Maybe a)
+obj .:? tag = Json.parseEither (Json..:? tag) obj
 
 parseObj :: Json.Object -> Parse (ER.Val ())
 parseObj obj =
@@ -174,19 +174,19 @@ parseObj obj =
     , obj .: "number" <&> read <&> fromDouble <&> pure
     , obj .: "tag" <&> (`parseInject` (obj .: "data"))
     , obj .: "func" <&> (\(Json.Number x) -> round x & ER.RFunc & Ann (Const ()) & pure)
-    ] & fromMaybe (parseRecord obj)
+    ] & either (const (parseRecord obj)) id
 
 parseResult :: Json.Value -> Parse (ER.Val ())
 parseResult (Json.Number x) = realToFrac x & fromDouble & pure
 parseResult (Json.Object obj) =
     case obj .: "cachedVal" of
-    Just cacheId -> Lens.use (Lens.singular (Lens.ix cacheId))
-    Nothing ->
+    Right cacheId -> Lens.use (Lens.singular (Lens.ix cacheId))
+    Left{} ->
         do
             x <- parseObj obj
             case obj .: "cacheId" <|> obj .: "func" of
-                Nothing -> pure ()
-                Just cacheId -> Lens.at cacheId ?= x
+                Left{} -> pure ()
+                Right cacheId -> Lens.at cacheId ?= x
             pure x
 parseResult x = "Unsupported encoded JS output: " ++ show x & error
 
@@ -201,16 +201,16 @@ addVal ::
     )
 addVal obj =
     case obj .: "result" of
-    Nothing -> pure id
-    Just result ->
+    Left{} -> pure id
+    Right result ->
         parseResult result
         <&> \pr ->
         Map.alter
         (<> Just (Map.singleton (ScopeId scope) pr))
         (parseUUID exprId)
     where
-        Just scope = obj .: "scope"
-        Just exprId = obj .: "exprId"
+        Right scope = obj .: "scope"
+        Right exprId = obj .: "exprId"
 
 newScope ::
     Json.Object ->
@@ -222,29 +222,29 @@ newScope obj =
     do
         arg <-
             case obj .: "arg" of
-            Nothing -> error "Scope report missing arg"
-            Just x -> parseResult x
+            Left{} -> error "Scope report missing arg"
+            Right x -> parseResult x
         let apply = Map.singleton (ScopeId parentScope) [(ScopeId scope, arg)]
         let addApply Nothing = Just apply
             addApply (Just x) = Just (Map.unionWith (++) x apply)
         Map.alter addApply (parseUUID lamId) & pure
     where
-        Just parentScope = obj .: "parentScope"
-        Just scope = obj .: "scope"
-        Just lamId = obj .: "lamId"
+        Right parentScope = obj .: "parentScope"
+        Right scope = obj .: "scope"
+        Right lamId = obj .: "lamId"
 
 completionSuccess :: Json.Object -> Parse (ER.Val ())
 completionSuccess obj =
     case obj .: "result" of
-    Nothing -> error "Completion success report missing result"
-    Just x -> parseResult x
+    Left{} -> error "Completion success report missing result"
+    Right x -> parseResult x
 
 completionError ::
     Monad m => Json.Object -> m (ER.EvalException UUID)
 completionError obj =
     case obj .: "err" of
-    Nothing -> "Completion error report missing valid err: " ++ show obj & error
-    Just x ->
+    Left{} -> "Completion error report missing valid err: " ++ show obj & error
+    Right x ->
         ER.EvalException
         <$> do
                 errTypeStr <- x .: "error"
@@ -252,8 +252,8 @@ completionError obj =
                 ER.decodeJsErrorException errTypeStr exceptionMStr
         <*> (
             case (,) <$> (x .: "globalId") <*> (x .: "exprId") of
-            Nothing -> pure Nothing
-            Just (g, e) ->
+            Left{} -> pure Nothing
+            Right (g, e) ->
                 (,)
                 <$> ER.decodeWhichGlobal g
                 ?? parseUUID e
@@ -286,7 +286,7 @@ processEvent resultsRef actions obj =
                         & postProcess res
                         & (, ())
                 actions ^. aReportUpdatesAvailable
-        Just event = obj .: "event"
+        Right event = obj .: "event"
 
 withJSDebugHandles :: Traversable t => t FilePath -> (t Handle -> IO a) -> IO a
 withJSDebugHandles paths =
