@@ -30,8 +30,8 @@ instance Lens.FunctorWithIndex k (MMap k) where imap f = _MMap %~ Lens.imap f
 instance Lens.FoldableWithIndex k (MMap k) where ifoldMap f = Lens.ifoldMap f . (^. _MMap)
 instance Lens.TraversableWithIndex k (MMap k) where itraverse f = _MMap %%~ Lens.itraverse f
 
-type instance Lens.Index (MMap k v) = k
-type instance Lens.IxValue (MMap k v) = v
+type instance Lens.Index (MMap k _) = k
+type instance Lens.IxValue (MMap _ v) = v
 instance Ord k => Lens.Ixed (MMap k v) where ix k = _MMap . Lens.ix k
 instance Ord k => Lens.At (MMap k v) where at k = _MMap . Lens.at k
 
