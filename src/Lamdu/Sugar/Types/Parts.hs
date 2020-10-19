@@ -119,6 +119,9 @@ data BinderParams v name i o
     | Params [(FuncParam v name, ParamInfo name i o)]
     deriving Generic
 
+-- VarInfo is used for:
+-- * Differentiating Mut actions so UI can suggest executing them
+-- * Name pass giving parameters names according to types
 data VarInfo
     = VarNominal T.NominalId T.Tag
     | VarGeneric | VarFunction | VarRecord | VarVariant
