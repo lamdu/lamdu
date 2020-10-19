@@ -32,7 +32,6 @@ import qualified Lamdu.Sugar.Convert.Input as Input
 import           Lamdu.Sugar.Convert.Monad (ConvertM, scScopeInfo, siLetItems)
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
 import qualified Lamdu.Sugar.Convert.Tag as ConvertTag
-import           Lamdu.Sugar.Convert.Type (convertType)
 import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import qualified Lamdu.Sugar.Lens as SugarLens
@@ -100,13 +99,11 @@ convertLet pl redex =
                     redex ^. Redex.lam . V.tlOut . hAnn . Input.stored
                         & replaceWith stored & void
                 <* postProcess
-        typS <-
-            convertType (EntityId.ofTypeOf (argAnn ^. Input.entityId))
-            (argAnn ^. Input.inferredType)
+        vinfo <- mkVarInfo (argAnn ^. Input.inferredType)
         pure Ann
             { _hVal =
                 BinderLet Let
-                { _lVarInfo = mkVarInfo typS
+                { _lVarInfo = vinfo
                 , _lValue = value & annotation . pActions %~ fixValueNodeActions
                 , _lDelete = del
                 , _lName = tag

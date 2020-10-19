@@ -13,7 +13,7 @@ module Lamdu.Sugar.Convert.Binder.Params
 
 import qualified Control.Lens as Lens
 import           Control.Monad.Once (OnceT)
-import           Control.Monad.Transaction (getP, setP)
+import           Control.Monad.Transaction (MonadTransaction, getP, setP)
 import qualified Data.List.Extended as List
 import qualified Data.Map as Map
 import           Data.Maybe.Extended (unsafeUnjust)
@@ -21,6 +21,7 @@ import           Data.Property (MkProperty', modP)
 import qualified Data.Set as Set
 import           Hyper
 import           Hyper.Type.AST.FuncType (FuncType(..), funcIn)
+import           Hyper.Type.AST.Nominal (NominalInst(..))
 import           Hyper.Type.AST.Row (RowExtend(..), FlatRowExtends(..))
 import qualified Hyper.Type.AST.Row as Row
 import           Hyper.Type.Functor (F)
@@ -40,6 +41,7 @@ import qualified Lamdu.Sugar.Convert.Input as Input
 import           Lamdu.Sugar.Convert.Monad (ConvertM)
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
 import qualified Lamdu.Sugar.Convert.Tag as ConvertTag
+import qualified Lamdu.Sugar.Convert.TId as ConvertTId
 import           Lamdu.Sugar.Convert.Type (convertType)
 import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
@@ -462,7 +464,7 @@ convertRecordParams mPresMode binderKind fieldParams lam@(V.TypedLam param _ _) 
                         )
                     <*> fieldParamActions mPresMode binderKind tags fp storedLam
                 let paramEntityId = paramInfo ^. piTag . tagRefTag . tagInstance
-                typeS <- convertType (EntityId.ofTypeOf paramEntityId) (fpFieldType fp)
+                vinfo <- mkVarInfo (fpFieldType fp)
                 let EntityId.EntityId u = paramEntityId
                 pure
                     ( FuncParam
@@ -472,7 +474,7 @@ convertRecordParams mPresMode binderKind fieldParams lam@(V.TypedLam param _ _) 
                             , _eEvalId = u
                             , _eLambdas = []
                             }
-                        , _fpVarInfo = mkVarInfo typeS
+                        , _fpVarInfo = vinfo
                         }
                     , paramInfo
                     )
@@ -614,22 +616,23 @@ makeNonRecordParamActions binderKind storedLam =
     where
         param = storedLam ^. slLam . V.tlIn
 
-mkVarInfo :: Ann a # Type InternalName -> VarInfo
-mkVarInfo (Ann _ TFun{}) = VarFunction
-mkVarInfo (Ann _ TRecord{}) = VarRecord
-mkVarInfo (Ann _ TVariant{}) = VarVariant
-mkVarInfo (Ann _ TVar{}) = VarGeneric
-mkVarInfo (Ann _ (TInst (TId name tid) _)) = VarNominal (TId (name ^. inTag) tid)
+mkVarInfo :: MonadTransaction n m => Pure # T.Type -> m VarInfo
+mkVarInfo (Pure T.TFun{}) = pure VarFunction
+mkVarInfo (Pure T.TRecord{}) = pure VarRecord
+mkVarInfo (Pure T.TVariant{}) = pure VarVariant
+mkVarInfo (Pure T.TVar{}) = pure VarGeneric
+mkVarInfo (Pure (T.TInst (NominalInst tid _))) = ConvertTId.convert tid <&> VarNominal . fmap (^. inTag)
 
 mkFuncParam ::
     Monad m =>
     EntityId -> Input.Payload m a # V.Term -> info ->
     ConvertM m (FuncParam EvalPrep InternalName, info)
 mkFuncParam entityId lamExprPl info =
-    (,)
+    (,,)
     <$> Lens.view ConvertM.scAnnotationsMode
     <*> convertType (EntityId.ofTypeOf entityId) typ
-    <&> \(annMode, typS) ->
+    <*> mkVarInfo typ
+    <&> \(annMode, typS, vinfo) ->
     ( FuncParam
         { _fpAnnotation =
             case annMode of
@@ -641,7 +644,7 @@ mkFuncParam entityId lamExprPl info =
                 , _eEvalId = u
                 , _eLambdas = []
                 }
-        , _fpVarInfo = mkVarInfo typS
+        , _fpVarInfo = vinfo
         }
     , info
     )

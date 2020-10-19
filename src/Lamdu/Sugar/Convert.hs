@@ -213,11 +213,10 @@ convertRepl env cp =
             >>= convertPayloads
             & ConvertM.run context
             >>= OrderTags.orderNode
-        let replEntityId = expr ^. SugarLens.binderResultExpr . _1 . plEntityId
-        typS <- ConvertType.convertType (EntityId.ofTypeOf replEntityId) typ
+        vinfo <- mkVarInfo typ
         pure Repl
             { _replExpr = expr
-            , _replVarInfo = mkVarInfo typS
+            , _replVarInfo = vinfo
             , _replResult = CurAndPrev Nothing Nothing
             }
     where
