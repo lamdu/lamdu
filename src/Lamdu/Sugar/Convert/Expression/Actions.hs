@@ -329,6 +329,16 @@ makeTypeAnnotation ::
     EntityId -> Pure # T.Type -> ConvertM m (Annotated EntityId # Type InternalName)
 makeTypeAnnotation = convertType . EntityId.ofTypeOf
 
+mkEvalPrep :: Input.Payload m a # V.Term -> EvalPrep
+mkEvalPrep pl =
+    EvalPrep
+    { _eType = pl ^. Input.inferredType
+    , _eEvalId = u
+    , _eLambdas = []
+    }
+    where
+        EntityId.EntityId u = pl ^. Input.entityId
+
 makeAnnotation ::
     Monad m =>
     Ann.ShowAnnotation -> Input.Payload m a # V.Term ->
@@ -341,14 +351,8 @@ makeAnnotation showAnn pl
         Annotations.Types | showAnn ^. Ann.showInTypeMode ->
             makeTypeAnnotationPl pl <&> AnnotationType
         Annotations.Evaluation | showAnn ^. Ann.showInEvalMode ->
-            AnnotationVal EvalPrep
-            { _eType = pl ^. Input.inferredType
-            , _eEvalId = u
-            , _eLambdas = []
-            } & pure
+            mkEvalPrep pl & AnnotationVal & pure
         _ -> pure AnnotationNone
-        where
-            EntityId.EntityId u = pl ^. Input.entityId
 
 convertPayloads ::
     (Monad m, RTraversable h) =>
