@@ -123,7 +123,7 @@ data BinderParams v name i o
 -- * Differentiating Mut actions so UI can suggest executing them
 -- * Name pass giving parameters names according to types
 data VarInfo
-    = VarNominal T.NominalId T.Tag
+    = VarNominal (TId T.Tag)
     | VarGeneric | VarFunction | VarRecord | VarVariant
     deriving (Generic, Eq)
 

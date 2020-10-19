@@ -619,7 +619,7 @@ mkVarInfo (Ann _ TFun{}) = VarFunction
 mkVarInfo (Ann _ TRecord{}) = VarRecord
 mkVarInfo (Ann _ TVariant{}) = VarVariant
 mkVarInfo (Ann _ TVar{}) = VarGeneric
-mkVarInfo (Ann _ (TInst (TId name tid) _)) = VarNominal tid (name ^. inTag)
+mkVarInfo (Ann _ (TInst (TId name tid) _)) = VarNominal (TId (name ^. inTag) tid)
 
 mkFuncParam ::
     Monad m =>

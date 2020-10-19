@@ -75,7 +75,7 @@ pAOpWithName varInfo (InternalName (Just uuid) tag)
     where
         newTag =
             case varInfo of
-            VarNominal _ nomTag -> nomTag
+            VarNominal (TId nomTag _) -> nomTag
             VarGeneric -> Builtins.genericVarTag
             VarFunction -> Builtins.functionTag
             VarRecord -> Builtins.recordTag
