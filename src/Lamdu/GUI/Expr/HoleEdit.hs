@@ -21,8 +21,8 @@ import qualified Lamdu.GUI.Expr.HoleEdit.SearchArea as SearchArea
 import           Lamdu.GUI.Expr.HoleEdit.ValTerms (allowedSearchTermCommon)
 import           Lamdu.GUI.Expr.HoleEdit.WidgetIds (WidgetIds(..))
 import qualified Lamdu.GUI.Expr.HoleEdit.WidgetIds as HoleWidgetIds
-import           Lamdu.GUI.ExpressionGui.Monad (GuiM)
-import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
+import           Lamdu.GUI.Monad (GuiM)
+import qualified Lamdu.GUI.Types as ExprGui
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.I18N.Code as Texts
 import qualified Lamdu.I18N.CodeUI as Texts

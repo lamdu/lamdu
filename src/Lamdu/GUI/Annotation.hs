@@ -1,5 +1,5 @@
 {-# LANGUAGE TypeFamilies, TupleSections #-}
-module Lamdu.GUI.ExpressionGui.Annotation
+module Lamdu.GUI.Annotation
     ( annotationSpacer
     , NeighborVals(..)
     , EvalAnnotationOptions(..), maybeAddAnnotationWith
@@ -37,8 +37,8 @@ import qualified Lamdu.Config.Theme as Theme
 import           Lamdu.Config.Theme.ValAnnotation (ValAnnotation)
 import qualified Lamdu.Config.Theme.ValAnnotation as ValAnnotation
 import qualified Lamdu.GUI.EvalView as EvalView
-import           Lamdu.GUI.ExpressionGui.Monad (GuiM)
-import qualified Lamdu.GUI.ExpressionGui.Monad as GuiM
+import           Lamdu.GUI.Monad (GuiM)
+import qualified Lamdu.GUI.Monad as GuiM
 import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.GUI.TypeView as TypeView
 import qualified Lamdu.GUI.WidgetIds as WidgetIds

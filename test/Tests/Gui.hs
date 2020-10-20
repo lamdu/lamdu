@@ -30,8 +30,8 @@ import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.GUI.CodeEdit as CodeEdit
 import qualified Lamdu.GUI.Expr as ExpressionEdit
 import qualified Lamdu.GUI.Expr.BinderEdit as BinderEdit
-import qualified Lamdu.GUI.ExpressionGui.Monad as GuiM
-import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
+import qualified Lamdu.GUI.Monad as GuiM
+import qualified Lamdu.GUI.Types as ExprGui
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Name (Name)
 import qualified Lamdu.Sugar.Lens as SugarLens

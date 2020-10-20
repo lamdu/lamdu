@@ -36,7 +36,7 @@ import qualified Lamdu.Config.Theme.TextColors as Theme
 import qualified Lamdu.Config.Theme.ValAnnotation as Theme
 import qualified Lamdu.Data.Definition as Def
 import qualified Lamdu.Data.Tag as Tag
-import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
+import qualified Lamdu.GUI.Types as ExprGui
 import qualified Lamdu.GUI.VersionControl.Config as VcGuiConfig
 import qualified Lamdu.I18N.Fonts as I18N.Fonts
 import           Lamdu.I18N.LangId (LangId)

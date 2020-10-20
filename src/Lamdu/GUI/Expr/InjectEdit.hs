@@ -24,12 +24,12 @@ import qualified GUI.Momentu.Widgets.TextView as TextView
 import qualified Lamdu.Config as Config
 import           Lamdu.Config.Theme (Theme)
 import qualified Lamdu.GUI.Expr.TagEdit as TagEdit
-import           Lamdu.GUI.ExpressionGui.Monad (GuiM)
-import qualified Lamdu.GUI.ExpressionGui.Monad as GuiM
-import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
-import           Lamdu.GUI.ExpressionGui.Wrap (stdWrapParentExpr)
+import           Lamdu.GUI.Monad (GuiM)
+import qualified Lamdu.GUI.Monad as GuiM
 import           Lamdu.GUI.Styled (text, grammar)
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
+import           Lamdu.GUI.Wrap (stdWrapParentExpr)
+import qualified Lamdu.GUI.Types as ExprGui
 import qualified Lamdu.I18N.Code as Texts
 import qualified Lamdu.I18N.CodeUI as Texts
 import qualified Lamdu.I18N.Definitions as Texts

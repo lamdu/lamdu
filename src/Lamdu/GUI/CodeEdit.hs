@@ -50,9 +50,8 @@ import qualified Lamdu.GUI.CodeEdit.GotoDefinition as GotoDefinition
 import qualified Lamdu.GUI.DefinitionEdit as DefinitionEdit
 import qualified Lamdu.GUI.Expr as ExpressionEdit
 import qualified Lamdu.GUI.Expr.BinderEdit as BinderEdit
-import           Lamdu.GUI.ExpressionGui.Monad (GuiM)
-import qualified Lamdu.GUI.ExpressionGui.Monad as GuiM
-import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
+import           Lamdu.GUI.Monad (GuiM)
+import qualified Lamdu.GUI.Monad as GuiM
 import           Lamdu.GUI.IOTrans (IOTrans(..))
 import qualified Lamdu.GUI.IOTrans as IOTrans
 import qualified Lamdu.GUI.ReplEdit as ReplEdit
@@ -60,6 +59,7 @@ import qualified Lamdu.GUI.StatusBar.Common as StatusBar
 import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.GUI.TagPane as TagPaneEdit
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
+import qualified Lamdu.GUI.Types as ExprGui
 import qualified Lamdu.I18N.Code as Texts
 import qualified Lamdu.I18N.CodeUI as Texts
 import qualified Lamdu.I18N.Collaboration as Texts

@@ -36,11 +36,11 @@ import qualified Lamdu.Config as Config
 import           Lamdu.Formatting (Format(..))
 import           Lamdu.GUI.Expr.EventMap (makeLiteralEventMap)
 import qualified Lamdu.GUI.Expr.HoleEdit.WidgetIds as HoleWidgetIds
-import           Lamdu.GUI.ExpressionGui.Monad (GuiM)
-import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
-import           Lamdu.GUI.ExpressionGui.Wrap (stdWrap)
+import           Lamdu.GUI.Monad (GuiM)
 import           Lamdu.GUI.Styled (label)
+import qualified Lamdu.GUI.Types as ExprGui
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
+import           Lamdu.GUI.Wrap (stdWrap)
 import qualified Lamdu.I18N.Code as Texts
 import qualified Lamdu.I18N.CodeUI as Texts
 import qualified Lamdu.I18N.Definitions as Texts

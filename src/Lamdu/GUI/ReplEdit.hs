@@ -37,11 +37,11 @@ import qualified Lamdu.Config as Config
 import           Lamdu.Config.Theme (Theme)
 import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.GUI.Expr.EventMap as ExprEventMap
-import           Lamdu.GUI.ExpressionGui.Monad (GuiM, makeBinder)
-import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
 import           Lamdu.GUI.IOTrans (IOTrans(..))
 import qualified Lamdu.GUI.IOTrans as IOTrans
+import           Lamdu.GUI.Monad (GuiM, makeBinder)
 import           Lamdu.GUI.Styled (label)
+import qualified Lamdu.GUI.Types as ExprGui
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.I18N.Code as Texts
 import qualified Lamdu.I18N.CodeUI as Texts

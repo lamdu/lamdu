@@ -24,8 +24,8 @@ import qualified Lamdu.GUI.Expr.LambdaEdit as LambdaEdit
 import qualified Lamdu.GUI.Expr.LiteralEdit as LiteralEdit
 import qualified Lamdu.GUI.Expr.NominalEdit as NominalEdit
 import qualified Lamdu.GUI.Expr.RecordEdit as RecordEdit
-import           Lamdu.GUI.ExpressionGui.Monad (GuiM)
-import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
+import           Lamdu.GUI.Monad (GuiM)
+import qualified Lamdu.GUI.Types as ExprGui
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.I18N.Code as Texts
 import qualified Lamdu.I18N.CodeUI as Texts

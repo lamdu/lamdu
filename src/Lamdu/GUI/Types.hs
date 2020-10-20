@@ -1,5 +1,5 @@
 {-# LANGUAGE TemplateHaskell #-}
-module Lamdu.GUI.ExpressionGui.Payload
+module Lamdu.GUI.Types
     ( Payload(..), plHiddenEntityIds, plParenInfo
     , mParensId
     ) where

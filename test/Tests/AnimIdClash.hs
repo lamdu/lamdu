@@ -13,8 +13,8 @@ import qualified GUI.Momentu.Widget as Widget
 import           Hyper
 import qualified Lamdu.GUI.Expr as ExpressionEdit
 import qualified Lamdu.GUI.Expr.BinderEdit as BinderEdit
-import qualified Lamdu.GUI.ExpressionGui.Monad as GuiM
-import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
+import qualified Lamdu.GUI.Monad as GuiM
+import qualified Lamdu.GUI.Types as ExprGui
 import qualified Lamdu.GUI.TypeView as TypeView
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.Name as Name

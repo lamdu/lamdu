@@ -356,13 +356,11 @@ Library
                   , Lamdu.GUI.Expr.NominalEdit
                   , Lamdu.GUI.Expr.RecordEdit
                   , Lamdu.GUI.Expr.TagEdit
-                  , Lamdu.GUI.ExpressionGui.Annotation
-                  , Lamdu.GUI.ExpressionGui.Monad
-                  , Lamdu.GUI.ExpressionGui.Payload
-                  , Lamdu.GUI.ExpressionGui.Wrap
+                  , Lamdu.GUI.Annotation
                   , Lamdu.GUI.IOTrans
                   , Lamdu.GUI.LightLambda
                   , Lamdu.GUI.Main
+                  , Lamdu.GUI.Monad
                   , Lamdu.GUI.NameView
                   , Lamdu.GUI.ParamEdit
                   , Lamdu.GUI.PresentationModeEdit
@@ -374,10 +372,12 @@ Library
                   , Lamdu.GUI.TagPane
                   , Lamdu.GUI.TagView
                   , Lamdu.GUI.TypeView
+                  , Lamdu.GUI.Types
                   , Lamdu.GUI.VersionControl
                   , Lamdu.GUI.VersionControl.Config
                   , Lamdu.GUI.WidgetIdIRef
                   , Lamdu.GUI.WidgetIds
+                  , Lamdu.GUI.Wrap
                   , Lamdu.I18N.Code
                   , Lamdu.I18N.CodeUI
                   , Lamdu.I18N.Collaboration

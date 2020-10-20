@@ -41,11 +41,11 @@ import qualified Lamdu.GUI.Expr.HoleEdit.ResultGroups as ResultGroups
 import qualified Lamdu.GUI.Expr.HoleEdit.ResultWidget as ResultWidget
 import           Lamdu.GUI.Expr.HoleEdit.WidgetIds (WidgetIds(..))
 import qualified Lamdu.GUI.Expr.HoleEdit.WidgetIds as HoleWidgetIds
-import           Lamdu.GUI.ExpressionGui.Annotation (maybeAddAnnotationPl)
-import qualified Lamdu.GUI.ExpressionGui.Annotation as Annotation
-import           Lamdu.GUI.ExpressionGui.Monad (GuiM)
-import qualified Lamdu.GUI.ExpressionGui.Monad as GuiM
-import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
+import           Lamdu.GUI.Annotation (maybeAddAnnotationPl)
+import qualified Lamdu.GUI.Annotation as Annotation
+import           Lamdu.GUI.Monad (GuiM)
+import qualified Lamdu.GUI.Monad as GuiM
+import qualified Lamdu.GUI.Types as ExprGui
 import qualified Lamdu.GUI.TypeView as TypeView
 import qualified Lamdu.I18N.Code as Texts
 import qualified Lamdu.I18N.CodeUI as Texts

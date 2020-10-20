@@ -1,7 +1,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving, TemplateHaskell #-}
 {-# LANGUAGE MultiParamTypeClasses, FlexibleInstances, DerivingVia #-}
 {-# LANGUAGE UndecidableInstances, PolymorphicComponents #-}
-module Lamdu.GUI.ExpressionGui.Monad
+module Lamdu.GUI.Monad
     ( StoredEntityIds(..)
     --
     , advanceDepth, resetDepth
@@ -54,7 +54,7 @@ import           Lamdu.Config.Theme (Theme)
 import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.Data.Anchors as Anchors
 import           Lamdu.Eval.Results (ScopeId, topLevelScopeId)
-import qualified Lamdu.GUI.ExpressionGui.Payload as ExprGui
+import qualified Lamdu.GUI.Types as ExprGui
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.I18N.LangId (LangId)
 import           Lamdu.Name (Name)
