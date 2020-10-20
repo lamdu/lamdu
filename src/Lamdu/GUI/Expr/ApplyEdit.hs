@@ -64,8 +64,7 @@ makeLabeled ::
     , Has (Texts.Name Text) env
     , Has (Texts.Navigation Text) env
     ) =>
-    Sugar.Expr Sugar.LabeledApply (Sugar.EvaluationScopes Name i) Name i o ExprGui.Payload ->
-    GuiM env i o (Responsive o)
+    ExprGui.Expr Sugar.LabeledApply i o -> GuiM env i o (Responsive o)
 makeLabeled (Ann (Const pl) apply) =
     ExprEventMap.add ExprEventMap.defaultOptions pl <*>
     ( Wrap.parentDelegator (WidgetIds.fromExprPayload (pl ^. _1)) <*>
@@ -91,8 +90,7 @@ makeLabeled (Ann (Const pl) apply) =
 
 makeArgRow ::
     (Monad i, Glue.HasTexts env, Has (Texts.Name Text) env) =>
-    Sugar.Body Sugar.AnnotatedArg (Sugar.EvaluationScopes Name i) Name i o ExprGui.Payload ->
-    GuiM env i o (TaggedItem o)
+    ExprGui.Body Sugar.AnnotatedArg i o -> GuiM env i o (TaggedItem o)
 makeArgRow arg =
     do
         expr <- GuiM.makeSubexpression (arg ^. Sugar.aaExpr)
@@ -113,8 +111,7 @@ addArgs ::
     , Has (Texts.Code Text) env, Has (Texts.CodeUI Text) env
     , Has (Texts.Name Text) env, Grid.HasTexts env
     ) =>
-    Sugar.Body Sugar.LabeledApply (Sugar.EvaluationScopes Name i) Name i o ExprGui.Payload ->
-    Responsive o -> GuiM env i o (Responsive o)
+    ExprGui.Body Sugar.LabeledApply i o -> Responsive o -> GuiM env i o (Responsive o)
 addArgs apply funcRow =
     do
         argRows <-

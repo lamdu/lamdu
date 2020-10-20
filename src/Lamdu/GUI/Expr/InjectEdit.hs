@@ -58,7 +58,7 @@ makeInject ::
     , Has (Texts.Name Text) env
     , Has (Texts.Navigation Text) env
     ) =>
-    Sugar.Expr Sugar.Term (Sugar.EvaluationScopes Name i) Name i o ExprGui.Payload ->
+    ExprGui.Expr Sugar.Term i o ->
     Sugar.TagRef Name i o ->
     (Sugar.Payload (Sugar.EvaluationScopes Name i) Name i o, ExprGui.Payload) ->
     GuiM env i o (Responsive o)
@@ -146,8 +146,7 @@ make ::
     , Has (Texts.Name Text) env
     , Has (Texts.Navigation Text) env
     ) =>
-    Sugar.Expr Sugar.Inject (Sugar.EvaluationScopes Name i) Name i o ExprGui.Payload ->
-    GuiM env i o (Responsive o)
+    ExprGui.Expr Sugar.Inject i o -> GuiM env i o (Responsive o)
 make (Ann (Const pl) (Sugar.Inject tag mVal)) =
     ( case mVal of
         Sugar.InjectNullary nullary -> makeNullaryInject nullary

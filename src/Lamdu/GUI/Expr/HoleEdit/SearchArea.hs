@@ -97,7 +97,7 @@ makeRenderedResult pl ctx result =
 postProcessSugar ::
     AddParens.MinOpPrec ->
     Sugar.Expr Sugar.Binder (Sugar.EvaluationScopes Name i) Name i o () ->
-    Sugar.Expr Sugar.Binder (Sugar.EvaluationScopes Name i) Name i o ExprGui.Payload
+    ExprGui.Expr Sugar.Binder i o
 postProcessSugar minOpPrec binder =
     AddParens.addToBinderWith minOpPrec binder
     & hflipped %~ hmap (\_ -> Lens._Wrapped %~ pl)

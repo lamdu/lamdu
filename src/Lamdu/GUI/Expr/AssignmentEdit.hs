@@ -377,10 +377,7 @@ makeFunctionParts ::
     , Has (Texts.Name Text) env
     , Has (Texts.Navigation Text) env
     ) =>
-    Sugar.FuncApplyLimit ->
-    Sugar.Expr Sugar.Function (Sugar.EvaluationScopes Name i) Name i o ExprGui.Payload ->
-    Widget.Id ->
-    GuiM env i o (Parts i o)
+    Sugar.FuncApplyLimit -> ExprGui.Expr Sugar.Function i o -> Widget.Id -> GuiM env i o (Parts i o)
 makeFunctionParts funcApplyLimit (Ann (Const pl) func) delVarBackwardsId =
     do
         mScopeCursor <- mkChosenScopeCursor func
@@ -430,9 +427,7 @@ makePlainParts ::
     , TextEdit.HasTexts env
     , SearchMenu.HasTexts env
     ) =>
-    Sugar.Expr Sugar.AssignPlain (Sugar.EvaluationScopes Name i) Name i o ExprGui.Payload ->
-    Widget.Id ->
-    GuiM env i o (Parts i o)
+    ExprGui.Expr Sugar.AssignPlain i o -> Widget.Id -> GuiM env i o (Parts i o)
 makePlainParts (Ann (Const pl) assignPlain) delVarBackwardsId =
     do
         mParamsEdit <-
@@ -455,10 +450,7 @@ makeParts ::
     , Has (Texts.Name Text) env
     , Has (Texts.Navigation Text) env
     ) =>
-    Sugar.FuncApplyLimit ->
-    Sugar.Expr Sugar.Assignment (Sugar.EvaluationScopes Name i) Name i o ExprGui.Payload ->
-    Widget.Id ->
-    GuiM env i o (Parts i o)
+    Sugar.FuncApplyLimit -> ExprGui.Expr Sugar.Assignment i o -> Widget.Id -> GuiM env i o (Parts i o)
 makeParts funcApplyLimit (Ann (Const pl) assignmentBody) =
     case assignmentBody of
     Sugar.BodyFunction x -> makeFunctionParts funcApplyLimit (Ann (Const pl) x)
@@ -497,7 +489,7 @@ make ::
     ) =>
     Maybe (i (Property o Meta.PresentationMode)) ->
     Sugar.TagRef Name i o -> Lens.ALens' TextColors Draw.Color ->
-    Sugar.Expr Sugar.Assignment (Sugar.EvaluationScopes Name i) Name i o ExprGui.Payload ->
+    ExprGui.Expr Sugar.Assignment i o ->
     GuiM env i o (Responsive o)
 make pMode tag color assignment =
     makeParts Sugar.UnlimitedFuncApply assignment delParamDest

@@ -31,7 +31,6 @@ import           Lamdu.GUI.Monad (GuiM)
 import qualified Lamdu.GUI.Monad as GuiM
 import qualified Lamdu.GUI.Types as ExprGui
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
-import           Lamdu.Name (Name(..))
 import qualified Lamdu.Sugar.Lens as SugarLens
 import qualified Lamdu.Sugar.Types as Sugar
 
@@ -65,9 +64,7 @@ applyResultLayout = (^. Responsive.rWide)
 
 makeWidget ::
     (Monad i, Monad o) =>
-    Widget.Id ->
-    Sugar.Expr Sugar.Binder (Sugar.EvaluationScopes Name i) Name i o ExprGui.Payload ->
-    GuiM env i o (TextWidget o)
+    Widget.Id -> ExprGui.Expr Sugar.Binder i o -> GuiM env i o (TextWidget o)
 makeWidget resultId holeResultConverted =
     do
         remUnwanted <- removeUnwanted
@@ -84,10 +81,7 @@ makeWidget resultId holeResultConverted =
 
 make ::
     (Monad i, Monad o, Has (MomentuTexts.Texts Text) env) =>
-    SearchMenu.ResultsContext ->
-    Widget.Id ->
-    o () ->
-    Sugar.Expr Sugar.Binder (Sugar.EvaluationScopes Name i) Name i o ExprGui.Payload ->
+    SearchMenu.ResultsContext -> Widget.Id -> o () -> ExprGui.Expr Sugar.Binder i o ->
     GuiM env i o (Menu.RenderedOption o)
 make ctx resultId pick holeResultConverted =
     (,) <$> Lens.view (has . MomentuTexts.choose) <*>

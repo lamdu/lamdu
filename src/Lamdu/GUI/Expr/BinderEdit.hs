@@ -34,7 +34,6 @@ import qualified Lamdu.I18N.Definitions as Definitions
 import qualified Lamdu.I18N.Definitions as Texts
 import qualified Lamdu.I18N.Name as Texts
 import qualified Lamdu.I18N.Navigation as Texts
-import           Lamdu.Name (Name(..))
 import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
@@ -51,8 +50,7 @@ makeLetEdit ::
     , Has (Texts.Name Text) env
     , Has (Texts.Navigation Text) env
     ) =>
-    Sugar.Body Sugar.Let (Sugar.EvaluationScopes Name i) Name i o ExprGui.Payload ->
-    GuiM env i o (Responsive o)
+    ExprGui.Body Sugar.Let i o -> GuiM env i o (Responsive o)
 makeLetEdit item =
     do
         env <- Lens.view id
@@ -105,8 +103,7 @@ make ::
     , Has (Texts.Name Text) env
     , Has (Texts.Navigation Text) env
     ) =>
-    Sugar.Expr Sugar.Binder (Sugar.EvaluationScopes Name i) Name i o ExprGui.Payload ->
-    GuiM env i o (Responsive o)
+    ExprGui.Expr Sugar.Binder i o -> GuiM env i o (Responsive o)
 make (Ann (Const pl) (Sugar.BinderTerm assignmentBody)) =
     Ann (Const pl) assignmentBody & GuiM.makeSubexpression
 make (Ann (Const pl) (Sugar.BinderLet l)) =

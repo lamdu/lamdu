@@ -57,7 +57,6 @@ import           Lamdu.Eval.Results (ScopeId, topLevelScopeId)
 import qualified Lamdu.GUI.Types as ExprGui
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.I18N.LangId (LangId)
-import           Lamdu.Name (Name)
 import           Lamdu.Settings (Settings)
 import           Lamdu.Style (Style, HasStyle)
 import qualified Lamdu.Sugar.Types as Sugar
@@ -76,12 +75,8 @@ data Askable env i o = Askable
     , _aConfig :: Config
     , _aTheme :: Theme
     , _aAssocTagName :: T.Tag -> MkProperty' o Text
-    , _aMakeSubexpression ::
-        Sugar.Expr Sugar.Term (Sugar.EvaluationScopes Name i) Name i o ExprGui.Payload ->
-        GuiM env i o (Responsive o)
-    , _aMakeBinder ::
-        Sugar.Expr Sugar.Binder (Sugar.EvaluationScopes Name i) Name i o ExprGui.Payload ->
-        GuiM env i o (Responsive o)
+    , _aMakeSubexpression :: ExprGui.Expr Sugar.Term i o -> GuiM env i o (Responsive o)
+    , _aMakeBinder :: ExprGui.Expr Sugar.Binder i o -> GuiM env i o (Responsive o)
     , _aGuiAnchors :: Anchors.GuiAnchors i o
     , _aDepthLeft :: Int
     , _aMScopeId :: CurAndPrev (Maybe ScopeId)
@@ -179,14 +174,12 @@ make sub expr =
 
 makeSubexpression ::
     Monad i =>
-    Sugar.Expr Sugar.Term (Sugar.EvaluationScopes Name i) Name i o ExprGui.Payload ->
-    GuiM env i o (Responsive.Responsive o)
+    ExprGui.Expr Sugar.Term i o -> GuiM env i o (Responsive.Responsive o)
 makeSubexpression = make aMakeSubexpression
 
 makeBinder ::
     Monad i =>
-    Sugar.Expr Sugar.Binder (Sugar.EvaluationScopes Name i) Name i o ExprGui.Payload ->
-    GuiM env i o (Responsive.Responsive o)
+    ExprGui.Expr Sugar.Binder i o -> GuiM env i o (Responsive.Responsive o)
 makeBinder = make aMakeBinder
 
 isHoleResult :: MonadReader (Askable env i o) m => m Bool
@@ -201,10 +194,8 @@ run ::
     , Has Settings env, HasStyle env
     ) =>
     (T.Tag -> MkProperty' o Text) ->
-    (Sugar.Expr Sugar.Term (Sugar.EvaluationScopes Name i) Name i o ExprGui.Payload ->
-        GuiM env i o (Responsive o)) ->
-    (Sugar.Expr Sugar.Binder (Sugar.EvaluationScopes Name i) Name i o ExprGui.Payload ->
-        GuiM env i o (Responsive o)) ->
+    (ExprGui.Expr Sugar.Term i o -> GuiM env i o (Responsive o)) ->
+    (ExprGui.Expr Sugar.Binder i o -> GuiM env i o (Responsive o)) ->
     Anchors.GuiAnchors i o ->
     env -> GuiM env i o a -> i a
 run assocTagName_ makeSubexpr mkBinder theGuiAnchors env (GuiM action) =

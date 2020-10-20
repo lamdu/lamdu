@@ -1,6 +1,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 module Lamdu.GUI.Types
-    ( Payload(..), plHiddenEntityIds, plParenInfo
+    ( Expr, Body
+    , Payload(..), plHiddenEntityIds, plParenInfo
     , mParensId
     ) where
 
@@ -8,6 +9,7 @@ import qualified Control.Lens as Lens
 import           GUI.Momentu.Animation (AnimId)
 import qualified GUI.Momentu.Widget.Id as WidgetId
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
+import           Lamdu.Name (Name)
 import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
@@ -19,6 +21,9 @@ data Payload = Payload
     , _plHiddenEntityIds :: [Sugar.EntityId]
     } deriving (Generic, Eq, Show)
 Lens.makeLenses ''Payload
+
+type Expr t i o = Sugar.Expr t (Sugar.EvaluationScopes Name i) Name i o Payload
+type Body t i o = Sugar.Body t (Sugar.EvaluationScopes Name i) Name i o Payload
 
 -- | Just myId or Nothing depending on whether parens are needed
 mParensId :: (Sugar.Payload v name i o, Payload) -> Maybe AnimId

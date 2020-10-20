@@ -38,7 +38,6 @@ import qualified Lamdu.I18N.CodeUI as Texts
 import qualified Lamdu.I18N.Definitions as Texts
 import qualified Lamdu.I18N.Name as Texts
 import qualified Lamdu.I18N.Navigation as Texts
-import           Lamdu.Name (Name(..))
 import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
@@ -63,8 +62,7 @@ make ::
     , Has (Texts.Navigation Text) env
     , SearchMenu.HasTexts env
     ) =>
-    Sugar.Expr Sugar.Fragment (Sugar.EvaluationScopes Name i) Name i o ExprGui.Payload ->
-    GuiM env i o (Responsive o)
+    ExprGui.Expr Sugar.Fragment i o -> GuiM env i o (Responsive o)
 make (Ann (Const pl) fragment) =
     do
         isSelected <- GuiState.isSubCursor ?? myId

@@ -132,8 +132,7 @@ make ::
     , Has (Texts.Name Text) env
     , Has (Texts.Navigation Text) env
     ) =>
-    Sugar.Expr Sugar.Composite (Sugar.EvaluationScopes Name i) Name i o ExprGui.Payload ->
-    GuiM env i o (Responsive o)
+    ExprGui.Expr Sugar.Composite i o -> GuiM env i o (Responsive o)
 make (Ann (Const pl) (Sugar.Composite [] [] Sugar.ClosedComposite{} addField)) =
     -- Ignore the ClosedComposite actions - it only has the open
     -- action which is equivalent ot deletion on the unit record
@@ -255,8 +254,7 @@ makeFieldRow ::
     , Has (Texts.Name Text) env
     , Has (Texts.Navigation Text) env
     ) =>
-    Sugar.Body Sugar.CompositeItem (Sugar.EvaluationScopes Name i) Name i o ExprGui.Payload ->
-    GuiM env i o (TaggedItem o)
+    ExprGui.Body Sugar.CompositeItem i o -> GuiM env i o (TaggedItem o)
 makeFieldRow (Sugar.CompositeItem delete tag fieldExpr) =
     do
         itemEventMap <- recordDelEventMap delete
@@ -279,9 +277,8 @@ separationBar theme animId width =
 
 makeOpenRecord ::
     (Monad i, Monad o, Glue.HasTexts env, Has (Texts.CodeUI Text) env) =>
-    Sugar.OpenCompositeActions o ->
-    Sugar.Expr Sugar.Term (Sugar.EvaluationScopes Name i) Name i o ExprGui.Payload ->
-    Responsive o -> GuiM env i o (Responsive o)
+    Sugar.OpenCompositeActions o -> ExprGui.Expr Sugar.Term i o -> Responsive o ->
+    GuiM env i o (Responsive o)
 makeOpenRecord (Sugar.OpenCompositeActions close) rest fieldsGui =
     do
         theme <- Lens.view has
