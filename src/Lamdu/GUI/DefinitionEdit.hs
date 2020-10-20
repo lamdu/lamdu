@@ -74,10 +74,8 @@ makeExprDefinition ::
     , Has (Texts.Name Text) env
     , Has (Texts.Navigation Text) env
     ) =>
-    Sugar.Definition (Sugar.EvaluationScopes Name i) Name i o
-       (Sugar.Payload (Sugar.EvaluationScopes Name i) Name i o, ExprGui.Payload) ->
-    Sugar.DefinitionExpression (Sugar.EvaluationScopes Name i) Name i o
-        (Sugar.Payload (Sugar.EvaluationScopes Name i) Name i o, ExprGui.Payload) ->
+    Sugar.Definition (Sugar.EvaluationScopes Name i) Name i o (ExprGui.Payload i o) ->
+    Sugar.DefinitionExpression (Sugar.EvaluationScopes Name i) Name i o (ExprGui.Payload i o) ->
     GuiM env i o (Responsive o)
 makeExprDefinition def bodyExpr =
     AssignmentEdit.make (bodyExpr ^. Sugar.dePresentationMode)
@@ -98,7 +96,7 @@ makeBuiltinDefinition ::
     , Has (Texts.Name Text) env
     , Has (Texts.Navigation Text) env
     ) =>
-    Sugar.Definition v Name i o (Sugar.Payload v Name i o, ExprGui.Payload) ->
+    Sugar.Definition v Name i o (Sugar.Payload v Name i o, ExprGui.GuiPayload) ->
     Sugar.DefinitionBuiltin Name o ->
     GuiM env i o (TextWidget o)
 makeBuiltinDefinition def builtin =
@@ -136,8 +134,7 @@ make ::
     , Has (Texts.Navigation Text) env
     ) =>
     EventMap (o GuiState.Update) ->
-    Sugar.Definition (Sugar.EvaluationScopes Name i) Name i o
-        (Sugar.Payload (Sugar.EvaluationScopes Name i) Name i o, ExprGui.Payload) ->
+    Sugar.Definition (Sugar.EvaluationScopes Name i) Name i o (ExprGui.Payload i o) ->
     GuiM env i o (Responsive o)
 make defEventMap def =
     do

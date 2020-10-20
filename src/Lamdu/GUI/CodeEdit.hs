@@ -119,7 +119,7 @@ make cp gp width mkWorkArea =
         env <- Lens.view id
         workArea <-
             mkWorkArea >>= (\x -> x (getTagName env) env)
-            <&> Lens.mapped . Lens.mapped %~ uncurry ExprGui.Payload
+            <&> Lens.mapped . Lens.mapped %~ uncurry ExprGui.GuiPayload
             & lift
         gotoDefinition <-
             GotoDefinition.make (workArea ^. Sugar.waGlobals & lift)
@@ -184,8 +184,7 @@ makePaneBodyEdit ::
     , Has (Texts.Name Text) env, Has (Texts.Navigation Text) env
     , Has LangId env, Has (Map LangId Text) env
     ) =>
-    Sugar.Pane (Sugar.EvaluationScopes Name i) Name i o
-        (Sugar.Payload (Sugar.EvaluationScopes Name i) Name i o, ExprGui.Payload) ->
+    Sugar.Pane (Sugar.EvaluationScopes Name i) Name i o (ExprGui.Payload i o) ->
     GuiM env i o (Responsive o)
 makePaneBodyEdit pane =
     case pane ^. Sugar.paneBody of
@@ -210,7 +209,7 @@ makePaneEdit ::
     (Monad m, Language.HasLanguage env) =>
     ExportActions m ->
     Sugar.Pane (Sugar.EvaluationScopes Name (OnceT (T m))) Name (OnceT (T m)) (T m)
-        (Sugar.Payload (Sugar.EvaluationScopes Name (OnceT (T m))) Name (OnceT (T m)) (T m), ExprGui.Payload) ->
+        (ExprGui.Payload (OnceT (T m)) (T m)) ->
     GuiM env (OnceT (T m)) (T m) (Responsive (IOTrans m))
 makePaneEdit theExportActions pane =
     do

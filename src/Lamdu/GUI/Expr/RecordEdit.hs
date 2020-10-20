@@ -104,8 +104,7 @@ makeUnit ::
     , Has (Texts.Name Text) env
     , Grid.HasTexts env
     ) =>
-    (Sugar.Payload (Sugar.EvaluationScopes Name i) Name i o, ExprGui.Payload) ->
-    GuiM env i o (Responsive o)
+    ExprGui.Payload i o -> GuiM env i o (Responsive o)
 makeUnit pl =
     do
         makeFocusable <- Widget.makeFocusableView ?? myId <&> (Align.tValue %~)

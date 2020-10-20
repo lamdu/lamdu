@@ -46,7 +46,6 @@ import qualified Lamdu.I18N.CodeUI as Texts
 import qualified Lamdu.I18N.Definitions as Texts
 import qualified Lamdu.I18N.Name as Texts
 import qualified Lamdu.I18N.Navigation as Texts
-import           Lamdu.Name (Name)
 import           Lamdu.Style (Style, HasStyle)
 import qualified Lamdu.Style as Style
 import qualified Lamdu.Sugar.Types as Sugar
@@ -281,8 +280,7 @@ make ::
     , TextEdit.HasTexts env
     , Grid.HasTexts env
     ) =>
-    Annotated (Sugar.Payload (Sugar.EvaluationScopes Name i) Name i o, ExprGui.Payload) #
-        Const (Sugar.Literal (Property o)) ->
+    Annotated (ExprGui.Payload i o) # Const (Sugar.Literal (Property o)) ->
     GuiM env i o (Responsive o)
 make (Ann (Const pl) (Const lit)) =
     case lit of

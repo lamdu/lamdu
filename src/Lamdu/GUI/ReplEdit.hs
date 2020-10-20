@@ -244,7 +244,7 @@ make ::
     ) =>
     ExportRepl m ->
     Sugar.Repl (Sugar.EvaluationScopes Name (OnceT (T m))) Name (OnceT (T m)) (T m)
-    (Sugar.Payload (Sugar.EvaluationScopes Name (OnceT (T m))) Name (OnceT (T m)) (T m), ExprGui.Payload) ->
+        (ExprGui.Payload (OnceT (T m)) (T m)) ->
     GuiM env (OnceT (T m)) (T m) (Responsive (IOTrans m))
 make expRepl (Sugar.Repl replExpr varInfo replResult) =
     do

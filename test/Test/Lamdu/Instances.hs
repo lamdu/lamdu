@@ -279,7 +279,7 @@ instance NFData (Sugar.OpenCompositeActions (T o))
 instance NFData (Sugar.TagReplace n (OnceT (T i)) (T o) a)
 instance NFData Def.FFIName
 instance NFData EntityId
-instance NFData ExprGui.Payload
+instance NFData ExprGui.GuiPayload
 instance NFData LangId
 instance NFData Name
 instance NFData Name.Collision

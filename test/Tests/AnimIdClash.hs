@@ -60,9 +60,9 @@ testTypeView =
             & Sugar.TRecord
             & Ann (Const entityId)
 
-adhocPayload :: ExprGui.Payload
+adhocPayload :: ExprGui.GuiPayload
 adhocPayload =
-    ExprGui.Payload
+    ExprGui.GuiPayload
     { ExprGui._plHiddenEntityIds = []
     , ExprGui._plParenInfo = Sugar.ParenInfo 13 False
     }

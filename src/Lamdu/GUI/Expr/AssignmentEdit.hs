@@ -73,7 +73,7 @@ data Parts i o = Parts
     , pMScopesEdit :: Maybe (Widget o)
     , pBodyEdit :: Responsive o
     , pEventMap :: EventMap (o GuiState.Update)
-    , pMLamPayload :: Maybe (Sugar.Payload (Sugar.EvaluationScopes Name i) Name i o, ExprGui.Payload)
+    , pMLamPayload :: Maybe (ExprGui.Payload i o)
     , pRhsId :: Widget.Id
     }
 
@@ -111,7 +111,7 @@ lookupMKey k m = k >>= (`Map.lookup` m)
 
 mkChosenScopeCursor ::
     Monad i =>
-    Sugar.Body Sugar.Function v Name i o ExprGui.Payload ->
+    Sugar.Body Sugar.Function v Name i o ExprGui.GuiPayload ->
     GuiM env i o (CurAndPrev (Maybe ScopeCursor))
 mkChosenScopeCursor func =
     do

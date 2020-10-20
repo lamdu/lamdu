@@ -1,7 +1,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 module Lamdu.GUI.Types
-    ( Expr, Body
-    , Payload(..), plHiddenEntityIds, plParenInfo
+    ( Expr, Body, Payload
+    , GuiPayload(..), plHiddenEntityIds, plParenInfo
     , mParensId
     ) where
 
@@ -16,17 +16,19 @@ import           Lamdu.Prelude
 
 -- TODO: This is not specific to GUI at all, can move to Sugar.Types?
 -- GUI input payload on sugar exprs
-data Payload = Payload
+data GuiPayload = GuiPayload
     { _plParenInfo :: !Sugar.ParenInfo
     , _plHiddenEntityIds :: [Sugar.EntityId]
     } deriving (Generic, Eq, Show)
-Lens.makeLenses ''Payload
+Lens.makeLenses ''GuiPayload
 
-type Expr t i o = Sugar.Expr t (Sugar.EvaluationScopes Name i) Name i o Payload
-type Body t i o = Sugar.Body t (Sugar.EvaluationScopes Name i) Name i o Payload
+type Expr t i o = Sugar.Expr t (Sugar.EvaluationScopes Name i) Name i o GuiPayload
+type Body t i o = Sugar.Body t (Sugar.EvaluationScopes Name i) Name i o GuiPayload
+
+type Payload i o = (Sugar.Payload (Sugar.EvaluationScopes Name i) Name i o, GuiPayload)
 
 -- | Just myId or Nothing depending on whether parens are needed
-mParensId :: (Sugar.Payload v name i o, Payload) -> Maybe AnimId
+mParensId :: (Sugar.Payload v name i o, GuiPayload) -> Maybe AnimId
 mParensId pl
     | pl ^. _2 . plParenInfo . Sugar.piNeedParens =
           pl ^. _1 & WidgetIds.fromExprPayload & WidgetId.toAnimId & Just
