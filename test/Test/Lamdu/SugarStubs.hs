@@ -113,8 +113,8 @@ mul :: Infix2
 mul = arithmeticInfix2 "*"
 
 pane ::
-    Sugar.Definition (Sugar.EvaluationScopes name i) name i Unit a ->
-    Sugar.Pane (Sugar.EvaluationScopes name i) name i Unit a
+    Sugar.Definition v name i Unit a ->
+    Sugar.Pane v name i Unit a
 pane body =
     Sugar.Pane
     { Sugar._paneBody = Sugar.PaneDefinition body
@@ -142,10 +142,8 @@ mkTag var tag =
 def ::
     Annotated Sugar.EntityId # Sugar.Type InternalName ->
     UUID -> T.Tag ->
-    Annotated expr #
-        Sugar.Assignment (Sugar.EvaluationScopes InternalName Identity)
-        InternalName Identity Unit ->
-    Sugar.Definition (Sugar.EvaluationScopes InternalName Identity) InternalName Identity Unit expr
+    Annotated expr # Sugar.Assignment v InternalName Identity Unit ->
+    Sugar.Definition v InternalName Identity Unit expr
 def typ var tag body =
     Sugar.Definition
     { Sugar._drName = mkTag (Just var) tag
@@ -167,8 +165,8 @@ def typ var tag body =
         emptyForalls = T.Types (QVars mempty) (QVars mempty)
 
 repl ::
-    Annotated a # Sugar.Term (Sugar.EvaluationScopes name i) name i o ->
-    Sugar.Repl (Sugar.EvaluationScopes name i) name i o a
+    Annotated a # Sugar.Term v name i o ->
+    Sugar.Repl v name i o a
 repl (Ann (Const pl) x) =
     Sugar.Repl
     { Sugar._replExpr = Ann (Const pl) (Sugar.BinderTerm x)

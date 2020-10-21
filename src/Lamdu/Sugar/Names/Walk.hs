@@ -184,10 +184,9 @@ toAnnotation AnnotationNone = pure AnnotationNone
 toAnnotation (AnnotationType typ) = toType typ <&> AnnotationType
 toAnnotation (AnnotationVal x) = toValAnnotation x <&> AnnotationVal
 
-type OldPayload m = Payload (EvaluationScopes (OldName m) (IM m)) (OldName m) (IM m)
-type NewPayload m = Payload (EvaluationScopes (NewName m) (IM m)) (NewName m) (IM m)
+type Pl n m = Payload (EvaluationScopes n (IM m)) n (IM m)
 
-toPayload :: MonadNaming m => OldPayload m o -> m (NewPayload m o)
+toPayload :: MonadNaming m => Pl (OldName m) m o -> m (Pl (NewName m) m o)
 toPayload payload@Payload{_plAnnotation, _plActions} =
     do
         _plAnnotation <- toAnnotation _plAnnotation
@@ -196,10 +195,10 @@ toPayload payload@Payload{_plAnnotation, _plActions} =
 
 toNode ::
     MonadNaming m =>
-    (ka # Annotated (OldPayload m o, p) ->
-     m (kb # Annotated (NewPayload m o, p))) ->
-    Annotated (OldPayload m o, p) # ka ->
-    m (Annotated (NewPayload m o, p) # kb)
+    (ka # Annotated (Pl (OldName m) m o, p) ->
+     m (kb # Annotated (Pl (NewName m) m o, p))) ->
+    Annotated (Pl (OldName m) m o, p) # ka ->
+    m (Annotated (Pl (NewName m) m o, p) # kb)
 toNode toV (Ann (Const pl) v) =
     Ann
     <$> (_1 toPayload pl <&> Const)
@@ -303,10 +302,10 @@ toLabeledApply
     <*> traverse toAnnotatedArg _aAnnotatedArgs
     <*> traverse (toNode (Lens._Wrapped toGetVar)) _aPunnedArgs
 
-toHole ::
-    MonadNaming m =>
-    Hole (EvaluationScopes (OldName m) (IM m)) (OldName m) (IM m) o ->
-    m (Hole (EvaluationScopes (NewName m) (IM m)) (NewName m) (IM m) o)
+type SugarElem t n m (o :: * -> *) = t (EvaluationScopes n (IM m)) n (IM m) o
+type WalkElem t m o = SugarElem t (OldName m) m o -> m (SugarElem t (NewName m) m o)
+
+toHole :: MonadNaming m => WalkElem Hole m o
 toHole hole =
     opRun
     <&>
@@ -421,14 +420,13 @@ withFuncParam f (FuncParam pl varInfo, info) =
 
 withBinderParams ::
     MonadNaming m =>
-    BinderParams (EvaluationScopes (OldName m) (IM m)) (OldName m) (IM m) o ->
-    CPS m (BinderParams (EvaluationScopes (NewName m) (IM m)) (NewName m) (IM m) o)
+    SugarElem BinderParams (OldName m) m o ->
+    CPS m (SugarElem BinderParams (NewName m) m o)
 withBinderParams (NullParam x) = withFuncParam (const pure) x <&> NullParam
 withBinderParams (Params xs) = traverse (withFuncParam withParamInfo) xs <&> Params
 
-type OldTop e m o a = e (EvaluationScopes (OldName m) (IM m)) (OldName m) (IM m) o (OldPayload m o, a)
-type NewTop e m o a = e (EvaluationScopes (NewName m) (IM m)) (NewName m) (IM m) o (NewPayload m o, a)
-type WalkTop e m o a = OldTop e m o a -> m (NewTop e m o a)
+type Top t n m o a = t (EvaluationScopes n (IM m)) n (IM m) o (Pl n m o, a)
+type WalkTop t m o a = Top t (OldName m) m o a -> m (Top t (NewName m) m o a)
 
 toDefExpr :: MonadNaming m => WalkTop DefinitionExpression m o a
 toDefExpr (DefinitionExpression typ presMode content) =
@@ -460,7 +458,7 @@ toPaneBody :: MonadNaming m => WalkTop PaneBody m o a
 toPaneBody (PaneDefinition def) = toDef def <&> PaneDefinition
 toPaneBody (PaneTag x) = toTagPane x <&> PaneTag
 
-toWorkArea :: MonadNaming m => OldTop WorkArea m o a -> m (NewTop WorkArea m o a)
+toWorkArea :: MonadNaming m => WalkTop WorkArea m o a
 toWorkArea WorkArea { _waPanes, _waRepl, _waGlobals } =
     do
         run <- opRun

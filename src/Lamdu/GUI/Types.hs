@@ -1,6 +1,6 @@
 {-# LANGUAGE TemplateHaskell #-}
 module Lamdu.GUI.Types
-    ( Expr, Body, Payload
+    ( Expr, Body, Payload, Top
     , GuiPayload(..), plHiddenEntityIds, plParenInfo
     , mParensId
     ) where
@@ -26,6 +26,8 @@ type Expr t i o = Sugar.Expr t (Sugar.EvaluationScopes Name i) Name i o GuiPaylo
 type Body t i o = Sugar.Body t (Sugar.EvaluationScopes Name i) Name i o GuiPayload
 
 type Payload i o = (Sugar.Payload (Sugar.EvaluationScopes Name i) Name i o, GuiPayload)
+
+type Top t i o = t (Sugar.EvaluationScopes Name i) Name i o (Payload i o)
 
 -- | Just myId or Nothing depending on whether parens are needed
 mParensId :: (Sugar.Payload v name i o, GuiPayload) -> Maybe AnimId

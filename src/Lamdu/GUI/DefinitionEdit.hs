@@ -74,8 +74,8 @@ makeExprDefinition ::
     , Has (Texts.Name Text) env
     , Has (Texts.Navigation Text) env
     ) =>
-    Sugar.Definition (Sugar.EvaluationScopes Name i) Name i o (ExprGui.Payload i o) ->
-    Sugar.DefinitionExpression (Sugar.EvaluationScopes Name i) Name i o (ExprGui.Payload i o) ->
+    ExprGui.Top Sugar.Definition i o ->
+    ExprGui.Top Sugar.DefinitionExpression i o ->
     GuiM env i o (Responsive o)
 makeExprDefinition def bodyExpr =
     AssignmentEdit.make (bodyExpr ^. Sugar.dePresentationMode)
@@ -134,7 +134,7 @@ make ::
     , Has (Texts.Navigation Text) env
     ) =>
     EventMap (o GuiState.Update) ->
-    Sugar.Definition (Sugar.EvaluationScopes Name i) Name i o (ExprGui.Payload i o) ->
+    ExprGui.Top Sugar.Definition i o ->
     GuiM env i o (Responsive o)
 make defEventMap def =
     do

@@ -48,7 +48,6 @@ import qualified Lamdu.I18N.CodeUI as Texts
 import qualified Lamdu.I18N.Collaboration as Texts
 import qualified Lamdu.I18N.Definitions as Texts
 import qualified Lamdu.I18N.Navigation as Texts
-import           Lamdu.Name (Name)
 import qualified Lamdu.Sugar.Lens as SugarLens
 import qualified Lamdu.Sugar.Types as Sugar
 import           Revision.Deltum.Transaction (Transaction)
@@ -243,8 +242,7 @@ make ::
     , Has (Texts.Navigation Text) env
     ) =>
     ExportRepl m ->
-    Sugar.Repl (Sugar.EvaluationScopes Name (OnceT (T m))) Name (OnceT (T m)) (T m)
-        (ExprGui.Payload (OnceT (T m)) (T m)) ->
+    ExprGui.Top Sugar.Repl (OnceT (T m)) (T m) ->
     GuiM env (OnceT (T m)) (T m) (Responsive (IOTrans m))
 make expRepl (Sugar.Repl replExpr varInfo replResult) =
     do
