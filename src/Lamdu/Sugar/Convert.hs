@@ -12,7 +12,6 @@ import           Data.Property (Property(Property))
 import qualified Data.Property as Property
 import qualified Data.Set as Set
 import           Hyper
-import qualified Lamdu.Annotations as Annotations
 import qualified Lamdu.Cache as Cache
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
@@ -23,8 +22,7 @@ import qualified Lamdu.Debug as Debug
 import           Lamdu.Expr.IRef (DefI, HRef)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Load as ExprLoad
-import           Lamdu.Sugar.Annotations (ShowAnnotation, MarkAnnotations, markNodeAnnotations, alwaysShowAnnotations)
-import           Lamdu.Sugar.Config (Config, showAllAnnotations)
+import           Lamdu.Sugar.Config (Config)
 import           Lamdu.Sugar.Convert.Binder (convertBinder)
 import           Lamdu.Sugar.Convert.Binder.Params (mkVarInfo)
 import qualified Lamdu.Sugar.Convert.DefExpr as ConvertDefExpr
@@ -91,13 +89,13 @@ assertInferSuccess =
 convertInferDefExpr ::
     ( HasCallStack, Monad m
     , Has Debug.Monitors env
-    , Has Config env, Has Cache.Functions env, Has Annotations.Mode env
+    , Has Config env, Has Cache.Functions env
     ) =>
     env -> Anchors.CodeAnchors m ->
     Pure # T.Scheme -> Definition.Expr (Ann (HRef m) # V.Term) -> DefI m ->
     OnceT (T m)
-    (DefinitionBody (Annotation EvalPrep InternalName) InternalName (OnceT (T m)) (T m)
-        (Payload (Annotation EvalPrep InternalName) InternalName (OnceT (T m)) (T m), [EntityId]))
+    (DefinitionBody EvalPrep InternalName (OnceT (T m)) (T m)
+        (Payload EvalPrep InternalName (OnceT (T m)) (T m), [EntityId]))
 convertInferDefExpr env cp defType defExpr defI =
     do
         outdatedDefinitions <-
@@ -123,12 +121,11 @@ convertInferDefExpr env cp defType defExpr defI =
                 , _scOutdatedDefinitions = outdatedDefinitions
                 , _scFrozenDeps =
                     Property (defExpr ^. Definition.exprFrozenDeps) setFrozenDeps
-                , _scAnnotationsMode = env ^. has
                 , scConvertSubexpression = ConvertExpr.convert
                 }
         ConvertDefExpr.convert
             defType (defExpr & Definition.expr .~ valInferred) defI
-            >>= (_DefinitionBodyExpression . deContent) (convertPayloads . markAnnotations (env ^. has))
+            <&> _DefinitionBodyExpression . deContent %~ convertPayloads
             & ConvertM.run context
     where
         Load.InferOut valInferred newInferContext =
@@ -149,38 +146,28 @@ convertInferDefExpr env cp defType defExpr defI =
 convertDefBody ::
     ( HasCallStack, Monad m
     , Has Debug.Monitors env
-    , Has Config env, Has Cache.Functions env, Has Annotations.Mode env
+    , Has Config env, Has Cache.Functions env
     ) =>
     env -> Anchors.CodeAnchors m ->
     Definition.Definition (Ann (HRef m) # V.Term) (DefI m) ->
     OnceT (T m)
-    (DefinitionBody (Annotation EvalPrep InternalName) InternalName (OnceT (T m)) (T m)
-        (Payload (Annotation EvalPrep InternalName) InternalName (OnceT (T m)) (T m), [EntityId]))
+    (DefinitionBody EvalPrep InternalName (OnceT (T m)) (T m)
+        (Payload EvalPrep InternalName (OnceT (T m)) (T m), [EntityId]))
 convertDefBody env cp (Definition.Definition bod defType defI) =
     case bod of
     Definition.BodyBuiltin builtin -> convertDefIBuiltin defType builtin defI & lift
     Definition.BodyExpr defExpr ->
         convertInferDefExpr env cp defType defExpr defI
 
-markAnnotations ::
-    (MarkAnnotations t, RTraversable t) =>
-    Config ->
-    Annotated a # t ->
-    Annotated (ShowAnnotation, a) # t
-markAnnotations config
-    | config ^. showAllAnnotations =
-        hflipped %~ hmap (const (Lens._Wrapped %~ (,) alwaysShowAnnotations))
-    | otherwise = markNodeAnnotations
-
 convertRepl ::
     ( HasCallStack, Monad m
     , Has Debug.Monitors env
-    , Has Config env, Has Cache.Functions env, Has Annotations.Mode env
+    , Has Config env, Has Cache.Functions env
     ) =>
     env -> Anchors.CodeAnchors m ->
     OnceT (T m)
-    (Repl (Annotation EvalPrep InternalName) InternalName (OnceT (T m)) (T m)
-        (Payload (Annotation EvalPrep InternalName) InternalName (OnceT (T m)) (T m), [EntityId]))
+    (Repl EvalPrep InternalName (OnceT (T m)) (T m)
+        (Payload EvalPrep InternalName (OnceT (T m)) (T m), [EntityId]))
 convertRepl env cp =
     do
         defExpr <- ExprLoad.defExpr prop & lift
@@ -203,14 +190,12 @@ convertRepl env cp =
                 , _scOutdatedDefinitions = outdatedDefinitions
                 , _scFrozenDeps =
                     Property (defExpr ^. Definition.exprFrozenDeps) setFrozenDeps
-                , _scAnnotationsMode = env ^. has
                 , scConvertSubexpression = ConvertExpr.convert
                 }
         let typ = valInferred ^. hAnn . Input.inferredType
         expr <-
             convertBinder valInferred
-            <&> markAnnotations (env ^. has)
-            >>= convertPayloads
+            <&> convertPayloads
             & ConvertM.run context
             >>= OrderTags.orderNode
         vinfo <- mkVarInfo typ
@@ -230,12 +215,12 @@ convertRepl env cp =
 convertPaneBody ::
     ( Monad m
     , Has Debug.Monitors env
-    , Has Config env, Has Cache.Functions env, Has Annotations.Mode env
+    , Has Config env, Has Cache.Functions env
     ) =>
     env -> Anchors.CodeAnchors m -> Anchors.Pane m ->
     OnceT (T m)
-    (PaneBody (Annotation EvalPrep InternalName) InternalName (OnceT (T m)) (T m)
-        (Payload (Annotation EvalPrep InternalName) InternalName (OnceT (T m)) (T m), [EntityId]))
+    (PaneBody EvalPrep InternalName (OnceT (T m)) (T m)
+        (Payload EvalPrep InternalName (OnceT (T m)) (T m), [EntityId]))
 convertPaneBody _ _ (Anchors.PaneTag tagId) =
     ExprIRef.readTagData tagId & lift <&>
     \tagData ->
@@ -277,14 +262,14 @@ paneEntityId (Anchors.PaneTag tag) = EntityId.ofTagPane tag
 convertPane ::
     ( Monad m
     , Has Debug.Monitors env
-    , Has Config env, Has Cache.Functions env, Has Annotations.Mode env
+    , Has Config env, Has Cache.Functions env
     ) =>
     env -> Anchors.CodeAnchors m -> EntityId ->
     Property (T m) [Anchors.Pane dummy] ->
     Int -> Anchors.Pane m ->
     OnceT (T m)
-    (Pane (Annotation EvalPrep InternalName) InternalName (OnceT (T m)) (T m)
-        (Payload (Annotation EvalPrep InternalName) InternalName (OnceT (T m)) (T m), [EntityId]))
+    (Pane EvalPrep InternalName (OnceT (T m)) (T m)
+        (Payload EvalPrep InternalName (OnceT (T m)) (T m), [EntityId]))
 convertPane env cp replEntityId (Property panes setPanes) i pane =
     convertPaneBody env cp pane
     <&> \body -> Pane
@@ -318,12 +303,12 @@ convertPane env cp replEntityId (Property panes setPanes) i pane =
 loadPanes ::
     ( Monad m
     , Has Debug.Monitors env
-    , Has Config env, Has Cache.Functions env, Has Annotations.Mode env
+    , Has Config env, Has Cache.Functions env
     ) =>
     env -> Anchors.CodeAnchors m -> EntityId ->
     OnceT (T m)
-    [Pane (Annotation EvalPrep InternalName) InternalName (OnceT (T m)) (T m)
-        (Payload (Annotation EvalPrep InternalName) InternalName (OnceT (T m)) (T m), [EntityId])]
+    [Pane EvalPrep InternalName (OnceT (T m)) (T m)
+        (Payload EvalPrep InternalName (OnceT (T m)) (T m), [EntityId])]
 loadPanes env cp replEntityId =
     do
         prop <- Anchors.panes cp ^. Property.mkProperty & lift
@@ -333,12 +318,12 @@ loadPanes env cp replEntityId =
 loadWorkArea ::
     ( HasCallStack, Monad m
     , Has Debug.Monitors env
-    , Has Config env, Has Cache.Functions env, Has Annotations.Mode env
+    , Has Config env, Has Cache.Functions env
     ) =>
     env -> Anchors.CodeAnchors m ->
     OnceT (T m)
-    (WorkArea (Annotation EvalPrep InternalName) InternalName (OnceT (T m)) (T m)
-        (Payload (Annotation EvalPrep InternalName) InternalName (OnceT (T m)) (T m), [EntityId]))
+    (WorkArea EvalPrep InternalName (OnceT (T m)) (T m)
+        (Payload EvalPrep InternalName (OnceT (T m)) (T m), [EntityId]))
 loadWorkArea env cp =
     do
         repl <- convertRepl env cp

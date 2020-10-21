@@ -55,7 +55,7 @@ convertLiteralBytes = convertLiteralCommon LiteralBytes PrimVal.Bytes
 convert ::
     (Monad m, Monoid a) =>
     ConvertM.PositionInfo -> Ann (Input.Payload m a) # V.Term ->
-    ConvertM m (ExpressionU (Annotation EvalPrep InternalName) m a)
+    ConvertM m (ExpressionU EvalPrep m a)
 convert _ (Ann pl (V.BLam x)) = ConvertBinder.convertLam x pl
 convert _ (Ann pl (V.BRecExtend x)) = ConvertRecord.convertExtend x pl
 convert _ (Ann pl (V.BGetField x)) = ConvertGetField.convert x pl

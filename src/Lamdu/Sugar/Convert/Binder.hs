@@ -65,9 +65,7 @@ convertLet ::
     (Monad m, Monoid a) =>
     Input.Payload m a # V.Term ->
     Redex # Input.Payload m a ->
-    ConvertM m
-        (Annotated (ConvertPayload m a)
-            # Binder (Annotation EvalPrep InternalName) InternalName (OnceT (T m)) (T m))
+    ConvertM m (Annotated (ConvertPayload m a) # Binder EvalPrep InternalName (OnceT (T m)) (T m))
 convertLet pl redex =
     do
         float <- makeFloatLetToOuterScope (pl ^. Input.stored . ExprIRef.setIref) redex
@@ -137,8 +135,7 @@ convertLet pl redex =
 convertBinder ::
     (Monad m, Monoid a) =>
     Ann (Input.Payload m a) # V.Term ->
-    ConvertM m (Annotated (ConvertPayload m a)
-        # Binder (Annotation EvalPrep InternalName) InternalName (OnceT (T m)) (T m))
+    ConvertM m (Annotated (ConvertPayload m a) # Binder EvalPrep InternalName (OnceT (T m)) (T m))
 convertBinder expr@(Ann pl body) =
     Lens.view (ConvertM.scConfig . Config.sugarsEnabled . Config.letExpression) >>=
     \case
@@ -179,9 +176,7 @@ makeFunction ::
     (Monad m, Monoid a) =>
     MkProperty' (T m) (Maybe BinderParamScopeId) ->
     ConventionalParams m -> Ann (Input.Payload m a) # V.Term ->
-    ConvertM m
-        (Function (Annotation EvalPrep InternalName) InternalName (OnceT (T m)) (T m)
-            # Annotated (ConvertPayload m a))
+    ConvertM m (Function EvalPrep InternalName (OnceT (T m)) (T m) # Annotated (ConvertPayload m a))
 makeFunction chosenScopeProp params funcBody =
     convertBinder funcBody
     <&> mkRes
@@ -211,8 +206,7 @@ makeAssignment ::
     BinderKind m -> V.Var -> Ann (Input.Payload m a) # V.Term ->
     ConvertM m
     ( Maybe (MkProperty' (T m) PresentationMode)
-    , Annotated (ConvertPayload m a)
-        # Assignment (Annotation EvalPrep InternalName) InternalName (OnceT (T m)) (T m)
+    , Annotated (ConvertPayload m a) # Assignment EvalPrep InternalName (OnceT (T m)) (T m)
     )
 makeAssignment chosenScopeProp binderKind defVar (Ann pl (V.BLam lam)) =
     do
@@ -249,7 +243,7 @@ convertLam ::
     (Monad m, Monoid a) =>
     V.TypedLam V.Var (HCompose Prune T.Type) V.Term # Ann (Input.Payload m a) ->
     Input.Payload m a # V.Term ->
-    ConvertM m (ExpressionU (Annotation EvalPrep InternalName) m a)
+    ConvertM m (ExpressionU EvalPrep m a)
 convertLam lam exprPl =
     do
         convParams <- convertLamParams lam exprPl
@@ -380,8 +374,7 @@ convertAssignment ::
     Ann (Input.Payload m a) # V.Term ->
     ConvertM m
     ( Maybe (MkProperty' (T m) PresentationMode)
-    , Annotated (ConvertPayload m a)
-        # Assignment (Annotation EvalPrep InternalName) InternalName (OnceT (T m)) (T m)
+    , Annotated (ConvertPayload m a) # Assignment EvalPrep InternalName (OnceT (T m)) (T m)
     )
 convertAssignment binderKind defVar expr =
     Lens.view (ConvertM.scConfig . Config.sugarsEnabled . Config.assignmentParameters)
@@ -404,7 +397,7 @@ convertDefinitionBinder ::
     ConvertM m
     ( Maybe (MkProperty' (T m) PresentationMode)
     , Annotated (ConvertPayload m a)
-        # Assignment (Annotation EvalPrep InternalName) InternalName (OnceT (T m)) (T m)
+        # Assignment EvalPrep InternalName (OnceT (T m)) (T m)
     )
 convertDefinitionBinder defI =
     convertAssignment (BinderKindDef defI) (ExprIRef.globalId defI)

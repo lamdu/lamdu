@@ -19,7 +19,6 @@ import qualified Hyper.Type.AST.Scheme as S
 import           Hyper.Type.Prune (Prune(..))
 import           Hyper.Unify.Binding (UVar)
 import           Hyper.Unify.Generalize (generalize)
-import qualified Lamdu.Annotations as Annotations
 import qualified Lamdu.Builtins.Anchors as Builtins
 import qualified Lamdu.Builtins.PrimVal as PrimVal
 import qualified Lamdu.Cache as Cache
@@ -33,7 +32,6 @@ import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Expr.IRef as ExprIRef
-import qualified Lamdu.Sugar.Annotations as Ann
 import qualified Lamdu.Sugar.Convert.Input as Input
 import           Lamdu.Sugar.Convert.Monad (ConvertM)
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
@@ -319,12 +317,6 @@ addActions subexprs exprPl bodyS =
     addActionsWith (mconcat (subexprPayloads subexprs (bodyS ^.. childPayloads)))
     exprPl bodyS
 
-makeTypeAnnotationPl ::
-    Monad m =>
-    Input.Payload m a # V.Term -> ConvertM m (Annotated EntityId # Type InternalName)
-makeTypeAnnotationPl payload =
-    makeTypeAnnotation (payload ^. Input.entityId) (payload ^. Input.inferredType)
-
 makeTypeAnnotation ::
     MonadTransaction n m =>
     EntityId -> Pure # T.Type -> m (Annotated EntityId # Type InternalName)
@@ -338,39 +330,20 @@ mkEvalPrep pl =
     , _eLambdas = []
     }
 
-makeAnnotation ::
-    Monad m =>
-    Ann.ShowAnnotation -> Input.Payload m a # V.Term ->
-    ConvertM m (Annotation EvalPrep InternalName)
-makeAnnotation showAnn pl
-    | showAnn ^. Ann.showTypeAlways = makeTypeAnnotationPl pl <&> AnnotationType
-    | otherwise =
-        Lens.view ConvertM.scAnnotationsMode >>=
-        \case
-        Annotations.Types | showAnn ^. Ann.showInTypeMode ->
-            makeTypeAnnotationPl pl <&> AnnotationType
-        Annotations.Evaluation | showAnn ^. Ann.showInEvalMode ->
-            mkEvalPrep pl & AnnotationVal & pure
-        _ -> pure AnnotationNone
-
 convertPayloads ::
-    (Monad m, RTraversable h) =>
-    Annotated (Ann.ShowAnnotation, ConvertPayload m a) # h ->
-    ConvertM m (Annotated (Payload (Annotation EvalPrep InternalName) InternalName (OnceT (T m)) (T m), a) # h)
-convertPayloads = htraverseFlipped (const (Lens._Wrapped convertPayload))
+    Recursively HFunctor h =>
+    Annotated (ConvertPayload m a) # h ->
+    Annotated (Payload EvalPrep InternalName (OnceT (T m)) (T m), a) # h
+convertPayloads = hflipped %~ hmap (const (Lens._Wrapped %~ convertPayload))
 
 convertPayload ::
-    Monad m =>
-    (Ann.ShowAnnotation, ConvertPayload m a) ->
-    ConvertM m (Payload (Annotation EvalPrep InternalName) InternalName (OnceT (T m)) (T m), a)
-convertPayload (showAnn, pl) =
-    makeAnnotation showAnn (pl ^. pInput)
-    <&>
-    \x ->
+    ConvertPayload m a ->
+    (Payload EvalPrep InternalName (OnceT (T m)) (T m), a)
+convertPayload pl =
     ( Payload
-        { _plAnnotation = x
+        { _plAnnotation = pl ^. pInput & mkEvalPrep
         , _plActions = pl ^. pActions
-        , _plNeverShrinkTypeAnnotations = showAnn ^. Ann.showTypeAlways
+        , _plNeverShrinkTypeAnnotations = False
         , _plEntityId = pl ^. pInput . Input.entityId
         }
     , pl ^. pInput . Input.userData

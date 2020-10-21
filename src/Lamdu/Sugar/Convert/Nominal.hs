@@ -21,7 +21,7 @@ convertToNom ::
     (Monad m, Monoid a) =>
     ToNom NominalId V.Term # Ann (Input.Payload m a) ->
     Input.Payload m a # V.Term ->
-    ConvertM m (ExpressionU (Annotation EvalPrep InternalName) m a)
+    ConvertM m (ExpressionU EvalPrep m a)
 convertToNom t@(ToNom tid x) pl =
     do
         ConvertText.text t pl & justToLeft

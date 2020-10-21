@@ -9,7 +9,7 @@ module Lamdu.Sugar.Convert.Monad
 
     , Context(..)
     , scInferContext, scTopLevelExpr, scPostProcessRoot, siRecursiveRef, scConfig
-    , scScopeInfo, scDebugMonitors, scCacheFunctions, scAnnotationsMode
+    , scScopeInfo, scDebugMonitors, scCacheFunctions
     , scOutdatedDefinitions, scFrozenDeps
 
     , cachedFunc
@@ -28,7 +28,6 @@ import qualified Control.Monad.Trans.Reader as Reader
 import           Control.Monad.Transaction (MonadTransaction(..))
 import           Data.Property (Property)
 import           Hyper.Unify.Binding (UVar)
-import qualified Lamdu.Annotations as Annotations
 import qualified Lamdu.Cache as Cache
 import           Lamdu.Calc.Definition (Deps)
 import           Lamdu.Calc.Infer (InferState)
@@ -110,11 +109,10 @@ data Context m = Context
     , _scDebugMonitors :: Debug.Monitors
     , _scCacheFunctions :: Cache.Functions
     , _scConfig :: Config
-    , _scAnnotationsMode :: Annotations.Mode
     , scConvertSubexpression ::
         forall a. Monoid a =>
         PositionInfo -> Ann (Input.Payload m a) # V.Term ->
-        ConvertM m (ExpressionU (Sugar.Annotation EvalPrep InternalName) m a)
+        ConvertM m (ExpressionU EvalPrep m a)
     }
 Lens.makeLenses ''Context
 Lens.makePrisms ''TagFieldParam
@@ -180,7 +178,7 @@ local f (ConvertM act) = ConvertM $ Reader.local f act
 convertSubexpression ::
     (Monad m, Monoid a) =>
     Ann (Input.Payload m a) # V.Term ->
-    ConvertM m (ExpressionU (Sugar.Annotation EvalPrep InternalName) m a)
+    ConvertM m (ExpressionU EvalPrep m a)
 convertSubexpression exprI =
     do
         convertSub <- Lens.view (Lens.to scConvertSubexpression)

@@ -26,7 +26,6 @@ import           Hyper.Type.AST.Row (RowExtend(..), FlatRowExtends(..))
 import qualified Hyper.Type.AST.Row as Row
 import           Hyper.Type.Functor (F)
 import           Hyper.Type.Prune (Prune(..), _Unpruned)
-import qualified Lamdu.Annotations as Annotations
 import qualified Lamdu.Calc.Lens as ExprLens
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
@@ -42,7 +41,6 @@ import           Lamdu.Sugar.Convert.Monad (ConvertM)
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
 import qualified Lamdu.Sugar.Convert.Tag as ConvertTag
 import qualified Lamdu.Sugar.Convert.TId as ConvertTId
-import           Lamdu.Sugar.Convert.Type (convertType)
 import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import           Lamdu.Sugar.Lens as SugarLens
@@ -57,7 +55,7 @@ type T = Transaction
 data ConventionalParams m = ConventionalParams
     { cpTags :: Set T.Tag
     , _cpParamInfos :: Map T.Tag ConvertM.TagFieldParam
-    , _cpParams :: Maybe (BinderParams (Annotation EvalPrep InternalName) InternalName (OnceT (T m)) (T m))
+    , _cpParams :: Maybe (BinderParams EvalPrep InternalName (OnceT (T m)) (T m))
     , _cpAddFirstParam :: AddFirstParam InternalName (OnceT (T m)) (T m)
     , cpMLamParam :: Maybe ({- lambda's -}EntityId, V.Var)
     }
@@ -468,7 +466,7 @@ convertRecordParams mPresMode binderKind fieldParams lam@(V.TypedLam param _ _) 
                 pure
                     ( FuncParam
                         { _fpAnnotation =
-                            AnnotationVal EvalPrep
+                            EvalPrep
                             { _eType = fpFieldType fp
                             , _eEvalId = paramEntityId
                             , _eLambdas = []
@@ -625,24 +623,17 @@ mkVarInfo (Pure (T.TInst (NominalInst tid _))) = ConvertTId.convert tid <&> VarN
 mkFuncParam ::
     Monad m =>
     EntityId -> Input.Payload m a # V.Term -> info ->
-    ConvertM m (FuncParam (Annotation EvalPrep InternalName) InternalName, info)
+    ConvertM m (FuncParam EvalPrep InternalName, info)
 mkFuncParam entityId lamExprPl info =
-    (,,)
-    <$> Lens.view ConvertM.scAnnotationsMode
-    <*> convertType (EntityId.ofTypeOf entityId) typ
-    <*> mkVarInfo typ
-    <&> \(annMode, typS, vinfo) ->
+    mkVarInfo typ <&>
+    \vinfo ->
     ( FuncParam
         { _fpAnnotation =
-            case annMode of
-            Annotations.None -> AnnotationNone
-            Annotations.Types -> AnnotationType typS
-            Annotations.Evaluation ->
-                AnnotationVal EvalPrep
-                { _eType = typ
-                , _eEvalId = entityId
-                , _eLambdas = []
-                }
+            EvalPrep
+            { _eType = typ
+            , _eEvalId = entityId
+            , _eLambdas = []
+            }
         , _fpVarInfo = vinfo
         }
     , info

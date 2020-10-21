@@ -1,14 +1,15 @@
 {-# LANGUAGE TemplateHaskell, TypeApplications, DataKinds, TypeFamilies #-}
+{-# LANGUAGE MultiParamTypeClasses, FlexibleInstances, ScopedTypeVariables #-}
 
 module Lamdu.Sugar.Annotations
     ( ShowAnnotation(..), showTypeAlways, showInTypeMode, showInEvalMode
-    , MarkAnnotations
-    , markNodeAnnotations
+    , MarkAnnotations(..)
     , neverShowAnnotations, alwaysShowAnnotations
     ) where
 
 import qualified Control.Lens as Lens
 import           Hyper
+import           Hyper.Class.Morph
 import qualified Lamdu.Builtins.Anchors as Builtins
 import qualified Lamdu.Sugar.Lens as SugarLens
 import           Lamdu.Sugar.Types
@@ -53,119 +54,108 @@ dontShowType =
     , _showInEvalMode = True
     }
 
-markNodeAnnotations ::
-    MarkAnnotations t =>
-    Annotated a # t ->
-    Annotated (ShowAnnotation, a) # t
-markNodeAnnotations (Ann (Const pl) x) =
-    Ann (Const (showAnn, pl)) newBody
-    where
-        (showAnn, newBody) = markAnnotations x
+class MarkBodyAnnotations v n i o e where
+    markBodyAnnotations ::
+        Body e v n i o a -> (ShowAnnotation, Body e (ShowAnnotation, v) n i o a)
 
-class MarkAnnotations t where
-    markAnnotations :: t # Annotated a -> (ShowAnnotation, t # Annotated (ShowAnnotation, a))
+class MarkAnnotations v n i o t0 t1 where
+    markNodeAnnotations ::
+        Annotated (Payload v n i o, a) # t0 ->
+        Annotated (Payload (ShowAnnotation, v) n i o, a) # t1
 
-instance MarkAnnotations (Binder v name i o) where
-    markAnnotations (BinderTerm body) =
+instance MarkAnnotations v n i o (Const a) (Const a) where
+    markNodeAnnotations (Ann a (Const b)) = Ann (a & Lens._Wrapped . _1 . plAnnotation %~ (,) neverShowAnnotations) (Const b)
+
+instance MarkBodyAnnotations v n i o e => MarkAnnotations v n i o (e v n i o) (e (ShowAnnotation, v) n i o) where
+    markNodeAnnotations (Ann (Const pl) x) =
+        Ann (Const (pl & _1 . plAnnotation %~ (,) showAnn)) newBody
+        where
+            (showAnn, newBody) = markBodyAnnotations x
+
+instance Functor i => MarkBodyAnnotations v n i o Binder where
+    markBodyAnnotations (BinderTerm body) =
         markBodyAnnotations body & _2 %~ BinderTerm
-    markAnnotations (BinderLet let_) =
+    markBodyAnnotations (BinderLet let_) =
         ( neverShowAnnotations
-        , hmap (Proxy @MarkAnnotations #> markNodeAnnotations) let_
+        , morphMap (Proxy @(MarkAnnotations v n i o) #?> markNodeAnnotations) let_
             & BinderLet
         )
 
-instance MarkAnnotations (Assignment v name i o) where
-    markAnnotations (BodyPlain (AssignPlain a b)) =
-        markAnnotations b
+instance Functor i => MarkBodyAnnotations v n i o Assignment where
+    markBodyAnnotations (BodyPlain (AssignPlain a b)) =
+        markBodyAnnotations b
         & _2 %~ BodyPlain . AssignPlain a
-    markAnnotations (BodyFunction f) = markAnnotations f & _2 %~ BodyFunction
+    markBodyAnnotations (BodyFunction f) = markBodyAnnotations f & _2 %~ BodyFunction
 
-instance MarkAnnotations (Else v name i o) where
-    markAnnotations (SimpleElse body) =
-        markBodyAnnotations body & _2 %~ SimpleElse
-    markAnnotations (ElseIf elseIf) =
+instance Functor i => MarkBodyAnnotations v n i o Else where
+    markBodyAnnotations (SimpleElse body) = markBodyAnnotations body & _2 %~ SimpleElse . markCaseHandler
+    markBodyAnnotations (ElseIf x) =
         ( neverShowAnnotations
-        , hmap (Proxy @MarkAnnotations #> markNodeAnnotations) elseIf
-            & ElseIf
+        , morphMap (Proxy @(MarkAnnotations v n i o) #?> markNodeAnnotations) x & ElseIf
         )
 
-instance MarkAnnotations (Function v n i o) where
-    markAnnotations f =
+instance Functor i => MarkBodyAnnotations v n i o Function where
+    markBodyAnnotations func =
         ( neverShowAnnotations
-        , f & fBody %~ markNodeAnnotations
+        , func
+            { _fBody = func ^. fBody & markNodeAnnotations
+            , _fParams = func ^. fParams & SugarLens.binderParamsAnnotations %~ (,) showAnnotationWhenVerbose
+            }
         )
 
-instance MarkAnnotations (Const a) where
-    markAnnotations (Const x) = (neverShowAnnotations, Const x)
+instance Functor i => MarkBodyAnnotations v n i o IfElse where
+    markBodyAnnotations (IfElse i t e) =
+        ( showAnnotationWhenVerbose
+        , IfElse (markNodeAnnotations i) (markNodeAnnotations t & hVal %~ markCaseHandler) (markNodeAnnotations e)
+        )
 
-instance MarkAnnotations (Term v name i o) where
-    markAnnotations = markBodyAnnotations
-
-markCaseHandler :: Term v n i o # Annotated (ShowAnnotation, a) -> Term v n i o # Annotated (ShowAnnotation, a)
-markCaseHandler =
-    _BodyLam . lamFunc . fBody .
-    SugarLens.binderResultExpr . Lens.ifiltered (const . Lens.nullOf SugarLens.bodyUnfinished) . _1
-    .~ neverShowAnnotations
-
-markBodyAnnotations ::
-    Term v name i o # Annotated a ->
-    ( ShowAnnotation
-    , Term v name i o # Annotated (ShowAnnotation, a)
-    )
-markBodyAnnotations oldBody =
-    case newBody of
-    BodyPlaceHolder -> set neverShowAnnotations
-    BodyLiteral LiteralNum {} -> set neverShowAnnotations
-    BodyLiteral LiteralText {} -> set neverShowAnnotations
-    BodyLiteral LiteralBytes {} -> set dontShowEval
-    BodyRecord _ -> set neverShowAnnotations
-    BodyLam _ -> set neverShowAnnotations
-    BodyGetVar (GetParam ParamRef { _pBinderMode = LightLambda }) ->
-        set showAnnotationWhenVerbose
-    BodyGetVar (GetParam ParamRef { _pBinderMode = NormalBinder }) ->
-        set neverShowAnnotations
-    BodyGetVar (GetBinder BinderVarRef { _bvForm = GetDefinition _ }) ->
-        set showAnnotationWhenVerbose
-    BodyGetVar (GetBinder BinderVarRef { _bvForm = GetLet }) ->
-        set neverShowAnnotations
-    BodyFromNom _ -> set dontShowEval
-    BodyToNom (Nominal tid binder) ->
+instance Functor i => MarkBodyAnnotations v n i o Term where
+    markBodyAnnotations BodyPlaceHolder = (neverShowAnnotations, BodyPlaceHolder)
+    markBodyAnnotations (BodyLiteral x@LiteralBytes{}) = (dontShowEval, BodyLiteral x)
+    markBodyAnnotations (BodyLiteral x) = (neverShowAnnotations, BodyLiteral x)
+    markBodyAnnotations (BodyRecord x) =
+        (neverShowAnnotations, morphMap (Proxy @(MarkAnnotations v n i o) #?> markNodeAnnotations) x & BodyRecord)
+    markBodyAnnotations (BodyLam x) = lamFunc markBodyAnnotations x & _2 %~ BodyLam
+    markBodyAnnotations (BodyGetVar x) =
+        ( case x of
+            GetParamsRecord{} -> showAnnotationWhenVerbose
+            GetParam ParamRef{ _pBinderMode = LightLambda } -> showAnnotationWhenVerbose
+            GetBinder BinderVarRef { _bvForm = GetDefinition{} } -> showAnnotationWhenVerbose
+            _ -> neverShowAnnotations
+        , BodyGetVar x
+        )
+    markBodyAnnotations (BodyFromNom x) = (neverShowAnnotations, BodyFromNom x)
+    markBodyAnnotations (BodyToNom (Nominal tid binder)) =
         ( showAnnotationWhenVerbose
             & showInEvalMode .~
                 ( tid ^. tidTId == Builtins.textTid
-                    || binder ^. SugarLens.binderResultExpr . _1 . showInEvalMode
+                    || newBinder ^. SugarLens.binderResultExpr . _1 . plAnnotation . _1 . showInEvalMode
                 )
-        , hmap
-            ( Proxy @SugarLens.SugarExpr #>
-                Lens.filtered (not . SugarLens.isUnfinished . (^. hVal)) . annotation . _1 .~ dontShowEval
-            ) newBody
+        , newBinder
+            & Lens.filtered (not . SugarLens.isUnfinished . (^. hVal)) .
+                annotation . _1 . plAnnotation . _1 .~ dontShowEval
+            & Nominal tid & BodyToNom
         )
-    BodyInject _ -> set dontShowEval
-    BodyGetVar (GetParamsRecord _) -> set showAnnotationWhenVerbose
-    BodyGetField _ -> set showAnnotationWhenVerbose
-    BodySimpleApply app ->
+        where
+            newBinder = markNodeAnnotations binder
+    markBodyAnnotations (BodyInject x) =
+        (dontShowEval, morphMap (Proxy @(MarkAnnotations v n i o) #?> markNodeAnnotations) x & BodyInject)
+    markBodyAnnotations (BodyGetField x) =
+        (showAnnotationWhenVerbose, morphMap (Proxy @(MarkAnnotations v n i o) #?> markNodeAnnotations) x & BodyGetField)
+    markBodyAnnotations (BodySimpleApply x) =
         ( showAnnotationWhenVerbose
-        , app
+        , morphMap (Proxy @(MarkAnnotations v n i o) #?> markNodeAnnotations) x
             & appFunc . nonHoleAnn .~ neverShowAnnotations
             & BodySimpleApply
         )
-    BodyLabeledApply _ -> set showAnnotationWhenVerbose
-    BodyIfElse i ->
-       ( showAnnotationWhenVerbose
-       , onIfElse i & BodyIfElse
-       )
-    BodyHole hole -> (alwaysShowAnnotations, BodyHole hole)
-    BodyFragment fragment ->
-        ( alwaysShowAnnotations
-        , fragment
-            & (if Lens.has Lens._Just (fragment ^. fTypeMismatch)
-                  then fExpr . nonHoleAnn .~ dontShowType
-                  else id)
-            & BodyFragment
-        )
-    BodyCase cas ->
+    markBodyAnnotations (BodyLabeledApply x) =
         ( showAnnotationWhenVerbose
-        , cas
+        , morphMap (Proxy @(MarkAnnotations v n i o) #?> markNodeAnnotations) x & BodyLabeledApply
+        )
+    markBodyAnnotations (BodyIfElse x) = markBodyAnnotations x & _2 %~ BodyIfElse
+    markBodyAnnotations (BodyCase x) =
+        ( showAnnotationWhenVerbose
+        , morphMap (Proxy @(MarkAnnotations v n i o) #?> markNodeAnnotations) x
             -- cKind contains the scrutinee which is not always
             -- visible (for case alts that aren't lambdas), so
             -- maybe we do want to show the annotation
@@ -173,16 +163,38 @@ markBodyAnnotations oldBody =
             & cBody . cItems . Lens.mapped . ciExpr . hVal %~ markCaseHandler
             & BodyCase
         )
-    where
-        set x = (x, newBody)
-        newBody =
-            hmap (Proxy @MarkAnnotations #> markNodeAnnotations) oldBody
-        nonHoleAnn =
-            Lens.filtered (Lens.nullOf (hVal . SugarLens.bodyUnfinished)) .
-            annotation . _1
-        onElse (SimpleElse x) = markCaseHandler x & SimpleElse
-        onElse (ElseIf elseIf) = onIfElse elseIf & ElseIf
-        onIfElse x =
-            x
-            & iThen . hVal %~ markCaseHandler
-            & iElse . hVal %~ onElse
+    markBodyAnnotations (BodyHole x) =
+        ( alwaysShowAnnotations
+        , x & holeOptions . Lens.mapped . Lens.mapped %~ markHoleOption
+            & BodyHole
+        )
+    markBodyAnnotations (BodyFragment (Fragment e h t o)) =
+        ( alwaysShowAnnotations
+        , Fragment
+            ( markNodeAnnotations e
+                & if Lens.has Lens._Just t
+                    then nonHoleAnn .~ dontShowType
+                    else id
+            ) h t (o <&> Lens.mapped %~ markHoleOption)
+            & BodyFragment
+        )
+
+nonHoleAnn ::
+    Lens.Traversal' (Annotated (Payload (ShowAnnotation, v0) n i o, a) # Term v1 n i o) ShowAnnotation
+nonHoleAnn =
+    Lens.filtered (Lens.nullOf (hVal . SugarLens.bodyUnfinished)) .
+    annotation . _1 . plAnnotation . _1
+
+markCaseHandler ::
+    Term v n i o # Annotated (Payload (ShowAnnotation, v0) n i o, a) ->
+    Term v n i o # Annotated (Payload (ShowAnnotation, v0) n i o, a)
+markCaseHandler =
+    _BodyLam . lamFunc . fBody .
+    SugarLens.binderResultExpr . Lens.ifiltered (const . Lens.nullOf SugarLens.bodyUnfinished) .
+    _1 . plAnnotation . _1
+    .~ neverShowAnnotations
+
+markHoleOption :: Functor i => HoleOption v n i o -> HoleOption (ShowAnnotation, v) n i o
+markHoleOption (HoleOption i b r) =
+    HoleOption i (b <&> markNodeAnnotations)
+    (r <&> _2 . Lens.mapped . holeResultConverted %~ markNodeAnnotations)

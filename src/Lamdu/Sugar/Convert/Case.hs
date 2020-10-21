@@ -50,7 +50,7 @@ convert ::
     (Monad m, Monoid a) =>
     RowExtend T.Tag V.Term V.Term # Ann (Input.Payload m a) ->
     Input.Payload m a # V.Term ->
-    ConvertM m (ExpressionU (Annotation EvalPrep InternalName) m a)
+    ConvertM m (ExpressionU EvalPrep m a)
 convert (RowExtend tag v rest) exprPl =
     do
         valS <-

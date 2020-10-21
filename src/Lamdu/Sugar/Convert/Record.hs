@@ -29,7 +29,7 @@ convertExtend ::
     (Monad m, Monoid a) =>
     RowExtend T.Tag V.Term V.Term # Ann (Input.Payload m a) ->
     Input.Payload m a # V.Term ->
-    ConvertM m (ExpressionU (Annotation EvalPrep InternalName) m a)
+    ConvertM m (ExpressionU EvalPrep m a)
 convertExtend (RowExtend tag val rest) exprPl =
     do
         valS <- ConvertM.convertSubexpression val
