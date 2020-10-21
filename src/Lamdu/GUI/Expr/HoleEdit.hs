@@ -65,7 +65,7 @@ make ::
     , SearchMenu.HasTexts env
     ) =>
     Annotated (ExprGui.Payload i o) #
-        Const (Sugar.Hole (Sugar.EvaluationScopes Name i) Name i o) ->
+        Const (Sugar.Hole (Sugar.Annotation (Sugar.EvaluationScopes Name i) Name) Name i o) ->
     GuiM env i o (Responsive o)
 make (Ann (Const pl) (Const hole)) =
     do

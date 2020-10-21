@@ -76,7 +76,7 @@ data ParamInfo name i o = ParamInfo
     } deriving Generic
 
 data FuncParam v name = FuncParam
-    { _fpAnnotation :: Annotation v name
+    { _fpAnnotation :: v
     , _fpVarInfo :: VarInfo
     } deriving Generic
 
@@ -128,7 +128,7 @@ data VarInfo
     deriving (Generic, Eq)
 
 data Payload v name i o = Payload
-    { _plAnnotation :: Annotation v name
+    { _plAnnotation :: v
     , _plNeverShrinkTypeAnnotations :: Bool
     , _plActions :: NodeActions name i o
     , _plEntityId :: EntityId

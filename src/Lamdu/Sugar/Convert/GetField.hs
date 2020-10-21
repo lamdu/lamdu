@@ -43,7 +43,7 @@ convertGetFieldNonParam ::
     (Monad m, Monoid a) =>
     V.GetField # Ann (Input.Payload m a) ->
     Input.Payload m a # V.Term ->
-    ConvertM m (ExpressionU EvalPrep m a)
+    ConvertM m (ExpressionU (Annotation EvalPrep InternalName) m a)
 convertGetFieldNonParam (V.GetField recExpr tag) exprPl =
     GetField
     <$> ConvertM.convertSubexpression recExpr
@@ -66,7 +66,7 @@ convert ::
     (Monad m, Monoid a) =>
     V.GetField # Ann (Input.Payload m a) ->
     Input.Payload m a # V.Term ->
-    ConvertM m (ExpressionU EvalPrep m a)
+    ConvertM m (ExpressionU (Annotation EvalPrep InternalName) m a)
 convert gf pl =
     convertGetFieldParam gf pl
     >>= maybe (convertGetFieldNonParam gf pl) pure

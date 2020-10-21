@@ -39,13 +39,13 @@ class AddEvalToNode n i o t0 t1 where
     addToNode ::
         Applicative i =>
         AddEvalCtx ->
-        Annotated (Payload EvalPrep n i o, a) # t0 ->
-        Annotated (Payload (EvaluationScopes InternalName i) n i o, a) # t1
+        Annotated (Payload (Annotation EvalPrep n) n i o, a) # t0 ->
+        Annotated (Payload (Annotation (EvaluationScopes InternalName i) n) n i o, a) # t1
 
 instance AddEvalToNode n i o (Const x) (Const x) where
     addToNode r (Ann (Const pl) (Const x)) = Ann (Const (pl & _1 %~ addToPayload r)) (Const x)
 
-instance AddEval e => AddEvalToNode n i o (e EvalPrep n i o) (e (EvaluationScopes InternalName i) n i o) where
+instance AddEval e => AddEvalToNode n i o (e (Annotation EvalPrep n) n i o) (e (Annotation (EvaluationScopes InternalName i) n) n i o) where
     addToNode results (Ann a b) =
         Ann
         { _hAnn = a & Lens._Wrapped . _1 %~ addToPayload results
@@ -55,12 +55,12 @@ instance AddEval e => AddEvalToNode n i o (e EvalPrep n i o) (e (EvaluationScope
             i = a ^. Lens._Wrapped . _1 . plEntityId
 
 type AddToBodyType e n i o a =
-    AddEvalCtx -> EntityId -> Body e EvalPrep n i o a -> Body e (EvaluationScopes InternalName i) n i o a
+    AddEvalCtx -> EntityId -> Body e (Annotation EvalPrep n) n i o a -> Body e (Annotation (EvaluationScopes InternalName i) n) n i o a
 
 class AddEval e where
     addToBody :: Applicative i => AddToBodyType e n i o a
     default addToBody ::
-        ( HMorphWithConstraint (e EvalPrep n i o) (e (EvaluationScopes InternalName i) n i o) (AddEvalToNode n i o)
+        ( HMorphWithConstraint (e (Annotation EvalPrep n) n i o) (e (Annotation (EvaluationScopes InternalName i) n) n i o) (AddEvalToNode n i o)
         , Applicative i
         ) => AddToBodyType e n i o a
     addToBody r _ x =
@@ -165,8 +165,8 @@ instance AddEval Term where
 addToPayload ::
     Applicative i =>
     AddEvalCtx ->
-    Payload EvalPrep name i o ->
-    Payload (EvaluationScopes InternalName i) name i o
+    Payload (Annotation EvalPrep n0) name i o ->
+    Payload (Annotation (EvaluationScopes InternalName i) n0) name i o
 addToPayload ctx a =
     a
     & plAnnotation . _AnnotationVal %~
@@ -184,12 +184,12 @@ addEvaluationResults ::
     (Applicative i, Monad m) =>
     Anchors.CodeAnchors m ->
     CurAndPrev EvalResults ->
-    WorkArea EvalPrep name i (T m) (Payload EvalPrep name i (T m), a) ->
+    WorkArea (Annotation EvalPrep n) n i (T m) (Payload (Annotation EvalPrep n) n i (T m), a) ->
     T m (
-        WorkArea (EvaluationScopes InternalName i) name i (T m)
-        (Payload (EvaluationScopes InternalName i) name i (T m), a))
+        WorkArea (Annotation (EvaluationScopes InternalName i) n) n i (T m)
+        (Payload (Annotation (EvaluationScopes InternalName i) n) n i (T m), a))
 addEvaluationResults cp r wa@(WorkArea panes repl listGlobals) =
-    makeNominalsMap (wa ^.. SugarLens.workAreaAnnotations . eType . tIds) <&> AddEvalCtx r
+    makeNominalsMap (wa ^.. SugarLens.workAreaAnnotations . _AnnotationVal . eType . tIds) <&> AddEvalCtx r
     <&>
     \ctx ->
     WorkArea

@@ -185,7 +185,7 @@ toAnnotation AnnotationNone = pure AnnotationNone
 toAnnotation (AnnotationType typ) = toType typ <&> AnnotationType
 toAnnotation (AnnotationVal x) = toValAnnotation x <&> AnnotationVal
 
-type Pl n m = Payload (EvaluationScopes n (IM m)) n (IM m)
+type Pl n m = Payload (Annotation (EvaluationScopes n (IM m)) n) n (IM m)
 
 toPayload :: MonadNaming m => Pl (OldName m) m o -> m (Pl (NewName m) m o)
 toPayload payload@Payload{_plAnnotation, _plActions} =
@@ -205,7 +205,7 @@ toNode toV (Ann (Const pl) v) =
     <$> (_1 toPayload pl <&> Const)
     <*> toV v
 
-type BodyW t n m o a = Body t (EvaluationScopes n (IM m)) n (IM m) o a
+type BodyW t n m o a = Body t (Annotation (EvaluationScopes n (IM m)) n) n (IM m) o a
 type WalkBody t m o a = BodyW t (OldName m) m o a -> m (BodyW t (NewName m) m o a)
 
 toLet :: MonadNaming m => WalkBody Let m o a
@@ -240,7 +240,7 @@ toBinderPlain AssignPlain{_apBody, _apAddFirstParam} =
     <$> toBinder _apBody
     <*> toAddFirstParam _apAddFirstParam
 
-type ExprW t n m o a = Expr t (EvaluationScopes n (IM m)) n (IM m) o a
+type ExprW t n m o a = Expr t (Annotation (EvaluationScopes n (IM m)) n) n (IM m) o a
 type WalkExpr t m o a = ExprW t (OldName m) m o a -> m (ExprW t (NewName m) m o a)
 
 toAssignment :: MonadNaming m => WalkExpr Assignment m o a
@@ -303,7 +303,7 @@ toLabeledApply
     <*> traverse toAnnotatedArg _aAnnotatedArgs
     <*> traverse (toNode (Lens._Wrapped toGetVar)) _aPunnedArgs
 
-type SugarElem t n m (o :: * -> *) = t (EvaluationScopes n (IM m)) n (IM m) o
+type SugarElem t n m (o :: * -> *) = t (Annotation (EvaluationScopes n (IM m)) n) n (IM m) o
 type WalkElem t m o = SugarElem t (OldName m) m o -> m (SugarElem t (NewName m) m o)
 
 toHole :: MonadNaming m => WalkElem Hole m o
@@ -409,8 +409,8 @@ withParamInfo varInfo (ParamInfo tag fpActions) =
 withFuncParam ::
     MonadNaming m =>
     (Sugar.VarInfo -> a -> CPS m b) ->
-    (FuncParam (EvaluationScopes (OldName m) (IM m)) (OldName m), a) ->
-    CPS m (FuncParam (EvaluationScopes (NewName m) (IM m)) (NewName m), b)
+    (FuncParam (Annotation (EvaluationScopes (OldName m) (IM m)) (OldName m)) (OldName m), a) ->
+    CPS m (FuncParam (Annotation (EvaluationScopes (NewName m) (IM m)) (NewName m)) (NewName m), b)
 withFuncParam f (FuncParam pl varInfo, info) =
     (,)
     <$>
@@ -426,7 +426,7 @@ withBinderParams ::
 withBinderParams (NullParam x) = withFuncParam (const pure) x <&> NullParam
 withBinderParams (Params xs) = traverse (withFuncParam withParamInfo) xs <&> Params
 
-type Top t n m o a = t (EvaluationScopes n (IM m)) n (IM m) o (Pl n m o, a)
+type Top t n m o a = t (Annotation (EvaluationScopes n (IM m)) n) n (IM m) o (Pl n m o, a)
 type WalkTop t m o a = Top t (OldName m) m o a -> m (Top t (NewName m) m o a)
 
 toDefExpr :: MonadNaming m => WalkTop DefinitionExpression m o a

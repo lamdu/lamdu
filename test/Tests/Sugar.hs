@@ -58,8 +58,8 @@ test =
 testSugarActionsWith ::
     HasCallStack =>
     FilePath ->
-    [WorkArea (EvaluationScopes Name (OnceT (T ViewM))) Name (OnceT (T ViewM)) (T ViewM)
-        ( Sugar.Payload (EvaluationScopes Name (OnceT (T ViewM))) Name (OnceT (T ViewM)) (T ViewM)
+    [WorkArea (Annotation (EvaluationScopes Name (OnceT (T ViewM))) Name) Name (OnceT (T ViewM)) (T ViewM)
+        ( Sugar.Payload (Annotation (EvaluationScopes Name (OnceT (T ViewM))) Name) Name (OnceT (T ViewM)) (T ViewM)
         , (ParenInfo, [EntityId])
         ) ->
         OnceT (T ViewM) a] ->
@@ -75,8 +75,8 @@ testSugarActionsWith program actions env =
 testSugarActions ::
     HasCallStack =>
     FilePath ->
-    [WorkArea (EvaluationScopes Name (OnceT (T ViewM))) Name (OnceT (T ViewM)) (T ViewM)
-        ( Sugar.Payload (EvaluationScopes Name (OnceT (T ViewM))) Name (OnceT (T ViewM)) (T ViewM)
+    [WorkArea (Annotation (EvaluationScopes Name (OnceT (T ViewM))) Name) Name (OnceT (T ViewM)) (T ViewM)
+        ( Sugar.Payload (Annotation (EvaluationScopes Name (OnceT (T ViewM))) Name) Name (OnceT (T ViewM)) (T ViewM)
         , (ParenInfo, [EntityId])
         ) ->
         OnceT (T ViewM) a] ->

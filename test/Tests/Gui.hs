@@ -138,7 +138,7 @@ applyEvent env virtCursor event =
 fromWorkArea ::
     Env ->
     Lens.ATraversal'
-        ( Sugar.WorkArea (Sugar.EvaluationScopes Name (OnceT (T ViewM))) Name (OnceT (T ViewM)) (T ViewM)
+        ( Sugar.WorkArea (Sugar.Annotation (Sugar.EvaluationScopes Name (OnceT (T ViewM))) Name) Name (OnceT (T ViewM)) (T ViewM)
             (ExprGui.Payload (OnceT (T ViewM)) (T ViewM))
         ) a ->
     T ViewM a

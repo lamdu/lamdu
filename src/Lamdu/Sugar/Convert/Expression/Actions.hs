@@ -356,13 +356,13 @@ makeAnnotation showAnn pl
 convertPayloads ::
     (Monad m, RTraversable h) =>
     Annotated (Ann.ShowAnnotation, ConvertPayload m a) # h ->
-    ConvertM m (Annotated (Payload EvalPrep InternalName (OnceT (T m)) (T m), a) # h)
+    ConvertM m (Annotated (Payload (Annotation EvalPrep InternalName) InternalName (OnceT (T m)) (T m), a) # h)
 convertPayloads = htraverseFlipped (const (Lens._Wrapped convertPayload))
 
 convertPayload ::
     Monad m =>
     (Ann.ShowAnnotation, ConvertPayload m a) ->
-    ConvertM m (Payload EvalPrep InternalName (OnceT (T m)) (T m), a)
+    ConvertM m (Payload (Annotation EvalPrep InternalName) InternalName (OnceT (T m)) (T m), a)
 convertPayload (showAnn, pl) =
     makeAnnotation showAnn (pl ^. pInput)
     <&>

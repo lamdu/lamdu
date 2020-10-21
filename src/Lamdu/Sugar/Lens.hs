@@ -169,20 +169,20 @@ workAreaAnnotations f w =
     ?? w ^. waGlobals
 
 binderParamsAnnotations :: Traversal (BinderParams v0 n i o) (BinderParams v1 n i o) v0 v1
-binderParamsAnnotations = binderParamsFuncParams . fpAnnotation . _AnnotationVal
+binderParamsAnnotations = binderParamsFuncParams . fpAnnotation
 
 class Annotations n i o v0 v1 t0 t1 where
     annotations :: Traversal (Annotated (Payload v0 n i o, a) # t0) (Annotated (Payload v1 n i o, a) # t1) v0 v1
 
 instance Annotations n i o v0 v1 (Const x) (Const x) where
     annotations f (Ann a (Const b)) =
-        (Lens._Wrapped . Lens._1 . plAnnotation . _AnnotationVal) f a
+        (Lens._Wrapped . Lens._1 . plAnnotation) f a
         <&> (`Ann` Const b)
 
 instance (BodyAnnotations e, Functor i) => Annotations n i o v0 v1 (e v0 n i o) (e v1 n i o) where
     annotations f (Ann a b) =
         Ann
-        <$> (Lens._Wrapped . Lens._1 . plAnnotation . _AnnotationVal) f a
+        <$> (Lens._Wrapped . Lens._1 . plAnnotation) f a
         <*> bodyAnnotations f b
 
 class BodyAnnotations e where

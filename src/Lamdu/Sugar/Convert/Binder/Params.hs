@@ -57,7 +57,7 @@ type T = Transaction
 data ConventionalParams m = ConventionalParams
     { cpTags :: Set T.Tag
     , _cpParamInfos :: Map T.Tag ConvertM.TagFieldParam
-    , _cpParams :: Maybe (BinderParams EvalPrep InternalName (OnceT (T m)) (T m))
+    , _cpParams :: Maybe (BinderParams (Annotation EvalPrep InternalName) InternalName (OnceT (T m)) (T m))
     , _cpAddFirstParam :: AddFirstParam InternalName (OnceT (T m)) (T m)
     , cpMLamParam :: Maybe ({- lambda's -}EntityId, V.Var)
     }
@@ -625,7 +625,7 @@ mkVarInfo (Pure (T.TInst (NominalInst tid _))) = ConvertTId.convert tid <&> VarN
 mkFuncParam ::
     Monad m =>
     EntityId -> Input.Payload m a # V.Term -> info ->
-    ConvertM m (FuncParam EvalPrep InternalName, info)
+    ConvertM m (FuncParam (Annotation EvalPrep InternalName) InternalName, info)
 mkFuncParam entityId lamExprPl info =
     (,,)
     <$> Lens.view ConvertM.scAnnotationsMode

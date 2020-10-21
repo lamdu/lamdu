@@ -96,7 +96,7 @@ makeRenderedResult pl ctx result =
 
 postProcessSugar ::
     AddParens.MinOpPrec ->
-    Sugar.Expr Sugar.Binder (Sugar.EvaluationScopes Name i) Name i o () ->
+    Sugar.Expr Sugar.Binder (Sugar.Annotation (Sugar.EvaluationScopes Name i) Name) Name i o () ->
     ExprGui.Expr Sugar.Binder i o
 postProcessSugar minOpPrec binder =
     AddParens.addToBinderWith minOpPrec binder
@@ -165,7 +165,7 @@ make ::
     , SearchMenu.HasTexts env
     ) =>
     AnnotationMode ->
-    i [Sugar.HoleOption (Sugar.EvaluationScopes Name i) Name i o] ->
+    i [Sugar.HoleOption (Sugar.Annotation (Sugar.EvaluationScopes Name i) Name) Name i o] ->
     ExprGui.Payload i o -> (Text -> Bool) -> WidgetIds ->
     GuiM env i o (Menu.Placement -> TextWidget o)
 make annMode mkOptions pl allowedTerms widgetIds =

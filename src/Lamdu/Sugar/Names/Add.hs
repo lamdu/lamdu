@@ -540,10 +540,10 @@ addToWorkArea ::
     ) =>
     env ->
     (T.Tag -> i (Tag.IsOperator, Tag.TextsInLang)) ->
-    WorkArea (EvaluationScopes InternalName i) InternalName i o
-    (Payload (EvaluationScopes InternalName i) InternalName i o, a) ->
-    i (WorkArea (EvaluationScopes Name i) Name i o
-          (Payload (EvaluationScopes Name i) Name i o, a))
+    WorkArea (Annotation (EvaluationScopes InternalName i) InternalName) InternalName i o
+        (Payload (Annotation (EvaluationScopes InternalName i) InternalName) InternalName i o, a) ->
+    i (WorkArea (Annotation (EvaluationScopes Name i) Name) Name i o
+          (Payload (Annotation (EvaluationScopes Name i) Name) Name i o, a))
 addToWorkArea env getName =
     runPasses env getName f f f f
     where

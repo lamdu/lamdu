@@ -137,7 +137,8 @@ makeSimple ::
     , Has (Texts.Name Text) env
     , Has (Texts.Navigation Text) env
     ) =>
-    Annotated (ExprGui.Payload i o) # Sugar.App (Sugar.Term (Sugar.EvaluationScopes Name i) Name i o) ->
+    Annotated (ExprGui.Payload i o)
+        # Sugar.App (Sugar.Term (Sugar.Annotation (Sugar.EvaluationScopes Name i) Name) Name i o) ->
     GuiM env i o (Responsive o)
 makeSimple (Ann (Const pl) (Sugar.App func arg)) =
     (ResponsiveExpr.boxSpacedMDisamb ?? ExprGui.mParensId pl)

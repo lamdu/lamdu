@@ -43,8 +43,8 @@ sugarWorkArea ::
     env0 -> Anchors.CodeAnchors m ->
     OnceT (T m)
     ( (Tag -> (IsOperator, TextsInLang)) -> env1 ->
-        OnceT (T m) (Sugar.WorkArea (Sugar.EvaluationScopes Name (OnceT (T m))) Name (OnceT (T m)) (T m)
-            (Sugar.Payload (Sugar.EvaluationScopes Name (OnceT (T m))) Name (OnceT (T m)) (T m),
+        OnceT (T m) (Sugar.WorkArea (Sugar.Annotation (Sugar.EvaluationScopes Name (OnceT (T m))) Name) Name (OnceT (T m)) (T m)
+            (Sugar.Payload (Sugar.Annotation (Sugar.EvaluationScopes Name (OnceT (T m))) Name) Name (OnceT (T m)) (T m),
                 (Sugar.ParenInfo, [Sugar.EntityId])))
     )
 sugarWorkArea env0 cp =
