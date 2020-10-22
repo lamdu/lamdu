@@ -22,8 +22,8 @@ type T = Transaction
 convertIfElse ::
     Functor m =>
     (ValI m -> T m (ValI m)) ->
-    Case EvalPrep InternalName (OnceT (T m)) (T m) # Annotated (ConvertPayload m a) ->
-    Maybe (IfElse EvalPrep InternalName (OnceT (T m)) (T m) # Annotated (ConvertPayload m a))
+    Case v InternalName (OnceT (T m)) (T m) # Annotated (ConvertPayload m a) ->
+    Maybe (IfElse v InternalName (OnceT (T m)) (T m) # Annotated (ConvertPayload m a))
 convertIfElse setToVal caseBody =
     do
         arg <- caseBody ^? cKind . _CaseWithArg . caVal

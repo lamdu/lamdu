@@ -71,8 +71,8 @@ convert (RowExtend tag v rest) exprPl =
 convertAppliedCase ::
     (Monad m, Monoid a) =>
     V.App V.Term # Ann (Input.Payload m a) ->
-    ExpressionU EvalPrep m a -> ExpressionU EvalPrep m a -> Input.Payload m a # V.Term ->
-    MaybeT (ConvertM m) (ExpressionU EvalPrep m a)
+    ExpressionU v m a -> ExpressionU v m a -> Input.Payload m a # V.Term ->
+    MaybeT (ConvertM m) (ExpressionU v m a)
 convertAppliedCase (V.App _ arg) funcS argS exprPl =
     do
         Lens.view (ConvertM.scConfig . Config.sugarsEnabled . Config.caseWithArgument) >>= guard

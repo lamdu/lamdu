@@ -90,8 +90,8 @@ validateDefParamsMatchArgs var record frozenDeps =
 convertLabeled ::
     (Monad m, Monoid a, Recursively HFoldable h) =>
     h # Ann (Input.Payload m a) ->
-    ExpressionU EvalPrep m a -> ExpressionU EvalPrep m a -> Input.Payload m a # V.Term ->
-    MaybeT (ConvertM m) (ExpressionU EvalPrep m a)
+    ExpressionU v m a -> ExpressionU v m a -> Input.Payload m a # V.Term ->
+    MaybeT (ConvertM m) (ExpressionU v m a)
 convertLabeled subexprs funcS argS exprPl =
     do
         Lens.view (ConvertM.scConfig . Config.sugarsEnabled . Config.labeledApply) >>= guard
