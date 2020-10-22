@@ -43,6 +43,7 @@ data EvalPrep = EvalPrep
       -- This happens in let-items (redexes) and in else-if clauses.
       -- Their evaluation scopes are translated to the parent scope
       -- which is exposed by the sugar.
+      -- TODO: Currently not yet used and body in let-expressions doesn't have evaluation results.
       _eLambdas :: [UUID]
     }
 
