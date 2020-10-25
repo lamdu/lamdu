@@ -2,7 +2,6 @@
 
 module Lamdu.Sugar.Lens
     ( SugarExpr(..)
-    , EvalResultsNode(..)
     , childPayloads
     , bodyUnfinished
     , defSchemes
@@ -12,6 +11,7 @@ module Lamdu.Sugar.Lens
     , holeTransformExprs, holeOptionTransformExprs
     , getVarName
     , paneBinder
+    , workAreaEvalResults
     ) where
 
 import           Control.Lens (Traversal)
@@ -158,6 +158,15 @@ binderParamsFuncParams f (Params x) = (traverse . _1) f x <&> Params
 
 paneBinder :: Traversal (Pane v0 n i o a0) (Pane v1 n i o a1) (Annotated a0 # Assignment v0 n i o) (Annotated a1 # Assignment v1 n i o)
 paneBinder = paneBody . _PaneDefinition . drBody . _DefinitionBodyExpression . deContent
+
+workAreaEvalResults ::
+    Functor i =>
+    Traversal (WorkArea v0 n i o (Payload v0 n i o, a)) (WorkArea v1 n i o (Payload v1 n i o, a)) v0 v1
+workAreaEvalResults f w =
+    WorkArea
+    <$> (traverse . paneBinder . evalResults) f (w ^. waPanes)
+    <*> (replExpr . evalResults) f (w ^. waRepl)
+    ?? w ^. waGlobals
 
 class EvalResultsNode n i o v0 v1 t0 t1 where
     evalResults :: Traversal (Annotated (Payload v0 n i o, a) # t0) (Annotated (Payload v1 n i o, a) # t1) v0 v1
