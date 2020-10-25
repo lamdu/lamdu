@@ -7,6 +7,7 @@ module Lamdu.Sugar.Convert.Expression.Actions
 
 import qualified Control.Lens.Extended as Lens
 import           Control.Monad.Once (OnceT)
+import           Control.Monad.Transaction (MonadTransaction)
 import qualified Data.Map as Map
 import qualified Data.Property as Property
 import qualified Data.Set as Set
@@ -325,8 +326,8 @@ makeTypeAnnotationPl payload =
     makeTypeAnnotation (payload ^. Input.entityId) (payload ^. Input.inferredType)
 
 makeTypeAnnotation ::
-    Monad m =>
-    EntityId -> Pure # T.Type -> ConvertM m (Annotated EntityId # Type InternalName)
+    MonadTransaction n m =>
+    EntityId -> Pure # T.Type -> m (Annotated EntityId # Type InternalName)
 makeTypeAnnotation = convertType . EntityId.ofTypeOf
 
 mkEvalPrep :: Input.Payload m a # V.Term -> EvalPrep

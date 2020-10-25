@@ -15,7 +15,6 @@ import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Expr.UniqueId as UniqueId
-import           Lamdu.Sugar.Convert.Monad (ConvertM)
 import           Lamdu.Sugar.Internal hiding (replaceWith)
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import           Lamdu.Sugar.Types
@@ -43,10 +42,10 @@ withoutContext entityId tag =
 -- NOT type-level constraints on tags. Violation of constraints is
 -- allowed, generating ordinary type errors
 ref ::
-    Monad m =>
+    (MonadTransaction n m, MonadReader env m, Anchors.HasCodeAnchors env n) =>
     T.Tag -> (T.Tag -> name) -> Set T.Tag -> (T.Tag -> EntityId) ->
-    (T.Tag -> T m ()) ->
-    ConvertM m (TagRef name (OnceT (T m)) (T m))
+    (T.Tag -> T n ()) ->
+    m (TagRef name (OnceT (T n)) (T n))
 ref tag name forbiddenTags mkInstance setTag =
     Lens.view id
     <&> \env ->
@@ -78,9 +77,9 @@ refWith cp tag name forbiddenTags allowAnon mkInstance setTag tagsProp =
     }
 
 replace ::
-    Monad m =>
-    (T.Tag -> name) -> Set T.Tag -> AllowAnonTag -> (T.Tag -> EntityId) -> (T.Tag -> T m a) ->
-    ConvertM m (TagReplace name (OnceT (T m)) (T m) a)
+    (MonadTransaction n m, MonadReader env m, Anchors.HasCodeAnchors env n) =>
+    (T.Tag -> name) -> Set T.Tag -> AllowAnonTag -> (T.Tag -> EntityId) -> (T.Tag -> T n a) ->
+    m (TagReplace name (OnceT (T n)) (T n) a)
 replace name forbiddenTags allowAnon mkInstance setTag =
     Lens.view id
     <&> \env ->
@@ -142,8 +141,8 @@ taggedEntityWith cp entity tagsProp =
         prop = Anchors.assocTag entity
 
 taggedEntity ::
-    (UniqueId.ToUUID a, Monad m) =>
-    a -> ConvertM m (TagRef InternalName (OnceT (T m)) (T m))
+    (UniqueId.ToUUID a, MonadTransaction n m, MonadReader env m, Anchors.HasCodeAnchors env n) =>
+    a -> m (TagRef InternalName (OnceT (T n)) (T n))
 taggedEntity entity =
     do
         env <- Lens.view id
