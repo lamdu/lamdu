@@ -85,8 +85,8 @@ data ExtractDestination
     | ExtractToDef EntityId
 
 data DetachAction o
-    = FragmentAlready EntityId -- I'o an apply-of-hole, no need to detach
-    | FragmentExprAlready EntityId -- I'o an arg of apply-of-hole, no need to detach
+    = FragmentAlready EntityId -- I'm an apply-of-hole, no need to detach
+    | FragmentExprAlready EntityId -- I'm an arg of apply-of-hole, no need to detach
     | DetachAction (o EntityId) -- Detach me
     deriving Generic
 
