@@ -46,6 +46,8 @@ module Lamdu.Sugar.Types.Expression
     , Case(..), cKind, cBody
     , CaseArg(..), caVal, caToLambdaCase
     , CaseKind(..), _LambdaCase, _CaseWithArg
+
+    , MorphWitness(..)
     ) where
 
 import qualified Control.Lens as Lens
@@ -273,6 +275,8 @@ traverse makeHTraversableAndBases
     , ''Fragment, ''Function, ''GetField, ''IfElse, ''Inject, ''InjectContent
     , ''LabeledApply, ''Lambda, ''Let, ''Nominal, ''Term
     ] <&> concat
+
+traverse makeHMorph [''Composite, ''IfElse, ''InjectContent, ''LabeledApply, ''Let] <&> concat
 
 -- TODO: Replace boilerplate below with TH
 

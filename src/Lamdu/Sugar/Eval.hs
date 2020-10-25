@@ -1,4 +1,5 @@
 {-# LANGUAGE TemplateHaskell, TypeApplications, RecordWildCards #-}
+{-# LANGUAGE GADTs, MultiParamTypeClasses, FlexibleInstances, DefaultSignatures #-}
 
 module Lamdu.Sugar.Eval
     ( addEvaluationResults
@@ -7,6 +8,7 @@ module Lamdu.Sugar.Eval
 import qualified Control.Lens as Lens
 import           Data.CurAndPrev (CurAndPrev)
 import           Hyper
+import           Hyper.Class.Morph
 import           Hyper.Type.AST.Nominal (NominalDecl)
 import           Lamdu.Calc.Lens (tIds)
 import qualified Lamdu.Calc.Type as T
@@ -33,13 +35,39 @@ data AddEvalCtx = AddEvalCtx
 
 Lens.makeLenses ''AddEvalCtx
 
-class AddEval e where
-    addToBody ::
+class AddEvalToNode n i o a t0 t1 where
+    addToNode ::
         Applicative i =>
         AddEvalCtx ->
-        EntityId ->
-        Body e EvalPrep name i o a ->
-        Body e (EvaluationScopes InternalName i) name i o a
+        Annotated (Payload EvalPrep n i o, a) # t0 ->
+        Annotated (Payload (EvaluationScopes InternalName i) n i o, a) # t1
+
+instance AddEvalToNode n i o a (Const x) (Const x) where
+    addToNode r (Ann (Const pl) (Const x)) = Ann (Const (pl & _1 %~ addToPayload r)) (Const x)
+
+instance AddEval e => AddEvalToNode n i o a (e EvalPrep n i o) (e (EvaluationScopes InternalName i) n i o) where
+    addToNode results (Ann a b) =
+        Ann
+        { _hAnn = a & Lens._Wrapped . _1 %~ addToPayload results
+        , _hVal = addToBody results i b
+        }
+        where
+            i = a ^. Lens._Wrapped . _1 . plEntityId
+
+type AddToBodyType e n i o a =
+    AddEvalCtx -> EntityId -> Body e EvalPrep n i o a -> Body e (EvaluationScopes InternalName i) n i o a
+
+class AddEval e where
+    addToBody :: Applicative i => AddToBodyType e n i o a
+    default addToBody ::
+        ( HMorphWithConstraint (e EvalPrep n i o) (e (EvaluationScopes InternalName i) n i o) (AddEvalToNode n i o a)
+        , Applicative i
+        ) => AddToBodyType e n i o a
+    addToBody r _ x =
+        morphMap (p x #?> addToNode r) x
+        where
+            p :: Body t EvalPrep n i o a -> Proxy (AddEvalToNode n i o a)
+            p _ = Proxy
 
 instance AddEval Assignment where
     addToBody r i (BodyFunction x) = addToBody r i x & BodyFunction
@@ -49,10 +77,7 @@ instance AddEval Binder where
     addToBody r i (BinderLet x) = addToBody r i x & BinderLet
     addToBody r i (BinderTerm x) = addToBody r i x & BinderTerm
 
-instance AddEval Composite where
-    addToBody r _ (Composite i p t a) =
-        Composite (i <&> ciExpr %~ addToNode r) (p <&> addToConst r)
-        (t & _OpenComposite . _2 %~ addToNode r) a
+instance AddEval Composite
 
 instance AddEval Else where
     addToBody r i (SimpleElse x) = addToBody r i x & SimpleElse
@@ -107,20 +132,10 @@ instance AddEval Function where
                 <&> Lens.mapped . Lens.mapped . _2 %~ addTypes (ctx ^. nominalsMap) (v ^. eType)
             EntityId u = i
 
-
-instance AddEval IfElse where
-    addToBody r _ (IfElse i t e) = IfElse (addToNode r i) (addToNode r t) (addToNode r e)
-
-instance AddEval InjectContent where
-    addToBody r _ (InjectNullary x) = addToConst r x & InjectNullary
-    addToBody r _ (InjectVal x) = addToNode r x & InjectVal
-
-instance AddEval Let where
-    addToBody r _ x@Let{..} =
-        x
-        { _lValue = addToNode r _lValue
-        , _lBody = addToNode r _lBody
-        }
+instance AddEval IfElse
+instance AddEval InjectContent
+instance AddEval LabeledApply
+instance AddEval Let
 
 instance AddEval Term where
     addToBody r i =
@@ -129,42 +144,23 @@ instance AddEval Term where
         BodyGetVar x -> BodyGetVar x
         BodyLiteral x -> BodyLiteral x
         BodyFromNom x -> BodyFromNom x
-        BodySimpleApply (App x y) -> App (n x) (n y) & BodySimpleApply
-        BodyGetField (GetField x t) -> GetField (n x) t & BodyGetField
+        BodySimpleApply (App x y) -> App (addToNode r x) (addToNode r y) & BodySimpleApply
+        BodyGetField (GetField x t) -> GetField (addToNode r x) t & BodyGetField
         BodyRecord c -> addToBody r i c & BodyRecord
-        BodyInject (Inject t c) -> addToBody r i c & Inject t & BodyInject
+        BodyInject x -> x & iContent %~ addToBody r i & BodyInject
         BodyIfElse x -> addToBody r i x & BodyIfElse
         BodyLam lam -> lam & lamFunc %~ addToBody r i & BodyLam
         BodyToNom nom -> nom & nVal %~ addToNode r & BodyToNom
         BodyHole h -> h & holeOptions . Lens.mapped . Lens.mapped %~ addToHoleOption & BodyHole
         BodyCase (Case k b) ->
             Case (k & _CaseWithArg . caVal %~ addToNode r) (addToBody r i b) & BodyCase
-        BodyLabeledApply (LabeledApply f s a p) ->
-            LabeledApply (addToConst r f) (s <&> n) (a <&> aaExpr %~ n) (p <&> addToConst r) & BodyLabeledApply
+        BodyLabeledApply x -> addToBody r i x & BodyLabeledApply
         BodyFragment (Fragment f h t o) ->
             Fragment (addToNode r f) h t (o <&> Lens.mapped %~ addToHoleOption) & BodyFragment
         where
-            n ::
-                (AddEval e, Applicative i) =>
-                Expr e EvalPrep name i o a ->
-                Expr e (EvaluationScopes InternalName i) name i o a
-            n = addToNode r
             addToHoleOption (HoleOption hi e s) =
                 HoleOption hi (e <&> addToNode r)
                 (s <&> _2 . Lens.mapped . holeResultConverted %~ addToNode r)
-
-addToNode ::
-    (AddEval e, Applicative i) =>
-    AddEvalCtx ->
-    Expr e EvalPrep name i o a ->
-    Expr e (EvaluationScopes InternalName i) name i o a
-addToNode results (Ann a b) =
-    Ann
-    { _hAnn = a & Lens._Wrapped . _1 %~ addToPayload results
-    , _hVal = addToBody results i b
-    }
-    where
-        i = a ^. Lens._Wrapped . _1 . plEntityId
 
 addToPayload ::
     Applicative i =>
@@ -183,13 +179,6 @@ addToPayload ctx a =
     where
         EntityId u = i
         i = a ^. plEntityId
-
-addToConst ::
-    Applicative i =>
-    AddEvalCtx ->
-    Annotated (Payload EvalPrep name i o, a) # Const x ->
-    Annotated (Payload (EvaluationScopes InternalName i) name i o, a) # Const x
-addToConst r (Ann (Const pl) (Const x)) = Ann (Const (pl & _1 %~ addToPayload r)) (Const x)
 
 addEvaluationResults ::
     (Applicative i, Monad m) =>

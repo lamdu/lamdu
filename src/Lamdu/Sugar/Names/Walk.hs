@@ -10,7 +10,8 @@ module Lamdu.Sugar.Names.Walk
 
 import qualified Control.Lens as Lens
 import qualified Data.Set as Set
-import           Hyper.Type.AST.App (appChildren)
+import           Hyper.Class.Morph (morphTraverse)
+import           Hyper.Type.AST.App (MorphWitness(..))
 import           Hyper.Type.AST.FuncType (FuncType(..))
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Sugar.Lens as SugarLens
@@ -375,7 +376,7 @@ toBody =
     BodyRecord       x -> x & toComposite <&> BodyRecord
     BodyCase         x -> x & toCase <&> BodyCase
     BodyIfElse       x -> x & toIfElse <&> BodyIfElse
-    BodySimpleApply  x -> x & appChildren toExpression <&> BodySimpleApply
+    BodySimpleApply  x -> x & morphTraverse (\M_App_expr -> toExpression) <&> BodySimpleApply
     BodyLabeledApply x -> x & toLabeledApply <&> BodyLabeledApply
     BodyHole         x -> x & toHole <&> BodyHole
     BodyFromNom      x -> x & toTId <&> BodyFromNom
