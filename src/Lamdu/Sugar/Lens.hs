@@ -9,6 +9,7 @@ module Lamdu.Sugar.Lens
     , binderResultExpr
     , holeTransformExprs, holeOptionTransformExprs
     , getVarName
+    , paneBinder
     , evalResults
     ) where
 
@@ -152,6 +153,9 @@ binderParamsFuncParams ::
     (FuncParam v1 name)
 binderParamsFuncParams f (NullParam x) = _1 f x <&> NullParam
 binderParamsFuncParams f (Params x) = (traverse . _1) f x <&> Params
+
+paneBinder :: Traversal (Pane v0 n i o a0) (Pane v1 n i o a1) (Annotated a0 # Assignment v0 n i o) (Annotated a1 # Assignment v1 n i o)
+paneBinder = paneBody . _PaneDefinition . drBody . _DefinitionBodyExpression . deContent
 
 evalResults ::
     (EvalResults e, Functor i) =>

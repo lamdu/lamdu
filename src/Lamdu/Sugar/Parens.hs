@@ -10,6 +10,7 @@ import qualified Control.Lens as Lens
 import           Hyper
 import qualified Lamdu.Calc.Term as V
 import           Lamdu.Precedence (Prec, Precedence(..), HasPrecedence(..), before, after)
+import qualified Lamdu.Sugar.Lens as SugarLens
 import           Lamdu.Sugar.Types
 
 import           Lamdu.Prelude
@@ -27,10 +28,7 @@ addToWorkArea ::
 addToWorkArea w =
     w
     { _waRepl = w ^. waRepl & replExpr %~ addToNode
-    , _waPanes =
-        w ^. waPanes
-        <&> paneBody . _PaneDefinition . drBody . _DefinitionBodyExpression . deContent
-        %~ addToNode
+    , _waPanes = w ^. waPanes <&> SugarLens.paneBinder %~ addToNode
     }
 
 class AddParens expr where

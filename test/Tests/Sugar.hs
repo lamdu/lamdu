@@ -259,8 +259,7 @@ testExtractForRecursion =
             replBody . _BodyLabeledApply . aFunc .
             hVal . Lens._Wrapped . bvNameRef . nrGotoDefinition
         extractDef =
-            waPanes . traverse . paneBody . _PaneDefinition .
-            drBody . _DefinitionBodyExpression . deContent .
+            waPanes . traverse . SugarLens.paneBinder .
             annotation . _1 . plActions . extract
 
 testInsistFactorial :: Test
@@ -276,8 +275,7 @@ testInsistFactorial =
             replBody . _BodySimpleApply . appFunc .
             hVal . _BodyGetVar . _GetBinder . bvNameRef . nrGotoDefinition
         ifElse =
-            waPanes . traverse . paneBody . _PaneDefinition .
-            drBody . _DefinitionBodyExpression . deContent .
+            waPanes . traverse . SugarLens.paneBinder .
             hVal . _BodyFunction . fBody .
             hVal . _BinderTerm . _BodyIfElse
         insist =
@@ -342,8 +340,7 @@ testInsistSubsets =
     where
         openDef = replBody . _BodyGetVar . _GetBinder . bvNameRef . nrGotoDefinition
         consArgs =
-            waPanes . traverse . paneBody . _PaneDefinition .
-            drBody . _DefinitionBodyExpression . deContent .
+            waPanes . traverse . SugarLens.paneBinder .
             hVal . _BodyFunction . fBody .
             hVal . _BinderTerm . _BodyCase . cBody . cItems . Lens.ix 1 . ciExpr .
             hVal . _BodyLam . lamFunc . fBody .
@@ -391,8 +388,7 @@ delDefParam =
     where
         openDef = replBody . _BodyGetVar . _GetBinder . bvNameRef . nrGotoDefinition
         action =
-            waPanes . traverse . paneBody . _PaneDefinition .
-            drBody . _DefinitionBodyExpression . deContent .
+            waPanes . traverse . SugarLens.paneBinder .
             hVal . _BodyFunction .
             fParams . _Params . traverse .
             _2 . piActions . fpDelete
@@ -405,8 +401,7 @@ updateDef =
     where
         openDef = replBody . _BodyGetVar . _GetBinder . bvNameRef . nrGotoDefinition
         action =
-            waPanes . traverse . paneBody . _PaneDefinition .
-            drBody . _DefinitionBodyExpression . deContent .
+            waPanes . traverse . SugarLens.paneBinder .
             hVal . _BodyFunction . fBody .
             hVal . _BinderTerm . _BodyLabeledApply . aFunc .
             hVal . Lens._Wrapped . bvForm . _GetDefinition . _DefTypeChanged . defTypeUseCurrent

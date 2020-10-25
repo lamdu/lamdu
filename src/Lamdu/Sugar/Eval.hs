@@ -204,9 +204,7 @@ addEvaluationResults cp r (WorkArea panes repl listGlobals) =
     <&>
     \ctx ->
     WorkArea
-    ( panes <&>
-        paneBody . _PaneDefinition . drBody .
-        _DefinitionBodyExpression . deContent %~ addToNode ctx)
+    ( panes <&> SugarLens.paneBinder %~ addToNode ctx)
     ( repl
         & replExpr %~ addToNode ctx
         & replResult .~ (r <&> (^. erCompleted) & ConvertEval.completion cp)
@@ -215,6 +213,4 @@ addEvaluationResults cp r (WorkArea panes repl listGlobals) =
     where
         evalPreps =
             repl ^.. replExpr . SugarLens.evalResults <>
-            panes ^..
-                traverse . paneBody . _PaneDefinition . drBody .
-                _DefinitionBodyExpression . deContent . SugarLens.evalResults
+            panes ^.. traverse . SugarLens.paneBinder . SugarLens.evalResults
