@@ -11,7 +11,7 @@ module Lamdu.Sugar.Lens
     , holeTransformExprs, holeOptionTransformExprs
     , getVarName
     , paneBinder
-    , workAreaEvalResults
+    , workAreaAnnotations
     ) where
 
 import           Control.Lens (Traversal)
@@ -159,97 +159,97 @@ binderParamsFuncParams f (Params x) = (traverse . _1) f x <&> Params
 paneBinder :: Traversal (Pane v0 n i o a0) (Pane v1 n i o a1) (Annotated a0 # Assignment v0 n i o) (Annotated a1 # Assignment v1 n i o)
 paneBinder = paneBody . _PaneDefinition . drBody . _DefinitionBodyExpression . deContent
 
-workAreaEvalResults ::
+workAreaAnnotations ::
     Functor i =>
     Traversal (WorkArea v0 n i o (Payload v0 n i o, a)) (WorkArea v1 n i o (Payload v1 n i o, a)) v0 v1
-workAreaEvalResults f w =
+workAreaAnnotations f w =
     WorkArea
-    <$> (traverse . paneBinder . evalResults) f (w ^. waPanes)
-    <*> (replExpr . evalResults) f (w ^. waRepl)
+    <$> (traverse . paneBinder . annotations) f (w ^. waPanes)
+    <*> (replExpr . annotations) f (w ^. waRepl)
     ?? w ^. waGlobals
 
-binderParamsEvalResults :: Traversal (BinderParams v0 n i o) (BinderParams v1 n i o) v0 v1
-binderParamsEvalResults = binderParamsFuncParams . fpAnnotation . _AnnotationVal
+binderParamsAnnotations :: Traversal (BinderParams v0 n i o) (BinderParams v1 n i o) v0 v1
+binderParamsAnnotations = binderParamsFuncParams . fpAnnotation . _AnnotationVal
 
-class EvalResultsNode n i o v0 v1 t0 t1 where
-    evalResults :: Traversal (Annotated (Payload v0 n i o, a) # t0) (Annotated (Payload v1 n i o, a) # t1) v0 v1
+class Annotations n i o v0 v1 t0 t1 where
+    annotations :: Traversal (Annotated (Payload v0 n i o, a) # t0) (Annotated (Payload v1 n i o, a) # t1) v0 v1
 
-instance EvalResultsNode n i o v0 v1 (Const x) (Const x) where
-    evalResults f (Ann a (Const b)) =
+instance Annotations n i o v0 v1 (Const x) (Const x) where
+    annotations f (Ann a (Const b)) =
         (Lens._Wrapped . Lens._1 . plAnnotation . _AnnotationVal) f a
         <&> (`Ann` Const b)
 
-instance (EvalResults e, Functor i) => EvalResultsNode n i o v0 v1 (e v0 n i o) (e v1 n i o) where
-    evalResults f (Ann a b) =
+instance (BodyAnnotations e, Functor i) => Annotations n i o v0 v1 (e v0 n i o) (e v1 n i o) where
+    annotations f (Ann a b) =
         Ann
         <$> (Lens._Wrapped . Lens._1 . plAnnotation . _AnnotationVal) f a
-        <*> bodyEvalResults f b
+        <*> bodyAnnotations f b
 
-class EvalResults e where
-    bodyEvalResults ::
+class BodyAnnotations e where
+    bodyAnnotations ::
         Functor i =>
         Traversal (Body e v0 n i o a) (Body e v1 n i o a) v0 v1
-    default bodyEvalResults ::
-        ( HMorphWithConstraint (e v0 n i o) (e v1 n i o) (EvalResultsNode n i o v0 v1)
+    default bodyAnnotations ::
+        ( HMorphWithConstraint (e v0 n i o) (e v1 n i o) (Annotations n i o v0 v1)
         , HTraversable (e v1 n i o)
         ) => Traversal (Body e v0 n i o a) (Body e v1 n i o a) v0 v1
-    bodyEvalResults =
-        withP (\p f -> morphTraverse (p #?> evalResults f))
+    bodyAnnotations =
+        withP (\p f -> morphTraverse (p #?> annotations f))
         where
             withP ::
-                (Proxy (EvalResultsNode n i o v0 v1) -> ((v0 -> f v1) -> Body e v0 n i o a -> r)) ->
+                (Proxy (Annotations n i o v0 v1) -> ((v0 -> f v1) -> Body e v0 n i o a -> r)) ->
                 (v0 -> f v1) -> Body e v0 n i o a -> r
             withP x = x Proxy
 
-instance EvalResults Assignment where
-    bodyEvalResults f (BodyFunction x) = bodyEvalResults f x <&> BodyFunction
-    bodyEvalResults f (BodyPlain x) = (apBody . bodyEvalResults) f x <&> BodyPlain
+instance BodyAnnotations Assignment where
+    bodyAnnotations f (BodyFunction x) = bodyAnnotations f x <&> BodyFunction
+    bodyAnnotations f (BodyPlain x) = (apBody . bodyAnnotations) f x <&> BodyPlain
 
-instance EvalResults Binder where
-    bodyEvalResults f (BinderLet x) = bodyEvalResults f x <&> BinderLet
-    bodyEvalResults f (BinderTerm x) = bodyEvalResults f x <&> BinderTerm
+instance BodyAnnotations Binder where
+    bodyAnnotations f (BinderLet x) = bodyAnnotations f x <&> BinderLet
+    bodyAnnotations f (BinderTerm x) = bodyAnnotations f x <&> BinderTerm
 
-instance EvalResults Case
-instance EvalResults Composite
+instance BodyAnnotations Case
+instance BodyAnnotations Composite
 
-instance EvalResults Else where
-    bodyEvalResults f (SimpleElse x) = bodyEvalResults f x <&> SimpleElse
-    bodyEvalResults f (ElseIf x) = bodyEvalResults f x <&> ElseIf
+instance BodyAnnotations Else where
+    bodyAnnotations f (SimpleElse x) = bodyAnnotations f x <&> SimpleElse
+    bodyAnnotations f (ElseIf x) = bodyAnnotations f x <&> ElseIf
 
-instance EvalResults Function where
-    bodyEvalResults f x =
+instance BodyAnnotations Function where
+    bodyAnnotations f x =
         (,)
-        <$> binderParamsEvalResults f (x ^. fParams)
-        <*> evalResults f (x ^. fBody)
+        <$> binderParamsAnnotations f (x ^. fParams)
+        <*> annotations f (x ^. fBody)
         <&> \(p, b) -> x { _fParams = p, _fBody = b }
 
-instance EvalResults IfElse
-instance EvalResults InjectContent
-instance EvalResults LabeledApply
-instance EvalResults Let
+instance BodyAnnotations IfElse
+instance BodyAnnotations InjectContent
+instance BodyAnnotations LabeledApply
+instance BodyAnnotations Let
 
-instance EvalResults Term where
-    bodyEvalResults _ BodyPlaceHolder = pure BodyPlaceHolder
-    bodyEvalResults _ (BodyLiteral x) = BodyLiteral x & pure
-    bodyEvalResults _ (BodyGetVar x) = BodyGetVar x & pure
-    bodyEvalResults _ (BodyFromNom x) = BodyFromNom x & pure
-    bodyEvalResults f (BodyLam x) = (lamFunc . bodyEvalResults) f x <&> BodyLam
-    bodyEvalResults f (BodyIfElse x) = bodyEvalResults f x <&> BodyIfElse
-    bodyEvalResults f (BodyGetField x) = (gfRecord . evalResults) f x <&> BodyGetField
-    bodyEvalResults f (BodyRecord x) = bodyEvalResults f x <&> BodyRecord
-    bodyEvalResults f (BodyToNom x) = (nVal . evalResults) f x <&> BodyToNom
-    bodyEvalResults f (BodySimpleApply x) =
-        morphTraverse (\M_App_expr -> evalResults f) x <&> BodySimpleApply
-    bodyEvalResults f (BodyInject x) = (iContent . bodyEvalResults) f x <&> BodyInject
-    bodyEvalResults f (BodyCase x) = bodyEvalResults f x <&> BodyCase
-    bodyEvalResults f (BodyLabeledApply x) = bodyEvalResults f x <&> BodyLabeledApply
-    bodyEvalResults _ (BodyHole x) =
+instance BodyAnnotations Term where
+    bodyAnnotations _ BodyPlaceHolder = pure BodyPlaceHolder
+    bodyAnnotations _ (BodyLiteral x) = BodyLiteral x & pure
+    bodyAnnotations _ (BodyGetVar x) = BodyGetVar x & pure
+    bodyAnnotations _ (BodyFromNom x) = BodyFromNom x & pure
+    bodyAnnotations f (BodyLam x) = (lamFunc . bodyAnnotations) f x <&> BodyLam
+    bodyAnnotations f (BodyIfElse x) = bodyAnnotations f x <&> BodyIfElse
+    bodyAnnotations f (BodyGetField x) = (gfRecord . annotations) f x <&> BodyGetField
+    bodyAnnotations f (BodyRecord x) = bodyAnnotations f x <&> BodyRecord
+    bodyAnnotations f (BodyToNom x) = (nVal . annotations) f x <&> BodyToNom
+    bodyAnnotations f (BodySimpleApply x) =
+        morphTraverse (\M_App_expr -> annotations f) x <&> BodySimpleApply
+    bodyAnnotations f (BodyInject x) = (iContent . bodyAnnotations) f x <&> BodyInject
+    bodyAnnotations f (BodyCase x) = bodyAnnotations f x <&> BodyCase
+    bodyAnnotations f (BodyLabeledApply x) = bodyAnnotations f x <&> BodyLabeledApply
+    bodyAnnotations _ (BodyHole x) =
         -- TODO: This is a "cheat".
         -- Should we solve it by hole results not having eval results?
         x & holeOptions . Lens.mapped .~ []
         & BodyHole & pure
-    bodyEvalResults f (BodyFragment x) =
-        evalResults f (x ^. fExpr) <&>
+    bodyAnnotations f (BodyFragment x) =
+        annotations f (x ^. fExpr) <&>
         \e ->
         BodyFragment x
         { _fExpr = e

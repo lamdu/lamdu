@@ -189,7 +189,7 @@ addEvaluationResults ::
         WorkArea (EvaluationScopes InternalName i) name i (T m)
         (Payload (EvaluationScopes InternalName i) name i (T m), a))
 addEvaluationResults cp r wa@(WorkArea panes repl listGlobals) =
-    makeNominalsMap (wa ^.. SugarLens.workAreaEvalResults . eType . tIds) <&> AddEvalCtx r
+    makeNominalsMap (wa ^.. SugarLens.workAreaAnnotations . eType . tIds) <&> AddEvalCtx r
     <&>
     \ctx ->
     WorkArea
