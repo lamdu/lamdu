@@ -13,6 +13,7 @@ import qualified Lamdu.Annotations as Annotations
 import qualified Lamdu.Calc.Term as V
 import           Lamdu.Data.Db.Layout (ViewM)
 import           Lamdu.Name (Name(..))
+import qualified Lamdu.Sugar.Lens as SugarLens
 import           Lamdu.Sugar.Types as Sugar
 import           Revision.Deltum.Transaction (Transaction)
 import           Test.Lamdu.Env (Env)
