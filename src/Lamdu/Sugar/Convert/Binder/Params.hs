@@ -465,13 +465,12 @@ convertRecordParams mPresMode binderKind fieldParams lam@(V.TypedLam param _ _) 
                     <*> fieldParamActions mPresMode binderKind tags fp storedLam
                 let paramEntityId = paramInfo ^. piTag . tagRefTag . tagInstance
                 vinfo <- mkVarInfo (fpFieldType fp)
-                let EntityId.EntityId u = paramEntityId
                 pure
                     ( FuncParam
                         { _fpAnnotation =
                             AnnotationVal EvalPrep
                             { _eType = fpFieldType fp
-                            , _eEvalId = u
+                            , _eEvalId = paramEntityId
                             , _eLambdas = []
                             }
                         , _fpVarInfo = vinfo
@@ -641,7 +640,7 @@ mkFuncParam entityId lamExprPl info =
             Annotations.Evaluation ->
                 AnnotationVal EvalPrep
                 { _eType = typ
-                , _eEvalId = u
+                , _eEvalId = entityId
                 , _eLambdas = []
                 }
         , _fpVarInfo = vinfo
@@ -650,7 +649,6 @@ mkFuncParam entityId lamExprPl info =
     )
     where
         typ = lamParamType lamExprPl
-        EntityId.EntityId u = entityId
 
 convertNonRecordParam ::
     Monad m =>

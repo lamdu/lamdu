@@ -38,7 +38,7 @@ data ConvertPayload m a = ConvertPayload
 
 data EvalPrep = EvalPrep
     { _eType :: Pure # T.Type
-    , _eEvalId :: UUID
+    , _eEvalId :: EntityId
     , -- Identifiers of lambdas that were "swallowed by the sugar".
       -- This happens in let-items (redexes) and in else-if clauses.
       -- Their evaluation scopes are translated to the parent scope

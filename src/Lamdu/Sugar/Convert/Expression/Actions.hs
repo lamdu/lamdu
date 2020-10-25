@@ -333,11 +333,9 @@ mkEvalPrep :: Input.Payload m a # V.Term -> EvalPrep
 mkEvalPrep pl =
     EvalPrep
     { _eType = pl ^. Input.inferredType
-    , _eEvalId = u
+    , _eEvalId = pl ^. Input.entityId
     , _eLambdas = []
     }
-    where
-        EntityId.EntityId u = pl ^. Input.entityId
 
 makeAnnotation ::
     Monad m =>
