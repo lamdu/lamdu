@@ -78,7 +78,7 @@ orderCase :: MonadTransaction m i => OrderT i (Sugar.Body Sugar.Case v name i o 
 orderCase = Sugar.cBody orderRecord
 
 instance MonadTransaction m i => Order v name i o (Sugar.Lambda v name i o)
-instance MonadTransaction m i => Order v name i o (Lens.Const a)
+instance MonadTransaction m i => Order v name i o (Const a)
 instance MonadTransaction m i => Order v name i o (Sugar.Else v name i o)
 instance MonadTransaction m i => Order v name i o (Sugar.IfElse v name i o)
 instance MonadTransaction m i => Order v name i o (Sugar.Let v name i o)

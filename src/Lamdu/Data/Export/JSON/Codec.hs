@@ -404,7 +404,7 @@ instance Codec V.Term where
         V.BLeaf x -> encodeLeaf x
         where
             encBody :: V.Term # Const Aeson.Value
-            encBody = hmap (Proxy @Codec #> Lens.Const . encodeVal) body
+            encBody = hmap (Proxy @Codec #> Const . encodeVal) body
             c x = x ^. Lens._Wrapped
     decodeBody obj =
         jsum
@@ -444,7 +444,7 @@ instance Codec V.Term where
         htraverse (Proxy @Codec #> decodeVal . (^. Lens._Wrapped))
         where
             c :: Aeson.Value -> Const Aeson.Value # n
-            c = Lens.Const
+            c = Const
 
 instance Codec (HCompose Prune T.Type) where
     decodeBody obj

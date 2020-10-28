@@ -348,7 +348,7 @@ markNodeLightParams ::
 markNodeLightParams paramNames =
     hVal %~ markLightParams paramNames
 
-instance MarkLightParams (Lens.Const a)
+instance MarkLightParams (Const a)
 instance MarkLightParams (Else v InternalName i o)
 instance MarkLightParams (Let v InternalName i o)
 instance MarkLightParams (Function v InternalName i o)

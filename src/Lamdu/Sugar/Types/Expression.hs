@@ -75,14 +75,14 @@ data AnnotatedArg v name i o k = AnnotatedArg
 -- TODO: func + specialArgs into a single sum type so that field order
 -- matches gui order, no need for special traversal code
 data LabeledApply v name i o k = LabeledApply
-    { _aFunc :: k :# Lens.Const (BinderVarRef name o)
+    { _aFunc :: k :# Const (BinderVarRef name o)
     , _aSpecialArgs :: Meta.SpecialArgs (k :# Term v name i o)
     , _aAnnotatedArgs :: [AnnotatedArg v name i o k]
-    , _aPunnedArgs :: [k :# Lens.Const (GetVar name o)]
+    , _aPunnedArgs :: [k :# Const (GetVar name o)]
     } deriving Generic
 
 data InjectContent v name i o k
-    = InjectNullary (k :# Lens.Const (NullaryVal name i o))
+    = InjectNullary (k :# Const (NullaryVal name i o))
     | InjectVal (k :# Term v name i o)
     deriving Generic
 
@@ -159,7 +159,7 @@ data CompositeTail v name i o k
 data Composite v name i o k = Composite
     { _cItems :: [CompositeItem v name i o k]
     , -- Punned items are like Haskell's NamedFieldPuns
-      _cPunnedItems :: [k :# Lens.Const (GetVar name o)]
+      _cPunnedItems :: [k :# Const (GetVar name o)]
     , _cTail :: CompositeTail v name i o k
     , _cAddItem :: TagReplace name i o EntityId
     } deriving Generic

@@ -77,7 +77,7 @@ genericEdit ::
     , Has (MomentuTexts.Texts Text) env, Has (Texts.CodeUI Text) env
     , Has Dir.Layout env
     ) =>
-    LensLike' (Lens.Const TextEdit.Style) Style TextEdit.Style ->
+    LensLike' (Const TextEdit.Style) Style TextEdit.Style ->
     Property o a ->
     Sugar.Payload v name i o -> f (Responsive o)
 genericEdit whichStyle prop pl =
