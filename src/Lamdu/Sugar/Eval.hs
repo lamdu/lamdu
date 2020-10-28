@@ -35,17 +35,17 @@ data AddEvalCtx = AddEvalCtx
 
 Lens.makeLenses ''AddEvalCtx
 
-class AddEvalToNode n i o a t0 t1 where
+class AddEvalToNode n i o t0 t1 where
     addToNode ::
         Applicative i =>
         AddEvalCtx ->
         Annotated (Payload EvalPrep n i o, a) # t0 ->
         Annotated (Payload (EvaluationScopes InternalName i) n i o, a) # t1
 
-instance AddEvalToNode n i o a (Const x) (Const x) where
+instance AddEvalToNode n i o (Const x) (Const x) where
     addToNode r (Ann (Const pl) (Const x)) = Ann (Const (pl & _1 %~ addToPayload r)) (Const x)
 
-instance AddEval e => AddEvalToNode n i o a (e EvalPrep n i o) (e (EvaluationScopes InternalName i) n i o) where
+instance AddEval e => AddEvalToNode n i o (e EvalPrep n i o) (e (EvaluationScopes InternalName i) n i o) where
     addToNode results (Ann a b) =
         Ann
         { _hAnn = a & Lens._Wrapped . _1 %~ addToPayload results
@@ -60,13 +60,13 @@ type AddToBodyType e n i o a =
 class AddEval e where
     addToBody :: Applicative i => AddToBodyType e n i o a
     default addToBody ::
-        ( HMorphWithConstraint (e EvalPrep n i o) (e (EvaluationScopes InternalName i) n i o) (AddEvalToNode n i o a)
+        ( HMorphWithConstraint (e EvalPrep n i o) (e (EvaluationScopes InternalName i) n i o) (AddEvalToNode n i o)
         , Applicative i
         ) => AddToBodyType e n i o a
     addToBody r _ x =
         morphMap (p x #?> addToNode r) x
         where
-            p :: Body t EvalPrep n i o a -> Proxy (AddEvalToNode n i o a)
+            p :: Body t v n i o a -> Proxy (AddEvalToNode n i o)
             p _ = Proxy
 
 instance AddEval Assignment where
