@@ -53,11 +53,6 @@ dontShowType =
     , _showInEvalMode = True
     }
 
-topLevelAnn ::
-    Lens' (Annotated (ShowAnnotation, a) # h)
-    ShowAnnotation
-topLevelAnn = annotation . _1
-
 markNodeAnnotations ::
     MarkAnnotations t =>
     Annotated a # t ->
@@ -106,6 +101,12 @@ instance MarkAnnotations (Const a) where
 instance MarkAnnotations (Term v name i o) where
     markAnnotations = markBodyAnnotations
 
+markCaseHandler :: Term v n i o # Annotated (ShowAnnotation, a) -> Term v n i o # Annotated (ShowAnnotation, a)
+markCaseHandler =
+    _BodyLam . lamFunc . fBody .
+    SugarLens.binderResultExpr . Lens.ifiltered (const . Lens.nullOf SugarLens.bodyUnfinished) . _1
+    .~ neverShowAnnotations
+
 markBodyAnnotations ::
     Term v name i o # Annotated a ->
     ( ShowAnnotation
@@ -134,7 +135,10 @@ markBodyAnnotations oldBody =
                 ( tid ^. tidTId == Builtins.textTid
                     || binder ^. SugarLens.binderResultExpr . _1 . showInEvalMode
                 )
-        , newBodyWith dontShowEval
+        , hmap
+            ( Proxy @SugarLens.SugarExpr #>
+                Lens.filtered (not . SugarLens.isUnfinished . (^. hVal)) . annotation . _1 .~ dontShowEval
+            ) newBody
         )
     BodyInject _ -> set dontShowEval
     BodyGetVar (GetParamsRecord _) -> set showAnnotationWhenVerbose
@@ -166,29 +170,19 @@ markBodyAnnotations oldBody =
             -- visible (for case alts that aren't lambdas), so
             -- maybe we do want to show the annotation
             & cKind . _CaseWithArg . caVal . nonHoleAnn .~ neverShowAnnotations
-            & cBody . cItems . Lens.mapped . ciExpr . hVal %~ onHandler
+            & cBody . cItems . Lens.mapped . ciExpr . hVal %~ markCaseHandler
             & BodyCase
         )
     where
-        newBodyWith f =
-            hmap
-            ( Proxy @SugarLens.SugarExpr #>
-                Lens.filtered (not . SugarLens.isUnfinished . (^. hVal)) . annotation . _1 .~ f
-            ) newBody
-        nonHoleIndex = Lens.ifiltered (const . Lens.nullOf SugarLens.bodyUnfinished)
         set x = (x, newBody)
         newBody =
             hmap (Proxy @MarkAnnotations #> markNodeAnnotations) oldBody
         nonHoleAnn =
             Lens.filtered (Lens.nullOf (hVal . SugarLens.bodyUnfinished)) .
-            topLevelAnn
-        onHandler a =
-            a
-            & _BodyLam . lamFunc . fBody .
-              SugarLens.binderResultExpr . nonHoleIndex . _1 .~ neverShowAnnotations
-        onElse (SimpleElse x) = onHandler x & SimpleElse
+            annotation . _1
+        onElse (SimpleElse x) = markCaseHandler x & SimpleElse
         onElse (ElseIf elseIf) = onIfElse elseIf & ElseIf
         onIfElse x =
             x
-            & iThen . hVal %~ onHandler
+            & iThen . hVal %~ markCaseHandler
             & iElse . hVal %~ onElse

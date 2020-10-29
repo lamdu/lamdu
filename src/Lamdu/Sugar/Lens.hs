@@ -168,6 +168,9 @@ workAreaEvalResults f w =
     <*> (replExpr . evalResults) f (w ^. waRepl)
     ?? w ^. waGlobals
 
+binderParamsEvalResults :: Traversal (BinderParams v0 n i o) (BinderParams v1 n i o) v0 v1
+binderParamsEvalResults = binderParamsFuncParams . fpAnnotation . _AnnotationVal
+
 class EvalResultsNode n i o v0 v1 t0 t1 where
     evalResults :: Traversal (Annotated (Payload v0 n i o, a) # t0) (Annotated (Payload v1 n i o, a) # t1) v0 v1
 
@@ -215,7 +218,7 @@ instance EvalResults Else where
 instance EvalResults Function where
     bodyEvalResults f x =
         (,)
-        <$> (binderParamsFuncParams . fpAnnotation . _AnnotationVal) f (x ^. fParams)
+        <$> binderParamsEvalResults f (x ^. fParams)
         <*> evalResults f (x ^. fBody)
         <&> \(p, b) -> x { _fParams = p, _fBody = b }
 
