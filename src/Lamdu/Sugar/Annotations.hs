@@ -83,10 +83,7 @@ instance MarkAnnotations (Assignment v name i o) where
     markAnnotations (BodyPlain (AssignPlain a b)) =
         markAnnotations b
         & _2 %~ BodyPlain . AssignPlain a
-    markAnnotations (BodyFunction function) =
-        ( neverShowAnnotations
-        , function & fBody %~ markNodeAnnotations & BodyFunction
-        )
+    markAnnotations (BodyFunction f) = markAnnotations f & _2 %~ BodyFunction
 
 instance MarkAnnotations (Else v name i o) where
     markAnnotations (SimpleElse body) =
@@ -95,6 +92,12 @@ instance MarkAnnotations (Else v name i o) where
         ( neverShowAnnotations
         , hmap (Proxy @MarkAnnotations #> markNodeAnnotations) elseIf
             & ElseIf
+        )
+
+instance MarkAnnotations (Function v n i o) where
+    markAnnotations f =
+        ( neverShowAnnotations
+        , f & fBody %~ markNodeAnnotations
         )
 
 instance MarkAnnotations (Const a) where
