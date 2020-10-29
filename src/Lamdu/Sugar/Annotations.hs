@@ -67,7 +67,7 @@ markNodeAnnotations (Ann (Const pl) x) =
     where
         (showAnn, newBody) = markAnnotations x
 
-class MarkAnnotations (t :: AHyperType -> *) where
+class MarkAnnotations t where
     markAnnotations :: t # Annotated a -> (ShowAnnotation, t # Annotated (ShowAnnotation, a))
 
 instance MarkAnnotations (Binder v name i o) where

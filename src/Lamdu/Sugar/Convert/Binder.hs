@@ -281,7 +281,7 @@ useNormalLambda paramNames func
             ^. Lens._Wrapped
         ) || not (allParamsUsed paramNames func)
 
-class GetParam (t :: AHyperType -> *) where
+class GetParam t where
     getParam :: t f -> Maybe InternalName
     getParam _ = Nothing
 
@@ -295,12 +295,10 @@ class GetParam (t :: AHyperType -> *) where
 instance Recursive GetParam where
     recurse = getParamRecursive . proxyArgument
 
-instance GetParam (Const (BinderVarRef InternalName o)) where
+instance GetParam (Const (BinderVarRef InternalName o))
 instance GetParam (Const (NullaryVal InternalName i o))
-
 instance GetParam (Else v InternalName i o)
-
-instance GetParam (Function v InternalName i o) where
+instance GetParam (Function v InternalName i o)
 
 instance GetParam (Const (GetVar InternalName o)) where
     getParam = (^? Lens._Wrapped . _GetParam . pNameRef . nrName)
@@ -326,7 +324,7 @@ allParamsUsed paramNames func =
                 (^. Lens._Just . Lens.to Set.singleton) . getParam
             ) func
 
-class MarkLightParams (t :: AHyperType -> *) where
+class MarkLightParams t where
     markLightParams :: Set InternalName -> t # Ann a -> t # Ann a
 
     default markLightParams ::
