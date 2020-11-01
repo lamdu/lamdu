@@ -47,7 +47,7 @@ instance Monad m => MonadOnce (OnceT m) where
         id <<%= (|> toDyn (Nothing :: Maybe a)) <&> Sequence.length & OnceT
         <&>
         \r ->
-        OnceT (Lens.use id) <&> (^?! Lens.ix r) <&> fromDynamic
+        OnceT (Lens.use id) <&> (^? Lens.ix r) <&> (>>= fromDynamic)
         >>=
         \case
         Just (Just x) -> pure x
