@@ -276,7 +276,7 @@ traverse makeHTraversableAndBases
     , ''LabeledApply, ''Lambda, ''Let, ''Nominal, ''Term
     ] <&> concat
 
-traverse makeHMorph [''Composite, ''IfElse, ''InjectContent, ''LabeledApply, ''Let] <&> concat
+traverse makeHMorph [''Case, ''Composite, ''IfElse, ''InjectContent, ''LabeledApply, ''Let] <&> concat
 
 -- TODO: Replace boilerplate below with TH
 

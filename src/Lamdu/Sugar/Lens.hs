@@ -209,6 +209,7 @@ instance EvalResults Binder where
     bodyEvalResults f (BinderLet x) = bodyEvalResults f x <&> BinderLet
     bodyEvalResults f (BinderTerm x) = bodyEvalResults f x <&> BinderTerm
 
+instance EvalResults Case
 instance EvalResults Composite
 
 instance EvalResults Else where
@@ -240,11 +241,7 @@ instance EvalResults Term where
     bodyEvalResults f (BodySimpleApply x) =
         morphTraverse (\M_App_expr -> evalResults f) x <&> BodySimpleApply
     bodyEvalResults f (BodyInject x) = (iContent . bodyEvalResults) f x <&> BodyInject
-    bodyEvalResults f (BodyCase (Case k b)) =
-        Case
-        <$> (_CaseWithArg . caVal . evalResults) f k
-        <*> bodyEvalResults f b
-        <&> BodyCase
+    bodyEvalResults f (BodyCase x) = bodyEvalResults f x <&> BodyCase
     bodyEvalResults f (BodyLabeledApply x) = bodyEvalResults f x <&> BodyLabeledApply
     bodyEvalResults _ (BodyHole x) =
         -- TODO: This is a "cheat".

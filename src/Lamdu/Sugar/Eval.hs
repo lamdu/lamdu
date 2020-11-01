@@ -77,6 +77,7 @@ instance AddEval Binder where
     addToBody r i (BinderLet x) = addToBody r i x & BinderLet
     addToBody r i (BinderTerm x) = addToBody r i x & BinderTerm
 
+instance AddEval Case
 instance AddEval Composite
 
 instance AddEval Else where
@@ -152,8 +153,7 @@ instance AddEval Term where
         BodyLam lam -> lam & lamFunc %~ addToBody r i & BodyLam
         BodyToNom nom -> nom & nVal %~ addToNode r & BodyToNom
         BodyHole h -> h & holeOptions . Lens.mapped . Lens.mapped %~ addToHoleOption & BodyHole
-        BodyCase (Case k b) ->
-            Case (k & _CaseWithArg . caVal %~ addToNode r) (addToBody r i b) & BodyCase
+        BodyCase x -> addToBody r i x & BodyCase
         BodyLabeledApply x -> addToBody r i x & BodyLabeledApply
         BodyFragment (Fragment f h t o) ->
             Fragment (addToNode r f) h t (o <&> Lens.mapped %~ addToHoleOption) & BodyFragment
