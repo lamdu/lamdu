@@ -48,12 +48,15 @@ instance Monad m => MonadOnce (OnceT m) where
         id <<%= (|> toDyn (Nothing :: Maybe a)) <&> Sequence.length & OnceT
         <&>
         \r ->
-        OnceT (Lens.use id) <&> (^? Lens.ix r) <&> (>>= fromDynamic)
+        OnceT (Lens.use id) <&> (^? Lens.ix r)
         >>=
         \case
-        Just (Just x) -> pure x
-        Just Nothing ->
-            do
-                x <- a
-                x <$ OnceT (Lens.ix r .= toDyn (Just x))
-        Nothing -> error "Once used incorrectly!"
+        Nothing -> error "Once used incorrectly: id beyond length of Seq!"
+        Just d ->
+            case fromDynamic d of
+            Just (Just x) -> pure x
+            Just Nothing ->
+                do
+                    x <- a
+                    x <$ OnceT (Lens.ix r .= toDyn (Just x))
+            Nothing -> error "Once used incorrectly: wrong type for key!"
