@@ -5,8 +5,7 @@
 module Tests.Sugar where
 
 import qualified Control.Lens as Lens
-import           Control.Monad.Once (OnceT, _OnceT)
-import           Control.Monad.State (evalStateT)
+import           Control.Monad.Once (OnceT)
 import qualified Data.List.Class as List
 import qualified Data.Property as Property
 import qualified Lamdu.Annotations as Annotations
@@ -66,9 +65,7 @@ testSugarActionsWith ::
     Env ->
     IO ()
 testSugarActionsWith program actions env =
-    (traverse_ (lift (convertWorkArea env) >>=) actions <* lift (convertWorkArea env))
-    ^. _OnceT
-    & (`evalStateT` mempty)
+    (traverse_ (convertWorkArea env >>=) actions <* convertWorkArea env)
     & testProgram program
 
 -- | Verify that a sugar action does not result in a crash
@@ -457,7 +454,7 @@ testFloatToRepl =
             do
                 workArea <- convertWorkArea env
                 assertLetVals workArea 1 2
-                void $ workArea ^?! innerLet . annotation . _1 . plActions . extract
+                _ <- workArea ^?! innerLet . annotation . _1 . plActions . extract & lift
                 newWorkArea <- convertWorkArea env
                 assertLetVals newWorkArea 2 1
     where
@@ -484,8 +481,8 @@ testCreateLetInLetVal =
                     workArea <- convertWorkArea env
                     _ <-
                         workArea ^?!
-                        theLet . lValue . annotation . _1 . plActions . mNewLet .
-                        Lens._Just
+                        theLet . lValue . annotation . _1 . plActions . mNewLet . Lens._Just
+                        & lift
                     newWorkArea <- convertWorkArea env
                     Lens.has
                         ( theLet . lValue . hVal . _BodyPlain
@@ -525,15 +522,11 @@ testValidHoleResult =
         env <- Env.make
         testProgram "nom-list.json" $
             do
-                workArea <- convertWorkArea env & lift
+                workArea <- convertWorkArea env
                 opts <-
                     workArea ^?!
-                    replBody . _BodyToNom . nVal .
-                    hVal . _BinderTerm . _BodyHole .
-                    holeOptions
+                    replBody . _BodyToNom . nVal . hVal . _BinderTerm . _BodyHole . holeOptions
                 -- The bug occured in the first suggested result
                 (_, mkHoleResult) <- opts ^?! Lens.ix 0 . hoResults & List.runList <&> List.headL
                 holeResult <- mkHoleResult
                 holeResult ^. holeResultPick & lift
-            ^. _OnceT
-            & (`evalStateT` mempty)

@@ -136,21 +136,20 @@ convertWorkArea ::
     , Has Cache.Functions env, Has Annotations.Mode env
     ) =>
     env ->
-    T ViewM
+    OnceT (T ViewM)
     ( WorkArea (Annotation (EvaluationScopes Name (OnceT (T ViewM))) Name) Name (OnceT (T ViewM)) (T ViewM)
         ( Sugar.Payload (Annotation (EvaluationScopes Name (OnceT (T ViewM))) Name) Name (OnceT (T ViewM)) (T ViewM)
         , (ParenInfo, [EntityId])
         )
     )
 convertWorkArea env =
-    (sugarWorkArea env codeAnchors >>= \x -> x (Tag.getTagName env) env) ^. _OnceT
-    & (`evalStateT` mempty)
-    >>= validate
+    (sugarWorkArea env codeAnchors >>= \x -> x (Tag.getTagName env) env)
+    >>= lift . validate
 
-testProgram :: FilePath -> T ViewM a -> IO a
+testProgram :: FilePath -> OnceT (T ViewM) a -> IO a
 testProgram program action =
     withDB ("test/programs/" <> program)
-    (runDbTransaction ?? runAction action)
+    (runDbTransaction ?? runAction (evalStateT (action ^. _OnceT) mempty))
 
 sugarConfig :: Config
 sugarConfig =

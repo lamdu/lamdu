@@ -4,7 +4,7 @@ module Tests.Gui where
 
 import qualified Control.Lens as Lens
 import           Control.Monad.Once (OnceT, _OnceT)
-import           Control.Monad.State (evalStateT)
+import           Control.Monad.State (mapStateT)
 import           Control.Monad.Unit (Unit(..))
 import qualified Data.Map as Map
 import qualified Data.Property as Property
@@ -74,7 +74,7 @@ wideFocused = Responsive.rWide . Align.tValue . Widget.wState . Widget._StateFoc
 
 makeGui ::
     HasCallStack =>
-    String -> Env -> T ViewM (Responsive (T ViewM))
+    String -> Env -> OnceT (T ViewM) (Responsive (T ViewM))
 makeGui afterDoc env =
     do
         workArea <- convertWorkArea env <&> (fmap . fmap) (uncurry ExprGui.GuiPayload)
@@ -94,8 +94,6 @@ makeGui afterDoc env =
             & GuiM.run assocTagName ExpressionEdit.make BinderEdit.make
                 (Anchors.onGui (Property.mkProperty %~ lift) DbLayout.guiAnchors)
                 env
-            & (^. _OnceT)
-            & (`evalStateT` mempty)
         if Lens.has wideFocused gui
             then pure gui
             else error ("Red cursor after " ++ afterDoc ++ ": " ++ show (env ^. cursor))
@@ -110,12 +108,12 @@ focusedWidget gui =
 
 makeFocusedWidget ::
     HasCallStack =>
-    String -> Env -> T ViewM (Widget.Focused (T ViewM GuiState.Update))
+    String -> Env -> OnceT (T ViewM) (Widget.Focused (T ViewM GuiState.Update))
 makeFocusedWidget afterDoc env =
     makeGui afterDoc env >>= either error pure . focusedWidget
 
 mApplyEvent ::
-    Env -> VirtualCursor -> Event -> T ViewM (Maybe GuiState.Update)
+    Env -> VirtualCursor -> Event -> OnceT (T ViewM) (Maybe GuiState.Update)
 mApplyEvent env virtCursor event =
     do
         w <- makeFocusedWidget "mApplyEvent" env
@@ -128,9 +126,9 @@ mApplyEvent env virtCursor event =
         E.lookup (Identity Nothing) event eventMap
             & runIdentity
             <&> (^. E.dhHandler)
-            & sequenceA
+            & sequenceA & lift
 
-applyEvent :: Env -> VirtualCursor -> Event -> T ViewM Env
+applyEvent :: Env -> VirtualCursor -> Event -> OnceT (T ViewM) Env
 applyEvent env virtCursor event =
     mApplyEvent env virtCursor event <&> (^?! Lens._Just)
     <&> (`GuiState.update` env)
@@ -141,7 +139,7 @@ fromWorkArea ::
         ( Sugar.WorkArea (Sugar.Annotation (Sugar.EvaluationScopes Name (OnceT (T ViewM))) Name) Name (OnceT (T ViewM)) (T ViewM)
             (ExprGui.Payload (OnceT (T ViewM)) (T ViewM))
         ) a ->
-    T ViewM a
+    OnceT (T ViewM) a
 fromWorkArea env path =
     convertWorkArea env <&> (fmap . fmap) (uncurry ExprGui.GuiPayload)
     <&> (^?! Lens.cloneTraversal path)
@@ -157,7 +155,7 @@ testTagPanes =
     testProgram "ab.json" $
     do
         fromWorkArea baseEnv (replExpr . Sugar._BodyRecord . Sugar.cItems)
-            >>= sequence_ . (^.. traverse . Sugar.ciTag . Sugar.tagRefJumpTo . Lens._Just)
+            >>= lift . sequence_ . (^.. traverse . Sugar.ciTag . Sugar.tagRefJumpTo . Lens._Just)
         () <$ makeFocusedWidget "opened tag panes" baseEnv
 
 -- | Test for issue #411
@@ -236,7 +234,7 @@ workAreaEq x y =
 
 testKeyboardDirAndBack ::
     HasCallStack =>
-    Env.Env -> VirtualCursor -> MetaKey -> MetaKey -> T ViewM ()
+    Env.Env -> VirtualCursor -> MetaKey -> MetaKey -> OnceT (T ViewM) ()
 testKeyboardDirAndBack posEnv posVirt way back =
     mApplyEvent posEnv posVirt (simpleKeyEvent way)
     >>=
@@ -277,7 +275,7 @@ comparePositions r0 r1
 
 testTabNavigation ::
     HasCallStack =>
-    Env.Env -> VirtualCursor -> T ViewM ()
+    Env.Env -> VirtualCursor -> OnceT (T ViewM) ()
 testTabNavigation env virtCursor =
     do
         w0 <- makeFocusedWidget "mApplyEvent" env
@@ -289,7 +287,7 @@ testTabNavigation env virtCursor =
                 }
         let testDir (name, event, expected) =
                 E.lookup (Identity Nothing) event eventMap
-                    & runIdentity <&> (^. E.dhHandler) & sequenceA
+                    & runIdentity <&> (^. E.dhHandler) & sequenceA & lift
                 >>=
                 \case
                 Nothing -> pure ()
@@ -312,7 +310,7 @@ testTabNavigation env virtCursor =
             , ("shift-tab", simpleKeyEvent (head Widget.strollBackKeys), Before)
             ]
 
-testConsistentKeyboardNavigation :: Env.Env -> VirtualCursor -> T ViewM ()
+testConsistentKeyboardNavigation :: Env.Env -> VirtualCursor -> OnceT (T ViewM) ()
 testConsistentKeyboardNavigation posEnv posVirt =
     do
         traverse_ (uncurry (testKeyboardDirAndBack posEnv posVirt))
@@ -327,7 +325,7 @@ testConsistentKeyboardNavigation posEnv posVirt =
 
 testActions ::
     HasCallStack =>
-    Env.Env -> VirtualCursor -> T ViewM ()
+    Env.Env -> VirtualCursor -> OnceT (T ViewM) ()
 testActions env virtCursor =
     do
         w <- makeFocusedWidget "" env
@@ -351,9 +349,9 @@ testActions env virtCursor =
     where
         exampleChars f = [f 'a', f '1', f '_', f '+'] ^.. traverse . Lens._Just
         testEvent (doc, event) =
-            event <&> (`GuiState.update` env)
+            event <&> (`GuiState.update` env) & lift
             >>= makeGui (show doc <> " from " <> show (env ^. cursor))
-            & Transaction.fork & void
+            & _OnceT %~ mapStateT (fmap fst . Transaction.fork) & void
 
 docHandler ::
     (Lens.Indexable E.Doc p, Applicative f) =>
@@ -361,15 +359,15 @@ docHandler ::
     f (E.DocHandler a)
 docHandler = Lens.filteredBy E.dhDoc <. E.dhHandler
 
-testActionsAndNavigation :: HasCallStack => Env -> VirtualCursor -> T ViewM ()
+testActionsAndNavigation :: HasCallStack => Env -> VirtualCursor -> OnceT (T ViewM) ()
 testActionsAndNavigation = testConsistentKeyboardNavigation <> testActions
 
 testProgramGuiAtPos ::
     HasCallStack =>
-    Env.Env -> Widget.EnterResult (T ViewM GuiState.Update) -> T ViewM ()
+    Env.Env -> Widget.EnterResult (T ViewM GuiState.Update) -> OnceT (T ViewM) ()
 testProgramGuiAtPos baseEnv enter =
     do
-        upd <- enter ^. Widget.enterResultEvent
+        upd <- enter ^. Widget.enterResultEvent & lift
         testActionsAndNavigation (GuiState.update upd baseEnv)
             (VirtualCursor (enter ^. Widget.enterResultRect))
 

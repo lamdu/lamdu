@@ -1,4 +1,4 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving, ScopedTypeVariables, TemplateHaskell #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving, ScopedTypeVariables, TemplateHaskell, TypeApplications #-}
 
 module Control.Monad.Once
     ( MonadOnce(..)
@@ -10,7 +10,8 @@ module Control.Monad.Once
 import qualified Control.Lens as Lens
 import           Control.Monad.Trans.Class
 import           Control.Monad.Trans.State
-import           Data.Dynamic (Dynamic, Typeable, toDyn, fromDynamic)
+import           Data.Dynamic (Dynamic, toDyn, fromDynamic)
+import           Data.Typeable (Typeable, typeRep)
 import           Data.IORef
 import qualified Data.Sequence as Sequence
 
@@ -51,7 +52,9 @@ instance Monad m => MonadOnce (OnceT m) where
         OnceT (Lens.use id) <&> (^? Lens.ix r)
         >>=
         \case
-        Nothing -> error "Once used incorrectly: id beyond length of Seq!"
+        Nothing ->
+            "Once used incorrectly, key beyond length of Seq: " <> show r <> "/" <> show (typeRep (Proxy @a))
+            & error
         Just d ->
             case fromDynamic d of
             Just (Just x) -> pure x
