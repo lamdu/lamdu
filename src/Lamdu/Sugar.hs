@@ -6,10 +6,9 @@ module Lamdu.Sugar
     ) where
 
 import qualified Control.Lens as Lens
-import           Control.Monad.Once (OnceT)
+import           Control.Monad.Once (OnceT, Typeable)
 import           Control.Monad.Transaction (MonadTransaction)
 import           Data.CurAndPrev (CurAndPrev(..))
-import           Data.Dynamic (Typeable)
 import qualified Lamdu.Annotations as Annotations
 import qualified Lamdu.Cache as Cache
 import qualified Lamdu.Data.Anchors as Anchors

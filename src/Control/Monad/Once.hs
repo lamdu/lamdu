@@ -4,6 +4,7 @@ module Control.Monad.Once
     ( MonadOnce(..)
     , OnceT(..), _OnceT
     , OnceState
+    , Typeable
     ) where
 
 import qualified Control.Lens as Lens
