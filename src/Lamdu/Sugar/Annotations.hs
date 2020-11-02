@@ -195,6 +195,4 @@ markCaseHandler =
     .~ neverShowAnnotations
 
 markHoleOption :: Functor i => HoleOption v n i o -> HoleOption (ShowAnnotation, v) n i o
-markHoleOption (HoleOption i b r) =
-    HoleOption i (b <&> markNodeAnnotations)
-    (r <&> _2 . Lens.mapped . holeResultConverted %~ markNodeAnnotations)
+markHoleOption = SugarLens.holeOptionAnnotations %~ (,) neverShowAnnotations
