@@ -13,7 +13,6 @@ import           Hyper.Type.AST.FuncType
 import           Hyper.Type.AST.Row (RowExtend(..))
 import           Hyper.Type.Prune
 import           Hyper.Unify
-import           Hyper.Unify.Lookup (semiPruneLookup)
 import           Hyper.Unify.New (newUnbound, newTerm)
 import           Hyper.Unify.Term
 import qualified Lamdu.Calc.Term as V

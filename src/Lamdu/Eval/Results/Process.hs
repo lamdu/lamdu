@@ -7,8 +7,7 @@ import qualified Control.Lens as Lens
 import qualified Data.Map as Map
 import qualified Data.Text as Text
 import           Hyper
-import           Hyper.Class.Has (HasChild(..))
-import qualified Hyper.Class.Has as HasChild
+import           Hyper.Class.Optic (HNodeLens(..))
 import qualified Hyper.Type.AST.Nominal as N
 import           Hyper.Type.AST.Row (RowExtend(..))
 import qualified Hyper.Type.AST.Row as Row
@@ -80,7 +79,7 @@ addTypesInject (ER.Inject tag val) go typ =
 
 addTypesArray :: [val] -> AddTypes val f
 addTypesArray items go typ =
-    case typ ^? _Pure . T._TInst . N.nArgs . HasChild.getChild . _QVarInstances . Lens.ix Builtins.valTypeParamId of
+    case typ ^? _Pure . T._TInst . N.nArgs . hNodeLens . _QVarInstances . Lens.ix Builtins.valTypeParamId of
     Nothing ->
         -- TODO: this is a work-around for a bug. HACK
         -- we currently don't know types for eval results of polymorphic values
@@ -104,7 +103,7 @@ addTypes nomsMap typ (Ann (Const ()) b) =
         r f = f (addTypes nomsMap) (unwrapTInsts nomsMap typ)
 
 class
-    (HFunctor k, HasQuantifiedVar k, Ord (QVar k), HasChild T.Types k) =>
+    (HFunctor k, HasQuantifiedVar k, Ord (QVar k), HNodeLens T.Types k) =>
     ApplyNominal k where
     applyNominalRecursive :: Proxy k -> Dict (HNodesConstraint k ApplyNominal)
 instance ApplyNominal T.Type where applyNominalRecursive _ = Dict
@@ -130,7 +129,7 @@ subst params (Pure x) =
     Nothing -> hmap (Proxy @ApplyNominal #> subst params) x
     Just q ->
         params ^?
-        getChild . _QVarInstances . Lens.ix q . _Pure
+        hNodeLens . _QVarInstances . Lens.ix q . _Pure
         & fromMaybe (quantifiedVar # q)
 
 -- Will loop forever for bottoms like: newtype Void = Void Void

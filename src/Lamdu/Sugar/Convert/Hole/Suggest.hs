@@ -15,7 +15,6 @@ import           Hyper.Type.AST.Nominal
 import           Hyper.Type.AST.Row (RowExtend(..))
 import           Hyper.Unify
 import           Hyper.Unify.Binding (UVar)
-import           Hyper.Unify.Lookup (semiPruneLookup)
 import           Hyper.Unify.New (newUnbound, newTerm)
 import           Hyper.Unify.Term
 import           Lamdu.Calc.Infer (PureInfer, InferState, runPureInfer)
