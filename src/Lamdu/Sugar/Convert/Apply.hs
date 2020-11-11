@@ -5,7 +5,6 @@ module Lamdu.Sugar.Convert.Apply
     ) where
 
 import qualified Control.Lens as Lens
-import           Control.Monad (MonadPlus)
 import           Control.Monad.Trans.Except.Extended (runMatcherT, justToLeft)
 import           Control.Monad.Trans.Maybe (MaybeT(..))
 import qualified Data.Map as Map
@@ -67,26 +66,25 @@ convert posInfo app@(V.App funcI argI) exprPl =
         convertLabeled app funcS argS exprPl & justToLeft
         convertPrefix app funcS argS exprPl & lift
 
-validateDefParamsMatchArgs ::
-    MonadPlus m =>
+defParamsMatchArgs ::
     V.Var ->
     Composite v InternalName i o # Ann a ->
     Deps ->
-    m ()
-validateDefParamsMatchArgs var record frozenDeps =
+    Bool
+defParamsMatchArgs var record frozenDeps =
     do
         defArgs <-
             frozenDeps ^?
                 depsGlobalTypes . Lens.at var . Lens._Just
                 . _Pure . sTyp . _Pure . T._TFun . funcIn
                 . _Pure . T._TRecord . T.flatRow
-            & maybeToMPlus
-        defArgs ^? freRest . _Pure . T._REmpty & maybeToMPlus
+        defArgs ^? freRest . _Pure . T._REmpty
         let sFields =
                 (record ^.. cItems . traverse . ciTag . tagRefTag . tagVal) <>
                 (record ^.. cPunnedItems . traverse . hVal . Lens._Wrapped . getVarName . inTag)
                 & Set.fromList
         guard (sFields == Map.keysSet (defArgs ^. freExtends))
+    & Lens.has Lens._Just
 
 convertLabeled ::
     (Monad m, Monoid a, Recursively HFoldable h) =>
@@ -112,8 +110,8 @@ convertLabeled subexprs funcS argS exprPl =
         -- scope), make sure the def (frozen) type is inferred to have
         -- closed record of same parameters
         recursiveRef <- Lens.view (ConvertM.scScopeInfo . ConvertM.siRecursiveRef)
-        validateDefParamsMatchArgs var record frozenDeps
-            & unless (Just var == (recursiveRef <&> (^. ConvertM.rrDefI) <&> ExprIRef.globalId))
+        (Just var == (recursiveRef <&> (^. ConvertM.rrDefI) <&> ExprIRef.globalId))
+            || defParamsMatchArgs var record frozenDeps & guard
         let getArg field =
                 AnnotatedArg
                     { _aaTag = field ^. ciTag . tagRefTag
