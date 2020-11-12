@@ -8,7 +8,7 @@ import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Sugar.Config as Config
 import           Lamdu.Sugar.Convert.Expression.Actions (addActions)
 import qualified Lamdu.Sugar.Convert.Input as Input
-import           Lamdu.Sugar.Convert.Monad (ConvertM)
+import           Lamdu.Sugar.Convert.Monad (ConvertM(..))
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
 import qualified Lamdu.Sugar.Convert.Tag as ConvertTag
 import           Lamdu.Sugar.Internal
@@ -55,6 +55,7 @@ convert (V.Inject tag injected) exprPl =
                     V.Inject newTag injectedI & V.BInject & ExprIRef.writeValI valI
                     void typeProtect
         ConvertTag.ref tag nameWithoutContext mempty (EntityId.ofTag entityId) setTag
+            >>= ConvertM . lift
             <&> (`Inject` inj) <&> BodyInject
             >>= addActions (Const ()) exprPl
     where

@@ -11,7 +11,7 @@ module GUI.Momentu.Widgets.Menu.Search
     , addSearchTermBgColor, addSearchTermEmptyColors
     , addSearchTermStyle
     , addDelSearchTerm
-    , searchTermEdit
+    , searchTermEdit, searchTermEditId
 
     , TermStyle(..), bgColors, emptyStrings, emptyStringsColors
     , enterWithSearchTerm
@@ -148,34 +148,34 @@ basicSearchTermEdit ::
     ( MonadReader env m, Applicative f, HasTexts env
     , TextEdit.Deps env, HasState env
     ) =>
-    Id -> AllowedSearchTerm -> TextEdit.EmptyStrings -> m (Term f)
-basicSearchTermEdit myId allowedSearchTerm textEditEmpty =
+    Id -> Id -> AllowedSearchTerm -> TextEdit.EmptyStrings -> m (Term f)
+basicSearchTermEdit searchTermId holeId allowedSearchTerm textEditEmpty =
     do
-        searchTerm <- readSearchTerm myId
+        searchTerm <- readSearchTerm holeId
         let onEvents (newSearchTerm, eventRes)
                 | newSearchTerm == searchTerm = eventRes
                 | otherwise =
                     eventRes
-                    <> State.updateWidgetState myId newSearchTerm
+                    <> State.updateWidgetState holeId newSearchTerm
                     -- When first letter is typed in search term, jump to the
                     -- results, which will go to first result:
                     & ( if Text.null searchTerm
                         then
                             State.uCursor .~
-                            (Just (resultsIdPrefix myId) ^. Lens._Unwrapped)
+                            (Just (resultsIdPrefix holeId) ^. Lens._Unwrapped)
                         else id
                     )
         widget <-
-            TextEdit.make ?? textEditEmpty ?? searchTerm ?? searchTermEditId myId
+            TextEdit.make ?? textEditEmpty ?? searchTerm ?? searchTermId
             <&> Align.tValue . Widget.eventMapMaker . Lens.mapped %~
                 E.filter (_tcTextEdit . allowedSearchTerm . fst)
             <&> Align.tValue . Widget.updates %~ pure . onEvents
-            <&> Align.tValue %~ Widget.takesStroll myId
+            <&> Align.tValue %~ Widget.takesStroll searchTermId
         env <- Lens.view id
         pure Term
             { _termWidget = widget
             , _termEditEventMap =
-                searchTermEditEventMap env myId (_tcAdHoc . allowedSearchTerm) searchTerm
+                searchTermEditEventMap env holeId (_tcAdHoc . allowedSearchTerm) searchTerm
             }
 
 searchTermDoc :: HasTexts env => env -> Lens.ALens' env Text -> E.Doc
@@ -240,7 +240,7 @@ searchTermEdit ::
     Widget.Id -> (Text -> TermCtx Bool) -> Menu.PickFirstResult f -> m (Term f)
 searchTermEdit myId allowedSearchTerm mPickFirst =
     Lens.view (has . emptyStrings)
-    >>= basicSearchTermEdit myId allowedSearchTerm
+    >>= basicSearchTermEdit (searchTermEditId myId) myId allowedSearchTerm
     & (addDelSearchTerm myId <*>)
     & addSearchTermStyle myId
     & (addPickFirstResultEvent myId mPickFirst <*>)

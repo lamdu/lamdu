@@ -33,7 +33,7 @@ import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Sugar.Convert.Input as Input
-import           Lamdu.Sugar.Convert.Monad (ConvertM)
+import           Lamdu.Sugar.Convert.Monad (ConvertM(..))
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
 import qualified Lamdu.Sugar.Convert.PostProcess as PostProcess
 import qualified Lamdu.Sugar.Convert.Tag as ConvertTag
@@ -138,6 +138,7 @@ mkWrapInRecord exprPl =
                 & void
         ConvertTag.replace nameWithoutContext mempty ConvertTag.RequireTag
             tempMkEntityId recWrap
+            >>= ConvertM . lift
     where
         stored = exprPl ^. Input.stored
         -- TODO: The entity-ids created here don't match the resulting entity ids of the record.

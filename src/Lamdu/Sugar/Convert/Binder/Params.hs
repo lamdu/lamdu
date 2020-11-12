@@ -37,7 +37,7 @@ import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Sugar.Config as Config
 import           Lamdu.Sugar.Convert.Binder.Types (BinderKind(..))
 import qualified Lamdu.Sugar.Convert.Input as Input
-import           Lamdu.Sugar.Convert.Monad (ConvertM)
+import           Lamdu.Sugar.Convert.Monad (ConvertM(..))
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
 import qualified Lamdu.Sugar.Convert.Tag as ConvertTag
 import qualified Lamdu.Sugar.Convert.TId as ConvertTId
@@ -313,6 +313,7 @@ fieldParamActions mPresMode binderKind tags fp storedLam =
             ConvertTag.replace (nameWithContext param)
             (Set.fromList tags) ConvertTag.RequireTag
             (EntityId.ofTaggedEntity param) addParamAfter
+            >>= ConvertM . lift
         del <- delFieldParamAndFixCalls binderKind tags fp storedLam
         pure FuncParamActions
             { _fpAddNext = AddNext addNext
@@ -439,6 +440,7 @@ convertRecordParams mPresMode binderKind fieldParams lam@(V.TypedLam param _ _) 
             (Set.fromList tags) ConvertTag.RequireTag
             (EntityId.ofTaggedEntity param)
             addFirst
+            >>= ConvertM . lift
         pure ConventionalParams
             { cpTags = Set.fromList tags
             , _cpParamInfos = fieldParams <&> mkParInfo & mconcat
@@ -459,6 +461,7 @@ convertRecordParams mPresMode binderKind fieldParams lam@(V.TypedLam param _ _) 
                             >>= ConvertTag.ref tag (nameWithContext param)
                                 (Set.delete tag (Set.fromList tagList))
                                 (EntityId.ofTaggedEntity param)
+                            >>= ConvertM . lift
                         )
                     <*> fieldParamActions mPresMode binderKind tags fp storedLam
                 let paramEntityId = paramInfo ^. piTag . tagRefTag . tagInstance
@@ -603,7 +606,9 @@ makeNonRecordParamActions binderKind storedLam =
             else
                 ConvertTag.replace (nameWithContext param)
                 (Set.singleton oldParam) ConvertTag.RequireTag
-                (EntityId.ofTaggedEntity param) addParamAfter <&> AddNext
+                (EntityId.ofTaggedEntity param) addParamAfter
+                >>= ConvertM . lift
+                <&> AddNext
         pure FuncParamActions
             { _fpAddNext = addNext
             , _fpDelete = del
@@ -661,7 +666,7 @@ convertNonRecordParam binderKind lam@(V.TypedLam param _ _) lamExprPl =
                     info = funcParamActions ^. fpDelete & void & NullParamActions
             _ ->
                 do
-                    tag <- ConvertTag.taggedEntity param
+                    tag <- ConvertTag.taggedEntity param >>= ConvertM . lift
                     mkFuncParam (tag ^. tagRefTag . tagInstance) lamExprPl
                         ParamInfo
                         { _piTag = tag
@@ -678,6 +683,7 @@ convertNonRecordParam binderKind lam@(V.TypedLam param _ _) lamExprPl =
         addFirstSelection <-
             ConvertTag.replace (nameWithContext param) (Set.singleton oldParam)
             ConvertTag.RequireTag (EntityId.ofTaggedEntity param) addFirst
+            >>= ConvertM . lift
         pure ConventionalParams
             { cpTags = mempty
             , _cpParamInfos = Map.empty

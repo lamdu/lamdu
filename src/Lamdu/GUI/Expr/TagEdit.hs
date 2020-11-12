@@ -89,21 +89,21 @@ makePickEventMap action =
 
 makeNewTag ::
     (Monad i, Monad o) =>
-    Sugar.TagReplace Name i o a ->
+    Sugar.TagOption Name o a ->
     GuiM env i o (Text -> (EntityId -> a -> b) -> o b)
-makeNewTag tagRefReplace =
-    (,) <$> GuiM.im (tagRefReplace ^. Sugar.tsNewTag) <*> GuiM.assocTagName
-    <&> \(tagOpt, assocTagName) searchTerm mkPickResult ->
+makeNewTag tagOpt =
+    GuiM.assocTagName <&>
+    \assocTagName searchTerm mkPickResult ->
     do
         Property.setP (assocTagName (tagOpt ^. Sugar.toInfo . Sugar.tagVal)) searchTerm
         tagOpt ^. Sugar.toPick <&> mkPickResult (tagOpt ^. Sugar.toInfo . Sugar.tagInstance)
 
 makeNewTagPreEvent ::
     (Has (Texts.CodeUI Text) env, Monad i, Monad o) =>
-    Sugar.TagReplace Name i o a ->
+    Sugar.TagOption Name o a ->
     GuiM env i o (Text -> (EntityId -> a -> r) -> Maybe (Widget.PreEvent (o r)))
-makeNewTagPreEvent tagRefReplace =
-    (,) <$> Lens.view (has . Texts.newName) <*> makeNewTag tagRefReplace
+makeNewTagPreEvent tagOpt =
+    (,) <$> Lens.view (has . Texts.newName) <*> makeNewTag tagOpt
     <&>
     \(newNameText, newTag) searchTerm mkPickResult ->
     if Text.null searchTerm
@@ -122,13 +122,13 @@ makeAddNewTag ::
     , Has (Texts.CodeUI Text) env
     , Has (Texts.CodeUI Text) menv
     ) =>
-    Sugar.TagReplace Name i o a ->
+    Sugar.TagOption Name o a ->
     GuiM menv i o
     ( (EntityId -> a -> Menu.PickResult) ->
         SearchMenu.ResultsContext -> Maybe (Menu.Option f o)
     )
-makeAddNewTag tagRefReplace =
-    makeNewTagPreEvent tagRefReplace <&>
+makeAddNewTag tagOpt =
+    makeNewTagPreEvent tagOpt <&>
     \newTagPreEvent mkPickResult ctx ->
     let optionId =
             (ctx ^. SearchMenu.rResultIdPrefix) `Widget.joinId` ["Create new"]
@@ -162,10 +162,11 @@ makeOptions ::
     , Has (MomentuTexts.Texts Text) env
     ) =>
     Sugar.TagReplace Name i o a ->
+    Sugar.TagOption Name o a ->
     (EntityId -> a -> Menu.PickResult) ->
     SearchMenu.ResultsContext ->
     GuiM env i o (Menu.OptionList (Menu.Option m o))
-makeOptions tagRefReplace mkPickResult ctx
+makeOptions tagRefReplace newTagOpt mkPickResult ctx
     | Text.null searchTerm = pure Menu.TooMany
     | otherwise =
         do
@@ -180,7 +181,7 @@ makeOptions tagRefReplace mkPickResult ctx
             let nonFuzzyResults =
                     results ^? Lens.ix 0 . _1 . Fuzzy.isFuzzy
                     & any not
-            addNewTag <- makeAddNewTag tagRefReplace
+            addNewTag <- makeAddNewTag newTagOpt
             let maybeAddNewTagOption
                     | nonFuzzyResults || not (Name.isValidText searchTerm) = id
                     | otherwise =
@@ -233,19 +234,19 @@ makeHoleSearchTerm ::
     , SearchMenu.HasTexts env
     , Has (Texts.CodeUI Text) env
     ) =>
-    Sugar.TagReplace Name i o a ->
+    Sugar.TagOption Name o a ->
     (EntityId -> a -> Menu.PickResult) -> Widget.Id ->
     GuiM env i o (SearchMenu.Term o)
-makeHoleSearchTerm tagRefReplace mkPickResult holeId =
+makeHoleSearchTerm newTagOption mkPickResult holeId =
     do
         searchTerm <- SearchMenu.readSearchTerm holeId
         let allowNewTag = Name.isValidText searchTerm
-        newTag <- makeNewTag tagRefReplace
+        newTag <- makeNewTag newTagOption
         newTagEventMap <-
             if allowNewTag
             then newTag searchTerm mkPickResult & makePickEventMap
             else pure mempty
-        newTagPreEvent <- makeNewTagPreEvent tagRefReplace
+        newTagPreEvent <- makeNewTagPreEvent newTagOption
         let newTagPreEvents =
                 newTagPreEvent searchTerm mkPickResult
                 ^.. Lens._Just
@@ -255,7 +256,7 @@ makeHoleSearchTerm tagRefReplace mkPickResult holeId =
                 Widget.fPreEvents %~ (Widget.PreEvents newTagPreEvents <>)
         term <-
             SearchMenu.addDelSearchTerm holeId
-            <*> SearchMenu.basicSearchTermEdit holeId (pure . allowedSearchTerm)
+            <*> SearchMenu.basicSearchTermEdit newTagId holeId (pure . allowedSearchTerm)
                 SearchMenu.defaultEmptyStrings
             <&> SearchMenu.termWidget . Align.tValue %~
                 addPreEvents . Widget.weakerEvents newTagEventMap
@@ -285,6 +286,9 @@ makeHoleSearchTerm tagRefReplace mkPickResult holeId =
                     & Reader.local (TextView.color .~ tooltip ^. Theme.tooltipFgColor)
                     & Reader.local (Element.animIdPrefix <>~ ["label"])
             else pure term
+    & GuiState.assignCursor (SearchMenu.searchTermEditId holeId) newTagId
+    where
+        newTagId = newTagOption ^. Sugar.toInfo . Sugar.tagInstance & WidgetIds.fromEntityId
 
 makeTagHoleEdit ::
     ( Monad i, Monad o
@@ -299,10 +303,12 @@ makeTagHoleEdit ::
     Widget.Id ->
     GuiM env i o (TextWidget o)
 makeTagHoleEdit tagRefReplace mkPickResult holeId =
-    SearchMenu.make
-    (const (makeHoleSearchTerm tagRefReplace mkPickResult holeId))
-    (makeOptions tagRefReplace mkPickResult) Element.empty holeId
-    ?? Menu.AnyPlace
+    do
+        newTagOption <- tagRefReplace ^. Sugar.tsNewTag & GuiM.im
+        SearchMenu.make
+            (const (makeHoleSearchTerm newTagOption mkPickResult holeId))
+            (makeOptions tagRefReplace newTagOption mkPickResult) Element.empty holeId
+            ?? Menu.AnyPlace
 
 makeTagRefEdit ::
     ( Monad i, Monad o

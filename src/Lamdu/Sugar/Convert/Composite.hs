@@ -16,7 +16,7 @@ import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Sugar.Config as Config
 import           Lamdu.Sugar.Convert.Expression.Actions (addActions)
 import qualified Lamdu.Sugar.Convert.Input as Input
-import           Lamdu.Sugar.Convert.Monad (ConvertM)
+import           Lamdu.Sugar.Convert.Monad (ConvertM(..))
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
 import qualified Lamdu.Sugar.Convert.Tag as ConvertTag
 import           Lamdu.Sugar.Internal
@@ -55,6 +55,7 @@ convertAddItem extendOp existingTags pl =
                 EntityId.ofValI newValI & pure
         ConvertTag.replace nameWithoutContext existingTags ConvertTag.RequireTag
             (EntityId.ofTag (pl ^. Input.entityId)) addItem
+            >>= ConvertM . lift
     where
         stored = pl ^. Input.stored
 
@@ -176,7 +177,9 @@ convertItem cons stored inst forbiddenTags exprS extendVal =
                     protectedSetToVal stored valI & void
                 where
                     valI = stored ^. ExprIRef.iref
-        tagS <- ConvertTag.ref tag nameWithoutContext forbiddenTags (EntityId.ofTag inst) setTag
+        tagS <-
+            ConvertTag.ref tag nameWithoutContext forbiddenTags (EntityId.ofTag inst) setTag
+            >>= ConvertM . lift
         pure CompositeItem
             { _ciTag = tagS
             , _ciExpr = exprS

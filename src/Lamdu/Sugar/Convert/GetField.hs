@@ -9,7 +9,7 @@ import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Expr.IRef as ExprIRef
 import           Lamdu.Sugar.Convert.Expression.Actions (addActions)
 import qualified Lamdu.Sugar.Convert.Input as Input
-import           Lamdu.Sugar.Convert.Monad (ConvertM)
+import           Lamdu.Sugar.Convert.Monad (ConvertM(..))
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
 import qualified Lamdu.Sugar.Convert.Tag as ConvertTag
 import           Lamdu.Sugar.Internal
@@ -55,6 +55,7 @@ convertGetFieldNonParam (V.GetField recExpr tag) exprPl =
                         protectedSetToVal recExprStored recExprI & void
             ConvertTag.ref tag nameWithoutContext mempty
                 (EntityId.ofTag (exprPl ^. Input.entityId)) setTag
+                >>= ConvertM . lift
     <&> BodyGetField
     >>= addActions (_ANode # recExpr) exprPl
     where

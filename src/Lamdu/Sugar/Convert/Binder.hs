@@ -29,7 +29,7 @@ import qualified Lamdu.Sugar.Convert.Binder.Redex as Redex
 import           Lamdu.Sugar.Convert.Binder.Types (BinderKind(..))
 import           Lamdu.Sugar.Convert.Expression.Actions (addActions, makeActions, subexprPayloads)
 import qualified Lamdu.Sugar.Convert.Input as Input
-import           Lamdu.Sugar.Convert.Monad (ConvertM, scScopeInfo, siLetItems)
+import           Lamdu.Sugar.Convert.Monad (ConvertM(..), scScopeInfo, siLetItems)
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
 import qualified Lamdu.Sugar.Convert.Tag as ConvertTag
 import           Lamdu.Sugar.Internal
@@ -69,7 +69,7 @@ convertLet ::
 convertLet pl redex =
     do
         float <- makeFloatLetToOuterScope (pl ^. Input.stored . ExprIRef.setIref) redex
-        tag <- ConvertTag.taggedEntity param
+        tag <- ConvertTag.taggedEntity param >>= ConvertM . lift
         (value, letBody, actions) <-
             (,,)
             <$> ( convertAssignment binderKind param (redex ^. Redex.arg)

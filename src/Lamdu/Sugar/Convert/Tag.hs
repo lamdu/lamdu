@@ -6,7 +6,7 @@ module Lamdu.Sugar.Convert.Tag
     ) where
 
 import qualified Control.Lens as Lens
-import           Control.Monad.Once (OnceT)
+import           Control.Monad.Once (MonadOnce(..), OnceT)
 import           Control.Monad.Transaction (MonadTransaction, getP, setP)
 import           Data.Property (MkProperty')
 import qualified Data.Property as Property
@@ -45,7 +45,7 @@ ref ::
     (MonadTransaction n m, MonadReader env m, Anchors.HasCodeAnchors env n) =>
     T.Tag -> (T.Tag -> name) -> Set T.Tag -> (T.Tag -> EntityId) ->
     (T.Tag -> T n ()) ->
-    m (TagRef name (OnceT (T n)) (T n))
+    m (OnceT (T n) (TagRef name (OnceT (T n)) (T n)))
 ref tag name forbiddenTags mkInstance setTag =
     Lens.view id
     <&> \env ->
@@ -58,16 +58,18 @@ refWith ::
     Anchors.CodeAnchors m ->
     T.Tag -> (T.Tag -> name) -> Set T.Tag -> AllowAnonTag -> (T.Tag -> EntityId) ->
     (T.Tag -> T m ()) -> MkProperty' (T m) (Set T.Tag) ->
-    TagRef name (OnceT (T m)) (T m)
+    OnceT (T m) (TagRef name (OnceT (T m)) (T m))
 refWith cp tag name forbiddenTags allowAnon mkInstance setTag tagsProp =
+    replaceWith name forbiddenTags allowAnon mkInstance setTag tagsProp
+    <&>
+    \r ->
     TagRef
     { _tagRefTag = Tag
         { _tagName = name tag
         , _tagInstance = mkInstance tag
         , _tagVal = tag
         }
-    , _tagRefReplace =
-        replaceWith name forbiddenTags allowAnon mkInstance setTag tagsProp
+    , _tagRefReplace = r
     , _tagRefJumpTo =
         if tag == Anchors.anonTag
         then Nothing
@@ -79,7 +81,7 @@ refWith cp tag name forbiddenTags allowAnon mkInstance setTag tagsProp =
 replace ::
     (MonadTransaction n m, MonadReader env m, Anchors.HasCodeAnchors env n) =>
     (T.Tag -> name) -> Set T.Tag -> AllowAnonTag -> (T.Tag -> EntityId) -> (T.Tag -> T n a) ->
-    m (TagReplace name (OnceT (T n)) (T n) a)
+    m (OnceT (T n) (TagReplace name (OnceT (T n)) (T n) a))
 replace name forbiddenTags allowAnon mkInstance setTag =
     Lens.view id
     <&> \env ->
@@ -91,8 +93,11 @@ replaceWith ::
     (T.Tag -> name) -> Set T.Tag -> AllowAnonTag -> (T.Tag -> EntityId) ->
     (T.Tag -> T m a) ->
     MkProperty' (T m) (Set T.Tag) ->
-    TagReplace name (OnceT (T m)) (T m) a
+    OnceT (T m) (TagReplace name (OnceT (T m)) (T m) a)
 replaceWith name forbiddenTags allowAnon mkInstance setTag tagsProp =
+    DataOps.genNewTag <&> traceId "foo" & lift & once
+    <&>
+    \mkNewTag ->
     TagReplace
     { _tsOptions =
         getP tagsProp & lift
@@ -100,14 +105,11 @@ replaceWith name forbiddenTags allowAnon mkInstance setTag tagsProp =
         <&> Set.toList
         <&> map toOption
     , _tsNewTag =
-        DataOps.genNewTag
+        mkNewTag
         <&>
-        ( \newTag ->
-            toOption newTag
-            & toPick %~ (Property.modP tagsProp (Lens.contains newTag .~ True) >>)
-        )
-        -- TODO: Do only once!
-        & lift
+        \newTag ->
+        toOption newTag
+        & toPick %~ (Property.modP tagsProp (Lens.contains newTag .~ True) >>)
     , _tsAnon =
         case allowAnon of
         RequireTag -> Nothing
@@ -130,7 +132,7 @@ replaceWith name forbiddenTags allowAnon mkInstance setTag tagsProp =
 taggedEntityWith ::
     (UniqueId.ToUUID a, MonadTransaction n m) =>
     Anchors.CodeAnchors n ->
-    a -> MkProperty' (T n) (Set T.Tag) -> m (TagRef InternalName (OnceT (T n)) (T n))
+    a -> MkProperty' (T n) (Set T.Tag) -> m (OnceT (T n) (TagRef InternalName (OnceT (T n)) (T n)))
 taggedEntityWith cp entity tagsProp =
     getP prop
     <&>
@@ -142,7 +144,7 @@ taggedEntityWith cp entity tagsProp =
 
 taggedEntity ::
     (UniqueId.ToUUID a, MonadTransaction n m, MonadReader env m, Anchors.HasCodeAnchors env n) =>
-    a -> m (TagRef InternalName (OnceT (T n)) (T n))
+    a -> m (OnceT (T n) (TagRef InternalName (OnceT (T n)) (T n)))
 taggedEntity entity =
     do
         env <- Lens.view id

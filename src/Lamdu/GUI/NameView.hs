@@ -62,7 +62,7 @@ make name =
             makeCollisionSuffixLabel NameTheme.tagCollisionSuffixBGColor tagCollision
             <&> Lens._Just %~ Aligned 0.5
             & Reader.local (Element.animIdPrefix <>~ ["tag-suffix"])
-        animId <- Element.subAnimId ?? ["name"]
+        animId <- Lens.view Element.animIdPrefix
         (|||) <- Glue.mkGlue ?? Glue.Horizontal
         TextView.make ?? visibleName ?? animId
             <&> Aligned 0.5
