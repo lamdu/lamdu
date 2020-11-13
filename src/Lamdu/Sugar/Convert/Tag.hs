@@ -95,7 +95,7 @@ replaceWith ::
     MkProperty' (T m) (Set T.Tag) ->
     OnceT (T m) (TagReplace name (OnceT (T m)) (T m) a)
 replaceWith name forbiddenTags allowAnon mkInstance setTag tagsProp =
-    DataOps.genNewTag <&> traceId "foo" & lift & once
+    DataOps.genNewTag & lift & once
     <&>
     \mkNewTag ->
     TagReplace
