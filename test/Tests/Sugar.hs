@@ -65,7 +65,7 @@ testSugarActionsWith ::
     Env ->
     IO ()
 testSugarActionsWith program actions env =
-    (traverse_ (convertWorkArea env >>=) actions <* convertWorkArea env)
+    traverse_ (convertWorkArea env >>=) actions <* convertWorkArea env
     & testProgram program
 
 -- | Verify that a sugar action does not result in a crash

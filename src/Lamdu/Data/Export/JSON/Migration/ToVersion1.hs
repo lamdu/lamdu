@@ -160,7 +160,7 @@ collectNominals (Aeson.Object obj) =
             where
                 frozenNom =
                     "nomType" ==> nomType
-                    & Lens.at "typeParams" .~ (obj ^. Lens.at "typeParams")
+                    & Lens.at "typeParams" .~ obj ^. Lens.at "typeParams"
                     & Aeson.Object
     Just _ -> Left "Malformed 'nom' id"
     Nothing -> Right mempty

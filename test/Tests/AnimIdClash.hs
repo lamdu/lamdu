@@ -74,13 +74,12 @@ testFragment =
             Env.make
             <&> cursor .~ WidgetIds.fromEntityId fragEntityId
         let expr =
-                ( Sugar.BodyFragment Sugar.Fragment
-                    { Sugar._fExpr = Stub.litNum 5
-                    , Sugar._fHeal = error "Not Implemented" -- not necessary for test!
-                    , Sugar._fTypeMismatch = Nothing
-                    , Sugar._fOptions = pure []
-                    } & Stub.expr
-                )
+                Sugar.BodyFragment Sugar.Fragment
+                { Sugar._fExpr = Stub.litNum 5
+                , Sugar._fHeal = error "Not Implemented" -- not necessary for test!
+                , Sugar._fTypeMismatch = Nothing
+                , Sugar._fOptions = pure []
+                } & Stub.expr
                 & annotation . _1 . Sugar.plEntityId .~ fragEntityId
                 & Stub.addNamesToExpr (env ^. has)
                 & hflipped %~ hmap (const (Lens._Wrapped . _2 .~ adhocPayload))

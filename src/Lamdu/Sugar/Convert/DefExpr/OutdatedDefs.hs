@@ -206,10 +206,10 @@ fixDefExpr ::
     Pure # T.Scheme -> Pure # T.Scheme ->
     V.Var -> Ann (HRef m) # V.Term -> T m ()
 fixDefExpr prevType newType usedDefVar defExpr =
-    ( -- Function result changed (arg is the same).
-        changeFuncRes usedDefVar defExpr <$
-        guard (isPartSame (_Pure . T._TFun . funcIn) prevType newType)
-    ) <|>
+     -- Function result changed (arg is the same).
+    changeFuncRes usedDefVar defExpr <$
+    guard (isPartSame (_Pure . T._TFun . funcIn) prevType newType)
+    <|>
     do
         isPartSame (_Pure . T._TFun . funcOut) prevType newType & guard
         -- Function arg changed (result is the same).

@@ -80,8 +80,8 @@ defParamsMatchArgs var record frozenDeps =
                 . _Pure . T._TRecord . T.flatRow
         defArgs ^? freRest . _Pure . T._REmpty
         let sFields =
-                (record ^.. cItems . traverse . ciTag . tagRefTag . tagVal) <>
-                (record ^.. cPunnedItems . traverse . hVal . Lens._Wrapped . getVarName . inTag)
+                record ^.. cItems . traverse . ciTag . tagRefTag . tagVal <>
+                record ^.. cPunnedItems . traverse . hVal . Lens._Wrapped . getVarName . inTag
                 & Set.fromList
         guard (sFields == Map.keysSet (defArgs ^. freExtends))
     & Lens.has Lens._Just
@@ -110,7 +110,7 @@ convertLabeled subexprs funcS argS exprPl =
         -- scope), make sure the def (frozen) type is inferred to have
         -- closed record of same parameters
         recursiveRef <- Lens.view (ConvertM.scScopeInfo . ConvertM.siRecursiveRef)
-        (Just var == (recursiveRef <&> (^. ConvertM.rrDefI) <&> ExprIRef.globalId))
+        Just var == (recursiveRef <&> (^. ConvertM.rrDefI) <&> ExprIRef.globalId)
             || defParamsMatchArgs var record frozenDeps & guard
         let getArg field =
                 AnnotatedArg

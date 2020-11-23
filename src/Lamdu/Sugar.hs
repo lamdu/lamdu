@@ -105,9 +105,7 @@ sugarWorkArea env0 cp =
     markAnnotations (env0 ^. has) workArea
     & SugarLens.workAreaAnnotations (fmap (map (makeHoleOptionAnn (env1 ^. has)))) (makeAnnotation (env1 ^. has))
     >>= lift . addEvaluationResults cp (env1 ^. has)
-    >>= report .
-        AddNames.addToWorkArea env1
-        (fmap getTagName . (lift . ExprIRef.readTagData))
+    >>= report . AddNames.addToWorkArea env1 (fmap getTagName . lift . ExprIRef.readTagData)
     <&> AddParens.addToWorkArea
     <&> Lens.mapped %~ \(parenInfo, pl) -> pl <&> (,) parenInfo
     where

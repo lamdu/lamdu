@@ -148,7 +148,7 @@ editorOpts =
     <*> annotationsMode
 
 command :: P.Parser Command
-command = (Editor <$> editorOpts) <|> subcommands
+command = Editor <$> editorOpts <|> subcommands
 
 windowMode :: P.Parser WindowMode
 windowMode =
@@ -175,7 +175,7 @@ requestVersion =
     & P.flag' ParsedRequestVersion
 
 parser :: P.Parser Parsed
-parser = requestVersion <|> (ParsedCommand <$> commandWithDb)
+parser = requestVersion <|> ParsedCommand <$> commandWithDb
 
 get :: IO Parsed
 get =

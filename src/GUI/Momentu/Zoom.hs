@@ -74,7 +74,7 @@ make win =
     do
         displayScale <- GLFW.Utils.getDisplayScale win
         winSize <- GLFW.Utils.windowSize win
-        let winSizeFactor = (winSize ^. _2) / 1080 & max 1
+        let winSizeFactor = winSize ^. _2 / 1080 & max 1
         newIORef (displayScale ^. _2 * winSizeFactor) <&> Zoom
 
 -- | Useful mainly for tests

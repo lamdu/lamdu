@@ -58,7 +58,7 @@ make (Ann (Const pl) (Sugar.GetField recExpr tag)) =
             Styled.grammar (Label.make ".")
             /|/
             (TagEdit.makeRecordTag tag <&> Lens.mapped %~ Widget.weakerEvents delEventMap)
-        (ResponsiveExpr.boxSpacedMDisamb ?? ExprGui.mParensId pl) ??
+        ResponsiveExpr.boxSpacedMDisamb ?? ExprGui.mParensId pl ??
             [ recExprEdit
             , Responsive.fromWithTextPos tagEdit
             ] & stdWrapParentExpr pl

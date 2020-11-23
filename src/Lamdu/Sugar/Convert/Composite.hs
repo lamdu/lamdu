@@ -221,7 +221,7 @@ convert op empty cons prism valS restS exprPl extendV =
             >>= addActions (Const ()) exprPl
             <&> annotation . pInput . Input.entityId .~ restS ^. annotation . pInput . Input.entityId
             <&> annotation . pInput . Input.userData <>~
-                (exprPl ^. Input.userData <> restS ^. annotation . pInput . Input.userData)
+                exprPl ^. Input.userData <> restS ^. annotation . pInput . Input.userData
     where
         convertOneItem =
             convertOneItemOpenComposite empty cons op valS restS exprPl extendV

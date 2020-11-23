@@ -374,12 +374,12 @@ getLocalScopeGetVars sugarContext par
     where
         var = V.LVar par & V.BLeafP
         fieldTags =
-            ( sugarContext ^@..
-                ConvertM.scScopeInfo . ConvertM.siTagParamInfos .>
-                ( Lens.itraversed <.
-                    ConvertM._TagFieldParam . Lens.to ConvertM.tpiFromParameters ) <.
-                    Lens.filtered (== par)
-            ) <&> fst
+            sugarContext ^@..
+            ConvertM.scScopeInfo . ConvertM.siTagParamInfos .>
+            ( Lens.itraversed <.
+                ConvertM._TagFieldParam . Lens.to ConvertM.tpiFromParameters ) <.
+                Lens.filtered (== par)
+            <&> fst
 
 -- | Runs inside a forked transaction
 writeResult ::

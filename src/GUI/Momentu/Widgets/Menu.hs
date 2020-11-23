@@ -308,7 +308,7 @@ makePickEventMap =
             Just nextEntry -> State.updateCursor nextEntry
             Nothing ->
                 State.updateCursor (result ^. pickDest)
-                & State.uPreferStroll .~ (True ^. Lens._Unwrapped)
+                & State.uPreferStroll .~ True ^. Lens._Unwrapped
             )
         <>
         E.keysEventMapMovesCursor (keys ^. keysPickOption)
@@ -389,7 +389,7 @@ make myId minWidth options =
                         ( Hover.Ordered
                             { _forward = id
                             , _backward = reverse
-                            } ?? (laidOutOptions ++ [hiddenOptionsWidget])
+                            } ?? laidOutOptions ++ [hiddenOptionsWidget]
                             <&> vbox
                         )
                     )

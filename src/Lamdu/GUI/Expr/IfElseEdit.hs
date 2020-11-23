@@ -86,12 +86,12 @@ makeElse ::
     ) =>
     AnimId -> ExprGui.Expr Sugar.Else i o -> GuiM env i o [Row (Responsive o)]
 makeElse parentAnimId (Ann (Const pl) (Sugar.SimpleElse expr)) =
-    ( Row elseAnimId
-        <$> (grammar (label Texts.else_) <&> Responsive.fromTextView)
-        <*> (grammar (label Texts.injectSymbol)
-                & Reader.local (Element.animIdPrefix .~ elseAnimId)
-                <&> Responsive.fromTextView)
-    ) <*> GuiM.makeSubexpression (Ann (Const pl) expr)
+    Row elseAnimId
+    <$> (grammar (label Texts.else_) <&> Responsive.fromTextView)
+    <*> (grammar (label Texts.injectSymbol)
+            & Reader.local (Element.animIdPrefix .~ elseAnimId)
+            <&> Responsive.fromTextView)
+    <*> GuiM.makeSubexpression (Ann (Const pl) expr)
     <&> pure
     where
         elseAnimId = parentAnimId <> ["else"]

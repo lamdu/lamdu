@@ -159,12 +159,11 @@ basicSearchTermEdit searchTermId holeId allowedSearchTerm textEditEmpty =
                     <> State.updateWidgetState holeId newSearchTerm
                     -- When first letter is typed in search term, jump to the
                     -- results, which will go to first result:
-                    & ( if Text.null searchTerm
+                    & if Text.null searchTerm
                         then
                             State.uCursor .~
-                            (Just (resultsIdPrefix holeId) ^. Lens._Unwrapped)
+                            Just (resultsIdPrefix holeId) ^. Lens._Unwrapped
                         else id
-                    )
         widget <-
             TextEdit.make ?? textEditEmpty ?? searchTerm ?? searchTermId
             <&> Align.tValue . Widget.eventMapMaker . Lens.mapped %~

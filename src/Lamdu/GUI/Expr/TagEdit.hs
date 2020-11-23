@@ -84,7 +84,7 @@ makePickEventMap action =
             Just nextEntry -> GuiState.updateCursor nextEntry
             Nothing ->
                 GuiState.updateCursor (result ^. Menu.pickDest)
-                & GuiState.uPreferStroll .~ (True ^. Lens._Unwrapped)
+                & GuiState.uPreferStroll .~ True ^. Lens._Unwrapped
         )
 
 makeNewTag ::
@@ -267,7 +267,7 @@ makeHoleSearchTerm newTagOption mkPickResult holeId =
                 do
                     newText <- Lens.view (has . Texts.new)
                     newTagLabel <-
-                        (TextView.make ?? ("(" <> newText <> ")"))
+                        (TextView.make ?? "(" <> newText <> ")")
                             <*> (Element.subAnimId ?? ["label"])
                     space <- Spacer.stdHSpace
                     hover <- Hover.hover

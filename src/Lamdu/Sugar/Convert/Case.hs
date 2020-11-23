@@ -94,13 +94,13 @@ convertAppliedCase (V.App _ arg) funcS argS exprPl =
                         <&> EntityId.ofValI
                     }
         ifSugar <- Lens.view (ConvertM.scConfig . Config.sugarsEnabled . Config.ifExpression)
-        (guard ifSugar *> convertIfElse setTo appliedCaseB)
+        guard ifSugar *> convertIfElse setTo appliedCaseB
             & maybe (BodyCase appliedCaseB) BodyIfElse
             -- func will be our entity id, so remove it from the hidden ids
             & addActions (_ANode # arg) exprPl & lift
             <&> annotation . pInput . Input.entityId .~ funcS ^. annotation . pInput . Input.entityId
             <&> annotation . pInput . Input.userData <>~
-                (exprPl ^. Input.userData <> funcS ^. annotation . pInput . Input.userData)
+                exprPl ^. Input.userData <> funcS ^. annotation . pInput . Input.userData
 
 simplifyCaseArg :: ExpressionU v m a -> ExpressionU v m a
 simplifyCaseArg argS =

@@ -258,7 +258,7 @@ toWidgetWithKeys env keys size sChildren =
                         if e ^. State.uPreferStroll . Lens._Wrapped
                         then
                             e
-                            & State.uCursor .~ (Just (dst ^. Lens._Wrapped) ^. Lens._Unwrapped)
+                            & State.uCursor .~ Just (dst ^. Lens._Wrapped) ^. Lens._Unwrapped
                             & State.uPreferStroll .~ mempty
                         else e
                 strollDests = traverse . _2 . Lens._Just . Widget.uMStroll
@@ -282,9 +282,9 @@ toWidgetWithKeys env keys size sChildren =
                 focusedChild ^. Widget.fMEnterPoint
                 & unionMaybeWith Widget.combineEnterPoints (unfocusedMEnter <&> (. Point))
             , Widget._fEventMap =
-                (focusedChild ^. Widget.fEventMap
-                    <&> addEventStroll
-                    & Lens.imapped %@~ addNavDests)
+                focusedChild ^. Widget.fEventMap
+                <&> addEventStroll
+                & Lens.imapped %@~ addNavDests
                 <&> (<> (strollBefore <> strollAfter))
             }
     }
@@ -297,7 +297,7 @@ toWidgetWithKeys env keys size sChildren =
             -- Surrounding parameters of all children
             Element.pad dir
             (rect ^. Rect.topLeft)
-            (size - (rect ^. Rect.bottomRight)) widget
+            (size - rect ^. Rect.bottomRight) widget
         translatedChildren = sChildren & each2d %~ translateChildWidget
         unfocused =
             translatedChildren

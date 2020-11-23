@@ -218,7 +218,7 @@ resultWidget expRepl varInfo tag Sugar.EvalSuccess{} =
                             executeIOProcess expRepl
                             & IOTrans.liftIO
                             & E.keysEventMap actionKeys (toDoc [Texts.execRepl])
-                    (Widget.makeFocusableView ?? indicatorId <&> (Align.tValue %~)) ?? view
+                    Widget.makeFocusableView ?? indicatorId <&> (Align.tValue %~) ?? view
                         <&> Align.tValue %~ Widget.weakerEvents executeEventMap
             _ -> view & Align.tValue %~ Widget.fromView & pure
 resultWidget _ _ tag (Sugar.EvalError err) =

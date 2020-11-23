@@ -27,6 +27,7 @@
     - warn: {lhs: "lift a >>= lift . b", rhs: "a >>= b & lift"}
     - warn: {lhs: "pure a <&> b", rhs: "pure (b a)"}
     - warn: {lhs: "a & lift <&> b >>= lift . c", rhs: "a <&> b >>= c & lift"}
+    - warn: {lhs: "either (Left . a) (Right . b)", rhs: "bimap a b"}
 
 - group:
     name: generalise-for-conciseness

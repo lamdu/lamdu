@@ -522,7 +522,7 @@ make pMode tag color assignment =
         equals <- grammar (label Texts.assign)
         hbox <- Options.boxSpaced ?? Options.disambiguationNone
         hbox [ defNameEdit :
-                (mParamEdit ^.. Lens._Just) ++
+                mParamEdit ^.. Lens._Just ++
                 [Responsive.fromTextView equals]
                 & hbox
             , bodyEdit

@@ -56,7 +56,7 @@ evalWriter :: Monoid w => Writer w a -> a
 evalWriter act = runWriter act & fst
 
 writerT :: (Functor m, Monoid w) => m (a, w) -> WriterT w m a
-writerT act = WriterT $ StateT $ \w -> act <&> (_2 %~ (w <>))
+writerT act = WriterT $ StateT $ \w -> act <&> _2 %~ (w <>)
 
 mapWriter :: (Functor m, Monoid w, Monoid w') => ((a, w) -> (b, w')) -> WriterT w m a -> WriterT w' m b
 mapWriter f = mapWriterT (<&> f)

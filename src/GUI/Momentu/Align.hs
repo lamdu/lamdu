@@ -54,7 +54,7 @@ instance SizedElement a => Element (Aligned a) where
     padImpl topLeftPadding bottomRightPadding (Aligned ratio w) =
         Aligned
         { _alignmentRatio =
-            (ratio * (w ^. Element.size) + topLeftPadding) / paddedWidget ^. Element.size
+            (ratio * w ^. Element.size + topLeftPadding) / paddedWidget ^. Element.size
         , _value = paddedWidget
         }
         where

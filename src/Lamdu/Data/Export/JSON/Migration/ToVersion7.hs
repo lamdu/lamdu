@@ -14,7 +14,7 @@ migrateVal val =
     Just x
         | x == "OpaqueNominal" ->
             val & _Object %~
-            ((Lens.at "nomType" .~ Nothing) . (Lens.at "typeParams" .~ Nothing))
+            (Lens.at "nomType" .~ Nothing) . (Lens.at "typeParams" .~ Nothing)
             & Right
         | otherwise -> Left ("Unexpected nomType: " <> x)
 

@@ -120,7 +120,7 @@ makeStatusWidgets themeNames langNames prop =
         )
     where
         opt sel =
-            (TextView.makeFocusable ?? (sel ^. title))
+            (TextView.makeFocusable ?? sel ^. title)
             <*> (Lens.view Element.animIdPrefix
                     <&> AnimId.augmentId (sel ^. selection)
                     <&> WidgetId.Id)

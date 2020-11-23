@@ -84,7 +84,7 @@ make =
         translate (Aligned _ (rect, view)) =
             pad
             (rect ^. Rect.topLeft)
-            (size - (rect ^. Rect.bottomRight))
+            (size - rect ^. Rect.bottomRight)
             view ^. View.vAnimLayers
     in  ( placements <&> Lens.mapped %~ void
         , View size (placements ^. traverse . traverse . Lens.to translate)

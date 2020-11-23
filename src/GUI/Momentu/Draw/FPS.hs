@@ -40,7 +40,7 @@ render font win fps =
         let Font.RenderedText sz img =
                 Font.render font white Nothing fpsText
         winSize <- GLFW.Utils.framebufferSize win
-        let translation = winSize - (sz ^. Font.bounding)
+        let translation = winSize - sz ^. Font.bounding
         pure (Draw.translateV translation %% img)
     where
         white = Draw.Color 1 1 1 1

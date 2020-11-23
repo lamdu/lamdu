@@ -82,7 +82,7 @@ add ::
     ) =>
     Options -> (Sugar.Payload v name i o, ExprGui.GuiPayload) ->
     GuiM env i o (w o -> w o)
-add options pl = (exprInfoFromPl ?? pl) >>= addWith options
+add options pl = exprInfoFromPl ?? pl >>= addWith options
 
 addWith ::
     ( HasWidget w, Monad i, Monad o
@@ -325,7 +325,7 @@ makeLiteralEventMap ::
     m (Sugar.NodeActions name i o -> EventMap (o GuiState.Update))
 makeLiteralEventMap =
     (<>)
-    <$> ( ((<>) <$> makeLiteralTextEventMap <*> makeLiteralNumberEventMap "")
+    <$> ( (<>) <$> makeLiteralTextEventMap <*> makeLiteralNumberEventMap ""
             <&> (. (^. Sugar.setToLiteral))
         )
     <*> (makeRecordEventMap <&> (. (^. Sugar.setToEmptyRecord)))

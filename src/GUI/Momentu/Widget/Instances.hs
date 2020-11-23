@@ -48,7 +48,7 @@ widgetSize :: Lens' (Widget a) (Vector2 Double)
 widgetSize f w =
     w
     & wSize f
-    <&> sizedState <. (_StateFocused . Lens.argument) %@~ fixSurrounding
+    <&> sizedState <. _StateFocused . Lens.argument %@~ fixSurrounding
     where
         fixSurrounding (Vector2 nw nh) surrounding =
             surrounding
@@ -146,7 +146,7 @@ combineStates env orientation order strollOrder (StateFocused f) (StateUnfocused
                 if e ^. State.uPreferStroll . Lens._Wrapped
                 then
                     e
-                    & State.uCursor .~ (Just fwd ^. Lens._Unwrapped)
+                    & State.uCursor .~ Just fwd ^. Lens._Unwrapped
                     & State.uPreferStroll .~ mempty
                 else
                     e

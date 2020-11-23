@@ -97,7 +97,7 @@ makeResultGroup ctx group =
     group ^. groupResults
     & ListClass.toList
     <&> sortOn fst
-    <&> mResultGroupOf (ctx ^. SearchMenu.rResultIdPrefix <> (group ^. groupId))
+    <&> mResultGroupOf (ctx ^. SearchMenu.rResultIdPrefix <> group ^. groupId)
     <&> Lens.mapped %~ rgExactMatch .~ toExactMatch
     where
         searchTerm = ctx ^. SearchMenu.rSearchTerm

@@ -118,7 +118,7 @@ convertLet pl redex =
                 { _pInput =
                     pl
                     & Input.userData .~
-                        (redex ^. Redex.lamPl . Input.userData) <>
+                        redex ^. Redex.lamPl . Input.userData <>
                         hfoldMap (const (^. Input.userData)) (redex ^. Redex.lam . V.tlInType . hflipped)
                 , _pActions = actions
                 }
@@ -274,12 +274,11 @@ useNormalLambda ::
 useNormalLambda paramNames func
     | Set.size paramNames < 2 = True
     | otherwise =
-        ( foldMapRecursive
-            (Proxy @SugarLens.SugarExpr ##>>
-                Any . SugarLens.isForbiddenInLightLam
-            ) (func ^. fBody . hVal)
-            ^. Lens._Wrapped
-        ) || not (allParamsUsed paramNames func)
+        foldMapRecursive
+        ( Proxy @SugarLens.SugarExpr ##>>
+            Any . SugarLens.isForbiddenInLightLam
+        ) (func ^. fBody . hVal) ^. Lens._Wrapped
+        || not (allParamsUsed paramNames func)
 
 class GetParam t where
     getParam :: t f -> Maybe InternalName

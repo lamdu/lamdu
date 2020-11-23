@@ -113,7 +113,7 @@ enterFuncAddVirtualCursor ::
     (FocusDirection -> EnterResult (f State.Update)) ->
     FocusDirection -> EnterResult (f State.Update)
 enterFuncAddVirtualCursor destRect =
-    Lens.imapped <. (enterResultEvent . Lens.mapped . State.uVirtualCursor . Lens._Wrapped) .@~ mkVirtCursor
+    Lens.imapped <. enterResultEvent . Lens.mapped . State.uVirtualCursor . Lens._Wrapped .@~ mkVirtCursor
     where
         mkVirtCursor dir =
             case dir of
@@ -171,7 +171,7 @@ addEventsWithContext append mkEvents =
                 where
                     add ctx =
                         ctx
-                        & ePrevTextRemainder <>~ (es ^. traverse . pTextRemainder)
+                        & ePrevTextRemainder <>~ es ^. traverse . pTextRemainder
                         & mkEvents
                         & (foldr (addPreEventToEventMap (liftA2 mappend)) ?? es)
                         & append

@@ -48,9 +48,9 @@ migratePresentationMode tagMap (Aeson.Object obj) =
     Just (Aeson.String "Verbose") -> Right obj
     Just (Aeson.Object pModeObj)
         | length pModeObj == 1 ->
-            ((pModeObj ^? Lens.ix "Infix" . _Array <&> Right)
-                <|> (pModeObj ^. Lens.at "Object" <&> migrateObject tagMap obj)
-                & fromMaybe (err pModeObj))
+            (pModeObj ^? Lens.ix "Infix" . _Array <&> Right)
+            <|> (pModeObj ^. Lens.at "Object" <&> migrateObject tagMap obj)
+            & fromMaybe (err pModeObj)
             <&> operatorPresentationMode
             <&> intoObj
     Just x -> err x

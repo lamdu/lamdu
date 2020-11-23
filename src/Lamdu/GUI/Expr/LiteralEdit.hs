@@ -136,7 +136,7 @@ withFd ::
     ) =>
     m (Widget.Id -> TextWidget f -> TextWidget f)
 withFd =
-    (FocusDelegator.make <*> fdConfig ?? FocusDelegator.FocusEntryParent)
+    FocusDelegator.make <*> fdConfig ?? FocusDelegator.FocusEntryParent
     <&> Lens.mapped %~ (Align.tValue %~)
 
 textEdit ::
@@ -224,7 +224,7 @@ numEdit prop pl =
                 , has . Texts.nextEntry
                 ])
             (pure ())
-            <&> Lens.mapped . GuiState.uPreferStroll .~ (True ^. Lens._Unwrapped)
+            <&> Lens.mapped . GuiState.uPreferStroll .~ True ^. Lens._Unwrapped
         let delEvent =
                 case pl ^. Sugar.plActions . Sugar.mSetToHole of
                 -- Allow to delete when text is empty

@@ -71,10 +71,10 @@ padAround p = padImpl p p
 class Element a => SizedElement a where size :: Lens.Getter a Size
 
 bottomLayer :: Element a => Lens.IndexedSetter' Size a Anim.Frame
-bottomLayer = setLayeredImage <. (layers . Lens.ix 0)
+bottomLayer = setLayeredImage <. layers . Lens.ix 0
 
 topLayer :: Element a => Lens.IndexedSetter' Size a Anim.Frame
-topLayer = setLayeredImage <. (layers . Lens.reversed . Lens.ix 0)
+topLayer = setLayeredImage <. layers . Lens.reversed . Lens.ix 0
 
 tint :: Element a => Draw.Color -> a -> a
 tint color = setLayeredImage . layers . traverse . Anim.unitImages %~ Draw.tint color

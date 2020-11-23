@@ -77,7 +77,7 @@ execRWS :: Monoid w => RWS r w s a -> r -> s -> (s, w)
 execRWS act r s = execRWST act r s & runIdentity
 
 rwst :: (Functor m, Monoid w) => (r -> s -> m (a, s, w)) -> RWST r w s m a
-rwst act = RWST $ \r w s -> act r s <&> (_3 %~ (w <>))
+rwst act = RWST $ \r w s -> act r s <&> _3 %~ (w <>)
 
 rws :: Monoid w => (r -> s -> (a, s, w)) -> RWS r w s a
 rws act = rwst $ \r s -> Identity $ act r s
