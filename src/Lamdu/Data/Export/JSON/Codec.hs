@@ -7,7 +7,7 @@ module Lamdu.Data.Export.JSON.Codec
     ) where
 
 import qualified Control.Lens as Lens
-import           Control.Lens.Extended ((==>))
+import           Control.Lens.Extended ((~~>))
 import           Data.Aeson ((.:))
 import           Data.Aeson.Lens (_Object)
 import qualified Data.Aeson as Aeson
@@ -81,7 +81,7 @@ array = Aeson.Array . Vector.fromList
 encodePresentationMode :: Encoder Meta.PresentationMode
 encodePresentationMode Meta.Verbose = Aeson.String "Verbose"
 encodePresentationMode (Meta.Operator l r) =
-    "Operator" ==> array [encodeTagId l, encodeTagId r]
+    "Operator" ~~> array [encodeTagId l, encodeTagId r]
     & Aeson.Object
 
 decodePresentationMode :: Decoder Meta.PresentationMode
@@ -152,7 +152,7 @@ encodeSquash ::
     Text -> (a -> j) -> a -> Aeson.Object
 encodeSquash name encode x
     | x == mempty = mempty
-    | otherwise = name ==> Aeson.toJSON (encode x)
+    | otherwise = name ~~> Aeson.toJSON (encode x)
 
 -- | Parse object based on containing some traversal
 decodeVariantObj ::
@@ -203,7 +203,7 @@ encodeComposite  =
     where
         go (Pure T.REmpty) = []
         go (Pure (T.RVar (T.Var name))) =
-            ["rowVar" ==> encodeIdent name & Aeson.Object]
+            ["rowVar" ~~> encodeIdent name & Aeson.Object]
         go (Pure (T.RExtend (RowExtend t v r))) =
             (encodeType v & _Object . Lens.at "rowTag" ?~ encodeTagId t) : go r
 
@@ -228,12 +228,12 @@ decodeComposite x = fail ("malformed row" <> show x)
 encodeType :: Encoder (Pure # T.Type)
 encodeType t =
     case t ^. _Pure of
-    T.TFun (FuncType a b) -> "funcParam" ==> encodeType a <> "funcResult" ==> encodeType b
-    T.TRecord composite   -> "record" ==> encodeComposite composite
-    T.TVariant composite  -> "variant" ==> encodeComposite composite
-    T.TVar (T.Var name)   -> "typeVar" ==> encodeIdent name
+    T.TFun (FuncType a b) -> "funcParam" ~~> encodeType a <> "funcResult" ~~> encodeType b
+    T.TRecord composite   -> "record" ~~> encodeComposite composite
+    T.TVariant composite  -> "variant" ~~> encodeComposite composite
+    T.TVar (T.Var name)   -> "typeVar" ~~> encodeIdent name
     T.TInst (NominalInst tId params) ->
-        "nomId" ==> encodeIdent (T.nomId tId) <>
+        "nomId" ~~> encodeIdent (T.nomId tId) <>
         encodeSquash "nomTypeArgs" (encodeIdentMap T.tvName encodeType) (params ^. T.tType . _QVarInstances) <>
         encodeSquash "nomRowArgs" (encodeIdentMap T.tvName encodeComposite) (params ^. T.tRow . _QVarInstances)
     & Aeson.Object
@@ -302,7 +302,7 @@ decodeTypeVars obj =
 
 encodeScheme :: Encoder (Pure # T.Scheme)
 encodeScheme (Pure (Scheme tvs typ)) =
-    "schemeType" ==> encodeType typ <> encodeTypeVars tvs
+    "schemeType" ~~> encodeType typ <> encodeTypeVars tvs
     & Aeson.Object
 
 decodeScheme :: Decoder (Pure # T.Scheme)
@@ -319,14 +319,14 @@ encodeLeaf =
     V.LHole -> l "hole"
     V.LRecEmpty -> l "recEmpty"
     V.LAbsurd -> l "absurd"
-    V.LVar (V.Var var) -> "var" ==> encodeIdent var
+    V.LVar (V.Var var) -> "var" ~~> encodeIdent var
     V.LLiteral (V.PrimVal (T.NominalId primId) primBytes) ->
-        "primId" ==> encodeIdent primId <>
-        "primBytes" ==> Aeson.toJSON (BS.unpack (Hex.encode primBytes))
+        "primId" ~~> encodeIdent primId <>
+        "primBytes" ~~> Aeson.toJSON (BS.unpack (Hex.encode primBytes))
     V.LFromNom (T.NominalId nomId) ->
-        "fromNomId" ==> encodeIdent nomId
+        "fromNomId" ~~> encodeIdent nomId
     where
-        l x = x ==> Aeson.object []
+        l x = x ~~> Aeson.object []
 
 decodeLeaf :: Aeson.Object -> AesonTypes.Parser V.Leaf
 decodeLeaf =
@@ -378,29 +378,29 @@ instance Codec V.Term where
     encodeBody body =
         case encBody of
         V.BApp (V.App func arg) ->
-            "applyFunc" ==> c func <>
-            "applyArg" ==> c arg
+            "applyFunc" ~~> c func <>
+            "applyArg" ~~> c arg
         V.BLam (V.TypedLam (V.Var varId) paramType res) ->
-            "lamVar" ==> encodeIdent varId <>
-            "lamParamType" ==> c paramType <>
-            "lamBody" ==> c res
+            "lamVar" ~~> encodeIdent varId <>
+            "lamParamType" ~~> c paramType <>
+            "lamBody" ~~> c res
         V.BGetField (V.GetField reco tag) ->
-            "getFieldRec" ==> c reco <>
-            "getFieldName" ==> encodeTagId tag
+            "getFieldRec" ~~> c reco <>
+            "getFieldName" ~~> encodeTagId tag
         V.BRecExtend (RowExtend tag x rest) ->
-            "extendTag" ==> encodeTagId tag <>
-            "extendVal" ==> c x <>
-            "extendRest" ==> c rest
+            "extendTag" ~~> encodeTagId tag <>
+            "extendVal" ~~> c x <>
+            "extendRest" ~~> c rest
         V.BInject (V.Inject tag x) ->
-            "injectTag" ==> encodeTagId tag <>
-            "injectVal" ==> c x
+            "injectTag" ~~> encodeTagId tag <>
+            "injectVal" ~~> c x
         V.BCase (RowExtend tag handler restHandler) ->
-            "caseTag" ==> encodeTagId tag <>
-            "caseHandler" ==> c handler <>
-            "caseRest" ==> c restHandler
+            "caseTag" ~~> encodeTagId tag <>
+            "caseHandler" ~~> c handler <>
+            "caseRest" ~~> c restHandler
         V.BToNom (ToNom (T.NominalId nomId) x) ->
-            "toNomId" ==> encodeIdent nomId <>
-            "toNomVal" ==> c x
+            "toNomId" ~~> encodeIdent nomId <>
+            "toNomVal" ~~> c x
         V.BLeaf x -> encodeLeaf x
         where
             encBody :: V.Term # Const Aeson.Value
@@ -475,7 +475,7 @@ instance Codec (HCompose Prune T.Type) where
             <&> (hcomposed _Unpruned . T._TRecord . _HCompose #)
     encodeBody (HCompose Pruned) = mempty
     encodeBody (HCompose (Unpruned (HCompose (T.TRecord (HCompose row))))) =
-        "record" ==> array (go row)
+        "record" ~~> array (go row)
         where
             go (Ann uuid (HCompose b)) =
                 Aeson.Object (insertField "rowId" uuid x) : xs
@@ -490,7 +490,7 @@ instance Codec (HCompose Prune T.Type) where
                                     (RowExtend t
                                         (HCompose (Ann fId (HCompose Pruned)))
                                         (HCompose r)))) ->
-                            ( "rowTag" ==> encodeTagId t
+                            ( "rowTag" ~~> encodeTagId t
                                 & insertField "id" fId
                             , go r
                             )
@@ -499,7 +499,7 @@ instance Codec (HCompose Prune T.Type) where
 
 encodeDefExpr :: Definition.Expr (Val UUID) -> Aeson.Object
 encodeDefExpr (Definition.Expr x frozenDeps) =
-    "val" ==> encodeVal x <>
+    "val" ~~> encodeVal x <>
     encodeSquash "frozenDeps" id encodedDeps
     where
         encodedDeps =
@@ -511,7 +511,7 @@ encodeDefExpr (Definition.Expr x frozenDeps) =
                 (frozenDeps ^. depsNominals)
 
 encodeDefBody :: Definition.Body (Val UUID) -> Aeson.Object
-encodeDefBody (Definition.BodyBuiltin name) = "builtin" ==> encodeFFIName name
+encodeDefBody (Definition.BodyBuiltin name) = "builtin" ~~> encodeFFIName name
 encodeDefBody (Definition.BodyExpr defExpr) = encodeDefExpr defExpr
 
 decodeDefExpr :: Aeson.Object -> AesonTypes.Parser (Definition.Expr (Val UUID))
@@ -534,7 +534,7 @@ decodeDefBody obj =
     ]
 
 encodeRepl :: Encoder (Definition.Expr (Val UUID))
-encodeRepl defExpr = "repl" ==> Aeson.Object (encodeDefExpr defExpr) & Aeson.Object
+encodeRepl defExpr = "repl" ~~> Aeson.Object (encodeDefExpr defExpr) & Aeson.Object
 
 decodeRepl :: Aeson.Object -> AesonTypes.Parser (Definition.Expr (Val UUID))
 decodeRepl obj =
@@ -545,7 +545,7 @@ insertField k v = HashMap.insert k (Aeson.toJSON v)
 
 encodeNominal :: Pure # NominalDecl T.Type -> Aeson.Object
 encodeNominal (Pure (NominalDecl params nominalType)) =
-    "nomType" ==> encodeScheme (_Pure # nominalType)
+    "nomType" ~~> encodeScheme (_Pure # nominalType)
     <> encodeTypeVars params
 
 decodeNominal :: Aeson.Object -> AesonTypes.Parser (Pure # NominalDecl T.Type)
@@ -593,13 +593,13 @@ decodeDef obj =
         Definition body scheme (presentationMode, tag, V.Var globalId) & pure
 
 encodeTagOrder :: TagOrder -> Aeson.Object
-encodeTagOrder tagOrder = "tagOrder" ==> Aeson.toJSON tagOrder
+encodeTagOrder tagOrder = "tagOrder" ~~> Aeson.toJSON tagOrder
 
 encodeSymbol :: Tag.Symbol -> Aeson.Object
 encodeSymbol Tag.NoSymbol = mempty
-encodeSymbol (Tag.UniversalSymbol x) = "op" ==> Aeson.String x
+encodeSymbol (Tag.UniversalSymbol x) = "op" ~~> Aeson.String x
 encodeSymbol (Tag.DirectionalSymbol (Tag.DirOp l r)) =
-    "op" ==> array [Aeson.String l, Aeson.String r]
+    "op" ~~> array [Aeson.String l, Aeson.String r]
 
 encodeNamedTag :: Encoder (T.Tag, Tag)
 encodeNamedTag (T.Tag ident, Tag order op names) =
@@ -660,7 +660,7 @@ decodeTaggedNominal json =
 
 encodeSchemaVersion :: Encoder Version
 encodeSchemaVersion (Version ver) =
-    "schemaVersion" ==> Aeson.toJSON ver & Aeson.Object
+    "schemaVersion" ~~> Aeson.toJSON ver & Aeson.Object
 
 decodeSchemaVersion :: Aeson.Object -> AesonTypes.Parser Version
 decodeSchemaVersion = (.: "schemaVersion") <&> fmap Version

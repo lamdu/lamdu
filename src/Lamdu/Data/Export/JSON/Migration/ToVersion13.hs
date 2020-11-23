@@ -1,7 +1,7 @@
 module Lamdu.Data.Export.JSON.Migration.ToVersion13 (migrate) where
 
 import qualified Control.Lens as Lens
-import           Control.Lens.Extended ((==>))
+import           Control.Lens.Extended ((~~>))
 import qualified Data.Aeson as Aeson
 import           Data.Aeson.Lens (_Array, _Object, _String)
 import           Data.Binary.Extended (encodeS)
@@ -29,12 +29,12 @@ collectLamParams _ = Right mempty
 encodeParamList :: UUID -> Maybe [TagId] -> Aeson.Object
 encodeParamList _ Nothing = mempty
 encodeParamList baseId (Just params) =
-    "record" ==>
+    "record" ~~>
     (Aeson.Array . Vector.fromList)
     ((zip [0 :: Int ..] params <&> uncurry mkField) <> [rowTail])
     where
         rowTail =
-            "rowId" ==> Aeson.toJSON (UUIDUtils.augment "tail" baseId)
+            "rowId" ~~> Aeson.toJSON (UUIDUtils.augment "tail" baseId)
             & Aeson.Object
         mkField i tagId =
             mempty
@@ -77,7 +77,7 @@ migrateRow (Aeson.Array v) =
     case v ^.. traverse of
     [Aeson.Object obj, Aeson.String rest] ->
         migrateRowFields obj
-        <&> (<> ["rowVar" ==> Aeson.String rest & Aeson.Object])
+        <&> (<> ["rowVar" ~~> Aeson.String rest & Aeson.Object])
         <&> Aeson.Array . Vector.fromList
     _ -> Left "Malformed row"
 migrateRow _ = Left "Malformed row"

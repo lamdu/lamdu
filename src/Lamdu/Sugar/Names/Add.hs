@@ -10,7 +10,7 @@ module Lamdu.Sugar.Names.Add
 
 import           Control.Lens (ALens)
 import qualified Control.Lens as Lens
-import           Control.Lens.Extended ((==>))
+import           Control.Lens.Extended ((~~>))
 import           Control.Monad.Reader (ReaderT(..), Reader, runReader)
 import qualified Control.Monad.Reader as Reader
 import qualified Control.Monad.Writer as Writer
@@ -222,16 +222,16 @@ p1Name mDisambiguator nameType (P0Name texts isOp internalName autoGen) =
     where
         tells
             | tag == anonTag = pure ()
-            | otherwise = tag ==> texts & tellSome p1Texts
+            | otherwise = tag ~~> texts & tellSome p1Texts
         p1lens
             | Walk.isGlobal nameType = p1Globals
             | otherwise = p1Locals . Lens.iso colliders uncolliders  -- makes it have colliders
-        myTags = tag ==> Collider (Clash.infoOf aName)
+        myTags = tag ~~> Collider (Clash.infoOf aName)
         tellCtx x
             | nameType == Walk.TypeVar =
                 tellSome p1TypeVars (OrderedSet.singleton x)
             | otherwise =
-                tellSome p1Contexts (tag ==> Set.singleton x)
+                tellSome p1Contexts (tag ~~> Set.singleton x)
         InternalName ctx tag = internalName
         aName =
             Annotated.Name

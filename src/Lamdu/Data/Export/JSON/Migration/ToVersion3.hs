@@ -9,7 +9,7 @@
 module Lamdu.Data.Export.JSON.Migration.ToVersion3 (migrate) where
 
 import qualified Control.Lens as Lens
-import           Control.Lens.Extended ((==>))
+import           Control.Lens.Extended ((~~>))
 import qualified Data.Aeson as Aeson
 import qualified Data.HashMap.Strict as HashMap
 import           Data.List.Class (sortOn)
@@ -31,12 +31,12 @@ migrateEntity tagMap (Aeson.Object obj) =
         mkNewPresMode (Just tags) (Aeson.String s) | s == "OO" =
             obj
             & Lens.at "defPresentationMode" ?~
-                Aeson.Object ("Object" ==> Aeson.String (head tags))
+                Aeson.Object ("Object" ~~> Aeson.String (head tags))
             & Right & Just
         mkNewPresMode (Just tags) (Aeson.String s) | s == "Infix" =
             obj
             & Lens.at "defPresentationMode" ?~
-                Aeson.Object ("Infix" ==> (take 2 tags <&> Aeson.String & Vector.fromList & Aeson.Array))
+                Aeson.Object ("Infix" ~~> (take 2 tags <&> Aeson.String & Vector.fromList & Aeson.Array))
             & Right & Just
         mkNewPresMode _ _ = Nothing
         mTags = mRecordType <&> HashMap.keys <&> sortOn tagOrder

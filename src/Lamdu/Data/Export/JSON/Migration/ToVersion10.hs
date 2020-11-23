@@ -1,7 +1,7 @@
 module Lamdu.Data.Export.JSON.Migration.ToVersion10 (migrate) where
 
 import qualified Control.Lens as Lens
-import           Control.Lens.Extended ((==>))
+import           Control.Lens.Extended ((~~>))
 import qualified Data.Aeson as Aeson
 import qualified Data.Text as Text
 import qualified Lamdu.CharClassification as Chars
@@ -26,7 +26,7 @@ migrateVal (Aeson.Object val) =
                 | isOperator x = Lens.at "op" ?~ Aeson.String x
                 | otherwise =
                     Lens.at "names" ?~
-                    Aeson.Object ("english" ==> Aeson.String x)
+                    Aeson.Object ("english" ~~> Aeson.String x)
     Just x -> Left ("Unexpected name: " <> Text.pack (show x))
     <&> Aeson.Object
 migrateVal x = Right x

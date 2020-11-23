@@ -190,7 +190,7 @@ termTransformsWithModify _ _ getInferred v@(Ann pl0 (V.BInject (V.Inject tag (An
         >>=
         \case
         Just T.REmpty ->
-            -- Variant:<hole> ==> Variant.
+            -- Variant:<hole> ~~> Variant.
             pure (Ann pl0 (V.BInject (V.Inject tag (Ann pl1 (V.BLeaf V.LRecEmpty)))))
             <|> pure v
         _ -> pure v

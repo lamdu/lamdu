@@ -711,7 +711,7 @@ optimizeExpr x@(JSS.CallExpr () func [arg]) =
     where
         key n = JSS.PropId () (JSS.Id () n)
 optimizeExpr (JSS.FuncExpr () Nothing [param] [JSS.ReturnStmt () (Just (JSS.CallExpr () func [JSS.VarRef () var]))])
-    -- eta reduce: \x -> f x ===> f
+    -- eta reduce: \x -> f x =~~> f
     | param == var = pure func
 optimizeExpr x = pure x
 

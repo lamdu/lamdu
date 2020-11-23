@@ -10,7 +10,7 @@ module Lamdu.GUI.CodeEdit
     ) where
 
 import qualified Control.Lens as Lens
-import           Control.Lens.Extended ((==>))
+import           Control.Lens.Extended ((~~>))
 import           Control.Monad.Once (OnceT)
 import           Control.Monad.Trans.Reader (ReaderT)
 import           Control.Monad.Transaction (MonadTransaction(..))
@@ -249,7 +249,7 @@ makeNewDefinition cp =
             (Definition.BodyExpr (Definition.Expr holeI mempty))
             ( _Pure # Scheme
                 { _sForAlls =
-                    T.Types (QVars ("a" ==> mempty)) (QVars mempty)
+                    T.Types (QVars ("a" ~~> mempty)) (QVars mempty)
                 , _sTyp = _Pure # T.TVar "a"
             }) ()
             & DataOps.newPublicDefinitionWithPane cp

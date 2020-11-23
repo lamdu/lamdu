@@ -4,7 +4,7 @@ module Lamdu.Data.Export.JSON.Migration.Common
     ) where
 
 import qualified Control.Lens as Lens
-import           Control.Lens.Extended ((==>))
+import           Control.Lens.Extended ((~~>))
 import qualified Data.Aeson as Aeson
 import qualified Data.Text as Text
 
@@ -21,14 +21,14 @@ collectTags (Aeson.Object obj) =
     Just (Aeson.Number tagOrder) ->
         case obj ^. Lens.at "tag" of
         Nothing -> Left "Malformed 'tag' node"
-        Just (Aeson.String tagId) -> tagId ==> round tagOrder & Right
+        Just (Aeson.String tagId) -> tagId ~~> round tagOrder & Right
         Just _ -> Left "Malformed 'tagOrder'"
     Just x -> Left $ "Malformed 'tag' id: " <> Text.pack (show x)
     Nothing -> Right mempty
 collectTags _ = Right mempty
 
 version :: Integer -> Aeson.Value
-version x = "schemaVersion" ==> Aeson.toJSON x & Aeson.Object
+version x = "schemaVersion" ~~> Aeson.toJSON x & Aeson.Object
 
 migrateToVer ::
     Integer ->

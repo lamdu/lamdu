@@ -1,7 +1,7 @@
 module Lamdu.Data.Export.JSON.Migration.ToVersion4 (migrate) where
 
 import qualified Control.Lens as Lens
-import           Control.Lens.Extended ((==>))
+import           Control.Lens.Extended ((~~>))
 import qualified Crypto.Hash.SHA256 as SHA256
 import qualified Data.Aeson as Aeson
 import qualified Data.ByteString as SBS
@@ -58,9 +58,9 @@ migrateEntity _ _ = Left "Expecting object"
 
 newTagEntity :: Text -> Text -> Aeson.Value
 newTagEntity name tag =
-    "tagOrder" ==> Aeson.Number 0
-    <> "tag" ==> Aeson.toJSON tag
-    <> "name" ==> Aeson.toJSON name
+    "tagOrder" ~~> Aeson.Number 0
+    <> "tag" ~~> Aeson.toJSON tag
+    <> "name" ~~> Aeson.toJSON name
     & Aeson.Object
 
 migrate :: Aeson.Value -> Either Text Aeson.Value

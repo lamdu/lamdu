@@ -5,7 +5,7 @@ module Lamdu.Sugar.Convert.GetVar
     ) where
 
 import qualified Control.Lens as Lens
-import           Control.Lens.Extended ((==>))
+import           Control.Lens.Extended ((~~>))
 import           Control.Monad.Trans.Except.Extended (runMatcherT, justToLeft)
 import           Control.Monad.Trans.Maybe (MaybeT)
 import           Control.Monad.Transaction (MonadTransaction, getP, setP)
@@ -61,7 +61,7 @@ inlineDef globalId dest =
                     def & Def.defBody .~ Def.BodyExpr (Def.Expr newDefExpr mempty)
                         & Def.defType .~
                             _Pure # S.Scheme
-                            { S._sForAlls = T.Types (S.QVars ("a" ==> mempty)) (S.QVars mempty)
+                            { S._sForAlls = T.Types (S.QVars ("a" ~~> mempty)) (S.QVars mempty)
                             , S._sTyp = _Pure # T.TVar "a"
                             }
                         & Transaction.writeIRef defI
