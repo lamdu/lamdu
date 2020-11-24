@@ -91,7 +91,6 @@
     "paramOrderAfterKeys"      : [ "Alt+Down" ],
     "healKeys"                 : [ "Space", "Enter", "Shift+0", "RightBracket" ],
     "detachKeys"               : [ "Space" ],
-    "parenDetachKeys"          : [ "Shift+9", "LeftBracket" ],
     "recordOpenKeys"           : [ "Alt+O" ],
     "recordCloseKeys"          : [ "Alt+O" ],
     "caseOpenKeys"             : [ "Alt+O" ],

@@ -236,7 +236,7 @@ transformEventMap =
         widgetId = pure . WidgetIds.fromEntityId
 
 detachEventMap ::
-    ( MonadReader env m, Has Config env
+    ( MonadReader env m, Has Config env, Has Dir.Layout env
     , Has (MomentuTexts.Texts Text) env, Has (Texts.CodeUI Text) env
     , Functor f
     ) =>
@@ -252,9 +252,14 @@ detachEventMap =
             (E.toDoc env [has . MomentuTexts.edit, has . Texts.modify])
             (act <&> WidgetIds.fromEntityId)
             <>
-            E.keysEventMap (env ^. has . Config.parenDetachKeys)
+            E.charGroup (Just "Open Paren")
             (E.toDoc env [has . MomentuTexts.edit, has . Texts.detach])
-            (void act)
+            parenKeys (const (mempty <$ act))
+        where
+            parenKeys =
+                case env ^. has of
+                Dir.LeftToRight -> "("
+                Dir.RightToLeft -> ")"
     _ -> mempty
 
 
