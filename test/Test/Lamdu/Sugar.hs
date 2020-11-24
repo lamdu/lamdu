@@ -146,10 +146,15 @@ convertWorkArea env =
     (sugarWorkArea env codeAnchors >>= \x -> x (Tag.getTagName env) env)
     >>= lift . validate
 
+testProgramH :: FilePath -> OnceT (T ViewM) a -> IO a
+testProgramH path action =
+    withDB path (runDbTransaction ?? runAction (evalStateT (action ^. _OnceT) mempty))
+
 testProgram :: FilePath -> OnceT (T ViewM) a -> IO a
-testProgram program action =
-    withDB ("test/programs/" <> program)
-    (runDbTransaction ?? runAction (evalStateT (action ^. _OnceT) mempty))
+testProgram = testProgramH . ("test/programs/" <>)
+
+testFresh :: OnceT (T ViewM) a -> IO a
+testFresh = testProgramH "data/freshdb.json"
 
 sugarConfig :: Config
 sugarConfig =

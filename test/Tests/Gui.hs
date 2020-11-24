@@ -26,6 +26,7 @@ import qualified Graphics.UI.GLFW as GLFW
 import qualified Lamdu.Data.Anchors as Anchors
 import           Lamdu.Data.Db.Layout (ViewM)
 import qualified Lamdu.Data.Db.Layout as DbLayout
+import qualified Lamdu.Data.Export.JS as ExportJS
 import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.GUI.CodeEdit as CodeEdit
 import qualified Lamdu.GUI.Expr as ExpressionEdit
@@ -39,11 +40,13 @@ import qualified Lamdu.Sugar.Types as Sugar
 import           Revision.Deltum.Transaction (Transaction)
 import qualified Revision.Deltum.Transaction as Transaction
 import           System.Directory (listDirectory)
+import           Test.Lamdu.Code (readRepl)
 import           Test.Lamdu.Env (Env)
 import qualified Test.Lamdu.Env as Env
+import           Test.Lamdu.Exec (runJS)
 import           Test.Lamdu.Gui (verifyLayers)
 import           Test.Lamdu.Instances ()
-import           Test.Lamdu.Sugar (convertWorkArea, testProgram)
+import           Test.Lamdu.Sugar (convertWorkArea, testProgram, testFresh)
 import           Tests.Momentu (simpleKeyEvent)
 import           Text.PrettyPrint (($+$))
 import qualified Text.PrettyPrint as Pretty
@@ -62,6 +65,7 @@ test =
     , testLambdaDelete
     , testPrograms
     , testTagPanes
+    , testWYTIWYS
     ]
 
 replExpr ::
@@ -128,10 +132,13 @@ mApplyEvent env virtCursor event =
             <&> (^. E.dhHandler)
             & sequenceA & lift
 
-applyEvent :: Env -> VirtualCursor -> Event -> OnceT (T ViewM) Env
-applyEvent env virtCursor event =
-    mApplyEvent env virtCursor event <&> (^?! Lens._Just)
+applyEventWith :: String -> Env -> VirtualCursor -> Event -> OnceT (T ViewM) Env
+applyEventWith msg env virtCursor event =
+    mApplyEvent env virtCursor event <&> fromMaybe (error msg)
     <&> (`GuiState.update` env)
+
+applyEvent :: Env -> VirtualCursor -> Event -> OnceT (T ViewM) Env
+applyEvent = applyEventWith "no event in applyEvent"
 
 fromWorkArea ::
     Env ->
@@ -420,3 +427,17 @@ testOne filename =
     do
         baseEnv <- Env.make
         programTest baseEnv filename
+
+applyActions :: String -> Env.Env -> OnceT (T ViewM) Env.Env
+applyActions [] env = pure env
+applyActions (x:xs) env =
+    applyEventWith ("No char " <> show x) env dummyVirt (EventChar x)
+    >>= applyActions xs
+
+testWYTIWYS :: Test
+testWYTIWYS =
+    Env.make
+    >>= testFresh . (>> lift (readRepl >>= ExportJS.compile)) . applyActions "2*(3+4)"
+    >>= runJS
+    >>= assertEqual "Expected output" "14\n"
+    & testCase "WYTIWYS"
