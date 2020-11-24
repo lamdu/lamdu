@@ -1,4 +1,5 @@
 - warn: { name: Use DerivingStrategies }
+- warn: { name: Redundant infix bracket due to operator fixities }
 
 - group:
     name: lamdu-style
@@ -7,7 +8,6 @@
     - package base
     - package lens
     rules:
-    - hint: {lhs: return, rhs: pure}
     - hint: {lhs: mapM, rhs: traverse}
     - hint: {lhs: mapM_, rhs: traverse_}
     - hint: {lhs: a `mappend` b, rhs: a <> b}
@@ -31,6 +31,14 @@
 
 - group:
     name: generalise-for-conciseness
+    enabled: true
+
+- group:
+    name: future
+    enabled: true
+
+- group:
+    name: monomorphic
     enabled: true
 
 - group:

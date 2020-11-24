@@ -207,12 +207,13 @@ addPostTags ::
 addPostTags items =
     do
         let f idx item =
-                ( if idx < lastIdx
-                    then label Texts.recordSep
-                    else label Texts.recordCloser
-                ) & grammar
+                label t & grammar
                 & Element.locallyAugmented idx
                 <&> \lbl -> item & tagPost ?~ (lbl <&> Widget.fromView)
+                where
+                    t :: Lens' (Texts.Code a) a
+                    t | idx < lastIdx = Texts.recordSep
+                        | otherwise = Texts.recordCloser
         Lens.itraverse f items
     where
         lastIdx = length items - 1
