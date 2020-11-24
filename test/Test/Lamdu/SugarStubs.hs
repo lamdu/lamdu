@@ -1,7 +1,5 @@
 -- | Build sugar expressions easily
 
-{-# LANGUAGE TypeOperators #-}
-
 module Test.Lamdu.SugarStubs where
 
 import           Control.Monad.Unit (Unit(Unit))

@@ -1,4 +1,3 @@
-{-# LANGUAGE TypeOperators #-}
 -- | Test the suggest module
 
 module Tests.Suggest where

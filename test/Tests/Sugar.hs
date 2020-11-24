@@ -1,7 +1,5 @@
 -- | Test sugar convert results (including its actions)
 
-{-# LANGUAGE TypeOperators #-}
-
 module Tests.Sugar where
 
 import qualified Control.Lens as Lens

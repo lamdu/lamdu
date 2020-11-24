@@ -1,6 +1,5 @@
 -- | Test export of JS programs
 
-{-# LANGUAGE TypeOperators #-}
 {-# OPTIONS_GHC -Wno-incomplete-uni-patterns #-}
 
 module Tests.JsExport where

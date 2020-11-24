@@ -1,5 +1,3 @@
-{-# LANGUAGE TypeOperators #-}
-
 module Tests.AnimIdClash (test) where
 
 import qualified Control.Lens as Lens

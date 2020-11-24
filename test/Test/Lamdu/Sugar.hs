@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell, TupleSections, TypeOperators #-}
+{-# LANGUAGE TemplateHaskell, TupleSections #-}
 module Test.Lamdu.Sugar where
 
 import           Control.DeepSeq (NFData, deepseq)

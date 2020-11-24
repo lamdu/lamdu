@@ -1,4 +1,4 @@
-{-# LANGUAGE OverloadedStrings, ScopedTypeVariables, TypeOperators #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module Tests.Gui where
 

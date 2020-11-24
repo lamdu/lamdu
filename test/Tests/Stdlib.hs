@@ -1,4 +1,4 @@
-{-# LANGUAGE TypeFamilies, TypeApplications, TypeOperators #-}
+{-# LANGUAGE TypeFamilies, TypeApplications #-}
 
 module Tests.Stdlib (test) where
 
