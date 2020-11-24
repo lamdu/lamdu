@@ -23,6 +23,7 @@ import           Control.Monad.Trans.State (State, runState)
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Types as Json
 import qualified Data.ByteString.Extended as BS
+import           Data.Either (fromRight)
 import           Data.HashMap.Strict (HashMap)
 import qualified Data.HashMap.Strict as HashMap
 import           Data.IORef
@@ -174,7 +175,7 @@ parseObj obj =
     , obj .: "number" <&> read <&> fromDouble <&> pure
     , obj .: "tag" <&> (`parseInject` (obj .: "data"))
     , obj .: "func" <&> (\(Json.Number x) -> round x & ER.RFunc & Ann (Const ()) & pure)
-    ] & either (const (parseRecord obj)) id
+    ] & fromRight (parseRecord obj)
 
 parseResult :: Json.Value -> Parse (ER.Val ())
 parseResult (Json.Number x) = realToFrac x & fromDouble & pure
