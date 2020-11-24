@@ -6,6 +6,7 @@ import qualified Control.Lens as Lens
 import           Data.Vector.Vector2 (Vector2(..))
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Animation as Anim
+import qualified GUI.Momentu.Direction as Dir
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.Glue as Glue
@@ -85,11 +86,14 @@ make (Ann (Const pl) fragment) =
             <&> (Align.tValue %~)
             ?? rawSearchArea
             <&> Lens.mapped %~
-                Widget.weakerEvents (healEventMap (Config.delKeys env) env)
+                Widget.weakerEvents (healEventMap (Config.delKeys env) "" env)
         let qmarkImage = qmarkView ^. Align.tValue . View.vAnimLayers
         let searchAreaQMark = searchArea <&> Element.setLayeredImage .~ qmarkImage
         let healKeys = env ^. has . Config.healKeys
-
+        let healChars =
+                case env ^. has of
+                Dir.LeftToRight -> ")]"
+                Dir.RightToLeft -> "(["
         hbox <- ResponsiveExpr.boxSpacedMDisamb ?? ExprGui.mParensId pl
 
         addInnerType <-
@@ -114,7 +118,7 @@ make (Ann (Const pl) fragment) =
             ]
             & Widget.widget %~ addInnerType
             & pure & stdWrapParentExpr pl
-            <&> Widget.weakerEvents (healEventMap healKeys env)
+            <&> Widget.weakerEvents (healEventMap healKeys healChars env)
     where
         lineBelow color animId spacing ann =
             ann
@@ -127,6 +131,10 @@ make (Ann (Const pl) fragment) =
 
         myId = WidgetIds.fromExprPayload (pl ^. _1)
         holeIds = WidgetIds.fragmentHoleId myId & HoleWidgetIds.makeFrom
-        healEventMap keys env =
-            fragment ^. Sugar.fHeal <&> WidgetIds.fromEntityId
-            & E.keysEventMapMovesCursor keys (fragmentDoc env (has . Texts.heal))
+        healEventMap keys chars env =
+            E.keysEventMapMovesCursor keys doc action <>
+            E.charGroup (Just "Close Paren") doc chars
+            (const (action <&> GuiState.updateCursor))
+            where
+                action = fragment ^. Sugar.fHeal <&> WidgetIds.fromEntityId
+                doc = fragmentDoc env (has . Texts.heal)

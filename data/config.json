@@ -89,7 +89,7 @@
     "addNextParamKeys"         : [ "Space" ],
     "paramOrderBeforeKeys"     : [ "Alt+Up" ],
     "paramOrderAfterKeys"      : [ "Alt+Down" ],
-    "healKeys"                 : [ "Space", "Enter", "Shift+0", "RightBracket" ],
+    "healKeys"                 : [ "Space", "Enter" ],
     "detachKeys"               : [ "Space" ],
     "recordOpenKeys"           : [ "Alt+O" ],
     "recordCloseKeys"          : [ "Alt+O" ],

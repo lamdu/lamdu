@@ -258,8 +258,8 @@ detachEventMap =
         where
             parenKeys =
                 case env ^. has of
-                Dir.LeftToRight -> "("
-                Dir.RightToLeft -> ")"
+                Dir.LeftToRight -> "(["
+                Dir.RightToLeft -> ")]"
     _ -> mempty
 
 
