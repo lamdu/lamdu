@@ -33,7 +33,7 @@ module Lamdu.Sugar.Types.Expression
     , AssignPlain(..), apAddFirstParam, apBody
     , Assignment(..), _BodyFunction, _BodyPlain
     -- Holes
-    , HoleOption(..), hoEntityId, hoSugaredBaseExpr, hoResults
+    , HoleOption(..), hoEntityId, hoSearchTerms, hoResults
     , Hole(..), holeOptions, holeMDelete
     , HoleResult(..), holeResultConverted, holeResultPick
     -- If/else
@@ -120,7 +120,7 @@ data HoleResult v name i o = HoleResult
 
 data HoleOption v name i o = HoleOption
     { _hoEntityId :: EntityId
-    , _hoSugaredBaseExpr :: i (Expr Binder v name i o ())
+    , _hoSearchTerms :: i [HoleTerm name]
     , -- A group in the hole results based on this option
         -- TODO: HoleResult need not have actual eval results
       _hoResults :: ListT i (HoleResultScore, i (HoleResult v name i o))

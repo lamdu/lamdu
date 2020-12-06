@@ -6,6 +6,7 @@ module Lamdu.Sugar.Types.Parts
     , FuncApplyLimit(..), _UnlimitedFuncApply, _AtMostOneFuncApply
     , Literal(..), _LiteralNum, _LiteralBytes, _LiteralText
     , HoleResultScore(..), hrsNumFragments, hrsScore
+    , HoleTerm(..), _HoleName
     , -- Annotations
       Annotation(..), _AnnotationVal, _AnnotationType, _AnnotationNone
     -- Node actions
@@ -159,6 +160,20 @@ data HoleResultScore = HoleResultScore
     , _hrsScore :: ![Int]
     } deriving (Eq, Ord, Generic)
 
+data HoleTerm name
+    = HoleGetDef name
+    | HoleName name
+    | HoleInject name
+    | HoleGetField name
+    | HoleParamsRecord
+    | HoleRecord
+    | HoleCase
+    | HoleEmptyCase
+    | HoleIf
+    | HoleLambda
+    | HoleLet
+    deriving (Functor, Foldable, Traversable, Show)
+
 data ParenInfo = ParenInfo
     { _piMinOpPrec :: !Int
     , _piNeedParens :: !Bool
@@ -181,5 +196,6 @@ Lens.makePrisms ''Annotation
 Lens.makePrisms ''BinderParams
 Lens.makePrisms ''DetachAction
 Lens.makePrisms ''FuncApplyLimit
+Lens.makePrisms ''HoleTerm
 Lens.makePrisms ''Literal
 Lens.makePrisms ''VarInfo

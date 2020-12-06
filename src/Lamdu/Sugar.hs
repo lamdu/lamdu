@@ -73,9 +73,8 @@ makeHoleOptionAnn ::
     Annotations.Mode ->
     Sugar.HoleOption (ShowAnnotation, EvalPrep) AddNames.InternalName (OnceT m) m ->
     Sugar.HoleOption (Sugar.Annotation EvalPrep AddNames.InternalName) AddNames.InternalName (OnceT m) m
-makeHoleOptionAnn annMode (Sugar.HoleOption i e r) =
-    Sugar.HoleOption i
-    (e >>= onNode)
+makeHoleOptionAnn annMode (Sugar.HoleOption i t r) =
+    Sugar.HoleOption i t
     (r <&> _2 %~ (>>= Sugar.holeResultConverted onNode))
     where
         onNode = SugarLens.annotations (<&> Lens.mapped %~ makeHoleOptionAnn annMode) (makeAnnotation annMode)

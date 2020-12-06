@@ -122,19 +122,16 @@ binderResultExpr f (Ann (Const pl) x) =
 
 holeOptionTransformExprs ::
     Monad i =>
-    (Expr Binder v0 n0 i o () -> i (Expr Binder v1 n1 i o ())) ->
-    HoleOption v0 n0 i o ->
-    HoleOption v1 n1 i o
-holeOptionTransformExprs onExpr option =
-    option
-    { _hoSugaredBaseExpr = option ^. hoSugaredBaseExpr >>= onExpr
-    , _hoResults = option ^. hoResults <&> _2 %~ (>>= holeResultConverted onExpr)
-    }
+    (Expr Binder v0 n i o () -> i (Expr Binder v1 n i o ())) ->
+    HoleOption v0 n i o ->
+    HoleOption v1 n i o
+holeOptionTransformExprs onExpr =
+    hoResults . Lens.mapped . _2 %~ (>>= holeResultConverted onExpr)
 
 holeTransformExprs ::
     Monad i =>
-    (Expr Binder v0 n0 i o () -> i (Expr Binder v1 n1 i o ())) ->
-    Hole v0 n0 i o -> Hole v1 n1 i o
+    (Expr Binder v0 n i o () -> i (Expr Binder v1 n i o ())) ->
+    Hole v0 n i o -> Hole v1 n i o
 holeTransformExprs onExpr =
     holeOptions . Lens.mapped . Lens.mapped %~ holeOptionTransformExprs onExpr
 
@@ -164,8 +161,8 @@ holeOptionAnnotations ::
     Lens.Setter (HoleOption v0 n i o) (HoleOption v1 n i o) v0 v1
 holeOptionAnnotations =
     Lens.setting $
-    \f (HoleOption i b r) ->
-    HoleOption i (b <&> onNode f)
+    \f (HoleOption i t r) ->
+    HoleOption i t
     (r <&> _2 . Lens.mapped . holeResultConverted %~ onNode f)
     where
         onNode f = annotations (<&> Lens.mapped . holeOptionAnnotations %~ f) %~ f

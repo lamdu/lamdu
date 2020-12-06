@@ -14,7 +14,6 @@ import           Hyper.Class.Morph (morphTraverse)
 import           Hyper.Type.AST.App (MorphWitness(..))
 import           Hyper.Type.AST.FuncType (FuncType(..))
 import qualified Lamdu.Calc.Type as T
-import qualified Lamdu.Sugar.Lens as SugarLens
 import           Lamdu.Sugar.Names.CPS (CPS(..), liftCPS)
 import qualified Lamdu.Sugar.Types as Sugar
 import           Lamdu.Sugar.Types hiding (Tag(..))
@@ -306,27 +305,39 @@ toLabeledApply
 type SugarElem t n m (o :: * -> *) = t (Annotation (EvaluationScopes n (IM m)) n) n (IM m) o
 type WalkElem t m o = SugarElem t (OldName m) m o -> m (SugarElem t (NewName m) m o)
 
+toHoleOption ::
+    MonadNaming m =>
+    (m (ExprW Binder (NewName m) m o ()) -> IM m (ExprW Binder (NewName m) m o ())) ->
+    (m (NewName m) -> IM m (NewName m)) ->
+    SugarElem HoleOption (OldName m) m o -> SugarElem HoleOption (NewName m) m o
+toHoleOption run0 run1 option =
+    option
+    { _hoSearchTerms =
+        -- Hack: Just using TaggedVar as NameType because disambiguations aren't important in hole results
+        option ^. hoSearchTerms >>= traverse . traverse %%~ run1 . opGetName Nothing TaggedVar
+    , _hoResults = option ^. hoResults <&> _2 %~ (>>= holeResultConverted (run0 . toNode toBinder))
+    }
+
 toHole :: MonadNaming m => WalkElem Hole m o
 toHole hole =
-    opRun
+    (,) <$> opRun <*> opRun
     <&>
-    \run ->
-    SugarLens.holeTransformExprs (run . toNode toBinder) hole
+    \(r0, r1) ->
+    hole & Sugar.holeOptions . Lens.mapped . Lens.mapped %~ toHoleOption r0 r1
 
 toFragment :: MonadNaming m => WalkBody Fragment m o a
 toFragment Fragment{_fExpr, _fHeal, _fTypeMismatch, _fOptions} =
     do
         newTypeMismatch <- Lens._Just toType _fTypeMismatch
-        run <- opRun
         newExpr <- toExpression _fExpr
+        r0 <- opRun
+        r1 <- opRun
         pure Fragment
             { _fExpr = newExpr
             , _fTypeMismatch = newTypeMismatch
             , _fOptions =
                  _fOptions
-                 <&> Lens.mapped %~
-                     SugarLens.holeOptionTransformExprs
-                     (run . toNode toBinder)
+                 <&> Lens.mapped %~ toHoleOption r0 r1
             , _fHeal
             }
 

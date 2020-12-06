@@ -1,6 +1,6 @@
 {-# LANGUAGE CPP #-}
 
--- What to do when "verify-nix-stack" fails -
+-- | What to do when "verify-nix-stack" fails -
 --
 -- Update of .nix files is requiried:
 -- * Update the "rev" value

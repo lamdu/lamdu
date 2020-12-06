@@ -181,11 +181,11 @@ mkGroup ::
     ) =>
     env -> Sugar.HoleOption (Sugar.Annotation (Sugar.EvaluationScopes Name i) Name) Name i o -> i (Group i o)
 mkGroup env option =
-    option ^. Sugar.hoSugaredBaseExpr
+    option ^. Sugar.hoSearchTerms
     <&>
-    \sugaredBaseExpr ->
+    \searchTerms ->
     Group
-    { _groupSearchTerms = sugaredBaseExpr ^. hVal & ValTerms.binder env
+    { _groupSearchTerms = searchTerms >>= ValTerms.holeSearchTerm env
     , _groupResults = option ^. Sugar.hoResults
     , _groupId = option ^. Sugar.hoEntityId & WidgetIds.fromEntityId
     }

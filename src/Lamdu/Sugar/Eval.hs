@@ -158,8 +158,8 @@ instance AddEval Term where
         BodyFragment (Fragment f h t o) ->
             Fragment (addToNode r f) h t (o <&> Lens.mapped %~ addToHoleOption) & BodyFragment
         where
-            addToHoleOption (HoleOption hi e s) =
-                HoleOption hi (e <&> addToNode r)
+            addToHoleOption (HoleOption hi t s) =
+                HoleOption hi t
                 (s <&> _2 . Lens.mapped . holeResultConverted %~ addToNode r)
 
 addToPayload ::

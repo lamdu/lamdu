@@ -346,7 +346,7 @@ mkOptionFromFragment sugarContext exprPl x =
         x & hflipped %~ hmap (\_ _ -> Const ())
         & show & Random.randFunc
         & EntityId.EntityId
-    , _hoSugaredBaseExpr = Hole.sugar sugarContext exprPl baseExpr
+    , _hoSearchTerms = Hole.mkHoleSearchTerms sugarContext exprPl baseExpr & lift -- TODO: Once?
     , _hoResults =
         do
             newDeps <- Hole.loadNewDeps (depsProp ^. Property.pVal) (exprPl ^. Input.inferScope) x

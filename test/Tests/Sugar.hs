@@ -184,10 +184,8 @@ testInline =
                 pure ()
             where
                 isY option =
-                    option ^. hoSugaredBaseExpr
-                    <&> Lens.has
-                    (hVal . _BinderTerm . _BodyGetVar . _GetBinder .
-                        bvForm . _GetLet)
+                    option ^. hoSearchTerms
+                    <&> Lens.has (traverse . _HoleName) -- TODO: Checked if was get of a let variable
         verify workArea
             | Lens.has afterInline workArea = pure ()
             | otherwise = error "Expected inline result"

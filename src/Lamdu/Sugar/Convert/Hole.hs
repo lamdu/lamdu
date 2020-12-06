@@ -5,7 +5,7 @@ module Lamdu.Sugar.Convert.Hole
       -- Used by Convert.Fragment:
     , Preconversion, ResultGen
     , ResultProcessor(..)
-    , mkOptions, detachValIfNeeded, sugar, loadNewDeps
+    , mkOptions, detachValIfNeeded, mkHoleSearchTerms, loadNewDeps
     , mkResult
     , mkOption, addWithoutDups
     , assertSuccessfulInfer
@@ -18,7 +18,6 @@ import           Control.Monad.ListT (ListT(..))
 import           Control.Monad.Once (OnceT, _OnceT, MonadOnce(..))
 import           Control.Monad.State (State, StateT(..), mapStateT, evalState, state)
 import qualified Control.Monad.State as State
-import           Control.Monad.Transaction (transaction)
 import qualified Crypto.Hash.SHA256 as SHA256
 import qualified Data.Binary as Binary
 import           Data.Bits (xor)
@@ -43,6 +42,7 @@ import           Hyper.Type.Prune (Prune(..))
 import           Hyper.Unify (Unify(..), BindingDict(..), unify)
 import           Hyper.Unify.Binding (UVar)
 import           Hyper.Unify.Term (UTerm(..), UTermBody(..))
+import qualified Lamdu.Builtins.Anchors as Builtins
 import qualified Lamdu.Cache as Cache
 import           Lamdu.Calc.Definition (Deps(..), depsGlobalTypes, depsNominals)
 import           Lamdu.Calc.Infer (InferState, runPureInfer, PureInfer)
@@ -116,6 +116,34 @@ holeResultProcessor =
     , rpPreConversion = id
     }
 
+mkHoleSearchTerms :: Monad m => ConvertM.Context m -> Input.Payload m a # V.Term -> Val () -> T m [HoleTerm InternalName]
+mkHoleSearchTerms ctx pl x =
+    case x ^. hVal of
+    V.BLeaf (V.LVar v)
+        | v `notElem` pl ^. Input.localsInScope -> taggedName v <&> (:[]) . HoleGetDef
+        | v `elem` recordParams -> pure [HoleParamsRecord]
+        | otherwise -> ofName v
+    V.BLeaf (V.LFromNom n) -> ofName n <&> (<> [HoleIf | n == Builtins.boolTid])
+    V.BLeaf V.LRecEmpty -> pure [HoleRecord]
+    V.BLeaf V.LAbsurd -> pure [HoleEmptyCase]
+    V.BLeaf V.LHole -> pure []
+    V.BLeaf V.LLiteral{} -> pure [] -- Literals not created from hole results
+    V.BToNom (V.ToNom n b) -> ofName n <> mkHoleSearchTerms ctx pl b
+    V.BInject i -> pure [HoleInject (nameWithoutContext (i ^. V.injectTag))]
+    V.BApp a -> mkHoleSearchTerms ctx pl (a ^. V.appFunc)
+    V.BLam{} -> pure [HoleLambda]
+    V.BRecExtend{} -> pure [HoleRecord]
+    V.BCase{} -> pure [HoleCase]
+    V.BGetField (V.GetField e f)
+        | Lens.anyOf (hVal . V._BLeaf . V._LVar) (`elem` recordParams) e ->
+            pure [HoleName (nameWithoutContext f)]
+        | otherwise -> pure [HoleGetField (nameWithoutContext f)]
+    where
+        ofName v = taggedName v <&> (:[]) . HoleName
+        recordParams =
+            ctx ^.. ConvertM.scScopeInfo . ConvertM.siTagParamInfos . traverse . ConvertM._TagFieldParam
+            <&> ConvertM.tpiFromParameters
+
 mkOption ::
     (Monad m, Typeable m) =>
     ConvertM.Context m -> ResultProcessor m ->
@@ -123,7 +151,7 @@ mkOption ::
     OnceT (T m) (HoleOption EvalPrep InternalName (OnceT (T m)) (T m))
 mkOption sugarContext resultProcessor holePl x =
     HoleOption entityId
-    <$> once (sugar sugarContext holePl x)
+    <$> once (lift (mkHoleSearchTerms sugarContext holePl x))
     ?? mkResults resultProcessor sugarContext holePl x
     where
         entityId =
@@ -132,7 +160,6 @@ mkOption sugarContext resultProcessor holePl x =
             & show
             & Random.randFunc
             & EntityId.EntityId
-
 
 mkHoleSuggesteds ::
     (Monad m, Typeable m) =>
@@ -281,37 +308,6 @@ loadNewDeps currentDeps scope x =
         newDepVars = newDeps depsGlobalTypes (ExprLens.valGlobals scopeVars)
         newNoms = newDeps depsNominals ExprLens.valNominals
 
--- Unstored and without eval results.
--- Used for hole's base exprs, to perform sugaring and get names from sugared exprs.
--- TODO: We shouldn't need to perform sugaring for base exprs, and this should be removed.
-prepareUnstoredPayloads ::
-    Ann (InferResult (Pure :*: UVar) :*: Const (EntityId, a)) # V.Term ->
-    Ann (Input.Payload m a) # V.Term
-prepareUnstoredPayloads v =
-    v & hflipped %~ hmap (const mk) & Input.preparePayloads
-    where
-        mk (inferPl :*: Const (eId, x)) =
-            Input.PreparePayloadInput
-            { Input.ppEntityId = eId
-            , Input.ppMakePl =
-                \varRefs ->
-                Input.Payload
-                { Input._varRefsOfLambda = varRefs
-                , Input._userData = x
-                , Input._localsInScope = []
-                , Input._inferRes = inferPl
-                , Input._inferScope = V.emptyScope
-                , Input._entityId = eId
-                , Input._stored =
-                    HRef
-                    (_F # IRef.unsafeFromUUID fakeStored)
-                    (error "stored output of base expr used!")
-                }
-            }
-            where
-                -- TODO: Which code reads this?
-                EntityId.EntityId fakeStored = eId
-
 assertSuccessfulInfer ::
     HasCallStack =>
     Either (Pure # T.TypeError) a -> a
@@ -334,38 +330,6 @@ loadInfer sugarContext scope v =
     where
         memoInfer = Cache.infer (sugarContext ^. ConvertM.scCacheFunctions)
         sugarDeps = sugarContext ^. ConvertM.scFrozenDeps . Property.pVal
-
-sugar ::
-    (Monad m, Monoid a) =>
-    ConvertM.Context m -> Input.Payload m dummy # V.Term -> Val a ->
-    OnceT (T m) (Expr Binder EvalPrep InternalName (OnceT (T m)) (T m) a)
-sugar sugarContext holePl v =
-    do
-        (val, inferCtx) <-
-            loadInfer sugarContext scope v
-            <&> snd
-            <&> assertSuccessfulInfer
-            <&>
-            ( \((term, topLevelScope), inferCtx) ->
-                ( inferUVarsApplyBindings term
-                    & runPureInfer () inferCtx
-                    & assertSuccessfulInfer
-                    & fst
-                    & hflipped %~ hmap (const mkPayload)
-                    & EntityId.randomizeExprAndParams
-                        (Random.genFromHashable (holePl ^. Input.entityId))
-                    & prepareUnstoredPayloads
-                    & Input.initScopes topLevelScope (holePl ^. Input.localsInScope)
-                , inferCtx
-                )
-            ) & transaction & lift
-        convertBinder val
-            <&> convertPayloads
-            & ConvertM.run (sugarContext & ConvertM.scInferContext .~ inferCtx)
-    where
-        scope = holePl ^. Input.inferScope
-        mkPayload (Const x :*: inferPl) =
-            _HFunc # \(Const entityId) -> inferPl :*: Const (entityId, x)
 
 getLocalScopeGetVars :: ConvertM.Context m -> V.Var -> [HPlain V.Term]
 getLocalScopeGetVars sugarContext par

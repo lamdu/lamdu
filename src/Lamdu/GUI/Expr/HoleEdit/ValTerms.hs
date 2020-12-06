@@ -1,7 +1,6 @@
 {-# LANGUAGE TypeFamilies #-}
 module Lamdu.GUI.Expr.HoleEdit.ValTerms
-    ( expr
-    , binder
+    ( holeSearchTerm
     , allowedSearchTermCommon
     , allowedFragmentSearchTerm
     , getSearchStringRemainder
@@ -14,13 +13,11 @@ import qualified Data.Char as Char
 import qualified Data.Text as Text
 import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import           Hyper
-import qualified Lamdu.Builtins.Anchors as Builtins
 import qualified Lamdu.CharClassification as Chars
 import qualified Lamdu.I18N.Code as Texts
 import qualified Lamdu.I18N.CodeUI as Texts
 import           Lamdu.Name (Name(..), Collision(..))
 import qualified Lamdu.Name as Name
-import qualified Lamdu.Sugar.Lens as SugarLens
 import           Lamdu.Sugar.Types
 
 import           Lamdu.Prelude
@@ -41,87 +38,25 @@ ofName (Name.NameTag x) =
     where
         Name.TagText displayName textCollision = x ^. Name.tnDisplayText
 
-expr ::
-    ( Has (Texts.Code Text) env
-    , Has (Texts.CodeUI Text) env
-    ) =>
-    env -> Annotated a # Term v Name i o -> [Text]
-expr env = ofBody env . (^. hVal)
-
-ofBody ::
-    ( Has (Texts.Code Text) env
-    , Has (Texts.CodeUI Text) env
-    ) =>
-    env -> Term v Name i o # Annotated a -> [Text]
-ofBody env =
-    \case
-    BodyLam {} ->
-        [ env ^. has . Texts.lambda
-        , "\\", "Λ", "λ", "->", "→"
-        ]
-    BodySimpleApply x ->
-        env ^. has . Texts.apply : x ^. htraverse1 . Lens.to (expr env)
-    BodyLabeledApply x ->
-        env ^. has . Texts.apply
-        : ofName (x ^. aFunc . hVal . Lens._Wrapped . bvNameRef . nrName)
-        ++ (x ^.. aAnnotatedArgs . Lens.folded . aaTag . tagName >>= ofName)
-    BodyRecord {} ->
-        -- We don't allow completing a record by typing one of its
-        -- field names/vals
-        ["{}", "()", "[]"]
-    BodyGetField gf ->
-        ofName (gf ^. gfTag . tagRefTag . tagName) <&> ("." <>)
-    BodyCase cas ->
-        [ env ^. has . Texts.case_
-        , env ^. has . Texts.of_
-        ] ++
-        case cas of
-            Case LambdaCase (Composite [] [] ClosedComposite{} _) ->
-                [env ^. has . Texts.absurd]
-            _ -> []
-    BodyIfElse {} -> [env ^. has . Texts.if_, ":"]
-    -- An inject "base expr" can have various things in its val filled
-    -- in, so the result group based on it may have both nullary
-    -- inject (".") and value inject (":"). Thus, an inject must match
-    -- both.
-    -- So these terms are used to filter the whole group, and then
-    -- isExactMatch (see below) is used to filter each entry.
-    BodyInject (Inject tag _) ->
-        (<>) <$> ofName (tag ^. tagRefTag . tagName) <*> [":", "."]
-    BodyLiteral {} -> []
-    BodyGetVar GetParamsRecord {} -> [env ^. has . Texts.paramsRecordOpener]
-    BodyGetVar (GetParam x) -> ofName (x ^. pNameRef . nrName)
-    BodyGetVar (GetBinder x) ->
-        ofName (x ^. bvNameRef . nrName)
-        & maybePrefixDot x
-    BodyToNom (Nominal tid b) ->
-        ofName (tid ^. tidName)
-        ++ b ^. SugarLens.binderResultExpr . Lens.asIndex . Lens.to (ofBody env)
-    BodyFromNom tid ->
-        ofName (tid ^. tidName) <>
-        -- The hole's "extra" apply-form results will be an
-        -- IfElse, but we give val terms only to the base expr
-        -- which looks like this:
-        [ env ^. has . Texts.if_
-        | tid ^. tidTId == Builtins.boolTid
-        ]
-    BodyHole {} -> []
-    BodyFragment {} -> []
-    BodyPlaceHolder {} -> []
+holeSearchTerm ::
+    (Has (Texts.Code Text) env, Has (Texts.CodeUI Text) env) =>
+    env -> HoleTerm Name -> [Text]
+holeSearchTerm _ (HoleGetDef x) =
+    ofName x >>= maybePrefixDot
     where
-        maybePrefixDot bv =
-            case bv ^. bvForm of
-            GetDefinition _
-                | bv ^. bvNameRef . nrName & Name.isOperator & not -> (>>= \x -> [x, "." <> x])
-            _ -> id
-
-binder ::
-    ( Has (Texts.Code Text) env
-    , Has (Texts.CodeUI Text) env
-    ) =>
-    env -> Binder v Name i o # Annotated a -> [Text]
-binder env BinderLet{} = [env ^. has . Texts.let_]
-binder env (BinderTerm x) = ofBody env x
+        maybePrefixDot n
+            | Name.isOperator x = [n]
+            | otherwise = [n, "." <> n]
+holeSearchTerm _ (HoleName x) = ofName x
+holeSearchTerm _ (HoleGetField x) = ofName x <&> ("." <>)
+holeSearchTerm _ (HoleInject x) = (<>) <$> ofName x <*> [":", "."]
+holeSearchTerm e HoleLet = [e ^. has . Texts.let_]
+holeSearchTerm e HoleLambda = [e ^. has . Texts.lambda, "\\", "Λ", "λ", "->", "→"]
+holeSearchTerm e HoleIf = [e ^. has . Texts.if_, ":"]
+holeSearchTerm e HoleCase = [e ^. has . Texts.case_, e ^. has . Texts.of_]
+holeSearchTerm e HoleEmptyCase = [e ^. has . Texts.absurd]
+holeSearchTerm _ HoleRecord = ["{}", "()", "[]"]
+holeSearchTerm e HoleParamsRecord = [e ^. has . Texts.paramsRecordOpener]
 
 type Suffix = Char
 
