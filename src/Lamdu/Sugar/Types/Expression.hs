@@ -288,8 +288,8 @@ instance RNodes (Else v name i o)
 instance RNodes (Function v name i o)
 instance RNodes (Term v name i o)
 
-type Dep v c name i o =
-    ( (c (Assignment v name i o) :: Constraint)
+type Dep v (c :: HyperType -> Constraint) name i o =
+    ( c (Assignment v name i o)
     , c (Binder v name i o)
     , c (Const (BinderVarRef name o))
     , c (Const (NullaryVal name i o))
@@ -303,8 +303,7 @@ instance Dep v c name i o => Recursively c (Binder v name i o)
 instance Dep v c name i o => Recursively c (Else v name i o)
 instance Dep v c name i o => Recursively c (Term v name i o)
 
-instance (Dep v c name i o, c (Function v name i o)) =>
-         Recursively c (Function v name i o)
+instance (Dep v c name i o, c (Function v name i o)) => Recursively c (Function v name i o)
 
 instance RTraversable (Assignment v name i o)
 instance RTraversable (Binder v name i o)

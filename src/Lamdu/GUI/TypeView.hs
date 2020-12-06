@@ -193,7 +193,6 @@ makeVariantField ::
     m (WithTextPos View, WithTextPos View)
 makeVariantField (tag, Ann _ (Sugar.TRecord (Sugar.CompositeFields [] Nothing))) =
     TagView.make tag <&> (, Element.empty)
-    -- ^ Nullary data constructor
 makeVariantField (tag, fieldType) = makeField (tag, fieldType)
 
 gridViewTopLeftAlign ::
