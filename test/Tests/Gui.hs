@@ -434,10 +434,16 @@ applyActions (x:xs) env =
     applyEventWith ("No char " <> show x) env dummyVirt (EventChar x)
     >>= applyActions xs
 
+wytiwys :: String -> ByteString -> Test
+wytiwys src result =
+    Env.make
+    >>= testFresh . (>> lift (readRepl >>= ExportJS.compile)) . applyActions src
+    >>= runJS
+    >>= assertEqual "Expected output" (result <> "\n")
+    & testCase src
+
 testWYTIWYS :: Test
 testWYTIWYS =
-    Env.make
-    >>= testFresh . (>> lift (readRepl >>= ExportJS.compile)) . applyActions "2*(3+4)"
-    >>= runJS
-    >>= assertEqual "Expected output" "14\n"
-    & testCase "WYTIWYS"
+    testGroup "WYTIWYS"
+    [ wytiwys "2*(3+4)" "14"
+    ]
