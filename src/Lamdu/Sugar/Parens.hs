@@ -116,7 +116,6 @@ loopExprBody parentPrec body_ =
     BodyGetVar       x -> result False (BodyGetVar x)
     BodyFromNom      x -> result False (BodyFromNom x)
     BodyHole         x -> result False (BodyHole x)
-    BodyFragment     x -> rightSymbol fExpr 7 BodyFragment x
     BodyRecord       x -> hmap (p #> addToNode) x & BodyRecord & result False
     BodyCase         x -> hmap (p #> addToNode) x & BodyCase & result (caseNeedsParens x)
     BodyLam          x -> leftSymbol (lamFunc . fBody) 0 BodyLam x
@@ -126,6 +125,11 @@ loopExprBody parentPrec body_ =
     BodySimpleApply  x -> simpleApply x
     BodyLabeledApply x -> labeledApply x
     BodyIfElse       x -> ifElse x
+    BodyFragment     x ->
+        x
+        & fExpr %~ loopExpr 13 (pure 0)
+        & BodyFragment
+        & result True
     where
         p = Proxy @AddParens
         result True = (,) NeedsParens
