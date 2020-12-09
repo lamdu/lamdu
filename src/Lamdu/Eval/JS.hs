@@ -349,7 +349,8 @@ processNodeOutput copyNodeOutput handleEvent stdout =
         let line = stripInteractive rawLine
         case Aeson.decode (BS.lazify line) of
             Nothing
-                | line `elem` ["'use strict'", "undefined", ""] -> pure ()
+                | line `elem` ["'use strict'", "undefined", "Type \".help\" for more information.", ""]
+                || "Welcome to Node.js " `BS.isPrefixOf` line -> pure ()
                 | otherwise -> "Failed to decode: " ++ show line & fail
             Just obj -> handleEvent obj
     & forever
