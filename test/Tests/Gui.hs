@@ -13,6 +13,7 @@ import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (Event(..))
 import qualified GUI.Momentu.EventMap as E
+import           GUI.Momentu.Main.Events (KeyEvent(..))
 import           GUI.Momentu.MetaKey (MetaKey(..), noMods)
 import           GUI.Momentu.Rect (Rect(..))
 import qualified GUI.Momentu.Rect as Rect
@@ -428,10 +429,14 @@ testOne filename =
         baseEnv <- Env.make
         programTest baseEnv filename
 
+charEvent :: Char -> Event
+charEvent ' ' = EventKey (KeyEvent GLFW.Key'Space 0 GLFW.KeyState'Pressed mempty)
+charEvent x = EventChar x
+
 applyActions :: String -> Env.Env -> OnceT (T ViewM) Env.Env
 applyActions [] env = pure env
 applyActions (x:xs) env =
-    applyEventWith ("No char " <> show x) env dummyVirt (EventChar x)
+    applyEventWith ("No char " <> show x) env dummyVirt (charEvent x)
     >>= applyActions xs
 
 wytiwys :: String -> ByteString -> Test
@@ -445,5 +450,12 @@ wytiwys src result =
 testWYTIWYS :: Test
 testWYTIWYS =
     testGroup "WYTIWYS"
-    [ wytiwys "2*(3+4)" "14"
+    [ wytiwys "1+1" "2"
+
+    , wytiwys "2*(3+4)" "14"
+    , wytiwys "2*(3+4" "14" -- Don't have to close paren
+
+    , wytiwys "sum(1..10)" "45"
+    , wytiwys "sum 1..10" "45" -- An Ergonomic WYTIWIS violation: types cause fragment
+    , wytiwys "sum(1..10.map n*2)" "90"
     ]
