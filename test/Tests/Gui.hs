@@ -457,5 +457,7 @@ testWYTIWYS =
 
     , wytiwys "sum(1..10)" "45"
     , wytiwys "sum 1..10" "45" -- An Ergonomic WYTIWIS violation: types cause fragment
-    , wytiwys "sum(1..10.map n*2)" "90"
+    , wytiwys "sum 1..10.map n*2" "90"
+    , wytiwys "sum 1..10.map 2*(num+1)" "108"
+    , wytiwys "sum 1..10.map 2*(num+1" "108"
     ]
