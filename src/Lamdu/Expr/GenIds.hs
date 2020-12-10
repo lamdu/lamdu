@@ -4,7 +4,6 @@
 module Lamdu.Expr.GenIds
     ( randomizeExprAndParams
     , randomizeParamIdsG
-    , randomizeParamIds
     , randomTag
 
     , transaction

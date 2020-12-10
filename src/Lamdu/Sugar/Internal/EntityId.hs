@@ -8,13 +8,11 @@ module Lamdu.Sugar.Internal.EntityId
     , ofTaggedEntity
     , ofTId
     , ofFragmentArg, ofFragmentUnder
-    , randomizeExprAndParams
     , ofEvalOf, ofEvalField, ofEvalArrayIdx
     , ofTypeOf, ofRestOfComposite, ofFunParam, ofFunResult, ofTInstParam
     , usedTypeOf, currentTypeOf
     ) where
 
-import qualified Control.Lens as Lens
 import           Data.Binary.Extended (encodeS)
 import qualified Data.ByteString as BS
 import           Data.Hashable (Hashable)
@@ -23,12 +21,9 @@ import qualified Data.UUID.Utils as UUIDUtils
 import           Hyper
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
-import qualified Lamdu.Expr.GenIds as GenIds
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.UniqueId as UniqueId
 import           Revision.Deltum.IRef (IRef)
-
-import           System.Random (RandomGen)
 
 import           Lamdu.Prelude
 
@@ -38,13 +33,6 @@ newtype EntityId = EntityId UUID
 
 bs :: EntityId -> ByteString
 bs (EntityId uuid) = UUIDUtils.toSBS16 uuid
-
-randomizeExprAndParams ::
-    RandomGen gen =>
-    gen -> Ann (HFunc (Const EntityId) a) # V.Term -> Ann a # V.Term
-randomizeExprAndParams gen =
-    GenIds.randomizeExprAndParams gen .
-    (hflipped %~ hmap (const (_HFunc . Lens.argument . Lens._Wrapped %~ EntityId)))
 
 augment :: ByteString -> EntityId -> EntityId
 augment str (EntityId x) = EntityId $ UUIDUtils.augment str x
