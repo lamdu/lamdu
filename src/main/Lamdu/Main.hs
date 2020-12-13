@@ -36,7 +36,7 @@ main =
             Opts.ParsedRequestVersion -> exitSuccess
             Opts.ParsedCommand cmd -> pure cmd
         lamduDir <- maybe LamduPaths.getLamduDir pure (cmd ^. Opts.cLamduDB)
-        let withDB = Db.withDBOpts lamduDir
+        let withDB = Db.withDB lamduDir
         case cmd ^. Opts.cCommand of
             Opts.DeleteDb -> deleteDB lamduDir
             Opts.Undo n ->

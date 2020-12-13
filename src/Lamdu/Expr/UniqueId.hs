@@ -1,6 +1,6 @@
 {-# LANGUAGE UndecidableInstances, DataKinds, FlexibleInstances #-}
 module Lamdu.Expr.UniqueId
-    ( ToUUID(..), UniqueId(..), identifierOfUUID, varOfUUID
+    ( ToUUID(..), UniqueId(..), identifierOfUUID
     ) where
 
 import qualified Data.ByteString as BS
@@ -24,9 +24,6 @@ type T = Transaction
 
 identifierOfUUID :: UUID -> Identifier
 identifierOfUUID = Identifier . UUIDUtils.toSBS16
-
-varOfUUID :: UUID -> V.Var
-varOfUUID = V.Var . identifierOfUUID
 
 class    ToUUID a           where toUUID :: a -> UUID
 instance ToUUID Identifier  where toUUID (Identifier bs) = UUIDUtils.fromSBS16 bs

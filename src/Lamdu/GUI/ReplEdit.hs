@@ -1,7 +1,7 @@
 -- | REPL Edit
 {-# LANGUAGE RankNTypes #-}
 module Lamdu.GUI.ReplEdit
-    ( ExportRepl(..), make, isExecutableType
+    ( ExportRepl(..), make
     ) where
 
 import qualified Control.Lens as Lens
@@ -188,12 +188,6 @@ errorIndicator myId tag (Sugar.EvalException errorType jumpToErr) =
 
 indicatorId :: Widget.Id
 indicatorId = Widget.joinId WidgetIds.replId ["result indicator"]
-
-isExecutableType :: Ann a # Sugar.Type name -> Bool
-isExecutableType t =
-    case t ^. hVal of
-    Sugar.TInst tid _ -> tid ^. Sugar.tidTId == Builtins.mutTid
-    _ -> False
 
 resultWidget ::
     ( MonadReader env m, GuiState.HasCursor env, Monad o

@@ -1,7 +1,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 module GUI.Momentu.Direction
     ( Orientation(..), _Horizontal, _Vertical
-    , perpendicular, axis, rectRange
+    , perpendicular, axis
     , Order(..), _Forward, _Backward
     , reverseOrder, applyOrder
     , Texts(..), left, right, up, down
@@ -12,8 +12,6 @@ module GUI.Momentu.Direction
 import qualified Control.Lens as Lens
 import qualified Data.Aeson.TH.Extended as JsonTH
 import           Data.Vector.Vector2 (Vector2(..))
-import           GUI.Momentu.Rect (Rect, R)
-import qualified GUI.Momentu.Rect as Rect
 
 import           GUI.Momentu.Prelude
 
@@ -34,10 +32,6 @@ axis Vertical = _2
 perpendicular :: Orientation -> Orientation
 perpendicular Horizontal = Vertical
 perpendicular Vertical = Horizontal
-
-rectRange :: Functor f => Orientation -> Lens.LensLike' f Rect (Rect.Range R)
-rectRange Horizontal = Rect.horizontalRange
-rectRange Vertical = Rect.verticalRange
 
 data Order = Forward | Backward
     deriving (Eq, Show, Ord, Generic)

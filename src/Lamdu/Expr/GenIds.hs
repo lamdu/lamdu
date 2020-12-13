@@ -1,9 +1,8 @@
 -- TODO: Split/rename to more generic (non-sugar) modules
-{-# LANGUAGE ScopedTypeVariables, TypeApplications, GADTs #-}
+{-# LANGUAGE GADTs #-}
 
 module Lamdu.Expr.GenIds
-    ( randomizeExprAndParams
-    , randomizeParamIdsG
+    ( randomizeParamIdsG
     , randomTag
 
     , transaction
@@ -20,13 +19,12 @@ import           Control.Monad.Trans.State (evalState, state, runState)
 import qualified Data.ByteString as BS
 import qualified Data.Map as Map
 import           Hyper
-import           Hyper.Recurse (recurse)
 import           Lamdu.Calc.Identifier (Identifier(..))
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
 import           Revision.Deltum.Transaction (Transaction)
 import qualified Revision.Deltum.Transaction as Transaction
-import           System.Random (Random, RandomGen, random)
+import           System.Random (RandomGen, random)
 import qualified System.Random.Extended as Random
 
 import           Lamdu.Prelude
@@ -47,20 +45,6 @@ randomVar g = randomIdentifier g & _1 %~ V.Var
 
 randomTag :: RandomGen g => g -> (T.Tag, g)
 randomTag g = randomIdentifier g & _1 %~ T.Tag
-
-randomizeExpr ::
-    forall gen r t a.
-    (RandomGen gen, Random r, RTraversable t) =>
-    gen -> Ann (HFunc (Const r) a) # t -> Ann a # t
-randomizeExpr gen (Ann (HFunc pl) body) =
-    withDict (recurse (Proxy @(RTraversable t))) $
-    (`evalState` gen) $
-    do
-        r <- state random
-        newBody <- htraverse (Proxy @RTraversable #> randomizeSubexpr) body
-        Ann (pl (Const r)) newBody & pure
-    where
-        randomizeSubexpr subExpr = state Random.split <&> (`randomizeExpr` subExpr)
 
 data NameGen par pl = NameGen
     { ngSplit :: (NameGen par pl, NameGen par pl)
@@ -131,16 +115,3 @@ randomizeParamIdsG preNG gen initMap =
                     ) v
         makeName oldParamId s nameGen =
             ngMakeName nameGen oldParamId $ preNG s
-
-randomizeParamIds ::
-    RandomGen g =>
-    g -> Ann a # V.Term -> Ann a # V.Term
-randomizeParamIds gen = randomizeParamIdsG id (randomNameGen gen) Map.empty
-
-randomizeExprAndParams ::
-    (RandomGen gen, Random r) =>
-    gen -> Ann (HFunc (Const r) a) # V.Term -> Ann a # V.Term
-randomizeExprAndParams gen =
-    randomizeParamIds paramGen . randomizeExpr exprGen
-    where
-        (exprGen, paramGen) = Random.split gen

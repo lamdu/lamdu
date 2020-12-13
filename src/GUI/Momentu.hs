@@ -5,7 +5,7 @@ module GUI.Momentu
     (
     -- | Shortcut Keys
       MetaKey.ModifierKeys(..), MetaKey.noMods, MetaKey.cmd, MetaKey.shift
-    , MetaKey(..), parseMetaKey, formatMetaKey
+    , MetaKey(..)
     , MetaKey.Key(..)
 
     -- | Events
@@ -108,9 +108,3 @@ createWindow title mode =
 type WidgetId = Widget.Id
 pattern WidgetId :: AnimId -> Widget.Id
 pattern WidgetId animId = Widget.Id animId
-
-parseMetaKey :: Text -> Maybe MetaKey
-parseMetaKey = MetaKey.parse
-
-formatMetaKey :: MetaKey -> Text
-formatMetaKey = MetaKey.format

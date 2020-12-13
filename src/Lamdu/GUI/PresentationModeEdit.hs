@@ -18,7 +18,6 @@ import qualified GUI.Momentu.Widgets.TextView as TextView
 import           Lamdu.Config.Theme (Theme)
 import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.Config.Theme.TextColors as TextColors
-import           Lamdu.GUI.Styled (OneOfT(..))
 import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.I18N.CodeUI as Texts
 import qualified Lamdu.Sugar.Types as Sugar
@@ -60,7 +59,7 @@ make myId (Sugar.Params params) prop =
     where
         paramTags =
             params ^.. traverse . _2 . Sugar.piTag . Sugar.tagRefTag . Sugar.tagVal
-        mkPair mode = Styled.mkFocusableLabel ?? OneOf (lens mode) <&> (,) mode
+        mkPair mode = Styled.focusableLabel (lens mode) <&> (,) mode
 make _ _ _ =
     -- This shouldn't happen?
     pure Element.empty

@@ -26,3 +26,6 @@ extra-deps:
 resolver: lts-16.16
 
 allow-newer: true
+
+ghc-options:
+  "$locals": -fwrite-ide-info

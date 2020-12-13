@@ -6,7 +6,6 @@ module Lamdu.Sugar.Internal.EntityId
     , ofBinder
     , ofTag, ofTagPane
     , ofTaggedEntity
-    , ofTId
     , ofFragmentArg, ofFragmentUnder
     , ofEvalOf, ofEvalField, ofEvalArrayIdx
     , ofTypeOf, ofRestOfComposite, ofFunParam, ofFunResult, ofTInstParam
@@ -45,9 +44,6 @@ ofIRef = fromUniqueId
 
 ofValI :: ExprIRef.ValI m -> EntityId
 ofValI = fromUniqueId
-
-ofTId :: T.NominalId -> EntityId
-ofTId = fromUniqueId
 
 ofBinder :: V.Var -> EntityId
 ofBinder = fromUniqueId

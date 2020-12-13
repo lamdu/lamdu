@@ -1,6 +1,5 @@
 module Lamdu.Data.Db
-    ( withDB
-    , withDBOpts, ImplicitFreshDb(..)
+    ( withDB, ImplicitFreshDb(..)
     ) where
 
 import           Control.Exception (onException)
@@ -28,11 +27,8 @@ importFreshDb (FailIfFresh msg) = fail msg
 importFreshDb ImplicitFreshDb =
     Paths.getDataFileName "freshdb.json" >>= fileImportAll <&> snd
 
-withDB :: FilePath -> (Transaction.Store DbM -> IO a) -> IO a
-withDB path = withDBOpts path ImplicitFreshDb
-
-withDBOpts :: FilePath -> ImplicitFreshDb -> (Transaction.Store DbM -> IO a) -> IO a
-withDBOpts lamduDir implicitFreshDb body =
+withDB :: FilePath -> ImplicitFreshDb -> (Transaction.Store DbM -> IO a) -> IO a
+withDB lamduDir implicitFreshDb body =
     do
         Directory.createDirectoryIfMissing False lamduDir
         alreadyExist <- Directory.doesDirectoryExist dbPath

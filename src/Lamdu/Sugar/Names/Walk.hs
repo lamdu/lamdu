@@ -2,7 +2,7 @@
 module Lamdu.Sugar.Names.Walk
     ( MonadNaming(..)
     , NameType(..), _GlobalDef, _TaggedVar, _TaggedNominal, _Tag
-    , isLocal, isGlobal
+    , isGlobal
     , FunctionSignature(..), Disambiguator
     , NameConvertor, CPSNameConvertor
     , toWorkArea, toDef, toExpression, toBody
@@ -25,11 +25,6 @@ data NameType = GlobalDef | TaggedVar | TaggedNominal | Tag | TypeVar
     deriving (Eq, Ord, Show)
 
 Lens.makePrisms ''NameType
-
--- | Bound by a local binder. Used to determine which locals collide
-isLocal :: NameType -> Bool
-isLocal TaggedVar = True
-isLocal _ = False
 
 -- | Not bound by a local binder and not a tag
 --

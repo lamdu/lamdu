@@ -1,12 +1,10 @@
 -- | Language definitions
 {-# OPTIONS -O0 #-}
-{-# LANGUAGE TemplateHaskell, FlexibleInstances, DerivingVia, RankNTypes #-}
+{-# LANGUAGE TemplateHaskell, FlexibleInstances, TypeFamilies #-}
 {-# LANGUAGE MultiParamTypeClasses, UndecidableInstances, ConstraintKinds #-}
-{-# LANGUAGE TypeFamilies #-}
 module Lamdu.I18N.Language
     ( Language(..), lFonts, lTitle
     , HasLanguage
-    , texts
     ) where
 
 import qualified Control.Lens as Lens
@@ -73,6 +71,3 @@ instance Has LangId Language where has = lIdentifier
 instance Has Dir.Layout Language where has = lDirection
 instance Has (f Text) (Texts Text) => Has (f Text) Language where
     has = lTexts . has
-
-texts :: Has Language env => Lens' env (Texts Text)
-texts = has . lTexts

@@ -155,10 +155,3 @@ testProgram = testProgramH . ("test/programs/" <>)
 
 testFresh :: OnceT (T ViewM) a -> IO a
 testFresh = testProgramH "data/freshdb.json"
-
-sugarConfig :: Config
-sugarConfig =
-    Config
-    { _showAllAnnotations = False
-    , _sugarsEnabled = pure True
-    }

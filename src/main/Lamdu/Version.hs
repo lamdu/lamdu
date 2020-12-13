@@ -21,12 +21,12 @@ data VersionInfo = VersionInfo
     , gitDirty :: !Bool
     }
 
-curdate :: String
-curdate =
+_curdate :: String
+_curdate =
     $(runIO (formatTime defaultTimeLocale "%y-%m-%d" <$> getZonedTime) >>= stringE)
 
 _rc :: String -> String
-_rc ver = ver ++ "-rc-" ++ curdate
+_rc ver = ver ++ "-rc-" ++ _curdate
 
 currentVersionInfo :: VersionInfo
 currentVersionInfo =

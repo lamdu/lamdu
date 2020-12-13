@@ -4,7 +4,7 @@
 module Lamdu.GUI.Monad
     ( StoredEntityIds(..)
     --
-    , advanceDepth, resetDepth
+    , advanceDepth
     --
     , mkPrejumpPosSaver
     --
@@ -133,9 +133,6 @@ mkPrejumpPosSaver =
         preJumpsProp <- preJumpsMkProp ^. Property.mkProperty & im
         cursor <- Lens.view GuiState.cursor
         Property.pureModify preJumpsProp ((cursor:) . take 19) & pure
-
-resetDepth :: MonadReader (Askable env i o) m => Int -> m r -> m r
-resetDepth depth = Reader.local (aDepthLeft .~ depth)
 
 advanceDepth :: MonadReader (Askable env i o) m => (WithTextPos View -> m r) -> m r -> m r
 advanceDepth f action =

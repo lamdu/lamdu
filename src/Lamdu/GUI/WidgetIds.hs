@@ -5,13 +5,11 @@ module Lamdu.GUI.WidgetIds
 
 import           Data.UUID.Types (UUID)
 import qualified Data.UUID.Utils as UUIDUtils
-import           GUI.Momentu.Animation.Id (AnimId)
 import           GUI.Momentu.Widget.Id (Id(..))
 import qualified GUI.Momentu.Widget.Id as WidgetId
 import           Lamdu.GUI.WidgetIdIRef
 import qualified Lamdu.Sugar.EntityId as EntityId
 import qualified Lamdu.Sugar.Types as Sugar
-import           System.Random.Extended (randFunc)
 
 import           Lamdu.Prelude
 
@@ -33,14 +31,8 @@ literalEditOf = flip WidgetId.joinId ["literal edit"]
 fromUUID :: UUID -> Id
 fromUUID = fromBS . UUIDUtils.toSBS16
 
-hash :: Show a => a -> Id
-hash = fromUUID . randFunc . show
-
 branchSelection :: Id
 branchSelection = Id ["selected branch"]
-
-activePaneBackground :: AnimId
-activePaneBackground = ["active def bg"]
 
 replId :: Id
 replId = Id ["repl"]

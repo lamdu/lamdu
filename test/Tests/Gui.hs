@@ -423,12 +423,6 @@ testPrograms =
               "old-codec-factorial.json"
             ]
 
-testOne :: FilePath -> IO ()
-testOne filename =
-    do
-        baseEnv <- Env.make
-        programTest baseEnv filename
-
 charEvent :: Char -> Event
 charEvent ' ' = EventKey (KeyEvent GLFW.Key'Space 0 GLFW.KeyState'Pressed mempty)
 charEvent x = EventChar x

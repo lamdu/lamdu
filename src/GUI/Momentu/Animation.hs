@@ -5,7 +5,6 @@ module GUI.Momentu.Animation
     , Image(..), iAnimId, iUnitImage, iRect
     , Frame(..), frameImages, unitImages, images
     , draw
-    , mapIdentities
     , unitSquare, emptyRectangle
     , coloredRectangle
     , translate, scale
@@ -75,9 +74,6 @@ draw frame =
             Draw.translateV (rect ^. Rect.topLeft) %%
             Draw.scaleV (rect ^. Rect.size) %%
             img
-
-mapIdentities :: (AnimId -> AnimId) -> Frame -> Frame
-mapIdentities f = images . iAnimId %~ f
 
 unitSquare :: AnimId -> Frame
 unitSquare animId = singletonFrame 1 animId Draw.square
