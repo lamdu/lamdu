@@ -241,6 +241,15 @@ mkNominalOptions nominals =
             <&> (`V.BInjectP` V.BLeafP V.LHole)
             <&> V.BToNomP tid
 
+baseForms :: ConvertM.PositionInfo -> [HPlain V.Term]
+baseForms posInfo =
+    [ V.BLamP "NewLambda" Pruned (V.BLeafP V.LHole)
+    , V.BLeafP V.LAbsurd
+    ] <>
+    [ V.BLamP "NewLambda" Pruned (V.BLeafP V.LHole) `V.BAppP` V.BLeafP V.LHole
+    | posInfo == ConvertM.BinderPos
+    ]
+
 mkOptions ::
     (Monad m, Typeable m) =>
     ConvertM.PositionInfo -> ResultProcessor m ->
@@ -260,12 +269,7 @@ mkOptions posInfo resultProcessor holePl =
             , globals <&> V.BLeafP . V.LVar . ExprIRef.globalId
             , tags <&> (`V.BInjectP` V.BLeafP V.LHole)
             , nominalOptions
-            , [ V.BLamP "NewLambda" Pruned (V.BLeafP V.LHole)
-              , V.BLeafP V.LAbsurd
-              ]
-            , [ V.BLamP "NewLambda" Pruned (V.BLeafP V.LHole) `V.BAppP` V.BLeafP V.LHole
-              | posInfo == ConvertM.BinderPos
-              ]
+            , baseForms posInfo
             ]
             <&> wrap (const (Ann (Const ()))) . (^. hPlain)
             & traverse (\x -> mkOption sugarContext resultProcessor holePl x <&> (,) x)
