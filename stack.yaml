@@ -23,7 +23,7 @@ extra-deps:
 - github: lamdu/nodejs-exec
   commit: b42c7880973a6eed67dffcfb6641e84de07612f2
 
-resolver: lts-16.16
+resolver: lts-16.26
 
 allow-newer: true
 
