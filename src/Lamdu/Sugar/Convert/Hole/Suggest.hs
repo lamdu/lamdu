@@ -6,6 +6,7 @@ module Lamdu.Sugar.Convert.Hole.Suggest
 
 import           Control.Applicative (Alternative(..))
 import qualified Control.Lens as Lens
+import           Control.Monad (MonadPlus)
 import           Control.Monad.State (StateT)
 import qualified Control.Monad.State as State
 import           Hyper
@@ -34,11 +35,12 @@ lookupBody x = semiPruneLookup x <&> (^? _2 . _UTerm . uBody)
 -- | These are offered in fragments (not holes). They transform a term
 -- by wrapping it in a larger term where it appears once.
 termTransforms ::
+    MonadPlus m =>
     V.Scope # UVar ->
     (forall n. InferResult UVar # n -> a # n) ->
     (a # V.Term -> InferResult UVar # V.Term) ->
     Ann a # V.Term ->
-    StateT InferState [] (Ann a # V.Term)
+    StateT InferState m (Ann a # V.Term)
 termTransforms srcScope mkPl getInferred src =
     getInferred (src ^. hAnn) ^. inferResult & lookupBody & liftInfer ()
     <&> (^? Lens._Just . T._TRecord)
@@ -49,9 +51,10 @@ termTransforms srcScope mkPl getInferred src =
     _ -> termTransformsWithoutSplit srcScope mkPl getInferred src
 
 transformGetFields ::
+    MonadPlus m =>
     (InferResult UVar # V.Term -> a # V.Term) ->
     Ann a # V.Term -> UVar # T.Row ->
-    StateT InferState [] (Ann a # V.Term)
+    StateT InferState m (Ann a # V.Term)
 transformGetFields mkPl src row =
     lookupBody row & liftInfer ()
     <&> (^? Lens._Just . T._RExtend)
@@ -62,7 +65,7 @@ transformGetFields mkPl src row =
         pure (Ann (mkPl (inferResult # typ)) (V.BGetField (V.GetField src tag)))
         <|> transformGetFields mkPl src rest
 
-liftInfer :: env -> PureInfer env a -> StateT InferState [] a
+liftInfer :: MonadPlus m => env -> PureInfer env a -> StateT InferState m a
 liftInfer e act =
     do
         s <- State.get
@@ -71,11 +74,12 @@ liftInfer e act =
             Right (r, newState) -> r <$ State.put newState
 
 termTransformsWithoutSplit ::
+    MonadPlus m =>
     V.Scope # UVar ->
     (forall n. InferResult UVar # n -> a # n) ->
     (a # V.Term -> InferResult UVar # V.Term) ->
     Ann a # V.Term ->
-    StateT InferState [] (Ann a # V.Term)
+    StateT InferState m (Ann a # V.Term)
 termTransformsWithoutSplit srcScope mkPl getInferred src =
     do
         -- Don't modify a redex from the outside.
@@ -130,11 +134,12 @@ termTransformsWithoutSplit srcScope mkPl getInferred src =
         mkResult t = Ann (mkPl (inferResult # t))
 
 termOptionalTransformsWithoutSplit ::
+    MonadPlus m =>
     V.Scope # UVar ->
     (forall n. InferResult UVar # n -> a # n) ->
     (a # V.Term -> InferResult UVar # V.Term) ->
     Ann a # V.Term ->
-    StateT InferState [] (Ann a # V.Term)
+    StateT InferState m (Ann a # V.Term)
 termOptionalTransformsWithoutSplit srcScope mkPl getInferred src =
     pure src <|>
     termTransformsWithoutSplit srcScope mkPl getInferred src
@@ -175,11 +180,12 @@ fillHoles mkPl getInferred x =
 -- whereas fragments emplace their content inside holes of these
 -- results.
 termTransformsWithModify ::
+    MonadPlus m =>
     V.Scope # UVar ->
     (forall n. InferResult UVar # n -> a # n) ->
     (a # V.Term -> InferResult UVar # V.Term) ->
     Ann a # V.Term ->
-    StateT InferState [] (Ann a # V.Term)
+    StateT InferState m (Ann a # V.Term)
 termTransformsWithModify _ _ _ v@(Ann _ V.BLam {}) = pure v -- Avoid creating a surprise redex
 termTransformsWithModify _ _ getInferred v@(Ann pl0 (V.BInject (V.Inject tag (Ann pl1 (V.BLeaf V.LHole))))) =
     getInferred pl1 ^. inferResult & lookupBody & liftInfer ()
