@@ -122,11 +122,7 @@ suggestCaseWith variantType resultType =
         RowExtend tag
         <$> (Ann
                 <$> (mkCaseType fieldType <&> (inferResult #))
-                <*> (V.TypedLam "var"
-                    <$> (newUnbound <&> (inferResult #) <&> (`Ann` (_HCompose # Pruned)))
-                    <*> suggestForTypeObvious resultType
-                    <&> V.BLam
-                    )
+                <*> suggestLam resultType
             )
         <*> (Ann
                 <$> (T.TVariant rest & newTerm >>= mkCaseType <&> (inferResult #))
