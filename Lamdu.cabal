@@ -324,7 +324,6 @@ Library
                   , Lamdu.Eval.Manager
                   , Lamdu.Eval.Results
                   , Lamdu.Eval.Results.Process
-                  , Lamdu.Expr.GenIds
                   , Lamdu.Expr.IRef
                   , Lamdu.Expr.Load
                   , Lamdu.Expr.UniqueId
@@ -472,7 +471,6 @@ Library
                   , Revision.Deltum.Rev.ViewBranchInternal
                   , Revision.Deltum.Transaction
                   , System.Process.Utils
-                  , System.Random.Extended
                   , System.Remote.Monitoring.Shim
                   , System.TimeIt.Pure
 

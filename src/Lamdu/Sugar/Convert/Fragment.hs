@@ -11,7 +11,7 @@ module Lamdu.Sugar.Convert.Fragment
 import qualified Control.Lens as Lens
 import           Control.Monad.Except (MonadError(..))
 import           Control.Monad.ListT (ListT)
-import           Control.Monad.Once (OnceT, Typeable)
+import           Control.Monad.Once (OnceT, Typeable, MonadOnce(..), onceList)
 import           Control.Monad.State (State, runState, StateT(..), mapStateT)
 import qualified Control.Monad.State as State
 import           Control.Monad.Trans.Maybe (MaybeT(..))
@@ -44,7 +44,7 @@ import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import           Lamdu.Sugar.Types
 import           Revision.Deltum.Hyper (Write(..))
 import           Revision.Deltum.Transaction (Transaction)
-import qualified System.Random.Extended as Random
+import qualified Revision.Deltum.Transaction as Transaction
 
 import           Lamdu.Prelude
 
@@ -71,10 +71,18 @@ mkOptions ::
 mkOptions posInfo sugarContext argI argS exprPl =
     Hole.mkOptions posInfo (fragmentResultProcessor topEntityId argI) exprPl
     <&> (fragmentOptions <>)
-    <&> Lens.mapped %~ Hole.addWithoutDups mkSuggested
-    <&> Lens.mapped . Lens.mapped %~ snd
+    <&>
+    ( \mkOpts ->
+        Hole.addWithoutDups
+        <$> mkOpts
+        <*> ( runStateT (mkAppliedHoleSuggesteds sugarContext argI exprPl) (sugarContext ^. ConvertM.scInferContext)
+                & ListClass.toList
+                <&> Lens.mapped %~ fst
+            )
+        <&> Lens.mapped %~ snd
+    )
+    >>= ConvertM.convertOnce
     where
-        mkSuggested = mkAppliedHoleSuggesteds sugarContext argI exprPl
         fragmentOptions =
             [ App hole hole & V.BApp & Ann (Const ()) | Lens.nullOf (hVal . _BodyLam) argS ]
             & traverse
@@ -90,33 +98,34 @@ mkAppliedHoleSuggesteds ::
     ConvertM.Context m ->
     Ann (Input.Payload m a) # V.Term ->
     Input.Payload m a # V.Term ->
-    [(V.Val (), HoleOption EvalPrep InternalName (OnceT (T m)) (T m))]
+    StateT InferState (ListT (OnceT (T m)))
+        (V.Val (), HoleOption EvalPrep InternalName (OnceT (T m)) (T m))
 mkAppliedHoleSuggesteds sugarContext argI exprPl =
-    runStateT
-    ( Suggest.termTransforms (exprPl ^. Input.inferScope) (WriteNew :*:) (^. _2)
-        ( argI & hflipped %~
-            hmap
-            ( Proxy @(Recursively (InferOfConstraint HFunctor)) #*#
-                \w ->
-                withDict (recursively (p0 w)) $
-                withDict (inferOfConstraint (Proxy @HFunctor) w)
-                onPl
-            )
-        )
-    ) (sugarContext ^. ConvertM.scInferContext)
-    <&> onSuggestion
+    do
+        (sugg, newInferCtx) <-
+            runStateT
+            ( Suggest.termTransforms ((lift . lift . lift) Hole.genLamVar) (exprPl ^. Input.inferScope) (WriteNew :*:) (^. _2)
+                ( argI & hflipped %~
+                    hmap
+                    ( Proxy @(Recursively (InferOfConstraint HFunctor)) #*#
+                        \w ->
+                        withDict (recursively (p0 w)) $
+                        withDict (inferOfConstraint (Proxy @HFunctor) w)
+                        onPl
+                    )
+                )
+            ) (sugarContext ^. ConvertM.scInferContext)
+        mkOptionFromFragment
+            (sugarContext & ConvertM.scInferContext .~ newInferCtx)
+            exprPl sugg
+            & lift & lift
+            <&> (,) (sugg & hflipped %~ hmap (\_ _ -> Const ()))
     where
         p0 :: proxy h -> Proxy (InferOfConstraint HFunctor h)
         p0 _ = Proxy
         onPl pl =
             ExistingRef (pl ^. Input.stored . iref) :*:
             (pl ^. Input.inferRes & hflipped %~ hmap (const (^. _2)))
-        onSuggestion (sugg, newInferCtx) =
-            ( sugg & hflipped %~ hmap (\_ _ -> Const ())
-            , mkOptionFromFragment
-                (sugarContext & ConvertM.scInferContext .~ newInferCtx)
-                exprPl sugg
-            )
 
 checkTypeMatch :: Monad m => UVar # T.Type -> UVar # T.Type -> ConvertM m Bool
 checkTypeMatch x y =
@@ -339,32 +348,29 @@ mkOptionFromFragment ::
     ConvertM.Context m ->
     Input.Payload m a # V.Term ->
     Ann (Write m :*: InferResult UVar) # V.Term ->
-    HoleOption EvalPrep InternalName (OnceT (T m)) (T m)
+    OnceT (T m) (HoleOption EvalPrep InternalName (OnceT (T m)) (T m))
 mkOptionFromFragment sugarContext exprPl x =
     HoleOption
-    { _hoEntityId =
-        x & hflipped %~ hmap (\_ _ -> Const ())
-        & show & Random.randFunc
-        & EntityId.EntityId
-    , _hoSearchTerms = Hole.mkHoleSearchTerms sugarContext exprPl baseExpr & lift -- TODO: Once?
-    , _hoResults =
-        do
-            newDeps <- Hole.loadNewDeps (depsProp ^. Property.pVal) (exprPl ^. Input.inferScope) x
-            let newSugarContext =
-                    sugarContext
-                    & ConvertM.scInferContext .~ inferCtx
-                    & ConvertM.scFrozenDeps . Property.pVal .~ newDeps
-            let updateDeps = (depsProp ^. Property.pSet) newDeps
-            pure
-                ( resultScore resolved
-                , Hole.mkResult (replaceFragment topEntityId 0)
-                    updateDeps exprPl result
-                    & ConvertM.run newSugarContext & join
-                )
-            & lift
-            <&> pure & ListClass.joinL
-    }
+    <$> (lift Transaction.newKey <&> EntityId.EntityId)
+    <*> once (lift (Hole.mkHoleSearchTerms sugarContext exprPl baseExpr))
+    <*> onceList res
     where
+        res =
+            do
+                newDeps <- Hole.loadNewDeps (depsProp ^. Property.pVal) (exprPl ^. Input.inferScope) x
+                let newSugarContext =
+                        sugarContext
+                        & ConvertM.scInferContext .~ inferCtx
+                        & ConvertM.scFrozenDeps . Property.pVal .~ newDeps
+                let updateDeps = (depsProp ^. Property.pSet) newDeps
+                pure
+                    ( resultScore resolved
+                    , Hole.mkResult (replaceFragment topEntityId 0)
+                        updateDeps exprPl result
+                        & ConvertM.run newSugarContext & join
+                    )
+                & lift
+                <&> pure & ListClass.joinL
         depsProp = sugarContext ^. ConvertM.scFrozenDeps
         (result, inferCtx) =
             runState

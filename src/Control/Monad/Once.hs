@@ -5,12 +5,15 @@ module Control.Monad.Once
     , OnceT(..), _OnceT
     , OnceState
     , Typeable
+    , onceList
     ) where
 
 import qualified Control.Lens as Lens
+import           Control.Monad.ListT (ListT(..))
 import           Control.Monad.Trans.Class
 import           Control.Monad.Trans.State
 import           Data.Dynamic (Dynamic, toDyn, fromDynamic)
+import qualified Data.List.Class as ListClass
 import           Data.Typeable (Typeable, typeRep)
 import           Data.IORef
 import qualified Data.Sequence as Sequence
@@ -63,3 +66,14 @@ instance Monad m => MonadOnce (OnceT m) where
                     x <- a
                     x <$ OnceT (Lens.ix r .= toDyn (Just x))
             Nothing -> error "Once used incorrectly: wrong type for key!"
+
+onceList ::
+    (MonadOnce m, Monad m, Typeable m, Typeable a) =>
+    ListT m a -> m (ListT m a)
+onceList (ListT a) =
+    once
+    ( a >>=
+        \case
+        ListClass.Nil -> pure ListClass.Nil
+        ListClass.Cons x xs -> onceList xs <&> ListClass.Cons x
+    ) <&> ListT

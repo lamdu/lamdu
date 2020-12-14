@@ -36,19 +36,20 @@ lookupBody x = semiPruneLookup x <&> (^? _2 . _UTerm . uBody)
 -- by wrapping it in a larger term where it appears once.
 termTransforms ::
     MonadPlus m =>
+    m V.Var ->
     V.Scope # UVar ->
     (forall n. InferResult UVar # n -> a # n) ->
     (a # V.Term -> InferResult UVar # V.Term) ->
     Ann a # V.Term ->
     StateT InferState m (Ann a # V.Term)
-termTransforms srcScope mkPl getInferred src =
+termTransforms mkVar srcScope mkPl getInferred src =
     getInferred (src ^. hAnn) ^. inferResult & lookupBody & liftInfer ()
     <&> (^? Lens._Just . T._TRecord)
     >>=
     \case
     Just row | Lens.nullOf (hVal . V._BRecExtend) src ->
         transformGetFields mkPl src row
-    _ -> termTransformsWithoutSplit srcScope mkPl getInferred src
+    _ -> termTransformsWithoutSplit mkVar srcScope mkPl getInferred src
 
 transformGetFields ::
     MonadPlus m =>
@@ -75,12 +76,13 @@ liftInfer e act =
 
 termTransformsWithoutSplit ::
     MonadPlus m =>
+    m V.Var ->
     V.Scope # UVar ->
     (forall n. InferResult UVar # n -> a # n) ->
     (a # V.Term -> InferResult UVar # V.Term) ->
     Ann a # V.Term ->
     StateT InferState m (Ann a # V.Term)
-termTransformsWithoutSplit srcScope mkPl getInferred src =
+termTransformsWithoutSplit mkVar srcScope mkPl getInferred src =
     do
         -- Don't modify a redex from the outside.
         -- Such transform are more suitable in it!
@@ -99,16 +101,17 @@ termTransformsWithoutSplit srcScope mkPl getInferred src =
                         V.App (mkResult fromNomTyp (V.BLeaf (V.LFromNom name))) src
                             & V.BApp & mkResult resultType & pure
                     & liftInfer srcScope
-                    >>= termOptionalTransformsWithoutSplit srcScope mkPl getInferred
+                    >>= termOptionalTransformsWithoutSplit mkVar srcScope mkPl getInferred
             Just (T.TVariant row) | Lens.nullOf (hVal . V._BInject) src ->
                 do
                     dstType <- newUnbound
                     caseType <- FuncType s1 dstType & T.TFun & newTerm
-                    suggestCaseWith row dstType
-                        <&> Ann (inferResult # caseType)
-                        <&> hflipped %~ hmap (const mkPl)
-                        <&> (`V.App` src) <&> V.BApp <&> mkResult dstType
+                    suggestCaseWith mkVar row dstType
+                        <&> Lens.mapped %~
+                            mkResult dstType . V.BApp . (`V.App` src) .
+                            (hflipped %~ hmap (const mkPl)) . Ann (inferResult # caseType)
                 & liftInfer (V.emptyScope @UVar)
+                >>= lift
             _ | Lens.nullOf (hVal . V._BLam) src ->
                 -- Apply if compatible with a function
                 do
@@ -119,59 +122,65 @@ termTransformsWithoutSplit srcScope mkPl getInferred src =
                         >>= unify s1
                         & liftInfer (V.emptyScope @UVar)
                     arg <-
-                        forTypeWithoutSplit argType & liftInfer (V.emptyScope @UVar)
-                        <&> hflipped %~ hmap (const mkPl)
-                    let applied = V.App src arg & V.BApp & mkResult resType
-                    pure applied
+                        forTypeWithoutSplit mkVar argType & liftInfer (V.emptyScope @UVar)
+                        <&> Lens.mapped . hflipped %~ hmap (const mkPl)
+                    let applied = arg <&> V.App src <&> V.BApp <&> mkResult resType
+                    lift applied
                         <|>
                         do
                             -- If the suggested argument has holes in it
                             -- then stop suggesting there to avoid "overwhelming"..
-                            Lens.nullOf (ExprLens.valLeafs . V._LHole) arg & guard
-                            termTransformsWithoutSplit srcScope mkPl getInferred applied
+                            arg >>= guard . Lens.nullOf (ExprLens.valLeafs . V._LHole) & lift
+                            lift applied >>= termTransformsWithoutSplit mkVar srcScope mkPl getInferred
             _ -> empty
     where
         mkResult t = Ann (mkPl (inferResult # t))
 
 termOptionalTransformsWithoutSplit ::
     MonadPlus m =>
+    m V.Var ->
     V.Scope # UVar ->
     (forall n. InferResult UVar # n -> a # n) ->
     (a # V.Term -> InferResult UVar # V.Term) ->
     Ann a # V.Term ->
     StateT InferState m (Ann a # V.Term)
-termOptionalTransformsWithoutSplit srcScope mkPl getInferred src =
+termOptionalTransformsWithoutSplit mkVar srcScope mkPl getInferred src =
     pure src <|>
-    termTransformsWithoutSplit srcScope mkPl getInferred src
+    termTransformsWithoutSplit mkVar srcScope mkPl getInferred src
 
 forTypeWithoutSplit ::
+    Applicative f =>
     (UnifyGen m T.Type, UnifyGen m T.Row) =>
-    UVarOf m # T.Type -> m (TypedTerm m)
-forTypeWithoutSplit t =
+    f V.Var -> UVarOf m # T.Type -> m (f (TypedTerm m))
+forTypeWithoutSplit mkVar t =
     lookupBody t
-    >>= suggestForTypeUTermWithoutSplit
-    <&> fromMaybe (V.BLeaf V.LHole)
-    <&> Ann (inferResult # t)
+    >>= suggestForTypeUTermWithoutSplit mkVar
+    <&> fromMaybe (pure (V.BLeaf V.LHole))
+    <&> Lens.mapped %~ Ann (inferResult # t)
 
 fillHoles ::
+    MonadPlus m =>
+    m V.Var ->
     (forall n. InferResult UVar # n -> a # n) ->
     (a # V.Term -> InferResult UVar # V.Term) ->
     Ann a # V.Term ->
-    PureInfer (V.Scope # UVar) (Ann a # V.Term)
-fillHoles mkPl getInferred (Ann pl (V.BLeaf V.LHole)) =
-    suggestForTypeObvious (getInferred pl ^. inferResult)
+    StateT InferState m (Ann a # V.Term)
+fillHoles mkVar mkPl getInferred (Ann pl (V.BLeaf V.LHole)) =
+    suggestForTypeObvious @_ @(PureInfer (V.Scope # UVar)) mkVar (getInferred pl ^. inferResult)
+    & liftInfer V.emptyScope
+    >>= lift
     <&> hflipped %~ hmap (const mkPl)
-fillHoles mkPl getInferred (Ann pl (V.BApp (V.App func arg))) =
+fillHoles mkVar mkPl getInferred (Ann pl (V.BApp (V.App func arg))) =
     -- Dont fill in holes inside apply funcs. This may create redexes..
-    fillHoles mkPl getInferred arg <&> V.App func <&> V.BApp <&> Ann pl
-fillHoles _ _ v@(Ann _ (V.BGetField (V.GetField (Ann _ (V.BLeaf V.LHole)) _))) =
+    fillHoles mkVar mkPl getInferred arg <&> Ann pl . V.BApp . V.App func
+fillHoles _ _ _ v@(Ann _ (V.BGetField (V.GetField (Ann _ (V.BLeaf V.LHole)) _))) =
     -- Dont fill in holes inside get-field.
     pure v
-fillHoles mkPl getInferred x =
+fillHoles mkVar mkPl getInferred x =
     hVal
     ( htraverse $
         \case
-        HWitness V.W_Term_Term -> fillHoles mkPl getInferred
+        HWitness V.W_Term_Term -> fillHoles mkVar mkPl getInferred
         _ -> pure
     ) x
 
@@ -181,13 +190,14 @@ fillHoles mkPl getInferred x =
 -- results.
 termTransformsWithModify ::
     MonadPlus m =>
+    m V.Var ->
     V.Scope # UVar ->
     (forall n. InferResult UVar # n -> a # n) ->
     (a # V.Term -> InferResult UVar # V.Term) ->
     Ann a # V.Term ->
     StateT InferState m (Ann a # V.Term)
-termTransformsWithModify _ _ _ v@(Ann _ V.BLam {}) = pure v -- Avoid creating a surprise redex
-termTransformsWithModify _ _ getInferred v@(Ann pl0 (V.BInject (V.Inject tag (Ann pl1 (V.BLeaf V.LHole))))) =
+termTransformsWithModify _ _ _ _ v@(Ann _ V.BLam {}) = pure v -- Avoid creating a surprise redex
+termTransformsWithModify _ _ _ getInferred v@(Ann pl0 (V.BInject (V.Inject tag (Ann pl1 (V.BLeaf V.LHole))))) =
     getInferred pl1 ^. inferResult & lookupBody & liftInfer ()
     >>=
     \case
@@ -201,7 +211,7 @@ termTransformsWithModify _ _ getInferred v@(Ann pl0 (V.BInject (V.Inject tag (An
             <|> pure v
         _ -> pure v
     _ -> pure v
-termTransformsWithModify srcScope mkPl getInferred src =
+termTransformsWithModify mkVar srcScope mkPl getInferred src =
     getInferred (src ^. hAnn) ^. inferResult & lookupBody & liftInfer ()
     >>=
     \case
@@ -210,5 +220,5 @@ termTransformsWithModify srcScope mkPl getInferred src =
         pure src
     _ ->
         do
-            t <- fillHoles mkPl getInferred src & liftInfer V.emptyScope
-            pure t <|> termTransforms srcScope mkPl getInferred t
+            t <- fillHoles mkVar mkPl getInferred src
+            pure t <|> termTransforms mkVar srcScope mkPl getInferred t

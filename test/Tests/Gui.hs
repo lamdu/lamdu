@@ -77,12 +77,21 @@ replExpr = Sugar.waRepl . Sugar.replExpr . hVal . Sugar._BinderTerm
 wideFocused :: Lens.Traversal' (Responsive f) (Widget.Surrounding -> Widget.Focused (f GuiState.Update))
 wideFocused = Responsive.rWide . Align.tValue . Widget.wState . Widget._StateFocused
 
+type SugarAnn = Sugar.Annotation (Sugar.EvaluationScopes Name (OnceT (T ViewM))) Name
+
+type WorkArea =
+    Sugar.WorkArea SugarAnn
+    Name (OnceT (T ViewM)) (T ViewM)
+    (Sugar.Payload SugarAnn Name (OnceT (T ViewM)) (T ViewM), ExprGui.GuiPayload)
+
+makeWorkArea :: Env -> OnceT (T ViewM) WorkArea
+makeWorkArea env = convertWorkArea env <&> (fmap . fmap) (uncurry ExprGui.GuiPayload)
+
 makeGui ::
     HasCallStack =>
-    String -> Env -> OnceT (T ViewM) (Responsive (T ViewM))
-makeGui afterDoc env =
+    String -> Env -> WorkArea -> OnceT (T ViewM) (Responsive (T ViewM))
+makeGui afterDoc env workArea =
     do
-        workArea <- convertWorkArea env <&> (fmap . fmap) (uncurry ExprGui.GuiPayload)
         let repl = workArea ^. Sugar.waRepl . Sugar.replExpr
         let replExprId = repl ^. SugarLens.binderResultExpr . _1 & WidgetIds.fromExprPayload
         let assocTagName = DataOps.assocTagName env
@@ -113,15 +122,15 @@ focusedWidget gui =
 
 makeFocusedWidget ::
     HasCallStack =>
-    String -> Env -> OnceT (T ViewM) (Widget.Focused (T ViewM GuiState.Update))
-makeFocusedWidget afterDoc env =
-    makeGui afterDoc env >>= either error pure . focusedWidget
+    String -> Env -> WorkArea -> OnceT (T ViewM) (Widget.Focused (T ViewM GuiState.Update))
+makeFocusedWidget afterDoc env workArea =
+    makeGui afterDoc env workArea >>= either error pure . focusedWidget
 
 mApplyEvent ::
-    Env -> VirtualCursor -> Event -> OnceT (T ViewM) (Maybe GuiState.Update)
-mApplyEvent env virtCursor event =
+    Env -> VirtualCursor -> Event -> WorkArea -> OnceT (T ViewM) (Maybe GuiState.Update)
+mApplyEvent env virtCursor event workArea =
     do
-        w <- makeFocusedWidget "mApplyEvent" env
+        w <- makeFocusedWidget "mApplyEvent" env workArea
         let eventMap =
                 (w ^. Widget.fEventMap)
                 Widget.EventContext
@@ -135,7 +144,9 @@ mApplyEvent env virtCursor event =
 
 applyEventWith :: String -> Env -> VirtualCursor -> Event -> OnceT (T ViewM) Env
 applyEventWith msg env virtCursor event =
-    mApplyEvent env virtCursor event <&> fromMaybe (error msg)
+    makeWorkArea env
+    >>= mApplyEvent env virtCursor event
+    <&> fromMaybe (error msg)
     <&> (`GuiState.update` env)
 
 applyEvent :: Env -> VirtualCursor -> Event -> OnceT (T ViewM) Env
@@ -164,7 +175,7 @@ testTagPanes =
     do
         fromWorkArea baseEnv (replExpr . Sugar._BodyRecord . Sugar.cItems)
             >>= lift . sequence_ . (^.. traverse . Sugar.ciTag . Sugar.tagRefJumpTo . Lens._Just)
-        () <$ makeFocusedWidget "opened tag panes" baseEnv
+        () <$ (makeWorkArea baseEnv >>= makeFocusedWidget "opened tag panes" baseEnv)
 
 -- | Test for issue #411
 -- https://trello.com/c/IF6kY9AZ/411-deleting-lambda-parameter-red-cursor
@@ -185,7 +196,7 @@ testLambdaDelete =
         env0 <- applyEvent (baseEnv & cursor .~ paramCursor) dummyVirt delEvent
         -- One delete replaces the param tag, next delete deletes param
         env1 <- applyEvent env0 dummyVirt delEvent
-        _ <- makeGui "" env1
+        _ <- makeWorkArea env1 >>= makeGui "" env1
         pure ()
 
 -- | Test for issue #410
@@ -200,11 +211,11 @@ testFragmentSize =
         frag <-
             fromWorkArea baseEnv
             (Sugar.waRepl . Sugar.replExpr . annotation . _1)
-        guiCursorOnFrag <-
-            baseEnv
-            & cursor .~ WidgetIds.fromExprPayload frag
-            & makeGui ""
-        guiCursorElseWhere <- makeGui "" baseEnv
+        let env1 =
+                baseEnv
+                & cursor .~ WidgetIds.fromExprPayload frag
+        guiCursorOnFrag <- makeWorkArea env1 >>= makeGui "" env1
+        guiCursorElseWhere <- makeWorkArea baseEnv >>= makeGui "" baseEnv
         unless (guiCursorOnFrag ^. sz == guiCursorElseWhere ^. sz) (error "fragment size inconsistent")
     where
         sz = Responsive.rWide . Align.tValue . Element.size
@@ -244,25 +255,27 @@ testKeyboardDirAndBack ::
     HasCallStack =>
     Env.Env -> VirtualCursor -> MetaKey -> MetaKey -> OnceT (T ViewM) ()
 testKeyboardDirAndBack posEnv posVirt way back =
-    mApplyEvent posEnv posVirt (simpleKeyEvent way)
-    >>=
-    \case
-    Nothing -> pure ()
-    Just updThere ->
-        mApplyEvent
-        (GuiState.update updThere posEnv)
-        (updThere ^?! GuiState.uVirtualCursor . traverse)
-        (simpleKeyEvent back)
-        >>=
-        \case
-        Nothing -> error (show baseInfo <> " can't move back with cursor keys")
-        Just updBack
-            | Lens.anyOf (GuiState.uCursor . traverse)
-              (`WidgetId.isSubId` (posEnv ^. cursor)) updBack & not ->
-                show baseInfo <> "moving back with cursor keys goes to different place: " <>
-                show (updBack ^. GuiState.uCursor)
-                & error
-        Just{} -> pure ()
+    do
+        wa <- makeWorkArea posEnv
+        mApplyEvent posEnv posVirt (simpleKeyEvent way) wa
+            >>=
+            \case
+            Nothing -> pure ()
+            Just updThere ->
+                mApplyEvent
+                (GuiState.update updThere posEnv)
+                (updThere ^?! GuiState.uVirtualCursor . traverse)
+                (simpleKeyEvent back) wa
+                >>=
+                \case
+                Nothing -> error (show baseInfo <> " can't move back with cursor keys")
+                Just updBack
+                    | Lens.anyOf (GuiState.uCursor . traverse)
+                    (`WidgetId.isSubId` (posEnv ^. cursor)) updBack & not ->
+                        show baseInfo <> "moving back with cursor keys goes to different place: " <>
+                        show (updBack ^. GuiState.uCursor)
+                        & error
+                Just{} -> pure ()
     where
         baseInfo =
             Pretty.text (show (posEnv ^. GuiState.cursor)) $+$
@@ -286,7 +299,7 @@ testTabNavigation ::
     Env.Env -> VirtualCursor -> OnceT (T ViewM) ()
 testTabNavigation env virtCursor =
     do
-        w0 <- makeFocusedWidget "mApplyEvent" env
+        w0 <- makeWorkArea env >>= makeFocusedWidget "mApplyEvent" env
         let eventMap =
                 (w0 ^. Widget.fEventMap)
                 Widget.EventContext
@@ -301,9 +314,9 @@ testTabNavigation env virtCursor =
                 Nothing -> pure ()
                 Just upd ->
                     do
+                        let newEnv = GuiState.update upd env
                         w1 <-
-                            makeFocusedWidget "testTabNavigation"
-                            (GuiState.update upd env)
+                            makeWorkArea newEnv >>= makeFocusedWidget "testTabNavigation" newEnv
                         let p0 = w0 ^?! pos
                         let p1 = w1 ^?! pos
                         when (comparePositions p1 p0 /= expected) $
@@ -336,7 +349,7 @@ testActions ::
     Env.Env -> VirtualCursor -> OnceT (T ViewM) ()
 testActions env virtCursor =
     do
-        w <- makeFocusedWidget "" env
+        w <- makeWorkArea env >>= makeFocusedWidget "" env
         let eventMap =
                 Widget.EventContext
                 { Widget._eVirtualCursor = virtCursor
@@ -357,8 +370,9 @@ testActions env virtCursor =
     where
         exampleChars f = [f 'a', f '1', f '_', f '+'] ^.. traverse . Lens._Just
         testEvent (doc, event) =
-            event <&> (`GuiState.update` env) & lift
-            >>= makeGui (show doc <> " from " <> show (env ^. cursor))
+            do
+                newEnv <- event <&> (`GuiState.update` env) & lift
+                makeWorkArea newEnv >>= makeGui (show doc <> " from " <> show (env ^. cursor)) newEnv
             & _OnceT %~ mapStateT (fmap fst . Transaction.fork) & void
 
 docHandler ::
@@ -388,7 +402,7 @@ programTest ::
 programTest baseEnv filename =
     testProgram filename $
     do
-        baseGui <- makeGui "" baseEnv
+        baseGui <- makeWorkArea baseEnv >>= makeGui "" baseEnv
         let size = baseGui ^. Responsive.rWide . Align.tValue . Widget.wSize
         let narrowSize =
                 (baseGui ^. Responsive.rNarrow) (Responsive.NarrowLayoutParams 0 False)

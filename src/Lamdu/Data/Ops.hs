@@ -15,13 +15,16 @@ module Lamdu.Data.Ops
     ) where
 
 import qualified Control.Lens as Lens
+import qualified Data.ByteString.Extended as BS
 import           Data.Property (MkProperty', Property(..))
 import qualified Data.Property as Property
 import qualified Data.Set as Set
+import qualified Data.UUID as UUID
 import qualified GUI.Momentu.Direction as Dir
 import           Hyper (_HCompose)
 import           Hyper.Type.AST.Row (RowExtend(..))
 import           Hyper.Type.Prune (Prune(..))
+import           Lamdu.Calc.Identifier (Identifier(..))
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.CharClassification as Chars
@@ -29,7 +32,6 @@ import qualified Lamdu.Data.Anchors as Anchors
 import           Lamdu.Data.Definition (Definition(..))
 import           Lamdu.Data.Meta (SpecialArgs(..), PresentationMode)
 import           Lamdu.Data.Tag (Symbol(..), TextsInLang(..), tagOrder, tagTexts, tagSymbol, getTagName, name)
-import qualified Lamdu.Expr.GenIds as GenIds
 import           Lamdu.Expr.IRef (DefI, HRef, ValI)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import           Lamdu.I18N.LangId (LangId)
@@ -106,7 +108,7 @@ data CompositeExtendResult m = CompositeExtendResult
     }
 
 genNewTag :: Monad m => T m T.Tag
-genNewTag = GenIds.transaction GenIds.randomTag
+genNewTag = Transaction.newKey <&> T.Tag . Identifier . BS.strictify . UUID.toByteString
 
 recExtend :: Monad m => T.Tag -> ValI m -> T m (CompositeExtendResult m)
 recExtend tag valI =

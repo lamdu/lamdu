@@ -9,18 +9,16 @@ module Lamdu.Sugar.Convert.Hole
     , mkResult
     , mkOption, addWithoutDups
     , assertSuccessfulInfer
+    , genLamVar
     ) where
 
 import           Control.Applicative (Alternative(..))
 import qualified Control.Lens as Lens
 import           Control.Monad (filterM)
 import           Control.Monad.ListT (ListT(..))
-import           Control.Monad.Once (OnceT, _OnceT, MonadOnce(..))
-import           Control.Monad.State (State, StateT(..), mapStateT, evalState, state)
+import           Control.Monad.Once (OnceT, _OnceT, MonadOnce(..), onceList)
+import           Control.Monad.State (State, StateT(..), mapStateT)
 import qualified Control.Monad.State as State
-import qualified Crypto.Hash.SHA256 as SHA256
-import qualified Data.Binary as Binary
-import           Data.Bits (xor)
 import qualified Data.ByteString.Extended as BS
 import qualified Data.List.Class as ListClass
 import qualified Data.Map as Map
@@ -32,12 +30,12 @@ import           Data.Typeable (Typeable)
 import qualified Data.UUID as UUID
 import           Hyper
 import           Hyper.Infer
-import           Hyper.Recurse (Recursive(..), wrap, unwrap)
+import           Hyper.Recurse (wrap, unwrap)
 import           Hyper.Type.AST.FuncType (FuncType(..))
 import           Hyper.Type.AST.Nominal (NominalDecl, nScheme)
 import           Hyper.Type.AST.Row (freExtends)
 import           Hyper.Type.AST.Scheme (sTyp)
-import           Hyper.Type.Functor (F(..), _F)
+import           Hyper.Type.Functor (_F)
 import           Hyper.Type.Prune (Prune(..))
 import           Hyper.Unify (Unify(..), BindingDict(..), unify)
 import           Hyper.Unify.Binding (UVar)
@@ -45,6 +43,7 @@ import           Hyper.Unify.Term (UTerm(..), UTermBody(..))
 import qualified Lamdu.Builtins.Anchors as Builtins
 import qualified Lamdu.Cache as Cache
 import           Lamdu.Calc.Definition (Deps(..), depsGlobalTypes, depsNominals)
+import           Lamdu.Calc.Identifier (Identifier(..))
 import           Lamdu.Calc.Infer (InferState, runPureInfer, PureInfer)
 import qualified Lamdu.Calc.Lens as ExprLens
 import           Lamdu.Calc.Term (Val)
@@ -54,8 +53,7 @@ import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Definition as Def
 import qualified Lamdu.Data.Definition as Definition
-import qualified Lamdu.Expr.GenIds as GenIds
-import           Lamdu.Expr.IRef (HRef(..), ValI, DefI)
+import           Lamdu.Expr.IRef (HRef(..), DefI)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Load as Load
 import           Lamdu.Sugar.Convert.Binder (convertBinder)
@@ -70,12 +68,9 @@ import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import           Lamdu.Sugar.Types
 import           Revision.Deltum.Hyper (Write(..))
-import           Revision.Deltum.IRef (IRef)
 import qualified Revision.Deltum.IRef as IRef
 import           Revision.Deltum.Transaction (Transaction)
 import qualified Revision.Deltum.Transaction as Transaction
-import           System.Random (random)
-import qualified System.Random.Extended as Random
 import           Text.PrettyPrint.HughesPJClass (prettyShow)
 
 import           Lamdu.Prelude
@@ -150,16 +145,10 @@ mkOption ::
     Input.Payload m a # V.Term -> Val () ->
     OnceT (T m) (HoleOption EvalPrep InternalName (OnceT (T m)) (T m))
 mkOption sugarContext resultProcessor holePl x =
-    HoleOption entityId
-    <$> once (lift (mkHoleSearchTerms sugarContext holePl x))
-    ?? mkResults resultProcessor sugarContext holePl x
-    where
-        entityId =
-            x
-            & ExprLens.valLeafs . V._LLiteral . V.primData .~ mempty
-            & show
-            & Random.randFunc
-            & EntityId.EntityId
+    HoleOption
+    <$> (lift Transaction.newKey <&> EntityId.EntityId)
+    <*> once (lift (mkHoleSearchTerms sugarContext holePl x))
+    <*> onceList (mkResults resultProcessor sugarContext holePl x)
 
 mkHoleSuggesteds ::
     (Monad m, Typeable m) =>
@@ -168,16 +157,16 @@ mkHoleSuggesteds ::
     OnceT (T m) [(Val (), HoleOption EvalPrep InternalName (OnceT (T m)) (T m))]
 mkHoleSuggesteds sugarContext resultProcessor holePl =
     holePl ^. Input.inferredTypeUVar
-    & Completions.suggestForType
+    & Completions.suggestForType genLamVar
     & runPureInfer (holePl ^. Input.inferScope) inferCtx
-
     -- TODO: Change ConvertM to be stateful rather than reader on the
     -- sugar context, to collect union-find updates.
     -- TODO: use a specific monad here that has no Either
     & assertSuccessfulInfer
     & fst
-    <&> hflipped %~ hmap (const (const (Const ()))) -- TODO: "Avoid re-inferring known type here"
-    & traverse
+    & sequenceA & lift
+    <&> Lens.mapped . hflipped %~ hmap (const (const (Const ()))) -- TODO: "Avoid re-inferring known type here"
+    >>= traverse
         (\x -> mkOption sugarContext resultProcessor holePl x <&> (,) x)
     where
         inferCtx = sugarContext ^. ConvertM.scInferContext
@@ -241,14 +230,17 @@ mkNominalOptions nominals =
             <&> (`V.BInjectP` V.BLeafP V.LHole)
             <&> V.BToNomP tid
 
-baseForms :: ConvertM.PositionInfo -> [HPlain V.Term]
-baseForms posInfo =
-    [ V.BLamP "NewLambda" Pruned (V.BLeafP V.LHole)
-    , V.BLeafP V.LAbsurd
+genLamVar :: Monad m => T m V.Var
+genLamVar = Transaction.newKey <&> V.Var . Identifier . BS.strictify . UUID.toByteString
+
+mkBaseForms :: Monad m => ConvertM.PositionInfo -> T m [HPlain V.Term]
+mkBaseForms posInfo =
+    [ genLamVar <&> \v -> V.BLamP v Pruned (V.BLeafP V.LHole)
+    , V.BLeafP V.LAbsurd & pure
     ] <>
-    [ V.BLamP "NewLambda" Pruned (V.BLeafP V.LHole) `V.BAppP` V.BLeafP V.LHole
+    [ genLamVar <&> \v -> V.BLamP v Pruned (V.BLeafP V.LHole) `V.BAppP` V.BLeafP V.LHole
     | posInfo == ConvertM.BinderPos
-    ]
+    ] & sequenceA
 
 mkOptions ::
     (Monad m, Typeable m) =>
@@ -264,12 +256,13 @@ mkOptions posInfo resultProcessor holePl =
         globals <- getGlobals sugarContext & lift
         tags <- getTags sugarContext & lift
         suggesteds <- mkHoleSuggesteds sugarContext resultProcessor holePl
+        baseForms <- mkBaseForms posInfo & lift
         concat
             [ holePl ^. Input.localsInScope >>= getLocalScopeGetVars sugarContext
             , globals <&> V.BLeafP . V.LVar . ExprIRef.globalId
             , tags <&> (`V.BInjectP` V.BLeafP V.LHole)
             , nominalOptions
-            , baseForms posInfo
+            , baseForms
             ]
             <&> wrap (const (Ann (Const ()))) . (^. hPlain)
             & traverse (\x -> mkOption sugarContext resultProcessor holePl x <&> (,) x)
@@ -349,28 +342,54 @@ getLocalScopeGetVars sugarContext par
                 Lens.filtered (== par)
             <&> fst
 
+randomizeVars ::
+    Monad m =>
+    (a # V.Term -> Bool) -> Ann a # V.Term -> T m (Ann a # V.Term)
+randomizeVars p (Ann a b) =
+    case b of
+    V.BLam (V.TypedLam _ t i) | p a ->
+        V.TypedLam
+        <$> genLamVar
+        <*> pure t
+        <*> randomizeVars p i
+        <&> V.BLam
+    _ ->
+        htraverse
+        ( \case
+            HWitness V.W_Term_Term -> randomizeVars p
+            _ -> pure
+        ) b
+    <&> Ann a
+
+-- Hack: Randomize variables until Fragments redesign
+randomizeNewVars :: Monad m => Ann (Write n :*: a) # V.Term -> T m (Ann (Write n :*: a) # V.Term)
+randomizeNewVars = randomizeVars (Lens.has (_1 . ExprIRef._WriteNew))
+
 -- | Runs inside a forked transaction
 writeResult ::
     Monad m =>
-    Preconversion m a -> InferState -> HRef m # V.Term ->
+    InferState -> HRef m # V.Term ->
     Ann ((Const a :*: Write m) :*: InferResult UVar) # V.Term ->
-    T m (Ann (Input.Payload m ()) # V.Term)
-writeResult preConversion inferCtx holeStored inferredVal =
+    T m (Ann (Input.Payload m a) # V.Term)
+writeResult inferCtx holeStored inferredVal =
     do
         writtenExpr <-
-            inferUVarsApplyBindings inferredVal
+            inferredVal
+            & hflipped %~ hmap (\_ ((Const a :*: w) :*: i) -> w :*: i :*: Const a)
+            & randomizeNewVars
+            >>= ExprIRef.writeRecursively
+        (holeStored ^. ExprIRef.setIref) (writtenExpr ^. hAnn . _1)
+        ExprIRef.toHRefs (holeStored ^. ExprIRef.setIref) writtenExpr
+            & hflipped %~ hmap (\_ (w :*: i :*: Const a) -> (w :*: Const a) :*: i)
+            & inferUVarsApplyBindings
             & runPureInfer () inferCtx
             & assertSuccessfulInfer
             & fst
-            & hflipped %~ hmap (\_ ((Const a :*: w) :*: i) -> w :*: i :*: Const a)
-            & writeExprMStored (holeStored ^. ExprIRef.iref)
-            <&> ExprIRef.toHRefs (holeStored ^. ExprIRef.setIref)
-            <&> hflipped %~ hmap (const toPayload)
-            <&> Input.preparePayloads
-        (holeStored ^. ExprIRef.setIref) (writtenExpr ^. hAnn . Input.stored . ExprIRef.iref)
-        preConversion writtenExpr & pure
+            & hflipped %~ hmap (const toPayload)
+            & Input.preparePayloads
+            & pure
     where
-        toPayload (stored :*: inferRes :*: Const a) =
+        toPayload ((stored :*: Const a) :*: inferRes) =
             -- TODO: Evaluate hole results instead of Map.empty's?
             Input.PreparePayloadInput
             { Input.ppEntityId = eId
@@ -442,8 +461,7 @@ mkResultVals sugarContext scope seed =
         do
             id .= newInferState
             form <-
-                Suggest.termTransformsWithModify scope (Const () :*:) (^. _2) i
-                & mapStateT ListClass.fromList
+                Suggest.termTransformsWithModify (lift (lift genLamVar)) scope (Const () :*:) (^. _2) i
             pure (newDeps, form & hflipped %~ hmap (const (_1 .~ WriteNew)))
     where
         txn = lift . lift
@@ -460,8 +478,9 @@ mkResult preConversion updateDeps holePl x =
         postProcess <- ConvertM.postProcessAssert
         do
             updateDeps
-            writeResult preConversion (sugarContext ^. ConvertM.scInferContext)
+            writeResult (sugarContext ^. ConvertM.scInferContext)
                 (holePl ^. Input.stored) x
+            <&> preConversion
             & lift
             <&> Input.initScopes
                     (holePl ^. Input.inferScope)
@@ -484,17 +503,17 @@ mkResult preConversion updateDeps holePl x =
                         Transaction.merge forkedChanges
                         postProcess
                 }
-            ) & pure
+            ) & ConvertM.convertOnce
 
 toStateT :: Applicative m => State s a -> StateT s m a
 toStateT = mapStateT $ \(Lens.Identity act) -> pure act
 
 toScoredResults ::
-    (Monad f, Monad m, Typeable m) =>
+    (Monad m, Typeable m) =>
     a -> Preconversion m a -> ConvertM.Context m ->
     Input.Payload m dummy # V.Term ->
-    StateT InferState f (Deps, Ann ((Const a :*: Write m) :*: InferResult UVar) # V.Term) ->
-    f (HoleResultScore, OnceT (T m) (HoleResult EvalPrep InternalName (OnceT (T m)) (T m)))
+    StateT InferState (ListT (OnceT (T m))) (Deps, Ann ((Const a :*: Write m) :*: InferResult UVar) # V.Term) ->
+    ListT (OnceT (T m)) (HoleResultScore, OnceT (T m) (HoleResult EvalPrep InternalName (OnceT (T m)) (T m)))
 toScoredResults emptyPl preConversion sugarContext holePl act =
     act
     >>= _2 %%~
@@ -503,26 +522,33 @@ toScoredResults emptyPl preConversion sugarContext holePl act =
             (Const emptyPl :*: WriteNew)
             (holePl ^. Input.inferredTypeUVar)
     & (`runStateT` (sugarContext ^. ConvertM.scInferContext))
-    <&> \((newDeps, x), inferCtx) ->
-    let newSugarContext =
-            sugarContext
-            & ConvertM.scInferContext .~ inferCtx
-            & ConvertM.scFrozenDeps . Property.pVal .~ newDeps
-        updateDeps = newDeps & sugarContext ^. ConvertM.scFrozenDeps . Property.pSet
-    in  ( inferUVarsApplyBindings x
-            <&> hflipped %~ hmap
-                ( Proxy @(Recursively (InferOfConstraint HFunctor)) #*#
-                    \w ->
-                    withDict (recursively (p0 w)) $
-                    withDict (inferOfConstraint (Proxy @HFunctor) w) $
-                    (hflipped %~ hmap (const (^. _1))) . (^. _2)
-                )
-            & runPureInfer () inferCtx
-            & assertSuccessfulInfer
-            & fst
-            & resultScore
-        , mkResult preConversion updateDeps holePl x & ConvertM.run newSugarContext & join
-        )
+    >>=
+    \((newDeps, x), inferCtx) ->
+    do
+        let newSugarContext =
+                sugarContext
+                & ConvertM.scInferContext .~ inferCtx
+                & ConvertM.scFrozenDeps . Property.pVal .~ newDeps
+            updateDeps = newDeps & sugarContext ^. ConvertM.scFrozenDeps . Property.pSet
+        r <-
+            mkResult preConversion updateDeps holePl x & ConvertM.run newSugarContext
+            >>= once
+            & lift
+        pure
+            ( inferUVarsApplyBindings x
+                <&> hflipped %~ hmap
+                    ( Proxy @(Recursively (InferOfConstraint HFunctor)) #*#
+                        \w ->
+                        withDict (recursively (p0 w)) $
+                        withDict (inferOfConstraint (Proxy @HFunctor) w) $
+                        (hflipped %~ hmap (const (^. _1))) . (^. _2)
+                    )
+                & runPureInfer () inferCtx
+                & assertSuccessfulInfer
+                & fst
+                & resultScore
+            , r
+            )
     where
         p0 :: proxy h -> Proxy (InferOfConstraint HFunctor h)
         p0 _ = Proxy
@@ -550,63 +576,3 @@ mkResults (ResultProcessor emptyPl postProcess preConversion) sugarContext holeP
     >>= _2 %%~ postProcess
     & toScoredResults emptyPl preConversion sugarContext holePl
     & mapListT (join . once)
-
-xorBS :: ByteString -> ByteString -> ByteString
-xorBS x y = BS.pack $ BS.zipWith xor x y
-
-randomizeNonStoredParamIds ::
-    Random.StdGen ->
-    Ann (ExprIRef.Write m :*: a) # V.Term ->
-    Ann (ExprIRef.Write m :*: a) # V.Term
-randomizeNonStoredParamIds gen =
-    GenIds.randomizeParamIdsG id nameGen Map.empty
-    where
-        nameGen = GenIds.onNgMakeName f $ GenIds.randomNameGen gen
-        f n _        prevEntityId (ExprIRef.ExistingRef{} :*: _) = (prevEntityId, n)
-        f _ prevFunc prevEntityId pl@(ExprIRef.WriteNew :*: _) = prevFunc prevEntityId pl
-
-randomizeNonStoredRefs ::
-    ByteString ->
-    Random.StdGen ->
-    Ann (ExprIRef.Write m :*: a) # V.Term ->
-    Ann (F (IRef m) :*: a) # V.Term
-randomizeNonStoredRefs uniqueIdent gen v =
-    evalState (hflipped (htraverse (const (_1 f))) v) gen
-    where
-        f :: Write m # h -> State Random.StdGen (F (IRef m) # h)
-        f ExprIRef.WriteNew =
-            state random
-            <&> UUID.toByteString <&> BS.strictify
-            <&> xorBS uniqueIdent
-            <&> BS.lazify <&> UUID.fromByteString
-            <&> fromMaybe (error "cant parse UUID")
-            <&> IRef.unsafeFromUUID <&> F
-        f (ExprIRef.ExistingRef x) = pure x
-
-writeExprMStored ::
-    Monad m =>
-    ValI m ->
-    Ann (ExprIRef.Write m :*: a) # V.Term ->
-    T m (Ann (F (IRef m) :*: a) # V.Term)
-writeExprMStored exprIRef exprMStorePoint =
-    result <$ writeAll result
-    where
-        result =
-            randomizeNonStoredParamIds genParamIds exprMStorePoint
-            & randomizeNonStoredRefs uniqueIdent genRefs
-        writeAll ::
-            forall m t a.
-            ExprIRef.HStore m t =>
-            Ann (F (IRef m) :*: a) # t -> T m ()
-        writeAll (Ann (dst :*: _) body) =
-            withDict (recurse (Proxy @(ExprIRef.HStore m t))) $
-            do
-                ExprIRef.writeValI dst (hmap (const (^. hAnn . _1)) body)
-                htraverse_ (Proxy @(ExprIRef.HStore m) #> writeAll) body
-        uniqueIdent =
-            Binary.encode
-            ( exprMStorePoint & hflipped %~ hmap (const (^. _1))
-            , exprIRef
-            )
-            & SHA256.hashlazy
-        (genParamIds, genRefs) = Random.genFromHashable uniqueIdent & Random.split

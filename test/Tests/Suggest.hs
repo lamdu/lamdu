@@ -1,10 +1,13 @@
+{-# LANGUAGE TypeApplications #-}
 -- | Test the suggest module
 
 module Tests.Suggest where
 
 import qualified Control.Lens as Lens
+import           Control.Monad.ListT (ListT)
 import           Control.Monad.Reader (local)
 import           Control.Monad.State (runStateT)
+import           Data.List.Class (toList)
 import qualified Data.Map as Map
 import           Hyper
 import           Hyper.Infer
@@ -19,23 +22,29 @@ import           Lamdu.Calc.Definition (Deps(..))
 import           Lamdu.Calc.Infer
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
+import           Lamdu.Data.Db.Layout (ViewM, runDbTransaction)
+import           Lamdu.VersionControl (runAction)
 import           Lamdu.Sugar.Convert.Hole.Suggest (termTransforms, termTransformsWithModify)
+import           Revision.Deltum.Transaction (Transaction)
+import           Test.Lamdu.Db (withDB)
 
 import           Test.Lamdu.Prelude
 
+runDb :: Transaction ViewM a -> IO a
+runDb a = withDB "data/freshdb.json" (`runDbTransaction` runAction a)
+
 testApplyForms :: Test
 testApplyForms =
-    case res of
+    termTransforms @(ListT _) (pure "var") V.emptyScope id id func
+    & (`runStateT` state) <&> fst & toList & runDb
+    >>=
+    \case
     [s] ->
         Lens.has (hVal . V._BApp . V.appArg . hVal . V._BRecExtend . eKey . Lens.only "a") s
         & assertBool "termTransforms did not create argument record"
     _ -> fail "termTransforms on func failed to suggest exactly 1 option"
     & testCase "apply-forms"
     where
-        res =
-            termTransforms V.emptyScope id id func
-            & (`runStateT` state)
-            <&> fst
         func = Ann (inferResult # funType) (V.BLeaf V.LHole)
         (funType, state) =
             either (error . show) id $
@@ -56,7 +65,10 @@ testApplyForms =
 -- see https://trello.com/c/AKfdwwDK/494-nullary-injects-results-are-cumbersome
 testBool :: Test
 testBool =
-    case res of
+    termTransformsWithModify @(ListT _) (pure "var") V.emptyScope id id expr
+    & (`runStateT` state) <&> fst & toList & runDb
+    >>=
+    \case
     [s] ->
         Lens.has
         ( hVal . V._BToNom . tnVal . hVal . V._BInject . V.injectVal
@@ -66,10 +78,6 @@ testBool =
     _ -> fail "termTransformsWithModify didn't result with 1 option"
     & testCase "bool"
     where
-        res =
-            termTransformsWithModify V.emptyScope id id expr
-            & (`runStateT` state)
-            <&> fst
         inferExample :: PureInfer (V.Scope # UVar) (Ann (InferResult UVar) # V.Term)
         inferExample =
             V.BToNomP "Bool" (V.BInjectP "True" (V.BLeafP V.LHole)) ^. hPlain
