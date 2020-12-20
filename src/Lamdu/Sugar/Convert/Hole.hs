@@ -125,6 +125,7 @@ mkHoleSearchTerms ctx pl x =
     V.BLeaf V.LLiteral{} -> pure [] -- Literals not created from hole results
     V.BToNom (V.ToNom n b) -> ofName n <> mkHoleSearchTerms ctx pl b
     V.BInject i -> pure [HoleInject (nameWithoutContext (i ^. V.injectTag))]
+    V.BApp (V.App (Ann _ V.BLam{}) _) -> pure [HoleLet]
     V.BApp a -> mkHoleSearchTerms ctx pl (a ^. V.appFunc)
     V.BLam{} -> pure [HoleLambda]
     V.BRecExtend{} -> pure [HoleRecord]
