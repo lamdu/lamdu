@@ -138,7 +138,7 @@ suggestCaseWith mkVar variantType resultType =
             field <- suggestLam mkVar resultType
             restType <- newTerm (T.TVariant rest) >>= mkCaseType
             restBody <- suggestCaseWith mkVar rest resultType
-            RowExtend tag <$> (field <&> Ann handlerType) <*> (restBody <&> Ann restType) <&> V.BRecExtend & pure
+            RowExtend tag <$> (field <&> Ann handlerType) <*> (restBody <&> Ann restType) <&> V.BCase & pure
         where
             mkCaseType which = FuncType which resultType & T.TFun & newTerm <&> (inferResult #)
     _ -> suggestLam mkVar resultType
