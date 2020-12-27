@@ -34,7 +34,7 @@ module Lamdu.Sugar.Types.Expression
     , Assignment(..), _BodyFunction, _BodyPlain
     -- Holes
     , HoleOption(..), hoEntityId, hoSearchTerms, hoResults
-    , Hole(..), holeOptions, holeMDelete
+    , Hole(..), holeOptions
     , HoleResult(..), holeResultConverted, holeResultPick
     -- If/else
     , IfElse(..), iIf, iThen, iElse
@@ -126,15 +126,12 @@ data HoleOption v name i o = HoleOption
       _hoResults :: ListT i (HoleResultScore, i (HoleResult v name i o))
     } deriving Generic
 
-data Hole v name i o = Hole
+newtype Hole v name i o = Hole
     { _holeOptions :: i [HoleOption v name i o]
         -- outer "i" here is used to read index of globals
         -- inner "i" is used to type-check/sugar every val in the option
       -- TODO: Lifter from i to o?
-    , -- Changes the structure around the hole to remove the hole.
-      -- For example (f _) becomes (f) or (2 + _) becomes 2
-      _holeMDelete :: Maybe (o EntityId)
-    } deriving Generic
+    } deriving stock Generic
 
 data Else v name i o f
     = SimpleElse (Term v name i o f)

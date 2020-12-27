@@ -37,9 +37,9 @@ makeLabeledApply func args punnedArgs exprPl =
         presentationMode <- func ^. hVal . Lens._Wrapped . Sugar.bvVar & Anchors.assocPresentationMode & getP
         protectedSetToVal <- ConvertM.typeProtectedSetToVal
         let mkOperatorArg arg other =
-                arg
-                & hVal . Sugar._BodyHole . Sugar.holeMDelete ?~
-                    (protectedSetToVal
+                arg & annotation . pActions . Sugar.delete . Lens.filteredBy Sugar._CannotDelete .~
+                    Sugar.Delete
+                    ( protectedSetToVal
                         (exprPl ^. Input.stored)
                         (other ^. annotation . pInput . Input.stored . iref)
                         <&> EntityId.ofValI

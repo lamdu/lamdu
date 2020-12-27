@@ -153,7 +153,7 @@ actionsEventMap options exprInfo =
                 [ extractEventMap ?? actions
                 , mkReplaceParent
                 ]
-        , actions ^. Sugar.mSetToHole & foldMap replaceEventMap
+        , actions ^. Sugar.delete & replaceEventMap
         , actions ^. Sugar.mNewLet & foldMap addLetEventMap
         , makeLiteralEventMap ?? actions
         ] <&> const -- throw away EventContext here
@@ -268,14 +268,20 @@ replaceEventMap ::
     , Has (MomentuTexts.Texts Text) env, Has (Texts.CodeUI Text) env
     , Functor f
     ) =>
-    f Sugar.EntityId-> m (EventMap (f GuiState.Update))
-replaceEventMap action =
+    Sugar.Delete f -> m (EventMap (f GuiState.Update))
+replaceEventMap x =
     Lens.view id
     <&>
     \env ->
-    action <&> WidgetIds.fromEntityId
-    & E.keysEventMapMovesCursor (Config.delKeys env)
-    (E.toDoc env [has . MomentuTexts.edit, has . Texts.setToHole])
+    let mk action =
+            action <&> WidgetIds.fromEntityId
+            & E.keysEventMapMovesCursor (Config.delKeys env)
+                (E.toDoc env [has . MomentuTexts.edit, has . Texts.setToHole])
+    in
+    case x of
+    Sugar.SetToHole action -> mk action
+    Sugar.Delete action -> mk action
+    Sugar.CannotDelete -> mempty
 
 goToLiteral :: Sugar.EntityId -> GuiState.Update
 goToLiteral = GuiState.updateCursor . WidgetIds.literalEditOf . WidgetIds.fromEntityId

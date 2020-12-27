@@ -11,8 +11,9 @@ module Lamdu.Sugar.Types.Parts
       Annotation(..), _AnnotationVal, _AnnotationType, _AnnotationNone
     -- Node actions
     , DetachAction(..), _FragmentAlready, _FragmentExprAlready, _DetachAction
+    , Delete(..), _SetToHole, _Delete, _CannotDelete
     , NodeActions(..)
-        , detach, mSetToHole, setToLiteral, setToEmptyRecord
+        , detach, delete, setToLiteral, setToEmptyRecord
         , extract, mReplaceParent, wrapInRecord, mNewLet
     , -- Let
       ExtractDestination(..)
@@ -91,9 +92,17 @@ data DetachAction o
     | DetachAction (o EntityId) -- Detach me
     deriving Generic
 
+data Delete m
+    = SetToHole (m EntityId)
+    | -- Changes the structure around the hole to remove the hole.
+      -- For example (f _) becomes (f) or (2 + _) becomes 2
+      Delete (m EntityId)
+    | CannotDelete
+    deriving Generic
+
 data NodeActions name i o = NodeActions
     { _detach :: DetachAction o
-    , _mSetToHole :: Maybe (o EntityId) -- (Not available for holes)
+    , _delete :: Delete o
     , _setToLiteral :: Literal Identity -> o EntityId
     , _setToEmptyRecord :: o EntityId
     , _extract :: o ExtractDestination
@@ -194,6 +203,7 @@ Lens.makePrisms ''AddFirstParam
 Lens.makePrisms ''AddNextParam
 Lens.makePrisms ''Annotation
 Lens.makePrisms ''BinderParams
+Lens.makePrisms ''Delete
 Lens.makePrisms ''DetachAction
 Lens.makePrisms ''FuncApplyLimit
 Lens.makePrisms ''HoleTerm

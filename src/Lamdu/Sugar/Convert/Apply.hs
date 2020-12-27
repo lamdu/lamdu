@@ -58,7 +58,7 @@ convert posInfo app@(V.App funcI argI) exprPl =
                                   EntityId.ofValI dst <$
                                   protectedSetToVal (exprPl ^. Input.stored) dst
                           in  funcS
-                              & annotation . pActions . mSetToHole ?~ deleteAction
+                              & annotation . pActions . delete .~ SetToHole deleteAction
                       else funcS
                     , argS
                     )
@@ -141,5 +141,5 @@ convertPrefix subexprs funcS argS applyPl =
                 <&> EntityId.ofValI
         BodySimpleApply App
             { _appFunc = funcS
-            , _appArg = argS & hVal . _BodyHole . holeMDelete ?~ del
+            , _appArg = argS & annotation . pActions . delete . Lens.filteredBy _CannotDelete .~ Delete del
             } & addActions subexprs applyPl

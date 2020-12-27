@@ -191,7 +191,7 @@ makeActions exprPl =
         setToRec <- makeSetToEmptyRecord exprPl
         pure NodeActions
             { _detach = DataOps.applyHoleTo stored <* postProcess <&> EntityId.ofValI & DetachAction
-            , _mSetToHole = DataOps.setToHole stored <* postProcess <&> EntityId.ofValI & Just
+            , _delete = DataOps.setToHole stored <* postProcess <&> EntityId.ofValI & SetToHole
             , _setToLiteral = setToLit
             , _setToEmptyRecord = setToRec
             , _extract = ext

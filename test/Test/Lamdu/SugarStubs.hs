@@ -79,7 +79,6 @@ hole :: Expr
 hole =
     Sugar.BodyHole Sugar.Hole
     { Sugar._holeOptions = mempty
-    , Sugar._holeMDelete = Nothing
     } & expr
 
 ($$) :: Expr -> Expr -> Expr
@@ -234,7 +233,7 @@ nodeActions :: Sugar.NodeActions InternalName Identity Unit
 nodeActions =
     Sugar.NodeActions
     { Sugar._detach = Sugar.DetachAction Unit
-    , Sugar._mSetToHole = Nothing
+    , Sugar._delete = Sugar.CannotDelete
     , Sugar._setToLiteral = pure Unit
     , Sugar._setToEmptyRecord = Unit
     , Sugar._extract = Unit

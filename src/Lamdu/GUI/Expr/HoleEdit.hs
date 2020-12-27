@@ -6,16 +6,13 @@ import qualified Control.Lens as Lens
 import qualified Data.Char as Char
 import qualified Data.Text as Text
 import qualified GUI.Momentu.Align as Align
-import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.Glue as Glue
-import qualified GUI.Momentu.I18N as MomentuTexts
 import           GUI.Momentu.Responsive (Responsive)
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Menu as Menu
 import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
-import qualified Lamdu.Config as Config
 import qualified Lamdu.GUI.Expr.EventMap as ExprEventMap
 import qualified Lamdu.GUI.Expr.HoleEdit.SearchArea as SearchArea
 import           Lamdu.GUI.Expr.HoleEdit.ValTerms (allowedSearchTermCommon)
@@ -23,7 +20,6 @@ import           Lamdu.GUI.Expr.HoleEdit.WidgetIds (WidgetIds(..))
 import qualified Lamdu.GUI.Expr.HoleEdit.WidgetIds as HoleWidgetIds
 import           Lamdu.GUI.Monad (GuiM)
 import qualified Lamdu.GUI.Types as ExprGui
-import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.I18N.Code as Texts
 import qualified Lamdu.I18N.CodeUI as Texts
 import qualified Lamdu.I18N.Definitions as Texts
@@ -70,28 +66,14 @@ make ::
 make (Ann (Const pl) (Const hole)) =
     do
         searchTerm <- SearchMenu.readSearchTerm searchMenuId
-        delKeys <- Lens.view id <&> Config.delKeys
-        env <- Lens.view id
-        let (mkLitEventMap, delEventMap)
-                | searchTerm == "" =
-                    ( ExprEventMap.makeLiteralEventMap ?? pl ^. _1 . Sugar.plActions
-                    , foldMap
-                        (E.keysEventMapMovesCursor delKeys
-                            (E.toDoc env
-                                [has . MomentuTexts.edit, has . MomentuTexts.delete])
-                            . fmap WidgetIds.fromEntityId)
-                        (hole ^. Sugar.holeMDelete)
-                    )
-                | searchTerm == "-" =
-                    ( ExprEventMap.makeLiteralNumberEventMap "-" ?? pl ^. _1 . Sugar.plActions . Sugar.setToLiteral
-                    , mempty
-                    )
-                | otherwise = (mempty, mempty)
+        let mkLitEventMap
+                | searchTerm == "" = ExprEventMap.makeLiteralEventMap ?? pl ^. _1 . Sugar.plActions
+                | searchTerm == "-" = ExprEventMap.makeLiteralNumberEventMap "-" ?? pl ^. _1 . Sugar.plActions . Sugar.setToLiteral
+                | otherwise = mempty
         litEventMap <- mkLitEventMap
         (ExprEventMap.add options pl <&> (Align.tValue %~))
             <*> ( SearchArea.make SearchArea.WithAnnotation (hole ^. Sugar.holeOptions)
                     pl allowedHoleSearchTerm widgetIds ?? Menu.AnyPlace
-                    <&> Align.tValue . Widget.eventMapMaker . Lens.mapped %~ (<> delEventMap)
                 )
             <&> Align.tValue . Widget.eventMapMaker . Lens.mapped %~ (litEventMap <>)
             <&> Responsive.fromWithTextPos

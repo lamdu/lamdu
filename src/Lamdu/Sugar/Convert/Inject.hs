@@ -41,14 +41,14 @@ convert (V.Inject tag injected) exprPl =
                     (BodyRecord
                      (Composite [] []
                       (ClosedComposite closedCompositeActions) addItem))
-                    | nullSugar->
+                    | nullSugar ->
                         NullaryVal closedCompositeActions addItem
                         & Const
                         & Ann (Const pl)
                         & InjectNullary
                 _ ->
                     injectedS
-                    & hVal . _BodyHole . holeMDelete ?~ toNullary
+                    & annotation . pActions . delete . Lens.filteredBy _CannotDelete .~ Delete toNullary
                     & InjectVal
         let setTag newTag =
                 do

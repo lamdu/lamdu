@@ -83,8 +83,8 @@ genericEdit ::
 genericEdit whichStyle prop pl =
     do
         editEventMap <-
-            case pl ^. Sugar.plActions . Sugar.mSetToHole of
-            Just action -> mkEditEventMap ?? valText ?? action
+            case pl ^. Sugar.plActions . Sugar.delete of
+            Sugar.SetToHole action -> mkEditEventMap ?? valText ?? action
             _ -> error "Cannot set literal to hole?!"
         TextView.makeFocusable ?? valText ?? myId
             <&> Align.tValue %~ Widget.weakerEvents editEventMap
@@ -226,7 +226,7 @@ numEdit prop pl =
             (pure ())
             <&> Lens.mapped . GuiState.uPreferStroll .~ True ^. Lens._Unwrapped
         let delEvent =
-                case pl ^. Sugar.plActions . Sugar.mSetToHole of
+                case pl ^? Sugar.plActions . Sugar.delete . Lens.failing Sugar._SetToHole Sugar._Delete of
                 -- Allow to delete when text is empty
                 Just action | Text.null text ->
                     E.keyPresses [ModKey mempty MetaKey.Key'Backspace]

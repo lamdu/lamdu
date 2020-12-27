@@ -230,10 +230,10 @@ delInfixArg =
     & testCase "del-infix-arg"
     where
         argDel workArea =
-            workArea ^?! arg . annotation . _1 . plActions . mSetToHole . Lens._Just
+            workArea ^?! arg . annotation . _1 . plActions . delete . _SetToHole
             & void & lift
         holeDel workArea =
-            workArea ^?! arg . hVal . _BodyHole . holeMDelete . Lens._Just
+            workArea ^?! arg . annotation . _1 . plActions . delete . _Delete
             & void & lift
         arg = replBody . _BodyLabeledApply . aSpecialArgs . _Operator . _2
         verify workArea
@@ -430,7 +430,7 @@ setHoleToHole =
         setToHole =
             replBody . _BodyLam . lamFunc . fBody .
             hVal . _BinderLet . lValue .
-            annotation . _1 . plActions . mSetToHole . Lens._Just
+            annotation . _1 . plActions . delete . _SetToHole
 
 assertEq :: (Monad m, Show a, Eq a) => String -> a -> a -> m ()
 assertEq msg expected got

@@ -168,7 +168,8 @@ convertAppliedHole posInfo app@(V.App funcI argI) exprPl argS =
                 { _fExpr =
                     argS
                     & annotation . pActions . detach .~ FragmentExprAlready storedEntityId
-                    & annotation . pActions . mSetToHole ?~
+                    & annotation . pActions . delete .~
+                        SetToHole
                         (DataOps.setToHole stored <* postProcess <&> EntityId.ofValI)
                 , _fHeal =
                     ( if isTypeMatch

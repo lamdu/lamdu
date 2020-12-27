@@ -91,9 +91,9 @@ convert posInfo holePl =
     mkOptions posInfo holeResultProcessor holePl
     <&> Lens.mapped . Lens.mapped %~ snd
     >>= ConvertM.convertOnce
-    <&> (`Hole` Nothing) <&> BodyHole
+    <&> Hole <&> BodyHole
     >>= addActions (Const ()) holePl
-    <&> annotation . pActions . mSetToHole .~ Nothing
+    <&> annotation . pActions . delete .~ CannotDelete
 
 data ResultProcessor m = forall a. ResultProcessor
     { rpEmptyPl :: a

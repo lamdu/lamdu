@@ -60,14 +60,14 @@ convertIfElse setToVal caseBody =
                     }
                 Nothing ->
                     altFalse ^. ciExpr . hVal
-                    & _BodyHole . holeMDelete ?~ elseDel
-                    & _BodyLam . lamFunc . fBody . hVal . _BinderTerm .
-                        _BodyHole . holeMDelete ?~ elseDel
+                    & _BodyLam . lamFunc . fBody . annotation . pActions . delete %~ mkElseDel
                     & SimpleElse
-                    & Ann (Const (altFalse ^. ciExpr . annotation))
+                    & Ann (Const (altFalse ^. ciExpr . annotation & pActions . delete %~ mkElseDel))
             }
             where
-                elseDel = setToVal (delTarget altTrue) <&> EntityId.ofValI
+                mkElseDel CannotDelete =
+                    delTarget altTrue & setToVal <&> EntityId.ofValI & Delete
+                mkElseDel x = x
                 delTarget alt =
                     alt ^? ciExpr . hVal . _BodyLam . lamFunc . fBody
                     . Lens.filteredBy (hVal . _BinderTerm) . annotation
