@@ -135,11 +135,11 @@ convertPrefix ::
 convertPrefix subexprs funcS argS applyPl =
     do
         protectedSetToVal <- ConvertM.typeProtectedSetToVal
-        let del =
+        let del remain =
                 protectedSetToVal (applyPl ^. Input.stored)
-                (funcS ^. annotation . pInput . Input.stored . ExprIRef.iref)
+                (remain ^. annotation . pInput . Input.stored . ExprIRef.iref)
                 <&> EntityId.ofValI
         BodySimpleApply App
-            { _appFunc = funcS
-            , _appArg = argS & annotation . pActions . delete . Lens.filteredBy _CannotDelete .~ Delete del
+            { _appFunc = funcS & annotation . pActions . delete .~ Delete (del argS)
+            , _appArg = argS & annotation . pActions . delete . Lens.filteredBy _CannotDelete .~ Delete (del funcS)
             } & addActions subexprs applyPl
