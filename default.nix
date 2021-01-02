@@ -2,7 +2,7 @@ let config = {
     packageOverrides = pkgs: rec {
         haskell = pkgs.haskell // {
             packages = pkgs.haskell.packages // {
-                ghc884 = pkgs.haskell.packages.ghc884.override {
+                ghc8103 = pkgs.haskell.packages.ghc8103.override {
                     overrides = self: super: rec {
                         hsc2hs = pkgs.haskell.lib.unmarkBroken (haskell.lib.dontCheck super.hsc2hs);
                         freetype2 = self.callPackage ./nix/freetype2.nix {};
@@ -18,17 +18,13 @@ let config = {
                               sha256 = "0mbwz6m9666l7kmg934205gxw1627s3yzk4w9zkpr0irx7xqml5i";
                             } {};
                         testing-feat = self.callHackage "testing-feat" "1.1.0.0" {};
-                        # aeson-diff = pkgs.haskell.lib.doJailbreak (self.callHackage "aeson-diff" "1.1.0.5" {});
-                        # language-ecmascript = pkgs.haskell.lib.doJailbreak (self.callHackage "language-ecmascript" "0.19" {});
-                        # ekg-core = pkgs.haskell.lib.doJailbreak (self.callHackage "ekg-core" "0.1.1.4" {});
-                        # th-abstraction = pkgs.haskell.lib.doJailbreak (self.callHackage "th-abstraction" "0.3.1.0" {});
                     };
                 };
             };
         };
     };
 };
-in with import (builtins.fetchTarball "https://github.com/NixOS/nixpkgs/archive/b3f8d3b80dd.tar.gz") {
+in with import (builtins.fetchTarball "https://github.com/NixOS/nixpkgs/archive/641e5f572f1.tar.gz") {
     inherit config;
 };
 
