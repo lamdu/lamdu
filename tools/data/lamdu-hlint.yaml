@@ -9,7 +9,6 @@
     - package lens
     rules:
     - warn: {lhs: a <&> ($), rhs: a}
-    - warn: {lhs: a <&> (&), rhs: flip a}
     - hint: {lhs: mapM, rhs: traverse}
     - hint: {lhs: mapM_, rhs: traverse_}
     - hint: {lhs: a `mappend` b, rhs: a <> b}
