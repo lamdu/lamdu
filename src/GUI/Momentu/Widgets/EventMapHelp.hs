@@ -280,8 +280,7 @@ makeTreeView =
 hoverEdge ::
     (MonadReader env m, Element.SizedElement a, Has Dir.Layout env) =>
     Widget.Size -> m (a -> a)
-hoverEdge size =
-    Element.padToSize ?? size ?? 1 <&> ($)
+hoverEdge size = Element.padToSize ?? size ?? 1
 
 toggle :: IsHelpShown -> IsHelpShown
 toggle HelpShown = HelpNotShown
