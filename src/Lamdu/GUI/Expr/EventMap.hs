@@ -216,22 +216,20 @@ transformEventMap ::
     ) =>
     m (Options -> ExprInfo name i o -> EventContext -> EventMap (o GuiState.Update))
 transformEventMap =
-    transformSearchTerm
-    <&> \transform options exprInfo eventCtx ->
-    let action detach =
-            transform exprInfo eventCtx
-            <&> SearchMenu.enterWithSearchTerm
-            <&> (detach <&>)
-    in  case exprInfoActions exprInfo ^. Sugar.detach of
-        Sugar.DetachAction detach ->
-            addOperatorSetHoleState options & maybe detachAndOpen widgetId
-            where
-                detachAndOpen =
-                    detach <&> WidgetIds.fromEntityId <&> WidgetIds.fragmentHoleId
-        Sugar.FragmentAlready holeId -> widgetId holeId <&> WidgetIds.fragmentHoleId
-        Sugar.FragmentExprAlready holeId -> widgetId holeId <&> WidgetIds.fragmentHoleId
-        <&> HoleWidgetIds.makeFrom <&> HoleWidgetIds.hidOpen
-        & action
+    transformSearchTerm <&>
+    \transform options exprInfo eventCtx ->
+    let x = case exprInfoActions exprInfo ^. Sugar.detach of
+            Sugar.DetachAction detach ->
+                addOperatorSetHoleState options & maybe detachAndOpen widgetId
+                where
+                    detachAndOpen =
+                        detach <&> WidgetIds.fromEntityId <&> WidgetIds.fragmentHoleId
+            Sugar.FragmentAlready holeId -> widgetId holeId <&> WidgetIds.fragmentHoleId
+            Sugar.FragmentExprAlready holeId -> widgetId holeId <&> WidgetIds.fragmentHoleId
+    in
+    transform exprInfo eventCtx
+    <&> SearchMenu.enterWithSearchTerm
+    <&> (x <&> HoleWidgetIds.makeFrom <&> HoleWidgetIds.hidOpen <&>)
     where
         widgetId = pure . WidgetIds.fromEntityId
 
