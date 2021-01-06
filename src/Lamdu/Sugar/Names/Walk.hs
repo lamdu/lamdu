@@ -173,47 +173,49 @@ toValAnnotation evalRes =
 
 toAnnotation ::
     MonadNaming m =>
-    Annotation (EvaluationScopes (OldName m) (IM m)) (OldName m) ->
-    m (Annotation (EvaluationScopes (NewName m) (IM m)) (NewName m))
-toAnnotation AnnotationNone = pure AnnotationNone
-toAnnotation (AnnotationType typ) = toType typ <&> AnnotationType
-toAnnotation (AnnotationVal x) = toValAnnotation x <&> AnnotationVal
+    (v0 -> m v1) ->
+    Annotation v0 (OldName m) ->
+    m (Annotation v1 (NewName m))
+toAnnotation _ AnnotationNone = pure AnnotationNone
+toAnnotation _ (AnnotationType typ) = toType typ <&> AnnotationType
+toAnnotation v (AnnotationVal x) = v x <&> AnnotationVal
 
-type Pl n m = Payload (Annotation (EvaluationScopes n (IM m)) n) n (IM m)
+type Pl v n m = Payload (Annotation v n) n (IM m)
 
-toPayload :: MonadNaming m => Pl (OldName m) m o -> m (Pl (NewName m) m o)
-toPayload payload@Payload{_plAnnotation, _plActions} =
+toPayload :: MonadNaming m => (v0 -> m v1) -> Pl v0 (OldName m) m o -> m (Pl v1 (NewName m) m o)
+toPayload v payload@Payload{_plAnnotation, _plActions} =
     do
-        _plAnnotation <- toAnnotation _plAnnotation
+        _plAnnotation <- toAnnotation v _plAnnotation
         _plActions <- toNodeActions _plActions
         pure payload{_plAnnotation, _plActions}
 
 toNode ::
     MonadNaming m =>
-    (ka # Annotated (Pl (OldName m) m o, p) ->
-     m (kb # Annotated (Pl (NewName m) m o, p))) ->
-    Annotated (Pl (OldName m) m o, p) # ka ->
-    m (Annotated (Pl (NewName m) m o, p) # kb)
-toNode toV (Ann (Const pl) v) =
+    (v0 -> m v1) ->
+    (ka # Annotated (Pl v0 (OldName m) m o, p) ->
+     m (kb # Annotated (Pl v1 (NewName m) m o, p))) ->
+    Annotated (Pl v0 (OldName m) m o, p) # ka ->
+    m (Annotated (Pl v1 (NewName m) m o, p) # kb)
+toNode toVal toV (Ann (Const pl) v) =
     Ann
-    <$> (_1 toPayload pl <&> Const)
+    <$> (_1 (toPayload toVal) pl <&> Const)
     <*> toV v
 
-type BodyW t n m o a = Body t (Annotation (EvaluationScopes n (IM m)) n) n (IM m) o a
-type WalkBody t m o a = BodyW t (OldName m) m o a -> m (BodyW t (NewName m) m o a)
+type BodyW v t n m o a = Body t (Annotation v n) n (IM m) o a
+type WalkBody t v0 v1 m o a = (v0 -> m v1) -> BodyW v0 t (OldName m) m o a -> m (BodyW v1 t (NewName m) m o a)
 
-toLet :: MonadNaming m => WalkBody Let m o a
-toLet let_@Let{_lName, _lVarInfo, _lBody, _lValue} =
+toLet :: MonadNaming m => WalkBody Let v0 v1 m o a
+toLet v let_@Let{_lName, _lVarInfo, _lBody, _lValue} =
     do
         (_lName, _lBody) <-
             unCPS (withTagRef TaggedVar _lVarInfo _lName)
-            (toNode toBinder _lBody)
-        _lValue <- toAssignment _lValue
+            (toNode v (toBinder v) _lBody)
+        _lValue <- toAssignment v _lValue
         pure let_{_lName, _lBody, _lValue}
 
-toBinder :: MonadNaming m => WalkBody Binder m o a
-toBinder (BinderLet l) = toLet l <&> BinderLet
-toBinder (BinderTerm e) = toBody e <&> BinderTerm
+toBinder :: MonadNaming m => WalkBody Binder v0 v1 m o a
+toBinder v (BinderLet l) = toLet v l <&> BinderLet
+toBinder v (BinderTerm e) = toBody v e <&> BinderTerm
 
 toAddFirstParam ::
     MonadNaming m =>
@@ -221,28 +223,28 @@ toAddFirstParam ::
     m (AddFirstParam (NewName m) (IM m) o)
 toAddFirstParam = _PrependParam toTagReplace
 
-toFunction :: MonadNaming m => WalkBody Function m o a
-toFunction func@Function{_fParams, _fBody, _fAddFirstParam} =
+toFunction :: MonadNaming m => WalkBody Function v0 v1 m o a
+toFunction v func@Function{_fParams, _fBody, _fAddFirstParam} =
     (\(_fParams, _fBody) _fAddFirstParam ->
          func{_fParams, _fBody, _fAddFirstParam})
-    <$> unCPS (withBinderParams _fParams) (toNode toBinder _fBody)
+    <$> unCPS (withBinderParams v _fParams) (toNode v (toBinder v) _fBody)
     <*> toAddFirstParam _fAddFirstParam
 
-toBinderPlain :: MonadNaming m => WalkBody AssignPlain m o a
-toBinderPlain AssignPlain{_apBody, _apAddFirstParam} =
+toBinderPlain :: MonadNaming m => WalkBody AssignPlain v0 v1 m o a
+toBinderPlain v AssignPlain{_apBody, _apAddFirstParam} =
     (\_apBody _apAddFirstParam -> AssignPlain{_apBody, _apAddFirstParam})
-    <$> toBinder _apBody
+    <$> toBinder v _apBody
     <*> toAddFirstParam _apAddFirstParam
 
-type ExprW t n m o a = Expr t (Annotation (EvaluationScopes n (IM m)) n) n (IM m) o a
-type WalkExpr t m o a = ExprW t (OldName m) m o a -> m (ExprW t (NewName m) m o a)
+type ExprW t v n m o a = Expr t (Annotation v n) n (IM m) o a
+type WalkExpr t v0 v1 m o a = (v0 -> m v1) -> ExprW t v0 (OldName m) m o a -> m (ExprW t v1 (NewName m) m o a)
 
-toAssignment :: MonadNaming m => WalkExpr Assignment m o a
-toAssignment =
+toAssignment :: MonadNaming m => WalkExpr Assignment v0 v1 m o a
+toAssignment v =
     \case
-    BodyPlain x -> toBinderPlain x <&> BodyPlain
-    BodyFunction x -> toFunction x <&> BodyFunction
-    & toNode
+    BodyPlain x -> toBinderPlain v x <&> BodyPlain
+    BodyFunction x -> toFunction v x <&> BodyFunction
+    & toNode v
 
 toTagOf :: MonadNaming m => NameType -> Sugar.Tag (OldName m) -> m (Sugar.Tag (NewName m))
 toTagOf nameType = tagName (opGetName Nothing nameType)
@@ -282,49 +284,49 @@ withTagRef nameType varInfo (Sugar.TagRef info actions jumpTo) =
     <*> liftCPS (toTagReplace actions)
     ?? jumpTo
 
-toAnnotatedArg :: MonadNaming m => WalkBody AnnotatedArg m o a
-toAnnotatedArg (AnnotatedArg tag e) =
+toAnnotatedArg :: MonadNaming m => WalkBody AnnotatedArg v0 v1 m o a
+toAnnotatedArg v (AnnotatedArg tag e) =
     AnnotatedArg
     <$> toTagOf Tag tag
-    <*> toExpression e
+    <*> toExpression v e
 
-toLabeledApply :: MonadNaming m => WalkBody LabeledApply m o a
-toLabeledApply
-    app@LabeledApply{_aFunc, _aSpecialArgs, _aAnnotatedArgs, _aPunnedArgs} =
+toLabeledApply :: MonadNaming m => WalkBody LabeledApply v0 v1 m o a
+toLabeledApply v app@LabeledApply{_aFunc, _aSpecialArgs, _aAnnotatedArgs, _aPunnedArgs} =
     LabeledApply
-    <$> toNode (Lens._Wrapped (toBinderVarRef (Just (funcSignature app)))) _aFunc
-    <*> traverse toExpression _aSpecialArgs
-    <*> traverse toAnnotatedArg _aAnnotatedArgs
-    <*> traverse (toNode (Lens._Wrapped toGetVar)) _aPunnedArgs
+    <$> toNode v (Lens._Wrapped (toBinderVarRef (Just (funcSignature app)))) _aFunc
+    <*> traverse (toExpression v) _aSpecialArgs
+    <*> traverse (toAnnotatedArg v) _aAnnotatedArgs
+    <*> traverse (toNode v (Lens._Wrapped toGetVar)) _aPunnedArgs
 
-type SugarElem t n m (o :: * -> *) = t (Annotation (EvaluationScopes n (IM m)) n) n (IM m) o
-type WalkElem t m o = SugarElem t (OldName m) m o -> m (SugarElem t (NewName m) m o)
+type SugarElem t v n m (o :: * -> *) = t (Annotation v n) n (IM m) o
+type WalkElem t v0 v1 m o = (v0 -> m v1) -> SugarElem t v0 (OldName m) m o -> m (SugarElem t v1 (NewName m) m o)
 
 toHoleOption ::
     MonadNaming m =>
-    (m (ExprW Binder (NewName m) m o ()) -> IM m (ExprW Binder (NewName m) m o ())) ->
+    (v0 -> m v1) ->
+    (m (ExprW Binder v1 (NewName m) m o ()) -> IM m (ExprW Binder v1 (NewName m) m o ())) ->
     (m (NewName m) -> IM m (NewName m)) ->
-    SugarElem HoleOption (OldName m) m o -> SugarElem HoleOption (NewName m) m o
-toHoleOption run0 run1 option =
+    SugarElem HoleOption v0 (OldName m) m o -> SugarElem HoleOption v1 (NewName m) m o
+toHoleOption v run0 run1 option =
     option
     { _hoSearchTerms =
         -- Hack: Just using TaggedVar as NameType because disambiguations aren't important in hole results
         option ^. hoSearchTerms >>= traverse . traverse %%~ run1 . opGetName Nothing TaggedVar
-    , _hoResults = option ^. hoResults <&> _2 %~ (>>= holeResultConverted (run0 . toNode toBinder))
+    , _hoResults = option ^. hoResults <&> _2 %~ (>>= holeResultConverted (run0 . toNode v (toBinder v)))
     }
 
-toHole :: MonadNaming m => WalkElem Hole m o
-toHole hole =
+toHole :: MonadNaming m => WalkElem Hole v0 v1 m o
+toHole v hole =
     (,) <$> opRun <*> opRun
     <&>
     \(r0, r1) ->
-    hole & Sugar.holeOptions . Lens.mapped . Lens.mapped %~ toHoleOption r0 r1
+    hole & Sugar.holeOptions . Lens.mapped . Lens.mapped %~ toHoleOption v r0 r1
 
-toFragment :: MonadNaming m => WalkBody Fragment m o a
-toFragment Fragment{_fExpr, _fHeal, _fTypeMismatch, _fOptions} =
+toFragment :: MonadNaming m => WalkBody Fragment v0 v1 m o a
+toFragment v Fragment{_fExpr, _fHeal, _fTypeMismatch, _fOptions} =
     do
         newTypeMismatch <- Lens._Just toType _fTypeMismatch
-        newExpr <- toExpression _fExpr
+        newExpr <- toExpression v _fExpr
         r0 <- opRun
         r1 <- opRun
         pure Fragment
@@ -332,65 +334,65 @@ toFragment Fragment{_fExpr, _fHeal, _fTypeMismatch, _fOptions} =
             , _fTypeMismatch = newTypeMismatch
             , _fOptions =
                  _fOptions
-                 <&> Lens.mapped %~ toHoleOption r0 r1
+                 <&> Lens.mapped %~ toHoleOption v r0 r1
             , _fHeal
             }
 
-toCompositeItem :: MonadNaming m => WalkBody CompositeItem m o a
-toCompositeItem (CompositeItem del tag e) =
+toCompositeItem :: MonadNaming m => WalkBody CompositeItem v0 v1 m o a
+toCompositeItem v (CompositeItem del tag e) =
     CompositeItem del
     <$> toTagRefOf Tag tag
-    <*> toExpression e
+    <*> toExpression v e
 
-toComposite :: MonadNaming m => WalkBody Composite m o a
-toComposite (Composite items punned tail_ addItem) =
+toComposite :: MonadNaming m => WalkBody Composite v0 v1 m o a
+toComposite v (Composite items punned tail_ addItem) =
     Composite
-    <$> traverse toCompositeItem items
-    <*> traverse (toNode (Lens._Wrapped toGetVar)) punned
-    <*> (_OpenComposite . _2) toExpression tail_
+    <$> traverse (toCompositeItem v) items
+    <*> traverse (toNode v (Lens._Wrapped toGetVar)) punned
+    <*> (_OpenComposite . _2) (toExpression v) tail_
     <*> toTagReplace addItem
 
-toCase :: MonadNaming m => WalkBody Case m o a
-toCase (Case k c) = Case <$> (_CaseWithArg . caVal) toExpression k <*> toComposite c
+toCase :: MonadNaming m => WalkBody Case v0 v1 m o a
+toCase v (Case k c) = Case <$> (_CaseWithArg . caVal) (toExpression v) k <*> toComposite v c
 
-toInjectVal :: MonadNaming m => WalkBody InjectContent m o a
-toInjectVal (InjectVal v) = toExpression v <&> InjectVal
-toInjectVal (InjectNullary n) = toNode (Lens._Wrapped (nullaryAddItem toTagReplace)) n <&> InjectNullary
+toInjectVal :: MonadNaming m => WalkBody InjectContent v0 v1 m o a
+toInjectVal v (InjectVal x) = toExpression v x <&> InjectVal
+toInjectVal v (InjectNullary n) = toNode v (Lens._Wrapped (nullaryAddItem toTagReplace)) n <&> InjectNullary
 
-toInject :: MonadNaming m => WalkBody Inject m o a
-toInject (Inject t v) =
-    Inject <$> toTagRefOf Tag t <*> toInjectVal v
+toInject :: MonadNaming m => WalkBody Inject v0 v1 m o a
+toInject v (Inject t x) =
+    Inject <$> toTagRefOf Tag t <*> toInjectVal v x
 
-toGetField :: MonadNaming m => WalkBody GetField m o a
-toGetField (GetField r t) = GetField <$> toExpression r <*> toTagRefOf Tag t
+toGetField :: MonadNaming m => WalkBody GetField v0 v1 m o a
+toGetField v (GetField r t) = GetField <$> toExpression v r <*> toTagRefOf Tag t
 
-toNominal :: MonadNaming m => WalkBody Nominal m o a
-toNominal (Nominal t e) = Nominal <$> toTId t <*> toNode toBinder e
+toNominal :: MonadNaming m => WalkBody Nominal v0 v1 m o a
+toNominal v (Nominal t e) = Nominal <$> toTId t <*> toNode v (toBinder v) e
 
-toElse :: MonadNaming m => WalkBody Else m o a
-toElse (SimpleElse x) = toBody x <&> SimpleElse
-toElse (ElseIf x) = toIfElse x <&> ElseIf
+toElse :: MonadNaming m => WalkBody Else v0 v1 m o a
+toElse v (SimpleElse x) = toBody v x <&> SimpleElse
+toElse v (ElseIf x) = toIfElse v x <&> ElseIf
 
-toIfElse :: MonadNaming m => WalkBody IfElse m o a
-toIfElse (IfElse i t e) = IfElse <$> toExpression i <*> toExpression t <*> toNode toElse e
+toIfElse :: MonadNaming m => WalkBody IfElse v0 v1 m o a
+toIfElse v (IfElse i t e) = IfElse <$> toExpression v i <*> toExpression v t <*> toNode v (toElse v) e
 
-toBody :: MonadNaming m => WalkBody Term m o a
-toBody =
+toBody :: MonadNaming m => WalkBody Term v0 v1 m o a
+toBody v =
     \case
-    BodyGetField     x -> x & toGetField <&> BodyGetField
-    BodyInject       x -> x & toInject <&> BodyInject
-    BodyRecord       x -> x & toComposite <&> BodyRecord
-    BodyCase         x -> x & toCase <&> BodyCase
-    BodyIfElse       x -> x & toIfElse <&> BodyIfElse
-    BodySimpleApply  x -> x & morphTraverse (\M_App_expr -> toExpression) <&> BodySimpleApply
-    BodyLabeledApply x -> x & toLabeledApply <&> BodyLabeledApply
-    BodyHole         x -> x & toHole <&> BodyHole
+    BodyGetField     x -> x & toGetField v <&> BodyGetField
+    BodyInject       x -> x & toInject v <&> BodyInject
+    BodyRecord       x -> x & toComposite v <&> BodyRecord
+    BodyCase         x -> x & toCase v <&> BodyCase
+    BodyIfElse       x -> x & toIfElse v <&> BodyIfElse
+    BodySimpleApply  x -> x & morphTraverse (\M_App_expr -> toExpression v) <&> BodySimpleApply
+    BodyLabeledApply x -> x & toLabeledApply v <&> BodyLabeledApply
+    BodyHole         x -> x & toHole v <&> BodyHole
     BodyFromNom      x -> x & toTId <&> BodyFromNom
-    BodyToNom        x -> x & toNominal <&> BodyToNom
+    BodyToNom        x -> x & toNominal v <&> BodyToNom
     BodyGetVar       x -> x & toGetVar <&> BodyGetVar
     BodyLiteral      x -> x & BodyLiteral & pure
-    BodyLam          x -> x & lamFunc toFunction <&> BodyLam
-    BodyFragment     x -> x & toFragment <&> BodyFragment
+    BodyLam          x -> x & lamFunc (toFunction v) <&> BodyLam
+    BodyFragment     x -> x & toFragment v <&> BodyFragment
     BodyPlaceHolder    -> pure BodyPlaceHolder
 
 funcSignature :: LabeledApply v name i o a -> FunctionSignature
@@ -400,8 +402,8 @@ funcSignature apply =
     , sNormalArgs = apply ^.. aAnnotatedArgs . traverse . aaTag . tagVal & Set.fromList
     }
 
-toExpression :: MonadNaming m => WalkExpr Term m o a
-toExpression = toNode toBody
+toExpression :: MonadNaming m => WalkExpr Term v0 v1 m o a
+toExpression = toNode <*> toBody
 
 withParamInfo ::
     MonadNaming m =>
@@ -414,25 +416,27 @@ withParamInfo varInfo (ParamInfo tag fpActions) =
 
 withFuncParam ::
     MonadNaming m =>
+    (v0 -> m v1) ->
     (Sugar.VarInfo -> a -> CPS m b) ->
-    (FuncParam (Annotation (EvaluationScopes (OldName m) (IM m)) (OldName m)) (OldName m), a) ->
-    CPS m (FuncParam (Annotation (EvaluationScopes (NewName m) (IM m)) (NewName m)) (NewName m), b)
-withFuncParam f (FuncParam pl varInfo, info) =
+    (FuncParam (Annotation v0 (OldName m)) (OldName m), a) ->
+    CPS m (FuncParam (Annotation v1 (NewName m)) (NewName m), b)
+withFuncParam v f (FuncParam pl varInfo, info) =
     (,)
     <$>
     ( FuncParam
-        <$> liftCPS (toAnnotation pl)
+        <$> liftCPS (toAnnotation v pl)
         <*> pure varInfo
     ) <*> f varInfo info
 
 withBinderParams ::
     MonadNaming m =>
-    SugarElem BinderParams (OldName m) m o ->
-    CPS m (SugarElem BinderParams (NewName m) m o)
-withBinderParams (NullParam x) = withFuncParam (const pure) x <&> NullParam
-withBinderParams (Params xs) = traverse (withFuncParam withParamInfo) xs <&> Params
+    (v0 -> m v1) ->
+    SugarElem BinderParams v0 (OldName m) m o ->
+    CPS m (SugarElem BinderParams v1 (NewName m) m o)
+withBinderParams v (NullParam x) = withFuncParam v (const pure) x <&> NullParam
+withBinderParams v (Params xs) = traverse (withFuncParam v withParamInfo) xs <&> Params
 
-type Top t n m o a = t (Annotation (EvaluationScopes n (IM m)) n) n (IM m) o (Pl n m o, a)
+type Top t n m o a = t (Annotation (EvaluationScopes n (IM m)) n) n (IM m) o (Pl (EvaluationScopes n (IM m)) n m o, a)
 type WalkTop t m o a = Top t (OldName m) m o a -> m (Top t (NewName m) m o a)
 
 toDefExpr :: MonadNaming m => WalkTop DefinitionExpression m o a
@@ -440,7 +444,7 @@ toDefExpr (DefinitionExpression typ presMode content) =
     DefinitionExpression
     <$> toScheme typ
     <*> pure presMode
-    <*> toAssignment content
+    <*> toAssignment toValAnnotation content
 
 toDefinitionBody :: MonadNaming m => WalkTop DefinitionBody m o a
 toDefinitionBody (DefinitionBodyBuiltin bi) =
@@ -470,7 +474,7 @@ toWorkArea WorkArea { _waPanes, _waRepl, _waGlobals } =
     do
         run <- opRun
         panes <- (traverse . paneBody) toPaneBody _waPanes
-        repl <- replExpr (toNode toBinder) _waRepl
+        repl <- replExpr (toNode toValAnnotation (toBinder toValAnnotation)) _waRepl
         let globals = _waGlobals >>= run . toGlobals
         WorkArea panes repl globals & pure
     where
