@@ -12,12 +12,8 @@ import           Hyper.Type.AST.Scheme (QVars(..))
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
 import           Lamdu.Data.Tag (TextsInLang(..), IsOperator(..))
-import           Lamdu.I18N.Language (Language)
-import           Lamdu.Name (Name)
 import           Lamdu.Sugar.Internal (nameWithoutContext)
 import           Lamdu.Sugar.Names.Add (InternalName(..))
-import qualified Lamdu.Sugar.Names.Add as AddNames
-import qualified Lamdu.Sugar.Names.Walk as NameWalk
 import qualified Lamdu.Sugar.Types as Sugar
 
 import           Test.Lamdu.Prelude
@@ -264,15 +260,6 @@ tagRefReplace =
         }
     , Sugar._tsAnon = Nothing
     }
-
-addNamesToExpr ::
-    Language ->
-    Sugar.Expr Sugar.Term (Sugar.Annotation (Sugar.EvaluationScopes InternalName Identity) InternalName) InternalName Identity Unit a ->
-    Sugar.Expr Sugar.Term (Sugar.Annotation (Sugar.EvaluationScopes Name Identity) Name) Name Identity Unit a
-addNamesToExpr lang x =
-    AddNames.runPasses lang
-    getName NameWalk.toExpression NameWalk.toExpression NameWalk.toExpression NameWalk.toExpression x
-    & runIdentity
 
 getName :: T.Tag -> Identity (IsOperator, TextsInLang)
 getName =
