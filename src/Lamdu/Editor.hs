@@ -9,8 +9,8 @@ import           Control.Concurrent.MVar
 import           Control.DeepSeq (deepseq)
 import qualified Control.Exception as E
 import qualified Control.Lens as Lens
-import           Control.Monad.Once (OnceT, _OnceT, OnceState, MonadOnce(..))
-import           Control.Monad.State (StateT(..), mapStateT)
+import           Control.Monad.Once (OnceT, _OnceT, OnceState, MonadOnce(..), runOnceT)
+import           Control.Monad.State (mapStateT)
 import           Control.Monad.Trans.FastWriter (evalWriterT)
 import qualified Data.Aeson.Config as AesonConfig
 import           Data.CurAndPrev (current)
@@ -286,8 +286,8 @@ initCache db env cacheRef =
             _ ->
                 do
                     (x, s) <-
-                        once (sugarWorkArea env DbLayout.codeAnchors) ^. _OnceT
-                        & (`runStateT` mempty)
+                        sugarWorkArea env DbLayout.codeAnchors & once
+                        & runOnceT mempty
                         & VersionControl.runAction
                         & DbLayout.runDbTransaction db
                     let r = EditorCache
@@ -305,7 +305,7 @@ withCache ::
 withCache db env cacheRef action =
     do
         cache <- initCache db env cacheRef
-        (r, s) <- runStateT (action cache ^. _OnceT) (ecState cache)
+        (r, s) <- action cache & runOnceT (ecState cache)
         writeIORef cacheRef (Just cache { ecState = s })
         pure r
 

@@ -3,8 +3,7 @@ module Test.Lamdu.Sugar where
 
 import           Control.DeepSeq (NFData, deepseq)
 import qualified Control.Lens as Lens
-import           Control.Monad.Once (OnceT, _OnceT)
-import           Control.Monad.State (evalStateT)
+import           Control.Monad.Once (OnceT, evalOnceT)
 import           Control.Monad.Transaction (getP)
 import qualified Data.Map as Map
 import qualified Data.Set as Set
@@ -148,7 +147,7 @@ convertWorkArea env =
 
 testProgramH :: FilePath -> OnceT (T ViewM) a -> IO a
 testProgramH path action =
-    withDB path (runDbTransaction ?? runAction (evalStateT (action ^. _OnceT) mempty))
+    withDB path (runDbTransaction ?? runAction (evalOnceT action))
 
 testProgram :: FilePath -> OnceT (T ViewM) a -> IO a
 testProgram = testProgramH . ("test/programs/" <>)

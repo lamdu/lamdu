@@ -6,6 +6,7 @@ module Control.Monad.Once
     , OnceState
     , Typeable
     , onceList
+    , runOnceT, evalOnceT
     ) where
 
 import qualified Control.Lens as Lens
@@ -77,3 +78,10 @@ onceList (ListT a) =
         ListClass.Nil -> pure ListClass.Nil
         ListClass.Cons x xs -> onceList xs <&> ListClass.Cons x
     ) <&> ListT
+
+-- | Evaluate a OnceT without any cache!
+evalOnceT :: Monad m => OnceT m a -> m a
+evalOnceT (OnceT x) = evalStateT x mempty
+
+runOnceT :: OnceState -> OnceT m a -> m (a, OnceState)
+runOnceT s (OnceT x) = runStateT x s
