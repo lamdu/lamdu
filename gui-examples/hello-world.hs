@@ -34,4 +34,4 @@ hello getFont env =
             & Widget.fromView
             & Widget.setFocused
             & M.weakerEvents M.quitEventMap
-            & return
+            & pure

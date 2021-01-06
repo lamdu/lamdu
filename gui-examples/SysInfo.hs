@@ -17,7 +17,7 @@ main =
             >>= putStrLn
         putStrLn ""
         GLFW.getVideoMode monitor
-            >>= maybe (fail "Can't get video mode of monitor") return
+            >>= maybe (fail "Can't get video mode of monitor") pure
             <&> show
             <&> ("Video mode: " ++)
             >>= putStrLn

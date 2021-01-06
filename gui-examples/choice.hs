@@ -80,4 +80,4 @@ makeWidget choiceRef getFont mainEnv =
                 & M.scale 100
         box `M.above` choiceWidget
             & M.weakerEvents M.quitEventMap
-            & return
+            & pure
