@@ -165,8 +165,7 @@ instance Functor i => MarkBodyAnnotations v n i o Term where
         )
     markBodyAnnotations (BodyHole x) =
         ( alwaysShowAnnotations
-        , x & holeOptions . Lens.mapped . Lens.mapped %~ markHoleOption
-            & BodyHole
+        , x & BodyHole
         )
     markBodyAnnotations (BodyFragment (Fragment e h t o)) =
         ( alwaysShowAnnotations
@@ -175,7 +174,7 @@ instance Functor i => MarkBodyAnnotations v n i o Term where
                 & if Lens.has Lens._Just t
                     then nonHoleAnn .~ dontShowType
                     else id
-            ) h t (o <&> Lens.mapped %~ markHoleOption)
+            ) h t o
             & BodyFragment
         )
 
@@ -193,6 +192,3 @@ markCaseHandler =
     SugarLens.binderResultExpr . Lens.ifiltered (const . Lens.nullOf SugarLens.bodyUnfinished) .
     _1 . plAnnotation . _1
     .~ neverShowAnnotations
-
-markHoleOption :: Functor i => HoleOption v n i o -> HoleOption (ShowAnnotation, v) n i o
-markHoleOption = SugarLens.holeOptionAnnotations %~ (,) neverShowAnnotations

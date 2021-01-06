@@ -51,6 +51,7 @@ import qualified Lamdu.I18N.Code as Texts
 import qualified Lamdu.I18N.CodeUI as Texts
 import qualified Lamdu.I18N.Name as Texts
 import           Lamdu.Name (Name)
+import qualified Lamdu.Sugar.Lens as SugarLens
 import qualified Lamdu.Sugar.Parens as AddParens
 import qualified Lamdu.Sugar.Types as Sugar
 
@@ -96,10 +97,12 @@ makeRenderedResult pl ctx result =
 
 postProcessSugar ::
     AddParens.MinOpPrec ->
-    Sugar.Expr Sugar.Binder (Sugar.Annotation (Sugar.EvaluationScopes Name i) Name) Name i o () ->
+    Sugar.Expr Sugar.Binder (Sugar.Annotation () Name) Name i o () ->
     ExprGui.Expr Sugar.Binder i o
 postProcessSugar minOpPrec binder =
-    AddParens.addToBinderWith minOpPrec binder
+    binder
+    & SugarLens.annotations . Sugar._AnnotationVal .~ mempty
+    & AddParens.addToBinderWith minOpPrec
     & hflipped %~ hmap (\_ -> Lens._Wrapped %~ pl)
     where
         pl (parenInfo, sugarPl) =
@@ -165,7 +168,7 @@ make ::
     , SearchMenu.HasTexts env
     ) =>
     AnnotationMode ->
-    i [Sugar.HoleOption (Sugar.Annotation (Sugar.EvaluationScopes Name i) Name) Name i o] ->
+    i [Sugar.HoleOption Name i o] ->
     ExprGui.Payload i o -> (Text -> Bool) -> WidgetIds ->
     GuiM env i o (Menu.Placement -> TextWidget o)
 make annMode mkOptions pl allowedTerms widgetIds =

@@ -58,11 +58,11 @@ import           Hyper.Type.AST.App (App(..), appFunc, appArg)
 import           Lamdu.Data.Anchors (BinderParamScopeId(..), bParamScopeId)
 import qualified Lamdu.Data.Meta as Meta
 import           Lamdu.Sugar.Internal.EntityId (EntityId)
-import           Lamdu.Sugar.Types.Eval
+import           Lamdu.Sugar.Types.Eval (ParamScopes)
 import           Lamdu.Sugar.Types.GetVar (GetVar, BinderVarRef, BinderMode)
 import           Lamdu.Sugar.Types.Parts
 import           Lamdu.Sugar.Types.Tag
-import           Lamdu.Sugar.Types.Type
+import           Lamdu.Sugar.Types.Type (TId, Type)
 
 import           Lamdu.Prelude
 
@@ -110,24 +110,24 @@ data Fragment v name i o k = Fragment
     { _fExpr :: k :# Term v name i o
     , _fHeal :: o EntityId
     , _fTypeMismatch :: Maybe (Annotated EntityId # Type name)
-    , _fOptions :: i [HoleOption v name i o]
+    , _fOptions :: i [HoleOption name i o]
     } deriving Generic
 
-data HoleResult v name i o = HoleResult
-    { _holeResultConverted :: Expr Binder v name i o ()
+data HoleResult name i o = HoleResult
+    { _holeResultConverted :: Expr Binder (Annotation () name) name i o ()
     , _holeResultPick :: o ()
     } deriving Generic
 
-data HoleOption v name i o = HoleOption
+data HoleOption name i o = HoleOption
     { _hoEntityId :: EntityId
     , _hoSearchTerms :: i [HoleTerm name]
     , -- A group in the hole results based on this option
         -- TODO: HoleResult need not have actual eval results
-      _hoResults :: ListT i (HoleResultScore, i (HoleResult v name i o))
+      _hoResults :: ListT i (HoleResultScore, i (HoleResult name i o))
     } deriving Generic
 
-newtype Hole v name i o = Hole
-    { _holeOptions :: i [HoleOption v name i o]
+newtype Hole name i o = Hole
+    { _holeOptions :: i [HoleOption name i o]
         -- outer "i" here is used to read index of globals
         -- inner "i" is used to type-check/sugar every val in the option
       -- TODO: Lifter from i to o?
@@ -187,7 +187,7 @@ data Term v name i o k
     = BodyLam (Lambda v name i o k)
     | BodySimpleApply (App (Term v name i o) k)
     | BodyLabeledApply (LabeledApply v name i o k)
-    | BodyHole (Hole v name i o)
+    | BodyHole (Hole name i o)
     | BodyLiteral (Literal (Property o))
     | BodyRecord (Composite v name i o k)
     | BodyGetField (GetField v name i o k)

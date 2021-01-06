@@ -152,15 +152,10 @@ instance AddEval Term where
         BodyIfElse x -> addToBody r i x & BodyIfElse
         BodyLam lam -> lam & lamFunc %~ addToBody r i & BodyLam
         BodyToNom nom -> nom & nVal %~ addToNode r & BodyToNom
-        BodyHole h -> h & holeOptions . Lens.mapped . Lens.mapped %~ addToHoleOption & BodyHole
+        BodyHole h -> BodyHole h
         BodyCase x -> addToBody r i x & BodyCase
         BodyLabeledApply x -> addToBody r i x & BodyLabeledApply
-        BodyFragment (Fragment f h t o) ->
-            Fragment (addToNode r f) h t (o <&> Lens.mapped %~ addToHoleOption) & BodyFragment
-        where
-            addToHoleOption (HoleOption hi t s) =
-                HoleOption hi t
-                (s <&> _2 . Lens.mapped . holeResultConverted %~ addToNode r)
+        BodyFragment f -> f & fExpr %~ addToNode r & BodyFragment
 
 addToPayload ::
     Applicative i =>
@@ -190,7 +185,7 @@ addEvaluationResults ::
         (Payload (Annotation (EvaluationScopes InternalName i) n) n i (T m), a))
 addEvaluationResults cp r wa@(WorkArea panes repl listGlobals) =
     makeNominalsMap
-    (wa ^.. SugarLens.workAreaAnnotations (pure (pure [])) . _AnnotationVal . eType . tIds)
+    (wa ^.. SugarLens.workAreaAnnotations . _AnnotationVal . eType . tIds)
     <&> AddEvalCtx r
     <&>
     \ctx ->

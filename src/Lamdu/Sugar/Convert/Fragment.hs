@@ -67,7 +67,7 @@ mkOptions ::
     Ann (Input.Payload m a) # V.Term ->
     Ann pl # Term v name i o ->
     Input.Payload m a # V.Term ->
-    ConvertM m (OnceT (T m) [HoleOption EvalPrep InternalName (OnceT (T m)) (T m)])
+    ConvertM m (OnceT (T m) [HoleOption InternalName (OnceT (T m)) (T m)])
 mkOptions posInfo sugarContext argI argS exprPl =
     Hole.mkOptions posInfo (fragmentResultProcessor topEntityId argI) exprPl
     <&> (fragmentOptions <>)
@@ -99,7 +99,7 @@ mkAppliedHoleSuggesteds ::
     Ann (Input.Payload m a) # V.Term ->
     Input.Payload m a # V.Term ->
     StateT InferState (ListT (OnceT (T m)))
-        (V.Val (), HoleOption EvalPrep InternalName (OnceT (T m)) (T m))
+        (V.Val (), HoleOption InternalName (OnceT (T m)) (T m))
 mkAppliedHoleSuggesteds sugarContext argI exprPl =
     do
         (sugg, newInferCtx) <-
@@ -349,7 +349,7 @@ mkOptionFromFragment ::
     ConvertM.Context m ->
     Input.Payload m a # V.Term ->
     Ann (Write m :*: InferResult UVar) # V.Term ->
-    OnceT (T m) (HoleOption EvalPrep InternalName (OnceT (T m)) (T m))
+    OnceT (T m) (HoleOption InternalName (OnceT (T m)) (T m))
 mkOptionFromFragment sugarContext exprPl x =
     HoleOption
     <$> (lift Transaction.newKey <&> EntityId.EntityId)

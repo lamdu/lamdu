@@ -42,10 +42,7 @@ markAnnotations ::
     Sugar.WorkArea (ShowAnnotation, v) n i o (Sugar.Payload (ShowAnnotation, v) n i o, a)
 markAnnotations config workArea
     | config ^. SugarConfig.showAllAnnotations =
-        workArea
-        & SugarLens.workAreaAnnotations
-            (Lens.mapped . Lens.mapped . SugarLens.holeOptionAnnotations %~ (,) alwaysShowAnnotations)
-            %~ (,) alwaysShowAnnotations
+        workArea & SugarLens.workAreaAnnotations %~ (,) alwaysShowAnnotations
     | otherwise =
         workArea
         { Sugar._waPanes = workArea ^. Sugar.waPanes <&> SugarLens.paneBinder %~ markNodeAnnotations
@@ -67,17 +64,6 @@ makeAnnotation annMode (showAnn, x) =
     Annotations.Types | showAnn ^. showInTypeMode -> typeAnnotationFromEvalRes x
     Annotations.Evaluation | showAnn ^. showInEvalMode -> Sugar.AnnotationVal x & pure
     _ -> pure Sugar.AnnotationNone
-
-makeHoleOptionAnn ::
-    (Monad m, Typeable m, MonadTransaction n m) =>
-    Annotations.Mode ->
-    Sugar.HoleOption (ShowAnnotation, EvalPrep) AddNames.InternalName (OnceT m) m ->
-    Sugar.HoleOption (Sugar.Annotation EvalPrep AddNames.InternalName) AddNames.InternalName (OnceT m) m
-makeHoleOptionAnn annMode (Sugar.HoleOption i t r) =
-    Sugar.HoleOption i t
-    (r <&> _2 %~ (>>= Sugar.holeResultConverted onNode))
-    where
-        onNode = SugarLens.annotations (<&> Lens.mapped %~ makeHoleOptionAnn annMode) (makeAnnotation annMode)
 
 sugarWorkArea ::
     ( HasCallStack
@@ -102,7 +88,7 @@ sugarWorkArea env0 cp =
     <&>
     \workArea getTagName env1 ->
     markAnnotations (env0 ^. has) workArea
-    & SugarLens.workAreaAnnotations (fmap (map (makeHoleOptionAnn (env1 ^. has)))) (makeAnnotation (env1 ^. has))
+    & SugarLens.workAreaAnnotations (makeAnnotation (env1 ^. has))
     >>= lift . addEvaluationResults cp (env1 ^. has)
     >>= report . AddNames.addToWorkArea env1 (fmap getTagName . lift . ExprIRef.readTagData)
     <&> AddParens.addToWorkArea
