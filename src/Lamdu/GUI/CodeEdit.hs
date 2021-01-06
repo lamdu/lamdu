@@ -11,7 +11,7 @@ module Lamdu.GUI.CodeEdit
 
 import qualified Control.Lens as Lens
 import           Control.Lens.Extended ((~~>))
-import           Control.Monad.Once (OnceT)
+import           Control.Monad.Once (OnceT, evalOnceT)
 import           Control.Monad.Trans.Reader (ReaderT)
 import           Control.Monad.Transaction (MonadTransaction(..))
 import           Data.CurAndPrev (CurAndPrev(..))
@@ -143,7 +143,7 @@ make cp gp width mkWorkArea =
                 ?? (replGui : panesEdits ++ [newDefinitionButton])
                 <&> Widget.widget . Widget.eventMapMaker . Lens.mapped %~ (<> eventMap)
             & GuiM.run assocTagName ExpressionEdit.make BinderEdit.make
-                (Anchors.onGui (Property.mkProperty %~ lift) gp) env
+                (Anchors.onGui (Property.mkProperty %~ lift) gp) env evalOnceT
             & lift
             <&> render
             <&> (^. Align.tValue)
