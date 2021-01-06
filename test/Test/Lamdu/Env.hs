@@ -1,16 +1,14 @@
 {-# LANGUAGE TemplateHaskell, MultiParamTypeClasses, TypeApplications, FlexibleInstances #-}
 {-# LANGUAGE UndecidableInstances #-}
 module Test.Lamdu.Env
-    ( Env(..), make, makeLang, dummyAnchors
+    ( Env(..), make, makeLang
     , EvalResults
     ) where
 
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Trans.FastWriter as Writer
-import           Control.Monad.Unit (Unit(..))
 import qualified Data.Aeson.Config as AesonConfig
 import           Data.CurAndPrev (CurAndPrev)
-import           Data.Property (MkProperty(..), Property(..))
 import           Data.Vector.Vector2 (Vector2)
 import qualified GUI.Momentu.Animation as Anim
 import qualified GUI.Momentu.Direction as Dir
@@ -32,7 +30,6 @@ import qualified Lamdu.Config.Folder as Folder
 import           Lamdu.Config.Theme (Theme, baseTextSize, fonts)
 import qualified Lamdu.Config.Theme as Theme
 import           Lamdu.Config.Theme.Sprites (Sprites)
-import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Debug as Debug
 import qualified Lamdu.Eval.Results as EvalResults
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
@@ -150,21 +147,4 @@ make =
             , _eAnimIdPrefix = []
             , _eDirLayout = Dir.LeftToRight
             , _eLanguage = testLang
-            }
-
-prop :: a -> MkProperty Identity Unit a
-prop x = Property x (const Unit) & Identity & MkProperty
-
-dummyAnchors :: Anchors.GuiAnchors Identity Unit
-dummyAnchors =
-    Anchors.Gui
-    { Anchors.preJumps = prop []
-    , Anchors.preGuiState = prop dummyState
-    , Anchors.postGuiState = prop dummyState
-    }
-    where
-        dummyState =
-            GUIState
-            { _sCursor = "dummy"
-            , _sWidgetStates = mempty
             }
