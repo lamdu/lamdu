@@ -12,9 +12,6 @@ module Lamdu.Sugar.Types.Parts
     -- Node actions
     , DetachAction(..), _FragmentAlready, _FragmentExprAlready, _DetachAction
     , Delete(..), _SetToHole, _Delete, _CannotDelete
-    , NodeActions(..)
-        , detach, delete, setToLiteral, setToEmptyRecord
-        , extract, mReplaceParent, wrapInRecord, mNewLet
     , -- Let
       ExtractDestination(..)
     , -- Binders
@@ -26,8 +23,7 @@ module Lamdu.Sugar.Types.Parts
     , AddFirstParam(..), _AddInitialParam, _PrependParam, _NeedToPickTagToAddFirst
     , AddNextParam(..), _AddNext, _NeedToPickTagToAddNext
     , -- Expressions
-      Payload(..), plEntityId, plAnnotation, plNeverShrinkTypeAnnotations, plActions
-    , ClosedCompositeActions(..), closedCompositeOpen
+      ClosedCompositeActions(..), closedCompositeOpen
     , OpenCompositeActions(..), openCompositeClose
     , NullaryVal(..), nullaryClosedCompositeActions, nullaryAddItem
 
@@ -100,17 +96,6 @@ data Delete m
     | CannotDelete
     deriving Generic
 
-data NodeActions name i o = NodeActions
-    { _detach :: DetachAction o
-    , _delete :: Delete o
-    , _setToLiteral :: Literal Identity -> o EntityId
-    , _setToEmptyRecord :: o EntityId
-    , _extract :: o ExtractDestination
-    , _mReplaceParent :: Maybe (o EntityId)
-    , _wrapInRecord :: TagReplace name i o ()
-    , _mNewLet :: Maybe (o EntityId)
-    } deriving Generic
-
 data AddFirstParam name i o
     = -- The inital param is created with anon-tag
       AddInitialParam (o EntityId)
@@ -136,13 +121,6 @@ data VarInfo
     = VarNominal (TId T.Tag)
     | VarGeneric | VarFunction | VarRecord | VarVariant
     deriving (Generic, Eq)
-
-data Payload v name i o = Payload
-    { _plAnnotation :: v
-    , _plNeverShrinkTypeAnnotations :: Bool
-    , _plActions :: NodeActions name i o
-    , _plEntityId :: EntityId
-    } deriving Generic
 
 newtype ClosedCompositeActions o = ClosedCompositeActions
     { _closedCompositeOpen :: o EntityId
@@ -192,13 +170,11 @@ Lens.makeLenses ''ClosedCompositeActions
 Lens.makeLenses ''FuncParam
 Lens.makeLenses ''FuncParamActions
 Lens.makeLenses ''HoleResultScore
-Lens.makeLenses ''NodeActions
 Lens.makeLenses ''NullParamActions
 Lens.makeLenses ''NullaryVal
 Lens.makeLenses ''OpenCompositeActions
 Lens.makeLenses ''ParamInfo
 Lens.makeLenses ''ParenInfo
-Lens.makeLenses ''Payload
 Lens.makePrisms ''AddFirstParam
 Lens.makePrisms ''AddNextParam
 Lens.makePrisms ''Annotation

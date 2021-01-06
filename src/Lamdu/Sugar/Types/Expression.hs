@@ -7,6 +7,11 @@
 {-# LANGUAGE TemplateHaskell, TypeFamilies, MultiParamTypeClasses, UndecidableInstances, DataKinds, GADTs, ConstraintKinds, FlexibleInstances #-}
 module Lamdu.Sugar.Types.Expression
     ( Expr, Body
+    , NodeActions(..)
+        , detach, delete, setToLiteral, setToEmptyRecord
+        , extract, mReplaceParent, wrapInRecord, mNewLet
+    , Payload(..), plEntityId, plAnnotation, plNeverShrinkTypeAnnotations, plActions
+
     , Term(..)
         , _BodyLam, _BodyLabeledApply, _BodySimpleApply
         , _BodyGetVar, _BodyGetField, _BodyInject, _BodyHole
@@ -240,6 +245,24 @@ data Assignment v name i o f
     | BodyPlain (AssignPlain v name i o f)
     deriving Generic
 
+data NodeActions name i o = NodeActions
+    { _detach :: DetachAction o
+    , _delete :: Delete o
+    , _setToLiteral :: Literal Identity -> o EntityId
+    , _setToEmptyRecord :: o EntityId
+    , _extract :: o ExtractDestination
+    , _mReplaceParent :: Maybe (o EntityId)
+    , _wrapInRecord :: TagReplace name i o ()
+    , _mNewLet :: Maybe (o EntityId)
+    } deriving Generic
+
+data Payload v name i o = Payload
+    { _plAnnotation :: v
+    , _plNeverShrinkTypeAnnotations :: Bool
+    , _plActions :: NodeActions name i o
+    , _plEntityId :: EntityId
+    } deriving Generic
+
 Lens.makeLenses ''AnnotatedArg
 Lens.makeLenses ''AssignPlain
 Lens.makeLenses ''Case
@@ -259,7 +282,9 @@ Lens.makeLenses ''Inject
 Lens.makeLenses ''LabeledApply
 Lens.makeLenses ''Lambda
 Lens.makeLenses ''Let
+Lens.makeLenses ''NodeActions
 Lens.makeLenses ''Nominal
+Lens.makeLenses ''Payload
 Lens.makePrisms ''Assignment
 Lens.makePrisms ''Binder
 Lens.makePrisms ''Else
