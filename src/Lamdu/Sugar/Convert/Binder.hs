@@ -52,7 +52,7 @@ makeInline ::
     Monad m =>
     HRef m # V.Term -> Redex # Input.Payload m a -> EntityId -> BinderVarInline (T m)
 makeInline stored redex useId
-    | Lens.has traverse otherUses = CannotInlineDueToUses (tail after <> before)
+    | Lens.has traverse otherUses = CannotInlineDueToUses (drop 1 after <> before)
     | otherwise =
         inlineLet stored (Redex.hmapRedex (const (^. Input.stored . ExprIRef.iref)) redex)
         & InlineVar
