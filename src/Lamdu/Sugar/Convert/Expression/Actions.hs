@@ -306,6 +306,7 @@ addActionsWith userData exprPl bodyS =
                 Const ConvertPayload
                 { _pInput = exprPl & Input.userData .~ userData
                 , _pActions = actions
+                , _pLambdas = []
                 }
             } & pure
 
@@ -323,12 +324,12 @@ makeTypeAnnotation ::
     EntityId -> Pure # T.Type -> m (Annotated EntityId # Type InternalName)
 makeTypeAnnotation = convertType . EntityId.ofTypeOf
 
-mkEvalPrep :: Input.Payload m a # V.Term -> EvalPrep
+mkEvalPrep :: ConvertPayload m a -> EvalPrep
 mkEvalPrep pl =
     EvalPrep
-    { _eType = pl ^. Input.inferredType
-    , _eEvalId = pl ^. Input.entityId
-    , _eLambdas = []
+    { _eType = pl ^. pInput . Input.inferredType
+    , _eEvalId = pl ^. pInput . Input.entityId
+    , _eLambdas = pl ^. pLambdas
     }
 
 convertPayloads ::
@@ -342,7 +343,7 @@ convertPayload ::
     (Payload EvalPrep InternalName (OnceT (T m)) (T m), a)
 convertPayload pl =
     ( Payload
-        { _plAnnotation = pl ^. pInput & mkEvalPrep
+        { _plAnnotation = mkEvalPrep pl
         , _plActions = pl ^. pActions
         , _plNeverShrinkTypeAnnotations = False
         , _plEntityId = pl ^. pInput . Input.entityId

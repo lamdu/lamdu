@@ -9,6 +9,7 @@ import           Hyper.Type.AST.Nominal (nId)
 import           Lamdu.Builtins.Anchors (boolTid, trueTag, falseTag)
 import qualified Lamdu.Calc.Type as T
 import           Lamdu.Expr.IRef (ValI, iref)
+import           Lamdu.Expr.UniqueId (ToUUID(..))
 import qualified Lamdu.Sugar.Convert.Input as Input
 import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
@@ -56,7 +57,10 @@ convertIfElse setToVal caseBody =
                 Just innerIfElse ->
                     Ann
                     { _hVal = ElseIf innerIfElse
-                    , _hAnn = altFalse ^. ciExpr . annotation & Const
+                    , _hAnn =
+                        altFalse ^. ciExpr . annotation
+                        & pLambdas .~ [altFalse ^. ciExpr . hAnn . Lens._Wrapped . pInput . Input.stored . iref & toUUID]
+                        & Const
                     }
                 Nothing ->
                     altFalse ^. ciExpr . hVal

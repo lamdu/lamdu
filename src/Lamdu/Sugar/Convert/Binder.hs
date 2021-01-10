@@ -20,6 +20,7 @@ import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Ops.Subexprs as SubExprs
 import           Lamdu.Expr.IRef (DefI, HRef)
 import qualified Lamdu.Expr.IRef as ExprIRef
+import           Lamdu.Expr.UniqueId (ToUUID(..))
 import qualified Lamdu.Sugar.Config as Config
 import           Lamdu.Sugar.Convert.Binder.Float (makeFloatLetToOuterScope)
 import           Lamdu.Sugar.Convert.Binder.Inline (inlineLet)
@@ -111,6 +112,7 @@ convertLet pl redex =
                     letBody
                     & annotation . pActions . mReplaceParent ?~
                         (letBody ^. annotation . pInput . Input.entityId <$ del)
+                    & annotation . pLambdas .~ [redex ^. Redex.lamPl . Input.stored . ExprIRef.iref & toUUID]
                 , _lUsages = redex ^. Redex.paramRefs
                 }
             , _hAnn =
@@ -121,6 +123,7 @@ convertLet pl redex =
                         redex ^. Redex.lamPl . Input.userData <>
                         hfoldMap (const (^. Input.userData)) (redex ^. Redex.lam . V.tlInType . hflipped)
                 , _pActions = actions
+                , _pLambdas = []
                 }
             }
     where
@@ -222,6 +225,7 @@ makeAssignment chosenScopeProp binderKind defVar (Ann pl (V.BLam lam)) =
                         pl & Input.userData .~
                         hfoldMap (const (^. Input.userData)) (lam ^. V.tlInType . hflipped)
                     , _pActions = nodeActions
+                    , _pLambdas = []
                     }
                 , _hVal = BodyFunction funcS
                 }

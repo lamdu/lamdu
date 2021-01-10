@@ -9,12 +9,15 @@ import qualified Control.Lens as Lens
 import           Control.Monad.Once (OnceT, Typeable)
 import           Control.Monad.Transaction (MonadTransaction)
 import           Data.CurAndPrev (CurAndPrev(..))
+import qualified Data.Map as Map
+import           Data.Tuple (swap)
+import           Data.UUID.Types (UUID)
 import qualified Lamdu.Annotations as Annotations
 import qualified Lamdu.Cache as Cache
 import qualified Lamdu.Data.Anchors as Anchors
 import           Lamdu.Data.Tag (Tag, IsOperator, TextsInLang)
 import qualified Lamdu.Debug as Debug
-import           Lamdu.Eval.Results (EvalResults)
+import           Lamdu.Eval.Results (EvalResults, erExprValues, erAppliesOfLam)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.I18N.Code as Texts
 import qualified Lamdu.I18N.Name as Texts
@@ -24,7 +27,7 @@ import qualified Lamdu.Sugar.Config as SugarConfig
 import qualified Lamdu.Sugar.Convert as SugarConvert
 import           Lamdu.Sugar.Convert.Expression.Actions (makeTypeAnnotation)
 import           Lamdu.Sugar.Eval (addEvaluationResults)
-import           Lamdu.Sugar.Internal (EvalPrep, eEvalId, eType)
+import           Lamdu.Sugar.Internal (EvalPrep, eEvalId, eType, eLambdas)
 import qualified Lamdu.Sugar.Lens as SugarLens
 import qualified Lamdu.Sugar.Names.Add as AddNames
 import qualified Lamdu.Sugar.Parens as AddParens
@@ -65,6 +68,19 @@ makeAnnotation annMode (showAnn, x) =
     Annotations.Evaluation | showAnn ^. showInEvalMode -> Sugar.AnnotationVal x & pure
     _ -> pure Sugar.AnnotationNone
 
+redirectLams :: [UUID] -> EvalResults -> EvalResults
+redirectLams lams results =
+    results
+    & erExprValues . Lens.mapped %~ Map.mapKeys mapScopeId
+    & erAppliesOfLam . Lens.mapped %~ Map.mapKeys mapScopeId
+    where
+        mapScopeId x = mapping ^. Lens.at x <&> mapScopeId & fromMaybe x
+        mapping =
+            lams
+            >>= (\lamId -> results ^@.. erAppliesOfLam . Lens.ix lamId . Lens.ifolded <. traverse . _1)
+            <&> swap
+            & Map.fromList
+
 sugarWorkArea ::
     ( HasCallStack
     , Has Debug.Monitors env0
@@ -87,9 +103,11 @@ sugarWorkArea env0 cp =
     SugarConvert.loadWorkArea env0 cp
     <&>
     \workArea getTagName env1 ->
+    let strippedLams = workArea ^.. SugarLens.workAreaAnnotations . eLambdas . traverse
+    in
     markAnnotations (env0 ^. has) workArea
     & SugarLens.workAreaAnnotations (makeAnnotation (env1 ^. has))
-    >>= lift . addEvaluationResults cp (env1 ^. has)
+    >>= lift . addEvaluationResults cp (env1 ^. has <&> redirectLams strippedLams)
     >>= report . AddNames.addToWorkArea env1 (fmap getTagName . lift . ExprIRef.readTagData)
     <&> AddParens.addToWorkArea
     <&> Lens.mapped %~ \(parenInfo, pl) -> pl <&> (,) parenInfo

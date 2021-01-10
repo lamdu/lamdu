@@ -1,7 +1,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 
 module Lamdu.Sugar.Internal
-    ( ConvertPayload(..), pInput, pActions
+    ( ConvertPayload(..), pInput, pActions, pLambdas
     , EvalPrep(..), eType, eEvalId, eLambdas
     , InternalName(..), inTag, inContext
     , internalNameMatch
@@ -34,6 +34,7 @@ data ConvertPayload m a = ConvertPayload
     { -- Stored of top-level subtree for sugar expression subtree
       _pInput :: Input.Payload m a # V.Term
     , _pActions :: NodeActions InternalName (OnceT (T m)) (T m)
+    , _pLambdas :: [UUID] -- See docs for eLambdas
     }
 
 data EvalPrep = EvalPrep
@@ -43,7 +44,6 @@ data EvalPrep = EvalPrep
       -- This happens in let-items (redexes) and in else-if clauses.
       -- Their evaluation scopes are translated to the parent scope
       -- which is exposed by the sugar.
-      -- TODO: Currently not yet used and body in let-expressions doesn't have evaluation results.
       _eLambdas :: [UUID]
     }
 

@@ -8,13 +8,13 @@ module Lamdu.Sugar.Convert.Binder.Redex
 
 import qualified Control.Lens as Lens
 import           Hyper
-import           Hyper.Recurse
+import           Hyper.Recurse (HRecWitness(..))
 import           Hyper.Type.AST.TypedLam
 import           Hyper.Type.Prune (Prune)
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Sugar.Convert.Input as Input
-import           Lamdu.Sugar.Types
+import           Lamdu.Sugar.Types (EntityId)
 
 import           Lamdu.Prelude
 
