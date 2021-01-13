@@ -74,7 +74,7 @@ redirectLams lams results =
     & erExprValues . Lens.mapped %~ Map.mapKeys mapScopeId
     & erAppliesOfLam . Lens.mapped %~ Map.mapKeys mapScopeId
     where
-        mapScopeId x = mapping ^. Lens.at x <&> mapScopeId & fromMaybe x
+        mapScopeId x = mapping ^. Lens.at x & maybe x mapScopeId
         mapping =
             lams
             >>= (\lamId -> results ^@.. erAppliesOfLam . Lens.ix lamId . Lens.ifolded <. traverse . _1)
