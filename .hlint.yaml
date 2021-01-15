@@ -1,5 +1,6 @@
 - warn: { name: Use DerivingStrategies }
 - warn: { name: Redundant bracket due to operator fixities }
+- ignore: { name: Too strict if }
 
 - group:
     name: lamdu-style

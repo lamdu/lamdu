@@ -36,7 +36,7 @@ isInteresting path =
     baseName `elem` interestingLibs
     where
         -- takeBaseName removes one extension, we remove all:
-        baseName = takeFileName path & break (== '.') & fst
+        baseName = takeFileName path & takeWhile (/= '.')
 
 parseLddOut :: String -> [FilePath]
 parseLddOut lddOut =
@@ -45,7 +45,7 @@ parseLddOut lddOut =
     & filter isInteresting
     where
         parseLine line =
-            case words line & break (== "=>") & snd of
+            case words line & dropWhile (/= "=>") of
             [] -> []
             "=>":libPath:_ -> [libPath]
             _ -> error "unexpected break output"

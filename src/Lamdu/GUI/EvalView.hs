@@ -132,7 +132,7 @@ makeArray ::
     [ResVal Name] -> M env m (WithTextPos View)
 makeArray items =
     do
-        itemViews <- zipWith makeItem [0..arrayCutoff] items & sequence
+        itemViews <- zipWithM makeItem [0..arrayCutoff] items
         (preLabel, postLabel) <-
             Lens.view has <&>
             \case

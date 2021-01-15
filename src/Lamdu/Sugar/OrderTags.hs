@@ -5,6 +5,7 @@ module Lamdu.Sugar.OrderTags
     ) where
 
 import qualified Control.Lens as Lens
+import           Control.Monad ((>=>))
 import           Control.Monad.Transaction (MonadTransaction(..))
 import           Data.List (sortOn)
 import           Hyper
@@ -40,9 +41,7 @@ orderByTag toTag =
 orderComposite ::
     MonadTransaction m i =>
     OrderT i (Sugar.CompositeFields name (Ann a # Sugar.Type name))
-orderComposite =
-    Sugar.compositeFields $
-    \fields -> fields & orderByTag (^. _1) >>= traverse . _2 %%~ orderType
+orderComposite = Sugar.compositeFields (orderByTag fst >=> (traverse . _2) orderType)
 
 orderTBody ::
     MonadTransaction m i =>
