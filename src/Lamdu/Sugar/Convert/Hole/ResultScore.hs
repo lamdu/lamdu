@@ -38,7 +38,7 @@ compositeTypeScore x =
 
 score :: Ann (InferResult Pure) # V.Term -> [Int]
 score x =
-    (if Lens.has ExprLens.valBodyHole (x ^. hVal) then 1 else 0) :
+    (if Lens.has (hVal . ExprLens.valBodyHole) x then 1 else 0) :
     resultTypeScore (x ^. hAnn . inferResult) ++
     hfoldMap
     ( \case

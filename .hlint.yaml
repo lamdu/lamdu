@@ -22,13 +22,12 @@
     - hint: {lhs: "zipWith a [0..]", rhs: "Control.Lens.imap a"}
     - hint: {lhs: "zipWith a [0::Int ..]", rhs: "Control.Lens.imap a"}
     - hint: {lhs: "map (uncurry a) (Data.Map.toList b)", rhs: "Control.Lens.imap a b ^.. Control.Lens.folded"}
-    - hint: {lhs: "mempty & (Control.Lens.at a ?~ b)", rhs: "a Control.Lens.Extended.~~> b"}
+    - hint: {lhs: "(Control.Lens.at a ?~ b) mempty", rhs: "a Control.Lens.Extended.~~> b"}
     - warn: {lhs: "do { a <- b; pure c }", rhs: b <&> \a -> c}
-    - warn: {lhs: "do { a <- b; c & pure }", rhs: b <&> \a -> c}
-    - warn: {lhs: "[a] & sequenceA", rhs: "a <&> pure"}
+    - warn: {lhs: "sequenceA [a]", rhs: "a <&> pure"}
     - warn: {lhs: "lift a >>= lift . b", rhs: "a >>= b & lift"}
     - warn: {lhs: "pure a <&> b", rhs: "pure (b a)"}
-    - warn: {lhs: "a & lift <&> b >>= lift . c", rhs: "a <&> b >>= c & lift"}
+    - warn: {lhs: "lift a <&> b >>= lift . c", rhs: "a <&> b >>= c & lift"}
     - warn: {lhs: "either (Left . a) (Right . b)", rhs: "bimap a b"}
 
 - group:
@@ -58,12 +57,12 @@
     - warn: {lhs: "a <&> (<&> b)", rhs: "a <&> Lens.mapped %~ b"}
     - warn: {lhs: "a ^? b <&> (^. c)", rhs: "a ^? (b . c)"}
     - warn: {lhs: "Control.Lens.at a . Control.Lens._Just", rhs: "Control.Lens.ix a"}
-    - warn: {lhs: "a & (b .~ (a ^. b))", rhs: "a"}
-    - warn: {lhs: "(a ^. b) & (c .~ (a ^. (b . c)))", rhs: "a ^. b"}
+    - warn: {lhs: "(b .~ (a ^. b)) a", rhs: "a"}
+    - warn: {lhs: "(c .~ (a ^. (b . c))) (a ^. b)", rhs: "a ^. b"}
     - warn: {lhs: "a ^.. (b . Control.Lens.withIndex)", rhs: "a ^@.. b"}
     - error: {lhs: "(^. Control.Lens.folded) . fmap a", rhs: "foldMap a"}
     - error: {lhs: "(a <&> b) ^. Control.Lens.folded", rhs: "foldMap b a"}
-    - error: {lhs: "a ^. b & Control.Lens.has c", rhs: "Control.Lens.has (b . c) a"}
+    - error: {lhs: "Control.Lens.has c (a ^. b)", rhs: "Control.Lens.has (b . c) a"}
     - error: {lhs: "Control.Lens.has (Control.Lens.at a)", rhs: "True"}
     - error: {lhs: "Control.Lens.has (a . Control.Lens.at b)", rhs: "Control.Lens.has a"}
     - error: {lhs: "Control.Lens.nullOf (Control.Lens.at a)", rhs: "False"}
