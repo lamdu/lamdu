@@ -2,13 +2,12 @@
 module Lamdu.GUI.Expr.HoleEdit.ResultGroups
     ( makeAll
     , Result(..)
-    , ResultGroup(..), rgPrefixId, rgMain, rgExtra, rgTerms
+    , ResultGroup(..), rgPrefixId, rgMain, rgTerms
     , Mode(..)
     ) where
 
 import qualified Control.Lens as Lens
 import           Control.Monad.ListT (ListT)
-import qualified Data.ByteString.Char8 as BS8
 import           Data.Function (on)
 import           Data.List (sortOn)
 import qualified Data.List.Class as ListClass
@@ -54,7 +53,6 @@ data ResultGroup i o = ResultGroup
     { _rgExactMatch :: IsExactMatch -- Move to top of result list
     , _rgPrefixId :: WidgetId.Id
     , _rgMain :: Result i o
-    , _rgExtra :: [Result i o]
     , _rgTerms :: [Text] -- for debugging
     }
 Lens.makeLenses ''ResultGroup
@@ -68,18 +66,14 @@ mResultGroupOf ::
     ] ->
     Maybe (ResultGroup i o)
 mResultGroupOf _ _ [] = Nothing
-mResultGroupOf terms prefixId (x:xs) = Just
+mResultGroupOf terms prefixId (x:_) = Just
     ResultGroup
     { _rgExactMatch = NotExactMatch
     , _rgPrefixId = prefixId
     , _rgMain = mkResult prefixId x
-    , _rgExtra = Lens.imap mkExtra xs
     , _rgTerms = terms
     }
     where
-        mkExtra = mkResult . extraResultId
-        extraResultId i = WidgetId.joinId extraResultsPrefixId [BS8.pack (show i)]
-        extraResultsPrefixId = prefixId <> WidgetId.Id ["extra results"]
         mkResult resultId (score, holeResult) =
             Result
             { _rScore = score

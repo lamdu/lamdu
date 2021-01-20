@@ -99,22 +99,10 @@ makeResultOption pl results =
     Menu.Option
     { Menu._oId = results ^. ResultGroups.rgPrefixId
     , Menu._oRender = makeRenderedResult searchTerms pl (results ^. ResultGroups.rgMain)
-    , Menu._oSubmenuWidgets =
-        case results ^. ResultGroups.rgExtra of
-        [] -> Menu.SubmenuEmpty
-        extras ->
-            traverse (makeRenderedResult searchTerms pl) extras
-            <&> map makeSubMenu
-            & Menu.SubmenuItems
+    , Menu._oSubmenuWidgets = Menu.SubmenuEmpty
     }
     where
         searchTerms = results ^. ResultGroups.rgTerms
-        makeSubMenu extraResultWidget =
-            Menu.Option
-            { Menu._oId = results ^. ResultGroups.rgPrefixId -- UGLY HACK
-            , Menu._oRender = pure extraResultWidget
-            , Menu._oSubmenuWidgets = Menu.SubmenuEmpty
-            }
 
 makeInferredTypeAnnotation ::
     _ => Sugar.Annotation v Name -> M.AnimId -> m M.View
