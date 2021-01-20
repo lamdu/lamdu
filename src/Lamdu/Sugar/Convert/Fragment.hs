@@ -316,12 +316,6 @@ emplaceInHoles replaceHole =
                                 [ replace x
                                 , pure (pure oldVal)
                                 ]
-                        V.BApp (V.App (Ann f (V.BLeaf V.LHole)) arg@(Ann _ (V.BLeaf V.LHole))) ->
-                            join $ lift
-                                [ replace f
-                                    <&> fmap (Ann x . V.BApp . (`V.App` arg))
-                                , pure (pure oldVal)
-                                ]
                         _ ->
                             htraverse
                             ( \case
