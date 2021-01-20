@@ -15,6 +15,7 @@ import           Control.Monad.Once (OnceT, Typeable, MonadOnce(..), onceList)
 import           Control.Monad.State (State, runState, StateT(..), mapStateT)
 import qualified Control.Monad.State as State
 import           Control.Monad.Trans.Maybe (MaybeT(..))
+import           Data.Functor.Compose (Compose(..))
 import qualified Data.List.Class as ListClass
 import qualified Data.Property as Property
 import           Hyper
@@ -294,8 +295,6 @@ replaceFragment parentEntityId idxInParent (Ann pl bod) =
         & (`State.evalState` (0 :: Int))
         & Ann (pl & Input.userData .~ ())
 
-newtype Foo f a h = Foo { getFoo :: f (Ann a h) }
-
 emplaceInHoles ::
     forall f a.
     Applicative f =>
@@ -326,10 +325,10 @@ emplaceInHoles replaceHole =
                         _ ->
                             htraverse
                             ( \case
-                                HWitness V.W_Term_Term -> fmap Foo . go
-                                HWitness V.W_Term_HCompose_Prune_Type -> pure . Foo . pure
+                                HWitness V.W_Term_Term -> fmap Compose . go
+                                HWitness V.W_Term_HCompose_Prune_Type -> pure . Compose . pure
                             ) bod
-                            <&> htraverse (const getFoo)
+                            <&> htraverse (const getCompose)
                             <&> Lens.mapped %~ Ann x
         replace x = replaceHole x <$ State.put True
 
