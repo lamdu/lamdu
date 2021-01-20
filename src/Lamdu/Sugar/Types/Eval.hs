@@ -101,12 +101,8 @@ data EvalCompletionResult o
 
 type EvalCompletion o = CurAndPrev (Maybe (EvalCompletionResult o))
 
-Lens.makeLenses ''EvalException
-Lens.makeLenses ''ResInject
-Lens.makeLenses ''ResRecord
-Lens.makeLenses ''ResList
-Lens.makeLenses ''ResTable
-Lens.makeLenses ''ResTree
-Lens.makeLenses ''ResVal
+traverse Lens.makeLenses
+    [''EvalException, ''ResInject, ''ResRecord, ''ResList, ''ResTable, ''ResTree, ''ResVal]
+    <&> concat
 Lens.makePrisms ''EvalCompletionResult
 Lens.makePrisms ''ResBody

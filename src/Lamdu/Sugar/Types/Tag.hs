@@ -39,7 +39,4 @@ data TagRef name i o = TagRef
     , _tagRefJumpTo :: Maybe (o EntityId)
     } deriving Generic
 
-Lens.makeLenses ''TagRef
-Lens.makeLenses ''Tag
-Lens.makeLenses ''TagOption
-Lens.makeLenses ''TagReplace
+traverse Lens.makeLenses [''Tag, ''TagOption, ''TagRef, ''TagReplace] <&> concat

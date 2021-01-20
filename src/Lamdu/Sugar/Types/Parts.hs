@@ -166,22 +166,11 @@ data ParenInfo = ParenInfo
     , _piNeedParens :: !Bool
     } deriving (Eq, Show, Generic)
 
-Lens.makeLenses ''ClosedCompositeActions
-Lens.makeLenses ''FuncParam
-Lens.makeLenses ''FuncParamActions
-Lens.makeLenses ''HoleResultScore
-Lens.makeLenses ''NullParamActions
-Lens.makeLenses ''NullaryVal
-Lens.makeLenses ''OpenCompositeActions
-Lens.makeLenses ''ParamInfo
-Lens.makeLenses ''ParenInfo
-Lens.makePrisms ''AddFirstParam
-Lens.makePrisms ''AddNextParam
-Lens.makePrisms ''Annotation
-Lens.makePrisms ''BinderParams
-Lens.makePrisms ''Delete
-Lens.makePrisms ''DetachAction
-Lens.makePrisms ''FuncApplyLimit
-Lens.makePrisms ''HoleTerm
-Lens.makePrisms ''Literal
-Lens.makePrisms ''VarInfo
+traverse Lens.makeLenses
+    [ ''ClosedCompositeActions, ''FuncParam, ''FuncParamActions, ''HoleResultScore
+    , ''NullParamActions, ''NullaryVal, ''OpenCompositeActions, ''ParamInfo, ''ParenInfo
+    ] <&> concat
+traverse Lens.makePrisms
+    [ ''AddFirstParam, ''AddNextParam, ''Annotation, ''BinderParams, ''Delete
+    , ''DetachAction, ''FuncApplyLimit, ''HoleTerm, ''Literal, ''VarInfo
+    ] <&> concat

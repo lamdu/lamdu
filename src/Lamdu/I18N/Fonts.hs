@@ -34,14 +34,9 @@ data LightAndBold a = LightAndBold
     , _bold :: a
     } deriving Eq
 
-Lens.makeLenses ''ProportionalAndMonospace
-Lens.makeLenses ''SansAndSerif
-Lens.makeLenses ''RomanAndItalic
-Lens.makeLenses ''LightAndBold
-JsonTH.derivePrefixed "_" ''ProportionalAndMonospace
-JsonTH.derivePrefixed "_" ''SansAndSerif
-JsonTH.derivePrefixed "_" ''RomanAndItalic
-JsonTH.derivePrefixed "_" ''LightAndBold
+traverse (\x -> (<>) <$> Lens.makeLenses x <*> JsonTH.derivePrefixed "_" x)
+    [''ProportionalAndMonospace, ''SansAndSerif, ''RomanAndItalic, ''LightAndBold]
+    <&> concat
 
 class Choice s where
     type Options s :: * -> *
@@ -52,10 +47,9 @@ data SansOrSerif = Sans | Serif                         deriving Eq
 data RomanOrItalic = Roman | Italic                     deriving Eq
 data LightOrBold = Light | Bold                         deriving Eq
 
-JsonTH.deriveJSON Aeson.defaultOptions ''ProportionalOrMonospace
-JsonTH.deriveJSON Aeson.defaultOptions ''SansOrSerif
-JsonTH.deriveJSON Aeson.defaultOptions ''RomanOrItalic
-JsonTH.deriveJSON Aeson.defaultOptions ''LightOrBold
+traverse (JsonTH.deriveJSON Aeson.defaultOptions)
+    [''ProportionalOrMonospace, ''SansOrSerif, ''RomanOrItalic, ''LightOrBold]
+    <&> concat
 
 instance Choice ProportionalOrMonospace where
     type Options ProportionalOrMonospace = ProportionalAndMonospace

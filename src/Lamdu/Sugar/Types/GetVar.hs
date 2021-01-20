@@ -73,13 +73,7 @@ data GetVar name o
     | GetBinder (BinderVarRef name o)
     deriving Generic
 
-Lens.makeLenses ''BinderVarRef
-Lens.makeLenses ''DefinitionOutdatedType
-Lens.makeLenses ''NameRef
-Lens.makeLenses ''ParamRef
-Lens.makeLenses ''ParamsRecordVarRef
-Lens.makePrisms ''BinderMode
-Lens.makePrisms ''BinderVarForm
-Lens.makePrisms ''BinderVarInline
-Lens.makePrisms ''DefinitionForm
-Lens.makePrisms ''GetVar
+traverse Lens.makeLenses
+    [''BinderVarRef, ''DefinitionOutdatedType, ''NameRef, ''ParamRef, ''ParamsRecordVarRef] <&> concat
+traverse Lens.makePrisms
+    [''BinderMode, ''BinderVarForm, ''BinderVarInline, ''DefinitionForm, ''GetVar] <&> concat

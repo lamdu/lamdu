@@ -263,33 +263,15 @@ data Payload v name i o = Payload
     , _plEntityId :: EntityId
     } deriving Generic
 
-Lens.makeLenses ''AnnotatedArg
-Lens.makeLenses ''AssignPlain
-Lens.makeLenses ''Case
-Lens.makeLenses ''CaseArg
-Lens.makePrisms ''CaseKind
-Lens.makeLenses ''Composite
-Lens.makeLenses ''CompositeItem
-Lens.makePrisms ''CompositeTail
-Lens.makeLenses ''Fragment
-Lens.makeLenses ''Function
-Lens.makeLenses ''GetField
-Lens.makeLenses ''Hole
-Lens.makeLenses ''HoleOption
-Lens.makeLenses ''HoleResult
-Lens.makeLenses ''IfElse
-Lens.makeLenses ''Inject
-Lens.makeLenses ''LabeledApply
-Lens.makeLenses ''Lambda
-Lens.makeLenses ''Let
-Lens.makeLenses ''NodeActions
-Lens.makeLenses ''Nominal
-Lens.makeLenses ''Payload
-Lens.makePrisms ''Assignment
-Lens.makePrisms ''Binder
-Lens.makePrisms ''Else
-Lens.makePrisms ''InjectContent
-Lens.makePrisms ''Term
+traverse Lens.makeLenses
+    [ ''AnnotatedArg, ''AssignPlain, ''Case, ''CaseArg
+    , ''Composite, ''CompositeItem, ''Fragment
+    , ''Function, ''GetField, ''Hole, ''HoleOption, ''HoleResult
+    , ''IfElse, ''Inject, ''LabeledApply, ''Lambda, ''Let
+    , ''NodeActions, ''Nominal, ''Payload
+    ] <&> concat
+traverse Lens.makePrisms
+    [''Assignment, ''Binder, ''CaseKind, ''CompositeTail, ''Else, ''InjectContent, ''Term] <&> concat
 
 traverse makeHTraversableAndBases
     [ ''AnnotatedArg, ''Assignment, ''AssignPlain, ''Binder, ''Case, ''CaseArg

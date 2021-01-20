@@ -50,11 +50,8 @@ data CommandWithDb = CommandWithDb
 
 data Parsed = ParsedRequestVersion | ParsedCommand CommandWithDb
 
-Lens.makeLenses ''CommandWithDb
-Lens.makeLenses ''EditorOpts
-Lens.makeLenses ''ImportOpts
-Lens.makePrisms ''Command
-Lens.makePrisms ''Parsed
+traverse Lens.makeLenses [''CommandWithDb, ''EditorOpts, ''ImportOpts] <&> concat
+traverse Lens.makePrisms [''Command, ''Parsed] <&> concat
 
 inverseSwitch :: P.Mod P.FlagFields Bool -> P.Parser Bool
 inverseSwitch m = P.switch m <&> not

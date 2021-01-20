@@ -100,12 +100,8 @@ data EventContext = EventContext
       _ePrevTextRemainder :: Text
     }
 
-Lens.makeLenses ''EnterResult
-Lens.makeLenses ''EventContext
-Lens.makeLenses ''Focused
-Lens.makeLenses ''PreEvent
-Lens.makeLenses ''Surrounding
-Lens.makeLenses ''Unfocused
-Lens.makeLenses ''Widget
-Lens.makePrisms ''PreEvents
-Lens.makePrisms ''State
+traverse Lens.makeLenses
+    [ ''EnterResult, ''EventContext, ''Focused, ''PreEvent
+    , ''Surrounding, ''Unfocused, ''Widget]
+    <&> concat
+traverse Lens.makePrisms [''PreEvents, ''State] <&> concat
