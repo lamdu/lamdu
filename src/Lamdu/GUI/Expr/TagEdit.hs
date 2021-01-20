@@ -286,9 +286,8 @@ makeHoleSearchTerm newTagOption mkPickResult holeId =
                     & Reader.local (TextView.color .~ tooltip ^. Theme.tooltipFgColor)
                     & Reader.local (Element.animIdPrefix <>~ ["label"])
             else pure term
-    & GuiState.assignCursor (SearchMenu.searchTermEditId holeId) newTagId
     where
-        newTagId = newTagOption ^. Sugar.toInfo . Sugar.tagInstance & WidgetIds.fromEntityId
+        newTagId = newTagOption ^. Sugar.toInfo . Sugar.tagInstance & WidgetIds.fromEntityId & Widget.toAnimId
 
 makeTagHoleEdit ::
     ( Monad i, Monad o

@@ -6,7 +6,7 @@ module GUI.Momentu.Widgets.TextEdit
         , sCursorColor, sCursorWidth, sEmptyStringsColors, sTextViewStyle
     , Modes(..), focused, unfocused
     , EmptyStrings
-    , make
+    , make, makeWithAnimId
     , defaultStyle
     , getCursor, encodeCursor
     , Texts(..)
@@ -138,8 +138,8 @@ cursorRects s str =
 makeInternal ::
     (Has Dir.Layout env, HasStyle env) =>
     env -> (forall a. Lens.Getting a (Modes a) a) ->
-    Text -> EmptyStrings -> Widget.Id -> TextWidget ((,) Text)
-makeInternal env mode str emptyStrings myId =
+    Text -> EmptyStrings -> Anim.AnimId -> Widget.Id -> TextWidget ((,) Text)
+makeInternal env mode str emptyStrings animId myId =
     v
     & Align.tValue %~ Widget.fromView
     & Align.tValue . Widget.wState . Widget._StateUnfocused . Widget.uMEnter ?~
@@ -155,7 +155,6 @@ makeInternal env mode str emptyStrings myId =
         mkView displayStr setColor =
             TextView.make (setColor env) displayStr animId
             & Element.padAround (Vector2 (env ^. has . sCursorWidth / 2) 0)
-        animId = Widget.toAnimId myId
 
 minimumIndex :: Ord a => [a] -> Int
 minimumIndex xs =
@@ -198,10 +197,10 @@ eventResult myId newText newCursor =
 -- | given text...
 makeFocused ::
     (HasTexts env, HasStyle env) =>
-    env -> Text -> EmptyStrings -> Cursor -> Widget.Id ->
+    env -> Text -> EmptyStrings -> Cursor -> Anim.AnimId -> Widget.Id ->
     TextWidget ((,) Text)
-makeFocused env str empty cursor myId =
-    makeInternal env focused str empty myId
+makeFocused env str empty cursor animId myId =
+    makeInternal env focused str empty animId myId
     & Element.bottomLayer <>~ cursorFrame
     & Align.tValue %~
         Widget.setFocusedWith cursorRect
@@ -417,11 +416,18 @@ make ::
     m ( EmptyStrings -> Text -> Widget.Id ->
         TextWidget ((,) Text)
       )
-make =
+make = makeWithAnimId <&> Lens.mapped . Lens.mapped %~ \f w -> f (Widget.toAnimId w) w
+
+makeWithAnimId ::
+    (MonadReader env m, State.HasCursor env, HasStyle env, HasTexts env) =>
+    m ( EmptyStrings -> Text -> Anim.AnimId -> Widget.Id ->
+        TextWidget ((,) Text)
+      )
+makeWithAnimId =
     do
         get <- getCursor
         env <- Lens.view id
-        pure $ \empty str myId ->
+        pure $ \empty str animId myId ->
             case get str myId of
-            Nothing -> makeInternal env unfocused str empty myId
-            Just pos -> makeFocused env str empty pos myId
+            Nothing -> makeInternal env unfocused str empty animId myId
+            Just pos -> makeFocused env str empty pos animId  myId

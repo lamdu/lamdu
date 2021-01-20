@@ -11,7 +11,7 @@ module GUI.Momentu.Widgets.Menu.Search
     , addSearchTermBgColor, addSearchTermEmptyColors
     , addSearchTermStyle
     , addDelSearchTerm
-    , searchTermEdit, searchTermEditId
+    , searchTermEdit
 
     , TermStyle(..), bgColors, emptyStrings, emptyStringsColors
     , enterWithSearchTerm
@@ -38,6 +38,7 @@ import qualified Data.Aeson.TH.Extended as JsonTH
 import qualified Data.Text as Text
 import           GUI.Momentu.Align (TextWidget)
 import qualified GUI.Momentu.Align as Align
+import           GUI.Momentu.Animation (AnimId)
 import qualified GUI.Momentu.Draw as Draw
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
@@ -148,7 +149,7 @@ basicSearchTermEdit ::
     ( MonadReader env m, Applicative f, HasTexts env
     , TextEdit.Deps env, HasState env
     ) =>
-    Id -> Id -> AllowedSearchTerm -> TextEdit.EmptyStrings -> m (Term f)
+    AnimId -> Id -> AllowedSearchTerm -> TextEdit.EmptyStrings -> m (Term f)
 basicSearchTermEdit searchTermId holeId allowedSearchTerm textEditEmpty =
     do
         searchTerm <- readSearchTerm holeId
@@ -165,11 +166,11 @@ basicSearchTermEdit searchTermId holeId allowedSearchTerm textEditEmpty =
                             Just (resultsIdPrefix holeId) ^. Lens._Unwrapped
                         else id
         widget <-
-            TextEdit.make ?? textEditEmpty ?? searchTerm ?? searchTermId
+            TextEdit.makeWithAnimId ?? textEditEmpty ?? searchTerm ?? searchTermId ?? searchTermEditId holeId
             <&> Align.tValue . Widget.eventMapMaker . Lens.mapped %~
                 E.filter (_tcTextEdit . allowedSearchTerm . fst)
             <&> Align.tValue . Widget.updates %~ pure . onEvents
-            <&> Align.tValue %~ Widget.takesStroll searchTermId
+            <&> Align.tValue %~ Widget.takesStroll holeId
         env <- Lens.view id
         pure Term
             { _termWidget = widget
@@ -239,11 +240,10 @@ searchTermEdit ::
     Widget.Id -> (Text -> TermCtx Bool) -> Menu.PickFirstResult f -> m (Term f)
 searchTermEdit myId allowedSearchTerm mPickFirst =
     Lens.view (has . emptyStrings)
-    >>= basicSearchTermEdit (searchTermEditId myId) myId allowedSearchTerm
+    >>= basicSearchTermEdit (searchTermEditId myId & Widget.toAnimId) myId allowedSearchTerm
     & (addDelSearchTerm myId <*>)
     & addSearchTermStyle myId
     & (addPickFirstResultEvent myId mPickFirst <*>)
-
 
 -- Add events on search term to pick the first result.
 addPickFirstResultEvent ::
