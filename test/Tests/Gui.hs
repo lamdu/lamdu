@@ -64,6 +64,7 @@ test =
     [ testOpPrec
     , testFragmentSize
     , testLambdaDelete
+    , testNewTag
     , testPrograms
     , testTagPanes
     , testWYTIWYS
@@ -186,16 +187,35 @@ testLambdaDelete =
     \baseEnv ->
     testProgram "simple-lambda.json" $
     do
-        paramCursor <-
-            fromWorkArea baseEnv
-            (replExpr . Sugar._BodyLam . Sugar.lamFunc .
-             Sugar.fParams . Sugar._Params . Lens.ix 0 . _2 .
-             Sugar.piTag . Sugar.tagRefTag . Sugar.tagInstance)
-            <&> WidgetIds.fromEntityId
+        paramCursor <- topLevelLamParamCursor baseEnv
         let delEvent = MetaKey noMods GLFW.Key'Backspace & simpleKeyEvent
         env0 <- applyEvent (baseEnv & cursor .~ paramCursor) dummyVirt delEvent
         -- One delete replaces the param tag, next delete deletes param
         env1 <- applyEvent env0 dummyVirt delEvent
+        _ <- makeWorkArea env1 >>= makeGui "" env1
+        pure ()
+
+topLevelLamParamCursor :: Env -> OnceT (T ViewM) WidgetId.Id
+topLevelLamParamCursor env =
+    fromWorkArea env
+    (replExpr . Sugar._BodyLam . Sugar.lamFunc .
+        Sugar.fParams . Sugar._Params . Lens.ix 0 . _2 .
+        Sugar.piTag . Sugar.tagRefTag . Sugar.tagInstance)
+    <&> WidgetIds.fromEntityId
+
+-- | Test for regression in creating new tags when there are tags matching the search string.
+-- (regression introduced at 2020.11.12 in 7bf691ce675f897)
+testNewTag :: Test
+testNewTag =
+    testCase "new-tag" $
+    Env.make >>=
+    \baseEnv ->
+    testProgram "simple-lambda.json" $
+    do
+        paramCursor <- topLevelLamParamCursor baseEnv
+        env0 <- applyEvent (baseEnv & cursor .~ paramCursor) dummyVirt (EventChar 'f')
+        let upEvent = MetaKey noMods GLFW.Key'Up & simpleKeyEvent
+        env1 <- applyEvent env0 dummyVirt upEvent
         _ <- makeWorkArea env1 >>= makeGui "" env1
         pure ()
 
