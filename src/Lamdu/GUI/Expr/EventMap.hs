@@ -145,7 +145,7 @@ actionsEventMap ::
     GuiM env i o (EventContext -> EventMap (o GuiState.Update))
 actionsEventMap options exprInfo =
     ( mconcat
-        [ detachEventMap ?? exprInfo ?? actions ^. Sugar.detach
+        [ detachEventMap ?? exprInfo
         , if exprInfoIsHoleResult exprInfo
             then pure mempty
             else
@@ -236,14 +236,14 @@ transformEventMap =
 detachEventMap ::
     ( MonadReader env m, Has Config env, Has Dir.Layout env
     , Has (MomentuTexts.Texts Text) env, Has (Texts.CodeUI Text) env
-    , Functor f
+    , Functor o
     ) =>
-    m (ExprInfo name i o -> Sugar.DetachAction f -> EventMap (f GuiState.Update))
+    m (ExprInfo name i o -> EventMap (o GuiState.Update))
 detachEventMap =
     Lens.view id
     <&>
     \env exprInfo ->
-    \case
+    case exprInfoActions exprInfo ^. Sugar.detach of
     Sugar.DetachAction act
         | exprInfoIsSelected exprInfo ->
             E.keysEventMapMovesCursor (env ^. has . Config.detachKeys)
@@ -259,7 +259,6 @@ detachEventMap =
                 Dir.LeftToRight -> "(["
                 Dir.RightToLeft -> ")]"
     _ -> mempty
-
 
 replaceEventMap ::
     ( MonadReader env m, Has Config env
