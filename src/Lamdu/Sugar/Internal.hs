@@ -66,8 +66,8 @@ data InternalName = InternalName
 -- i.e: Having no Var (e.g: a record field) means it matches the exact
 -- same tag set for a Var
 internalNameMatch :: InternalName -> InternalName -> Maybe InternalName
-internalNameMatch a@(InternalName aMVar aUuid) b@(InternalName bMVar bUuid)
-    | aUuid /= bUuid = Nothing
+internalNameMatch a@(InternalName aMVar aTag) b@(InternalName bMVar bTag)
+    | aTag /= bTag = Nothing
     | otherwise =
         case (aMVar, bMVar) of
         (Just aVar, Just bVar)

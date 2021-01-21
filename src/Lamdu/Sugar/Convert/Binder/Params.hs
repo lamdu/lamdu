@@ -674,24 +674,26 @@ convertNonRecordParam binderKind lam@(V.TypedLam param _ _) lamExprPl =
                         }
                 <&> (:[])
                 <&> Params
-        oldParam <- Anchors.assocTag param & getP
         postProcess <- ConvertM.postProcessAssert
         addFirst <-
             convertToRecordParams ?? DataOps.newHole ?? binderKind ?? storedLam
             ?? NewParamBefore
             <&> Lens.mapped %~ (<* postProcess)
-        addFirstSelection <-
-            ConvertTag.replace (nameWithContext param) (Set.singleton oldParam)
-            ConvertTag.RequireTag (EntityId.ofTaggedEntity param) addFirst
-            >>= ConvertM . lift
+        addFirstParam <-
+            do
+                oldParam <- Anchors.assocTag param & getP
+                if oldParam == Anchors.anonTag
+                    then NeedToPickTagToAddFirst (EntityId.ofTaggedEntity param oldParam) & pure
+                    else
+                        ConvertTag.replace (nameWithContext param) (Set.singleton oldParam)
+                        ConvertTag.RequireTag (EntityId.ofTaggedEntity param) addFirst
+                        >>= ConvertM . lift
+                        <&> PrependParam
         pure ConventionalParams
             { cpTags = mempty
             , _cpParamInfos = Map.empty
             , _cpParams = Just funcParam
-            , _cpAddFirstParam =
-                if oldParam == Anchors.anonTag
-                then NeedToPickTagToAddFirst (EntityId.ofTaggedEntity param oldParam)
-                else PrependParam addFirstSelection
+            , _cpAddFirstParam = addFirstParam
             , cpMLamParam = Just (lamExprPl ^. Input.entityId, param)
             }
     where
