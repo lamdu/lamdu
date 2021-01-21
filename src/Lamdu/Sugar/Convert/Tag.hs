@@ -131,9 +131,9 @@ replaceWith name forbiddenTags allowAnon mkInstance setTag tagsProp =
 -- | Convert a "Entity" (param, def, TId) via its associated tag
 taggedEntityWith ::
     (UniqueId.ToUUID a, MonadTransaction n m) =>
-    Anchors.CodeAnchors n ->
-    a -> MkProperty' (T n) (Set T.Tag) -> m (OnceT (T n) (TagRef InternalName (OnceT (T n)) (T n)))
-taggedEntityWith cp entity tagsProp =
+    Anchors.CodeAnchors n -> a ->
+    m (OnceT (T n) (TagRef InternalName (OnceT (T n)) (T n)))
+taggedEntityWith cp entity =
     getP prop
     <&>
     \entityTag ->
@@ -141,11 +141,9 @@ taggedEntityWith cp entity tagsProp =
     (EntityId.ofTaggedEntity entity) (setP prop) tagsProp
     where
         prop = Anchors.assocTag entity
+        tagsProp = Anchors.tags cp
 
 taggedEntity ::
     (UniqueId.ToUUID a, MonadTransaction n m, MonadReader env m, Anchors.HasCodeAnchors env n) =>
     a -> m (OnceT (T n) (TagRef InternalName (OnceT (T n)) (T n)))
-taggedEntity entity =
-    do
-        env <- Lens.view id
-        taggedEntityWith (env ^. Anchors.codeAnchors) entity (getTagsProp env)
+taggedEntity entity = Lens.view Anchors.codeAnchors >>= (`taggedEntityWith` entity)
