@@ -310,7 +310,7 @@ fieldParamActions mPresMode binderKind tags fp storedLam =
                     add DataOps.newHole binderKind storedLam (\x -> tagsBefore <> [x] <> tagsAfter) newTag
                     postProcess
         addNext <-
-            ConvertTag.replace (nameWithContext param)
+            ConvertTag.replace (nameWithContext Nothing param)
             (Set.fromList tags) ConvertTag.RequireTag
             (EntityId.ofTaggedEntity param) addParamAfter
             >>= ConvertM . lift
@@ -436,7 +436,7 @@ convertRecordParams mPresMode binderKind fieldParams lam@(V.TypedLam param _ _) 
                     add DataOps.newHole binderKind storedLam (: (fieldParams <&> fpTag)) tag
                     postProcess
         addFirstSelection <-
-            ConvertTag.replace (nameWithContext param)
+            ConvertTag.replace (nameWithContext Nothing param)
             (Set.fromList tags) ConvertTag.RequireTag
             (EntityId.ofTaggedEntity param)
             addFirst
@@ -458,7 +458,7 @@ convertRecordParams mPresMode binderKind fieldParams lam@(V.TypedLam param _ _) 
                 paramInfo <-
                     ParamInfo
                     <$> ( setFieldParamTag mPresMode binderKind storedLam tagList tag
-                            >>= ConvertTag.ref tag (nameWithContext param)
+                            >>= ConvertTag.ref tag (nameWithContext Nothing param)
                                 (Set.delete tag (Set.fromList tagList))
                                 (EntityId.ofTaggedEntity param)
                             >>= ConvertM . lift
@@ -604,7 +604,7 @@ makeNonRecordParamActions binderKind storedLam =
             if oldParam == Anchors.anonTag
             then EntityId.ofTaggedEntity param oldParam & NeedToPickTagToAddNext & pure
             else
-                ConvertTag.replace (nameWithContext param)
+                ConvertTag.replace (nameWithContext Nothing param)
                 (Set.singleton oldParam) ConvertTag.RequireTag
                 (EntityId.ofTaggedEntity param) addParamAfter
                 >>= ConvertM . lift
@@ -657,6 +657,7 @@ convertNonRecordParam binderKind lam@(V.TypedLam param _ _) lamExprPl =
         funcParamActions <- makeNonRecordParamActions binderKind storedLam
         nullParamSugar <-
             Lens.view (ConvertM.scConfig . Config.sugarsEnabled . Config.nullaryParameter)
+        varInfo <- lamParamType lamExprPl & mkVarInfo
         funcParam <-
             case lamParamType lamExprPl ^. _Pure of
             T.TRecord (Pure T.REmpty)
@@ -666,7 +667,7 @@ convertNonRecordParam binderKind lam@(V.TypedLam param _ _) lamExprPl =
                     info = funcParamActions ^. fpDelete & void & NullParamActions
             _ ->
                 do
-                    tag <- ConvertTag.taggedEntity param >>= ConvertM . lift
+                    tag <- ConvertTag.taggedEntity (Just varInfo) param >>= ConvertM . lift
                     mkFuncParam (tag ^. tagRefTag . tagInstance) lamExprPl
                         ParamInfo
                         { _piTag = tag
@@ -685,7 +686,7 @@ convertNonRecordParam binderKind lam@(V.TypedLam param _ _) lamExprPl =
                 if oldParam == Anchors.anonTag
                     then NeedToPickTagToAddFirst (EntityId.ofTaggedEntity param oldParam) & pure
                     else
-                        ConvertTag.replace (nameWithContext param) (Set.singleton oldParam)
+                        ConvertTag.replace (nameWithContext (Just varInfo) param) (Set.singleton oldParam)
                         ConvertTag.RequireTag (EntityId.ofTaggedEntity param) addFirst
                         >>= ConvertM . lift
                         <&> PrependParam

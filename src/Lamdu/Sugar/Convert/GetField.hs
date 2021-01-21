@@ -32,7 +32,7 @@ convertGetFieldParam (V.GetField recExpr tag) exprPl =
             guard $ param == ConvertM.tpiFromParameters paramInfo
             GetParam ParamRef
                 { _pNameRef = NameRef
-                  { _nrName = nameWithContext param tag
+                  { _nrName = nameWithContext Nothing param tag
                   , _nrGotoDefinition = ConvertM.tpiJumpTo paramInfo & pure
                   }
                 , _pBinderMode = NormalBinder

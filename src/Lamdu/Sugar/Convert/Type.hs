@@ -35,7 +35,7 @@ convertComposite entityId (Pure (T.RExtend (RowExtend tag typ rest))) =
         tagS = ConvertTag.withoutContext entityId tag
 
 convertComposite _ (Pure (T.RVar v)) =
-    CompositeFields mempty (Just (nameWithContext v anonTag)) & pure
+    CompositeFields mempty (Just (nameWithContext Nothing v anonTag)) & pure
 convertComposite _ (Pure T.REmpty) = CompositeFields mempty Nothing & pure
 
 convertType ::
@@ -43,7 +43,7 @@ convertType ::
     EntityId -> Pure # T.Type -> m (Annotated EntityId # Type InternalName)
 convertType entityId typ =
     case typ ^. _Pure of
-    T.TVar tv -> nameWithContext tv anonTag & TVar & pure
+    T.TVar tv -> nameWithContext Nothing tv anonTag & TVar & pure
     T.TFun (FuncType param res) ->
         FuncType
         <$> convertType (ofFunParam entityId) param
@@ -59,7 +59,7 @@ convertType entityId typ =
             T.Types (S.QVarInstances tParams) (S.QVarInstances rParams) = args
             convertTypeParam (tv, val) =
                 (,)
-                <$> taggedName tv
+                <$> taggedName Nothing tv
                 <*> convertType (EntityId.ofTInstParam tv entityId) val
     T.TRecord composite -> TRecord <$> convertComposite entityId composite
     T.TVariant composite -> TVariant <$> convertComposite entityId composite

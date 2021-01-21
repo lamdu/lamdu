@@ -243,7 +243,7 @@ convertPaneBody env cp (Anchors.PaneDefinition defI) =
         bodyS <-
             ExprLoad.def defI & lift <&> Definition.defPayload .~ defI
             >>= convertDefBody env cp
-        tag <- ConvertTag.taggedEntityWith cp defVar & join
+        tag <- ConvertTag.taggedEntityWith cp Nothing defVar & join
         defState <- Anchors.assocDefinitionState defI ^. Property.mkProperty & lift
         OrderTags.orderDef Definition
             { _drEntityId = EntityId.ofIRef defI

@@ -52,7 +52,7 @@ class (Monad m, Monad (IM m)) => MonadNaming m where
     type IM m :: * -> *
     opRun :: m (m a -> IM m a)
 
-    opWithName :: Sugar.VarInfo -> NameType -> CPSNameConvertor m
+    opWithName :: NameType -> CPSNameConvertor m
     opGetName :: Maybe Disambiguator -> NameType -> NameConvertor m
 
 toParamRef ::
@@ -205,10 +205,10 @@ type BodyW v t n m o a = Body t (Annotation v n) n (IM m) o a
 type WalkBody t v0 v1 m o a = (v0 -> m v1) -> BodyW v0 t (OldName m) m o a -> m (BodyW v1 t (NewName m) m o a)
 
 toLet :: MonadNaming m => WalkBody Let v0 v1 m o a
-toLet v let_@Let{_lName, _lVarInfo, _lBody, _lValue} =
+toLet v let_@Let{_lName, _lBody, _lValue} =
     do
         (_lName, _lBody) <-
-            unCPS (withTagRef TaggedVar _lVarInfo _lName)
+            unCPS (withTagRef TaggedVar _lName)
             (toNode v (toBinder v) _lBody)
         _lValue <- toAssignment v _lValue
         pure let_{_lName, _lBody, _lValue}
@@ -275,12 +275,12 @@ toTagRefOf nameType (Sugar.TagRef info actions jumpTo) =
 
 withTagRef ::
     MonadNaming m =>
-    NameType -> Sugar.VarInfo ->
+    NameType ->
     Sugar.TagRef (OldName m) (IM m) o ->
     CPS m (Sugar.TagRef (NewName m) (IM m) o)
-withTagRef nameType varInfo (Sugar.TagRef info actions jumpTo) =
+withTagRef nameType (Sugar.TagRef info actions jumpTo) =
     Sugar.TagRef
-    <$> tagName (opWithName varInfo nameType) info
+    <$> tagName (opWithName nameType) info
     <*> liftCPS (toTagReplace actions)
     ?? jumpTo
 
@@ -405,17 +405,17 @@ toExpression = toNode <*> toBody
 
 withParamInfo ::
     MonadNaming m =>
-    Sugar.VarInfo -> ParamInfo (OldName m) (IM m) o ->
+    ParamInfo (OldName m) (IM m) o ->
     CPS m (ParamInfo (NewName m) (IM m) o)
-withParamInfo varInfo (ParamInfo tag fpActions) =
+withParamInfo (ParamInfo tag fpActions) =
     ParamInfo
-    <$> withTagRef TaggedVar varInfo tag
+    <$> withTagRef TaggedVar tag
     <*> liftCPS ((fpAddNext . Sugar._AddNext) toTagReplace fpActions)
 
 withFuncParam ::
     MonadNaming m =>
     (v0 -> m v1) ->
-    (Sugar.VarInfo -> a -> CPS m b) ->
+    (a -> CPS m b) ->
     (FuncParam (Annotation v0 (OldName m)) (OldName m), a) ->
     CPS m (FuncParam (Annotation v1 (NewName m)) (NewName m), b)
 withFuncParam v f (FuncParam pl varInfo, info) =
@@ -424,14 +424,14 @@ withFuncParam v f (FuncParam pl varInfo, info) =
     ( FuncParam
         <$> liftCPS (toAnnotation v pl)
         <*> pure varInfo
-    ) <*> f varInfo info
+    ) <*> f info
 
 withBinderParams ::
     MonadNaming m =>
     (v0 -> m v1) ->
     SugarElem BinderParams v0 (OldName m) m o ->
     CPS m (SugarElem BinderParams v1 (NewName m) m o)
-withBinderParams v (NullParam x) = withFuncParam v (const pure) x <&> NullParam
+withBinderParams v (NullParam x) = withFuncParam v pure x <&> NullParam
 withBinderParams v (Params xs) = traverse (withFuncParam v withParamInfo) xs <&> Params
 
 type Top t n m o a = t (Annotation (EvaluationScopes n (IM m)) n) n (IM m) o (Pl (EvaluationScopes n (IM m)) n m o, a)

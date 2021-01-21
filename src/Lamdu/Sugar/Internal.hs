@@ -3,7 +3,7 @@
 module Lamdu.Sugar.Internal
     ( ConvertPayload(..), pInput, pActions, pLambdas
     , EvalPrep(..), eType, eEvalId, eLambdas
-    , InternalName(..), inTag, inContext
+    , InternalName(..), inTag, inContext, inIsAutoName
     , internalNameMatch
     , nameWithoutContext, nameWithContext, taggedName
     , ExpressionU
@@ -15,6 +15,7 @@ import           Control.Monad.Once (OnceT)
 import           Control.Monad.Transaction (MonadTransaction, getP)
 import           Data.UUID.Types (UUID)
 import           Hyper
+import qualified Lamdu.Builtins.Anchors as Builtins
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Data.Anchors as Anchors
@@ -58,6 +59,10 @@ data EvalPrep = EvalPrep
 data InternalName = InternalName
     { _inContext :: Maybe UUID
     , _inTag :: T.Tag
+    , -- Is an automatic "isomorphic-naming" name.
+      -- When a variable's tag is anonTag, we assign it an automatic name according to its type.
+      -- This is done early in sugaring (rather than the names pass) so that it can affect field punning.
+      _inIsAutoName :: Bool
     } deriving (Eq, Ord, Show)
 
 -- 2 Internal names clash if their UUIDs mismatch OR if they
@@ -66,7 +71,7 @@ data InternalName = InternalName
 -- i.e: Having no Var (e.g: a record field) means it matches the exact
 -- same tag set for a Var
 internalNameMatch :: InternalName -> InternalName -> Maybe InternalName
-internalNameMatch a@(InternalName aMVar aTag) b@(InternalName bMVar bTag)
+internalNameMatch a@(InternalName aMVar aTag _) b@(InternalName bMVar bTag _)
     | aTag /= bTag = Nothing
     | otherwise =
         case (aMVar, bMVar) of
@@ -81,17 +86,33 @@ nameWithoutContext tag =
     InternalName
     { _inContext = Nothing
     , _inTag = tag
+    , _inIsAutoName = False
     }
 
-nameWithContext :: UniqueId.ToUUID a => a -> T.Tag -> InternalName
-nameWithContext param tag =
+nameWithContext ::
+    UniqueId.ToUUID a =>
+    Maybe VarInfo -> a -> T.Tag -> InternalName
+nameWithContext mVarInfo param tag =
     InternalName
     { _inContext = Just (UniqueId.toUUID param)
-    , _inTag = tag
+    , _inTag = t
+    , _inIsAutoName = a
     }
+    where
+        (t, a) =
+            case mVarInfo of
+            Just varInfo | tag == Anchors.anonTag -> (autoName varInfo, True)
+            _ -> (tag, False)
 
-taggedName :: (MonadTransaction n m, UniqueId.ToUUID a) => a -> m InternalName
-taggedName x = Anchors.assocTag x & getP <&> nameWithContext x
+autoName :: VarInfo -> T.Tag
+autoName (VarNominal (TId nomTag _)) = nomTag
+autoName VarGeneric = Builtins.genericVarTag
+autoName VarFunction = Builtins.functionTag
+autoName VarRecord = Builtins.recordTag
+autoName VarVariant = Builtins.variantTag
+
+taggedName :: (MonadTransaction n m, UniqueId.ToUUID a) => Maybe VarInfo -> a -> m InternalName
+taggedName mVarInfo x = Anchors.assocTag x & getP <&> nameWithContext mVarInfo x
 
 type ExpressionU v m a = Annotated (ConvertPayload m a) # Term v InternalName (OnceT (T m)) (T m)
 

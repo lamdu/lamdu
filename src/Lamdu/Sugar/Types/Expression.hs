@@ -27,7 +27,7 @@ module Lamdu.Sugar.Types.Expression
     , GetField(..), gfRecord, gfTag
     , Nominal(..), nTId, nVal
     -- Binders
-    , Let(..), lValue, lName, lUsages, lDelete, lBody, lVarInfo
+    , Let(..), lValue, lName, lUsages, lDelete, lBody
     , Meta.SpecialArgs(..), Meta._Verbose, Meta._Operator
     , Meta.DefinitionState(..)
     , BinderParamScopeId(..), bParamScopeId
@@ -208,7 +208,6 @@ data Term v name i o k
 
 data Let v name i o k = Let
     { _lValue :: k :# Assignment v name i o -- "let foo = [[bar]] in x"
-    , _lVarInfo :: VarInfo
     , _lUsages :: [EntityId]
     , _lName :: TagRef name i o -- let [[foo]] = bar in x
     , _lDelete :: o ()

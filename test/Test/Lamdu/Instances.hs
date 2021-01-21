@@ -136,7 +136,7 @@ instance Arbitrary Widget.Id where
     arbitrary = arbitrary <&> BS8.pack <&> (:[]) <&> Widget.Id
 
 instance HasPrecedence InternalName where
-    precedence (InternalName _ (T.Tag (Identifier ident))) =
+    precedence (InternalName _ (T.Tag (Identifier ident)) _) =
         precedence (BS8.head ident)
 
 instance NFData (Transaction m a) where rnf = pure () -- Cheating

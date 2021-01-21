@@ -199,7 +199,7 @@ processLet redex =
             _ -> error "multiple osiVarsUnderPos not expected!?"
     where
         innerScopeLocalVars =
-            redex ^. Redex.arg . hAnn . Input.localsInScope & Set.fromList
+            redex ^. Redex.arg . hAnn . Input.localsInScope <&> fst & Set.fromList
 
 makeFloatLetToOuterScope ::
     Monad m =>

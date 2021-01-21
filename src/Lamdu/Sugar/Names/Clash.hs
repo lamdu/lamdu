@@ -88,13 +88,13 @@ groupNameContextOf uuid Nothing = Ambiguous (Single uuid)
 groupNameContextOf uuid (Just d) = d ~~> Single uuid & Disambiguated
 
 nameContextOf :: Annotated.Name -> NameContext
-nameContextOf (Annotated.Name (InternalName (Just nameCtx) _tag) disamb nameType) =
+nameContextOf (Annotated.Name (InternalName (Just nameCtx) _tag _) disamb nameType) =
     filter (nameType `elem`) collisionGroups
     <&> ((,) ?? ctx)
     & MMap.fromList
     where
         ctx = groupNameContextOf nameCtx disamb
-nameContextOf (Annotated.Name (InternalName Nothing _tag) _disamb _nameType) =
+nameContextOf (Annotated.Name (InternalName Nothing _tag _) _disamb _nameType) =
     mempty
 
 instance Semigroup Info where

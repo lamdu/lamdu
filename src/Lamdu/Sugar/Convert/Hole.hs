@@ -57,6 +57,7 @@ import           Lamdu.Expr.IRef (HRef(..), DefI)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Load as Load
 import           Lamdu.Sugar.Convert.Binder (convertBinder)
+import           Lamdu.Sugar.Convert.Binder.Params (mkVarInfo)
 import qualified Lamdu.Sugar.Convert.Completions as Completions
 import           Lamdu.Sugar.Convert.Expression.Actions (addActions, convertPayloads)
 import           Lamdu.Sugar.Convert.Hole.ResultScore (resultScore)
@@ -115,10 +116,12 @@ holeResultProcessor =
 mkHoleSearchTerms :: Monad m => ConvertM.Context m -> Input.Payload m a # V.Term -> Val () -> T m [HoleTerm InternalName]
 mkHoleSearchTerms ctx pl x =
     case x ^. hVal of
-    V.BLeaf (V.LVar v)
-        | v `notElem` pl ^. Input.localsInScope -> taggedName v <&> (:[]) . HoleGetDef
-        | v `elem` recordParams -> pure [HoleParamsRecord]
-        | otherwise -> ofName v
+    V.BLeaf (V.LVar v) ->
+        case lookup v (pl ^. Input.localsInScope) of
+        Nothing -> taggedName Nothing v <&> (:[]) . HoleGetDef
+        Just t
+            | v `elem` recordParams -> pure [HoleParamsRecord]
+            | otherwise -> mkVarInfo t <&> Just >>= (`taggedName` v) <&> (:[]) . HoleName
     V.BLeaf (V.LFromNom n) -> ofName n <&> (<> [HoleIf | n == Builtins.boolTid])
     V.BLeaf V.LRecEmpty -> pure [HoleRecord]
     V.BLeaf V.LAbsurd -> pure [HoleEmptyCase]
@@ -136,7 +139,7 @@ mkHoleSearchTerms ctx pl x =
             pure [HoleName (nameWithoutContext f)]
         | otherwise -> pure [HoleGetField (nameWithoutContext f)]
     where
-        ofName v = taggedName v <&> (:[]) . HoleName
+        ofName v = taggedName Nothing v <&> (:[]) . HoleName
         recordParams =
             ctx ^.. ConvertM.scScopeInfo . ConvertM.siTagParamInfos . traverse . ConvertM._TagFieldParam
             <&> ConvertM.tpiFromParameters
@@ -260,7 +263,7 @@ mkOptions posInfo resultProcessor holePl =
         suggesteds <- mkHoleSuggesteds sugarContext resultProcessor holePl
         baseForms <- mkBaseForms posInfo & lift
         concat
-            [ holePl ^. Input.localsInScope >>= getLocalScopeGetVars sugarContext
+            [ holePl ^. Input.localsInScope <&> fst >>= getLocalScopeGetVars sugarContext
             , globals <&> V.BLeafP . V.LVar . ExprIRef.globalId
             , tags <&> (`V.BInjectP` V.BLeafP V.LHole)
             , nominalOptions

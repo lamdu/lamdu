@@ -10,4 +10,4 @@ import           Lamdu.Sugar.Types
 import           Lamdu.Prelude
 
 convert :: MonadTransaction n m => T.NominalId -> m (TId InternalName)
-convert tid = taggedName tid <&> (`TId` tid)
+convert tid = taggedName Nothing tid <&> (`TId` tid)

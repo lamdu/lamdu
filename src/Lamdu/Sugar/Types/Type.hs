@@ -27,7 +27,7 @@ data CompositeFields name a = CompositeFields
 data TId name = TId
     { _tidName :: name
     , _tidTId :: T.NominalId
-    } deriving (Eq, Ord, Generic, Functor)
+    } deriving (Eq, Ord, Generic, Functor, Show)
 
 data Type name k
     = TVar name

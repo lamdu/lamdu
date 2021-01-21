@@ -70,7 +70,8 @@ convertLet ::
 convertLet pl redex =
     do
         float <- makeFloatLetToOuterScope (pl ^. Input.stored . ExprIRef.setIref) redex
-        tag <- ConvertTag.taggedEntity param >>= ConvertM . lift
+        vinfo <- mkVarInfo (argAnn ^. Input.inferredType)
+        tag <- ConvertTag.taggedEntity (Just vinfo) param >>= ConvertM . lift
         (value, letBody, actions) <-
             (,,)
             <$> ( convertAssignment binderKind param (redex ^. Redex.arg)
@@ -100,12 +101,10 @@ convertLet pl redex =
                     redex ^. Redex.lam . V.tlOut . hAnn . Input.stored
                         & replaceWith stored & void
                 <* postProcess
-        vinfo <- mkVarInfo (argAnn ^. Input.inferredType)
         pure Ann
             { _hVal =
                 BinderLet Let
-                { _lVarInfo = vinfo
-                , _lValue = value & annotation . pActions %~ fixValueNodeActions
+                { _lValue = value & annotation . pActions %~ fixValueNodeActions
                 , _lDelete = del
                 , _lName = tag
                 , _lBody =

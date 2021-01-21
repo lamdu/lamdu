@@ -243,6 +243,7 @@ taggedEntityName ctx tag =
     InternalName
     { _inContext = Just ctx
     , _inTag = tag
+    , _inIsAutoName = False
     }
 
 tagRefReplace :: Sugar.TagReplace InternalName Identity Unit ()

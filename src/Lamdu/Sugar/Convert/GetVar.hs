@@ -25,6 +25,7 @@ import qualified Lamdu.Data.Definition as Def
 import qualified Lamdu.Data.Ops as DataOps
 import           Lamdu.Expr.IRef (DefI, HRef)
 import qualified Lamdu.Expr.IRef as ExprIRef
+import           Lamdu.Sugar.Convert.Binder.Params (mkVarInfo)
 import           Lamdu.Sugar.Convert.Expression.Actions (addActions)
 import qualified Lamdu.Sugar.Convert.Fragment as ConvertFragment
 import qualified Lamdu.Sugar.Convert.Input as Input
@@ -90,7 +91,7 @@ globalNameRef ::
     (MonadTransaction n m, Monad f) =>
     Anchors.CodeAnchors f -> DefI f -> m (NameRef InternalName (T f))
 globalNameRef cp defI =
-    taggedName defI <&>
+    taggedName Nothing defI <&>
     \name ->
     NameRef
     { _nrName = name
@@ -115,7 +116,7 @@ convertGlobal ::
 convertGlobal var exprPl =
     do
         ctx <- Lens.view id
-        notElem var (exprPl ^. Input.localsInScope) & guard
+        notElem var (exprPl ^. Input.localsInScope <&> fst) & guard
         lifeState <- Anchors.assocDefinitionState defI & getP
         let defForm =
                 case lifeState of
@@ -148,7 +149,8 @@ convertGetLet param exprPl =
         inline <-
             Lens.view (ConvertM.scScopeInfo . ConvertM.siLetItems . Lens.at param)
             >>= maybeToMPlus
-        nameRef <- convertLocalNameRef param
+        varInfo <- mkVarInfo (exprPl ^. Input.inferredType)
+        nameRef <- convertLocalNameRef varInfo param
         GetBinder BinderVarRef
             { _bvNameRef = nameRef
             , _bvVar = param
@@ -165,7 +167,7 @@ convertParamsRecord param exprPl =
         exprPl
         ^.. Input.inferredType . _Pure . T._TRecord . T.flatRow
         . freExtends . Lens.to Map.toList . traverse . _1
-        <&> nameWithContext param
+        <&> nameWithContext Nothing param
     } <$ check
     where
         check =
@@ -177,19 +179,21 @@ convertParamsRecord param exprPl =
 
 convertLocalNameRef ::
     (Applicative f, MonadTransaction n m) =>
-    V.Var -> m (NameRef InternalName f)
-convertLocalNameRef param =
+    VarInfo -> V.Var -> m (NameRef InternalName f)
+convertLocalNameRef varInfo param =
     Anchors.assocTag param & getP
     <&> \tag ->
     NameRef
-    { _nrName = nameWithContext param tag
+    { _nrName = nameWithContext (Just varInfo) param tag
     , _nrGotoDefinition = EntityId.ofTaggedEntity param tag & pure
     }
 
 convertParam ::
-    (MonadTransaction u m, Applicative n) => V.Var -> m (GetVar InternalName n)
-convertParam param =
-    convertLocalNameRef param
+    (MonadTransaction u m, Applicative n) =>
+    V.Var -> Input.Payload u a # V.Term -> m (GetVar InternalName n)
+convertParam param exprPl =
+    mkVarInfo (exprPl ^. Input.inferredType)
+    >>= (`convertLocalNameRef` param)
     <&>
     \nameRef ->
     GetParam ParamRef
@@ -208,7 +212,7 @@ convert param exprPl
             convertGlobal param exprPl & justToLeft
             convertGetLet param exprPl & justToLeft
             convertParamsRecord param exprPl & justToLeft
-            convertParam param & lift
+            convertParam param exprPl & lift
         & runMatcherT
         <&> BodyGetVar
         >>= addActions (Const ()) exprPl

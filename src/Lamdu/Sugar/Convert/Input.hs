@@ -14,11 +14,13 @@ import qualified Control.Lens as Lens
 import qualified Data.Map as Map
 import           Hyper
 import           Hyper.Infer (InferResult, inferResult)
+import           Hyper.Type.AST.FuncType (funcIn)
 import           Hyper.Type.Prune (Prune)
 import           Hyper.Unify.Binding (UVar)
 import           Hyper.Unify.Generalize (GTerm(..))
 import qualified Lamdu.Calc.Term as V
 import           Lamdu.Calc.Type (Type, Row)
+import qualified Lamdu.Calc.Type as T
 import           Lamdu.Expr.IRef (HRef)
 import           Lamdu.Sugar.EntityId (EntityId)
 
@@ -28,7 +30,7 @@ data Payload m a h = Payload
     { _entityId :: EntityId
     , _inferRes :: InferResult (Pure :*: UVar) h
     , _inferScope :: V.Scope # UVar
-    , _localsInScope :: [V.Var]
+    , _localsInScope :: [(V.Var, Pure # Type)]
     , _stored :: HRef m h
     , -- The GetVars of this lambda's var if this is a lambda
       _varRefsOfLambda :: [EntityId]
@@ -59,7 +61,7 @@ class SugarInput t where
         Ann (PreparePayloadInput pl) # t ->
         PreparePayloadsRes pl # t
     initScopes ::
-        V.Scope # UVar -> [V.Var] ->
+        V.Scope # UVar -> [(V.Var, Pure # Type)] ->
         Ann (Payload m a) # t ->
         Ann (Payload m a) # t
     initScopes _ _ = id
@@ -88,10 +90,11 @@ instance SugarInput V.Term where
     initScopes iScope locals (Ann pl body) =
         case body of
         V.BLam (V.TypedLam var t b) ->
-            initScopes innerScope (var : locals) b
+            initScopes innerScope ((var, varType) : locals) b
             & V.TypedLam var t
             & V.BLam
             where
+                varType = pl ^?! inferredType . _Pure . T._TFun . funcIn
                 innerScope =
                     iScope
                     & V.scopeVarTypes . Lens.at var ?~
