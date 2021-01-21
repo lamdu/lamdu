@@ -44,6 +44,7 @@ test =
     , testHoleTypeShown
     , testUnnamed
     , testValidHoleResult
+    , testPunnedIso
     , testGroup "insist-tests"
         [ testInsistFactorial
         , testInsistEq
@@ -526,3 +527,13 @@ testValidHoleResult =
                 (_, mkHoleResult) <- opts ^?! Lens.ix 0 . hoResults & List.runList <&> List.headL
                 holeResult <- mkHoleResult
                 holeResult ^. holeResultPick & lift
+
+-- Test for https://trello.com/c/Dzp5vgos/510-not-punning-auto-named-variables
+testPunnedIso :: Test
+testPunnedIso =
+    testCase "punned-iso" $
+    Env.make >>= testProgram "punned-fields.json" . convertWorkArea
+    <&> (^? replBinder . _BinderLet . lBody . hVal . _BinderLet . lBody . hVal . _BinderTerm . _BodyRecord . cItems)
+    <&> Lens.mapped . Lens.mapped %~
+        (\x -> (x ^. ciTag . tagRefTag . tagName, x ^? ciExpr . hVal . _BodyGetVar . _GetBinder . bvNameRef . nrName))
+    >>= assertEqual "Record items expected to be punned" (Just [])
