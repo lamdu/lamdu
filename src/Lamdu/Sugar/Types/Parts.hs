@@ -1,6 +1,6 @@
 -- | Different leaf types in the Sugar expressions.
 -- These don't contain more expressions in them.
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TemplateHaskell, DataKinds, GADTs, TypeFamilies #-}
 module Lamdu.Sugar.Types.Parts
     ( VarInfo(..), _VarNominal, _VarGeneric, _VarFunction, _VarRecord, _VarVariant
     , FuncApplyLimit(..), _UnlimitedFuncApply, _AtMostOneFuncApply
@@ -25,14 +25,17 @@ module Lamdu.Sugar.Types.Parts
     , -- Expressions
       ClosedCompositeActions(..), closedCompositeOpen
     , OpenCompositeActions(..), openCompositeClose
+    , PunnedVar(..), pvVar, pvTagEntityId
     , NullaryVal(..), nullaryClosedCompositeActions, nullaryAddItem
 
     , ParenInfo(..), piNeedParens, piMinOpPrec
     ) where
 
 import qualified Control.Lens as Lens
+import           Hyper (makeHTraversableAndBases)
 import qualified Lamdu.Calc.Type as T
 import           Lamdu.Sugar.Internal.EntityId (EntityId)
+import           Lamdu.Sugar.Types.GetVar
 import           Lamdu.Sugar.Types.Tag
 import           Lamdu.Sugar.Types.Type
 
@@ -142,6 +145,11 @@ data Literal f
     | LiteralText (f Text)
     deriving Generic
 
+data PunnedVar name o k = PunnedVar
+    { _pvVar :: k :# Const (GetVar name o)
+    , _pvTagEntityId :: EntityId
+    } deriving Generic
+
 data HoleResultScore = HoleResultScore
     { _hrsNumFragments :: !Int
     , _hrsScore :: ![Int]
@@ -168,9 +176,10 @@ data ParenInfo = ParenInfo
 
 traverse Lens.makeLenses
     [ ''ClosedCompositeActions, ''FuncParam, ''FuncParamActions, ''HoleResultScore
-    , ''NullParamActions, ''NullaryVal, ''OpenCompositeActions, ''ParamInfo, ''ParenInfo
+    , ''NullParamActions, ''NullaryVal, ''OpenCompositeActions, ''ParamInfo, ''ParenInfo, ''PunnedVar
     ] <&> concat
 traverse Lens.makePrisms
     [ ''AddFirstParam, ''AddNextParam, ''Annotation, ''BinderParams, ''Delete
     , ''DetachAction, ''FuncApplyLimit, ''HoleTerm, ''Literal, ''VarInfo
     ] <&> concat
+makeHTraversableAndBases ''PunnedVar

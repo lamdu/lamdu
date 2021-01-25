@@ -48,6 +48,7 @@ module Lamdu.Sugar.Types.Expression
     , Composite(..), cItems, cPunnedItems, cAddItem, cTail
     , CompositeItem(..), ciDelete, ciTag, ciExpr
     , CompositeTail(..), _OpenComposite, _ClosedComposite
+    , PunnedVar(..), pvVar, pvTagEntityId
     , Case(..), cKind, cBody
     , CaseArg(..), caVal, caToLambdaCase
     , CaseKind(..), _LambdaCase, _CaseWithArg
@@ -85,7 +86,7 @@ data LabeledApply v name i o k = LabeledApply
     { _aFunc :: k :# Const (BinderVarRef name o)
     , _aSpecialArgs :: Meta.SpecialArgs (k :# Term v name i o)
     , _aAnnotatedArgs :: [AnnotatedArg v name i o k]
-    , _aPunnedArgs :: [k :# Const (GetVar name o)]
+    , _aPunnedArgs :: [PunnedVar name o k]
     } deriving Generic
 
 data InjectContent v name i o k
@@ -163,7 +164,7 @@ data CompositeTail v name i o k
 data Composite v name i o k = Composite
     { _cItems :: [CompositeItem v name i o k]
     , -- Punned items are like Haskell's NamedFieldPuns
-      _cPunnedItems :: [k :# Const (GetVar name o)]
+      _cPunnedItems :: [PunnedVar name o k]
     , _cTail :: CompositeTail v name i o k
     , _cAddItem :: TagReplace name i o EntityId
     } deriving Generic

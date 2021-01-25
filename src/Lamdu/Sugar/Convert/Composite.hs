@@ -88,7 +88,11 @@ convertExtend cons extendOp valS exprPl extendV restC =
                     getVar <- itemS ^? ciExpr . hVal . _BodyGetVar
                     name <- getVar ^? SugarLens.getVarName
                     _ <- internalNameMatch (itemS ^. ciTag . tagRefTag . tagName) name
-                    let punned = Ann (Const (itemS ^. ciExpr . annotation)) (Const getVar)
+                    let punned =
+                            PunnedVar
+                            { _pvVar = Ann (Const (itemS ^. ciExpr . annotation)) (Const getVar)
+                            , _pvTagEntityId = itemS ^. ciTag . tagRefTag . tagInstance
+                            }
                     Just (cPunnedItems %~ (punned :))
                 & fromMaybe (cItems %~ (itemS :))
         addItemAction <- convertAddItem extendOp (Set.fromList (extendV ^. extendTag : restTags)) exprPl

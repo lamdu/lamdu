@@ -296,7 +296,7 @@ toLabeledApply v app@LabeledApply{_aFunc, _aSpecialArgs, _aAnnotatedArgs, _aPunn
     <$> toNode v (Lens._Wrapped (toBinderVarRef (Just (funcSignature app)))) _aFunc
     <*> traverse (toExpression v) _aSpecialArgs
     <*> traverse (toAnnotatedArg v) _aAnnotatedArgs
-    <*> traverse (toNode v (Lens._Wrapped toGetVar)) _aPunnedArgs
+    <*> (traverse . pvVar) (toNode v (Lens._Wrapped toGetVar)) _aPunnedArgs
 
 type SugarElem t v n m (o :: * -> *) = t (Annotation v n) n (IM m) o
 
@@ -346,7 +346,7 @@ toComposite :: MonadNaming m => WalkBody Composite v0 v1 m o a
 toComposite v (Composite items punned tail_ addItem) =
     Composite
     <$> traverse (toCompositeItem v) items
-    <*> traverse (toNode v (Lens._Wrapped toGetVar)) punned
+    <*> (traverse . pvVar) (toNode v (Lens._Wrapped toGetVar)) punned
     <*> (_OpenComposite . _2) (toExpression v) tail_
     <*> toTagReplace addItem
 

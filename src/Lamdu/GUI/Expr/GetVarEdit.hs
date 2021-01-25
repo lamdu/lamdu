@@ -364,7 +364,22 @@ make ::
     Annotated (ExprGui.Payload i o) # Const (Sugar.GetVar Name o) ->
     GuiM env i o (Responsive o)
 make (Ann (Const pl) (Const getVar)) =
-    makeNoActions getVar (WidgetIds.fromExprPayload (pl ^. _1)) & stdWrap pl
+    makeNoActions getVar (WidgetIds.fromExprPayload (pl ^. _1))
+    & stdWrap pl
+
+makePunnedVar ::
+    ( Monad i, Monad o
+    , Has (Texts.Definitions Text) env, Has (Texts.Navigation Text) env
+    , Has (Texts.Code Text) env, Has (Texts.CodeUI Text) env
+    , Has (Texts.Name Text) env, Grid.HasTexts env
+    ) =>
+    Sugar.PunnedVar Name o # Annotated (ExprGui.Payload i o) ->
+    GuiM env i o (Responsive o)
+makePunnedVar (Sugar.PunnedVar var tagId) =
+    make var
+    & GuiState.assignCursor
+        (WidgetIds.fromEntityId tagId)
+        (WidgetIds.fromExprPayload (var ^. annotation . _1))
 
 makePunnedVars ::
     ( Monad i, Monad o
@@ -372,10 +387,10 @@ makePunnedVars ::
     , Has (Texts.Code Text) env, Has (Texts.CodeUI Text) env
     , Has (Texts.Name Text) env, Grid.HasTexts env
     ) =>
-    [Annotated (ExprGui.Payload i o) # Const (Sugar.GetVar Name o)] ->
+    [Sugar.PunnedVar Name o # Annotated (ExprGui.Payload i o)] ->
     GuiM env i o (Responsive o)
 makePunnedVars args =
     do
-        argEdits <- traverse make args
+        argEdits <- traverse makePunnedVar args
         collapsed <- grammar (label Texts.punnedFields) <&> Responsive.fromTextView
         Options.boxSpaced ?? Options.disambiguationNone ?? collapsed : argEdits

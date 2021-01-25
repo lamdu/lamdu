@@ -28,7 +28,7 @@ makeLabeledApply ::
     Annotated (ConvertPayload m a) # Const (Sugar.BinderVarRef InternalName (T m)) ->
     [ Sugar.AnnotatedArg v InternalName (OnceT (T m)) (T m) # Annotated (ConvertPayload m a)
     ] ->
-    [Annotated (ConvertPayload m a) # Const (Sugar.GetVar InternalName (T m))] ->
+    [Sugar.PunnedVar InternalName (T m) # Annotated (ConvertPayload m a)] ->
     Input.Payload m a # Term ->
     ConvertM m
     (Sugar.LabeledApply v InternalName (OnceT (T m)) (T m) # Annotated (ConvertPayload m a))
@@ -58,7 +58,7 @@ makeLabeledApply func args punnedArgs exprPl =
                 filter ((`notElem` removedKeys) . (^. Sugar.aaTag . Sugar.tagVal)) args
             , Sugar._aPunnedArgs =
                 filter
-                ((`notElem` removedKeys) . (^?! hVal . Lens._Wrapped . SugarLens.getVarName . inTag))
+                ((`notElem` removedKeys) . (^?! Sugar.pvVar . hVal . Lens._Wrapped . SugarLens.getVarName . inTag))
                 punnedArgs
             }
     where
@@ -66,9 +66,9 @@ makeLabeledApply func args punnedArgs exprPl =
             (args <&> \x -> (x ^. Sugar.aaTag . Sugar.tagVal, x ^. Sugar.aaExpr)) <>
             (punnedArgs <&>
                 \x ->
-                ( x ^?! hVal . Lens._Wrapped . SugarLens.getVarName . inTag
-                , x ^. hVal . Lens._Wrapped & Sugar.BodyGetVar &
-                    Ann (Const (x ^. annotation))
+                ( x ^?! Sugar.pvVar . hVal . Lens._Wrapped . SugarLens.getVarName . inTag
+                , x ^. Sugar.pvVar . hVal . Lens._Wrapped & Sugar.BodyGetVar &
+                    Ann (Const (x ^. Sugar.pvVar . annotation))
                 ))
             & Map.fromList
         argExpr t = Map.lookup t argsMap <&> (,) t

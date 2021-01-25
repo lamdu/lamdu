@@ -33,9 +33,10 @@ test =
 -- https://trello.com/c/fQmgXuRE/471-operators-on-punned-args-dont-work-require-fragmenting-first
 testPunnedArgOp :: Test
 testPunnedArgOp =
-    expr ^?!
-    hVal . Sugar._BodyLabeledApply . Sugar.aPunnedArgs . traverse . annotation . _1 . Sugar.piMinOpPrec
-    & assertEqual "punned arg precedence" 0
+    expr ^?
+    hVal . Sugar._BodyLabeledApply . Sugar.aPunnedArgs . traverse .
+    Sugar.pvVar . annotation . _1 . Sugar.piMinOpPrec
+    & assertEqual "punned arg precedence" (Just 0)
     & testCase "punned-arg-op"
     where
         expr =
@@ -44,7 +45,7 @@ testPunnedArgOp =
             , Sugar._aSpecialArgs = Sugar.Verbose
             , Sugar._aAnnotatedArgs = []
             , Sugar._aPunnedArgs =
-                [ Stub.defRef "b" "b" & Sugar.GetBinder & Const & Stub.node
+                [ Sugar.PunnedVar (Stub.defRef "b" "b" & Sugar.GetBinder & Const & Stub.node) "b"
                 ]
             } & Stub.node
             & Parens.addToExprWith 0
