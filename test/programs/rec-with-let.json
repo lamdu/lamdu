@@ -1,0 +1,60 @@
+[
+    {
+        "schemaVersion": 13
+    },
+    {
+        "tagOrder": 0,
+        "tag": "a386d980d96f732451f7b7b7ebab441c",
+        "names": {
+            "english": "x"
+        }
+    },
+    {
+        "tagOrder": 1,
+        "tag": "3cb3e183ba35da7e0cf25510f81231dd",
+        "names": {
+            "english": "y"
+        }
+    },
+    {
+        "tagOrder": 2,
+        "tag": "575207fdec4d5da3b7a780cde0305b6c",
+        "names": {
+            "english": "z"
+        }
+    },
+    {
+        "tag": null,
+        "lamVar": "6da4ab91f5d24088830ee9c4bbcf58e9"
+    },
+    {
+        "repl": {
+            "val": {
+                "applyFunc": {
+                    "lamParamType": {
+                        "id": "4c8cb5d9-716e-4c39-8165-f5f9a5cb3f15"
+                    },
+                    "lamVar": "6da4ab91f5d24088830ee9c4bbcf58e9",
+                    "id": "7f44cb45-af8b-4dc8-9d44-577042153005",
+                    "lamBody": {
+                        "extendVal": {
+                            "var": "6da4ab91f5d24088830ee9c4bbcf58e9",
+                            "id": "91b9dbf7-a57f-4057-ac4e-8183a74934f3"
+                        },
+                        "extendTag": "3cb3e183ba35da7e0cf25510f81231dd",
+                        "id": "469c8c9b-69ea-4f3f-924d-93141609ec77",
+                        "extendRest": {
+                            "recEmpty": {},
+                            "id": "2210ad98-83ef-5ca8-859e-adbd59f50931"
+                        }
+                    }
+                },
+                "applyArg": {
+                    "hole": {},
+                    "id": "5ab2955a-c9a4-4355-a265-cc71f1c70508"
+                },
+                "id": "a483eddd-109e-47dc-a815-95b0a15c1209"
+            }
+        }
+    }
+]

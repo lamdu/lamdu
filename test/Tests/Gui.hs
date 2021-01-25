@@ -65,6 +65,7 @@ test =
     , testFragmentSize
     , testLambdaDelete
     , testNewTag
+    , testPunCursor
     , testPrograms
     , testTagPanes
     , testWYTIWYS
@@ -258,6 +259,32 @@ testOpPrec =
         _ <- applyEvent (baseEnv & cursor .~ holeId) dummyVirt (EventChar '&')
         workArea' <- convertWorkArea baseEnv
         unless (workAreaEq workArea workArea') (error "bad operator precedence")
+
+-- | Test for
+-- https://trello.com/c/uLlMpi5g/509-when-picking-record-tag-makes-the-field-pun-it-causes-red-cursor
+testPunCursor :: Test
+testPunCursor =
+    testCase "pun-cursor" $
+    Env.make >>=
+    \baseEnv ->
+    do
+        tagId <-
+            fromWorkArea baseEnv
+            (Lens.cloneTraversal waRec . Sugar.cItems . traverse . Sugar.ciTag . Sugar.tagRefTag . Sugar.tagInstance)
+        env0 <-
+            applyEvent (baseEnv & cursor .~ WidgetIds.tagHoleId (WidgetIds.fromEntityId tagId))
+            dummyVirt (EventChar 'x')
+        env1 <- MetaKey noMods GLFW.Key'Enter & simpleKeyEvent & applyEvent env0 dummyVirt
+        workArea <- makeWorkArea env1
+        _ <- makeFocusedWidget "" env1 workArea
+        workArea ^? Lens.cloneTraversal waRec . Sugar.cPunnedItems <&> length & pure
+    & testProgram "rec-with-let.json"
+    >>= assertEqual "Item should be punned" (Just 1)
+    where
+        waRec =
+            Sugar.waRepl . Sugar.replExpr . hVal
+            . Sugar._BinderLet . Sugar.lBody . hVal
+            . Sugar._BinderTerm . Sugar._BodyRecord
 
 workAreaEq ::
     forall a m v.
