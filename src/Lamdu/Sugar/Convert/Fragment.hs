@@ -347,7 +347,7 @@ emplaceInHoles replaceHole =
                 _ ->
                     htraverse
                     ( \case
-                        HWitness V.W_Term_Term -> fmap Compose . go EPOther
+                        HWitness V.W_Term_Term -> fmap Compose . go ctx
                         HWitness V.W_Term_HCompose_Prune_Type -> pure . Compose . pure
                     ) bod
                     <&> fin
