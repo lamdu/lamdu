@@ -37,6 +37,7 @@ test =
     , testInline
     , testReorderLets
     , testReplaceParent
+    , testReplaceParentFragment
     , setHoleToHole
     , testCreateLetInLetVal
     , testFloatToRepl
@@ -409,6 +410,21 @@ testReplaceParent =
         action =
             replBody . _BodyLam . lamFunc . fBody .
             annotation . _1 . plActions . mReplaceParent . Lens._Just
+
+testReplaceParentFragment :: Test
+testReplaceParentFragment =
+    testSugarActions "multiply-list.json" [void . lift . (^?! action), verify]
+    & testCase "replace-parent-fragment"
+    where
+        action =
+            Lens.cloneTraversal fragExpr .
+            hVal . _BodySimpleApply . appArg .
+            annotation . _1 . plActions . mReplaceParent . Lens._Just
+        fragExpr = replBody . _BodyLabeledApply . aSpecialArgs . traverse . hVal . _BodyFragment . fExpr
+        verify workArea
+            | Lens.has (Lens.cloneTraversal fragExpr) workArea =
+                error "replace-parent did not remove fragment"
+            | otherwise = pure ()
 
 floatLetWithGlobalRef :: Test
 floatLetWithGlobalRef =
