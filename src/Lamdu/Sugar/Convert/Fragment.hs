@@ -305,25 +305,25 @@ emplaceInHoles replaceHole =
     where
         go :: Ann a # V.Term -> StateT Bool [] (f (Ann a # V.Term))
         go oldVal@(Ann x bod) =
-            do
-                alreadyReplaced <- State.get
-                if alreadyReplaced
-                    then pure (pure oldVal)
-                    else
-                        case bod of
-                        V.BLeaf V.LHole ->
-                            join $ lift
-                                [ replace x
-                                , pure (pure oldVal)
-                                ]
-                        _ ->
-                            htraverse
-                            ( \case
-                                HWitness V.W_Term_Term -> fmap Compose . go
-                                HWitness V.W_Term_HCompose_Prune_Type -> pure . Compose . pure
-                            ) bod
-                            <&> htraverse (const getCompose)
-                            <&> Lens.mapped %~ Ann x
+            State.get
+            >>=
+            \case
+            True -> pure (pure oldVal)
+            False ->
+                case bod of
+                V.BLeaf V.LHole ->
+                    join $ lift
+                        [ replace x
+                        , pure (pure oldVal)
+                        ]
+                _ ->
+                    htraverse
+                    ( \case
+                        HWitness V.W_Term_Term -> fmap Compose . go
+                        HWitness V.W_Term_HCompose_Prune_Type -> pure . Compose . pure
+                    ) bod
+                    <&> htraverse (const getCompose)
+                    <&> Lens.mapped %~ Ann x
         replace x = replaceHole x <$ State.put True
 
 mkResultValFragment ::
