@@ -29,8 +29,10 @@ import           Lamdu.Calc.Infer (InferState, runPureInfer, PureInfer)
 import qualified Lamdu.Calc.Lens as ExprLens
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
+import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Ops as DataOps
-import           Lamdu.Expr.IRef (iref)
+import           Lamdu.Data.Tag (tagOrder)
+import           Lamdu.Expr.IRef (iref, readTagData)
 import qualified Lamdu.Sugar.Config as Config
 import qualified Lamdu.Sugar.Convert.Expression.Actions as Actions
 import           Lamdu.Sugar.Convert.Fragment.Heal (healMismatch)
@@ -202,6 +204,19 @@ exceptToListT :: Monad m => Either t a -> ListT m a
 exceptToListT (Left _) = mempty
 exceptToListT (Right x) = pure x
 
+data EmplacePos = EPOther | EPArg V.Var | EPTag T.Tag EmplacePos
+
+emplacePosScore :: Monad m => EmplacePos -> T m Int
+emplacePosScore (EPTag tag (EPArg v)) =
+    Anchors.assocPresentationMode v & Property.getP >>=
+    \case
+    Operator l r
+        | tag == l -> pure (-2)
+        | tag == r -> pure (-1)
+    _ -> emplacePosScore (EPTag tag EPOther)
+emplacePosScore (EPTag tag _) = readTagData tag <&> (^. tagOrder)
+emplacePosScore _ = pure 0
+
 holeResultsEmplaceFragment ::
     Monad m =>
     Ann (Input.Payload n a) # V.Term ->
@@ -210,9 +225,10 @@ holeResultsEmplaceFragment ::
 holeResultsEmplaceFragment rawFragmentExpr x =
     markNotFragment x
     & emplaceInHoles emplace
-    & ListClass.fromList
-    & lift
-    & join
+    & (traverse . _2) (lift . lift . lift . emplacePosScore)
+    <&> ListClass.sortOn snd
+    <&> lift . ListClass.fromList . map fst
+    >>= join
     where
         emplace pl =
             -- Try to emplace the fragmentExpr in directly, but if
@@ -299,32 +315,44 @@ emplaceInHoles ::
     forall f a.
     Applicative f =>
     (a # V.Term -> f (Ann a # V.Term)) ->
-    Ann a # V.Term -> [f (Ann a # V.Term)]
+    Ann a # V.Term -> [(f (Ann a # V.Term), EmplacePos)]
 emplaceInHoles replaceHole =
-    map fst . filter snd . (`runStateT` False) . go
+    ListClass.mapMaybe (_2 id) . (`runStateT` Nothing) . go EPOther
     where
-        go :: Ann a # V.Term -> StateT Bool [] (f (Ann a # V.Term))
-        go oldVal@(Ann x bod) =
+        go :: EmplacePos -> Ann a # V.Term -> StateT (Maybe EmplacePos) [] (f (Ann a # V.Term))
+        go ctx oldVal@(Ann x bod) =
             State.get
             >>=
             \case
-            True -> pure (pure oldVal)
-            False ->
+            Just _ -> pure (pure oldVal)
+            Nothing ->
                 case bod of
                 V.BLeaf V.LHole ->
                     join $ lift
-                        [ replace x
+                        [ replaceHole x <$ State.put (Just ctx)
                         , pure (pure oldVal)
                         ]
+                V.BApp (V.App f@(Ann _ (V.BLeaf (V.LVar v))) a) ->
+                    V.App
+                    <$> (go EPOther f <&> Compose)
+                    <*> (go (EPArg v) a <&> Compose)
+                    <&> V.BApp
+                    <&> fin
+                V.BRecExtend (V.RowExtend t v r) ->
+                    V.RowExtend t
+                    <$> (go (EPTag t ctx) v <&> Compose)
+                    <*> (go ctx r <&> Compose)
+                    <&> V.BRecExtend
+                    <&> fin
                 _ ->
                     htraverse
                     ( \case
-                        HWitness V.W_Term_Term -> fmap Compose . go
+                        HWitness V.W_Term_Term -> fmap Compose . go EPOther
                         HWitness V.W_Term_HCompose_Prune_Type -> pure . Compose . pure
                     ) bod
-                    <&> htraverse (const getCompose)
-                    <&> Lens.mapped %~ Ann x
-        replace x = replaceHole x <$ State.put True
+                    <&> fin
+            where
+                fin = fmap (Ann x) . htraverse (const getCompose)
 
 mkResultValFragment ::
     UVar # T.Type ->

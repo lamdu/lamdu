@@ -4,6 +4,8 @@ module Lamdu.Sugar.Convert.Hole.ResultScore
     ) where
 
 import qualified Control.Lens as Lens
+import           Control.Monad ((>=>))
+import           Data.List (sort)
 import qualified Data.Map as Map
 import           Hyper
 import           Hyper.Infer (InferResult, inferResult)
@@ -37,14 +39,20 @@ compositeTypeScore x =
         max (resultTypeScore t) (compositeTypeScore r)
 
 score :: Ann (InferResult Pure) # V.Term -> [Int]
-score x =
-    (if Lens.has (hVal . ExprLens.valBodyHole) x then 1 else 0) :
-    resultTypeScore (x ^. hAnn . inferResult) ++
-    hfoldMap
-    ( \case
-        HWitness V.W_Term_Term -> score
-        HWitness V.W_Term_HCompose_Prune_Type -> const []
-    ) (x ^. hVal)
+score = scoreH >=> uncurry (:)
+
+scoreH :: Ann (InferResult Pure) # V.Term -> [(Int, [Int])]
+scoreH x =
+    ( if Lens.has (hVal . ExprLens.valBodyHole) x then 1 else 0
+    , resultTypeScore (x ^. hAnn . inferResult)
+    ) :
+    sort
+    ( hfoldMap
+        ( \case
+            HWitness V.W_Term_Term -> scoreH
+            HWitness V.W_Term_HCompose_Prune_Type -> const []
+        ) (x ^. hVal)
+    )
 
 resultScore :: Ann (InferResult Pure) # V.Term -> HoleResultScore
 resultScore x =
