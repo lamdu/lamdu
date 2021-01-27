@@ -262,14 +262,14 @@ setChildReplaceParentActions =
                 stored
                 (srcPl ^. pInput . Input.stored . ExprIRef.iref)
                 <&> EntityId.ofValI)
+        setForChildren = hmap (\_ -> annotation %~ join setToExpr)
     in
-    bod
-    & Lens.filtered (not . Lens.has (_BodyFragment . fTypeMismatch . Lens._Just)) %~
-        hmap (p #> annotation %~ join setToExpr)
-    & hmap (p #> fixReplaceParent setToExpr)
-    where
-        p :: Proxy FixReplaceParent
-        p = Proxy
+    case bod of
+    BodyFragment f | Lens.has (fTypeMismatch . Lens._Just) f ->
+        -- Replace-parent for child of expr in fragment attempts heal
+        f & fExpr . hVal %~ setForChildren & BodyFragment
+    _ -> setForChildren bod
+    & hmap (Proxy @FixReplaceParent #> fixReplaceParent setToExpr)
 
 subexprPayloads ::
     forall h m a.
