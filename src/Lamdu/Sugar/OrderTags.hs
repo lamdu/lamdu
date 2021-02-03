@@ -55,16 +55,14 @@ orderTBody t =
 orderType :: MonadTransaction m i => OrderT i (Ann a # Sugar.Type name)
 orderType = hVal orderTBody
 
-orderRecord ::
-    MonadTransaction m i =>
-    OrderT i (Sugar.Body Sugar.Composite v name i o a)
-orderRecord (Sugar.Composite items punned tail_ addItem) =
-    Sugar.Composite
-    <$> (orderByTag (^. Sugar.ciTag . Sugar.tagRefTag) items
-        >>= (traverse . Sugar.ciExpr) orderNode)
-    <*> pure punned
-    <*> (Sugar._OpenComposite . _2) orderNode tail_
-    <*> pure addItem
+instance MonadTransaction m i => Order v name i o (Sugar.Composite v name i o) where
+    order (Sugar.Composite items punned tail_ addItem) =
+        Sugar.Composite
+        <$> (orderByTag (^. Sugar.ciTag . Sugar.tagRefTag) items
+            >>= (traverse . Sugar.ciExpr) orderNode)
+        <*> pure punned
+        <*> (Sugar._OpenComposite . _2) orderNode tail_
+        <*> pure addItem
 
 instance MonadTransaction m i => Order v name i o (Sugar.LabeledApply v name i o) where
     order (Sugar.LabeledApply func specialArgs annotated punned) =
@@ -74,7 +72,7 @@ instance MonadTransaction m i => Order v name i o (Sugar.LabeledApply v name i o
         >>= htraverse (Proxy @(Order v name i o) #> orderNode)
 
 orderCase :: MonadTransaction m i => OrderT i (Sugar.Body Sugar.Case v name i o a)
-orderCase = Sugar.cBody orderRecord
+orderCase = Sugar.cBody order
 
 instance MonadTransaction m i => Order v name i o (Sugar.Lambda v name i o)
 instance MonadTransaction m i => Order v name i o (Const a)
@@ -105,7 +103,7 @@ instance MonadTransaction m i => Order v name i o (Sugar.Binder v name i o) wher
 
 instance MonadTransaction m i => Order v name i o (Sugar.Term v name i o) where
     order (Sugar.BodyLam l) = order l <&> Sugar.BodyLam
-    order (Sugar.BodyRecord r) = orderRecord r <&> Sugar.BodyRecord
+    order (Sugar.BodyRecord r) = order r <&> Sugar.BodyRecord
     order (Sugar.BodyLabeledApply a) = order a <&> Sugar.BodyLabeledApply
     order (Sugar.BodyCase c) = orderCase c <&> Sugar.BodyCase
     order (Sugar.BodyHole a) = SugarLens.holeTransformExprs orderNode a & Sugar.BodyHole & pure
