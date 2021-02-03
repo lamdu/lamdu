@@ -5,9 +5,7 @@ module Lamdu.Sugar.Convert.IfElse (convertIfElse) where
 
 import qualified Control.Lens as Lens
 import           Control.Monad.Once (OnceT)
-import           Hyper.Type.AST.Nominal (nId)
 import           Lamdu.Builtins.Anchors (boolTid, trueTag, falseTag)
-import qualified Lamdu.Calc.Type as T
 import           Lamdu.Expr.IRef (ValI, iref)
 import           Lamdu.Expr.UniqueId (ToUUID(..))
 import qualified Lamdu.Sugar.Convert.Input as Input
@@ -30,12 +28,7 @@ convertIfElse setToVal caseBody =
         arg <- caseBody ^? cKind . _CaseWithArg . caVal
         case arg ^. hVal of
             BodySimpleApply (App (Ann _ (BodyFromNom nom)) x)
-                | nom ^. tidTId == boolTid ->
-                    -- In "case _»Nom of ..." the case expression doesn't absorb the FromNom
-                    -- (and also in case of fragment)
-                    tryIfElse x
-            _ | arg ^? annotation . pInput . Input.inferredType . _Pure . T._TInst . nId == Just boolTid ->
-                tryIfElse arg
+                | nom ^. tidTId == boolTid -> tryIfElse x
             _ -> Nothing
     where
         tryIfElse cond =
