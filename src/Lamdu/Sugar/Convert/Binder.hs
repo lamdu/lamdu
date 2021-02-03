@@ -297,6 +297,7 @@ class GetParam t where
 instance Recursive GetParam where
     recurse = getParamRecursive . proxyArgument
 
+instance GetParam (Composite v InternalName i o)
 instance GetParam (Const (BinderVarRef InternalName o))
 instance GetParam (Const (NullaryVal InternalName i o))
 instance GetParam (Else v InternalName i o)
@@ -348,6 +349,7 @@ markNodeLightParams ::
 markNodeLightParams paramNames =
     hVal %~ markLightParams paramNames
 
+instance MarkLightParams (Composite v InternalName i o)
 instance MarkLightParams (Const a)
 instance MarkLightParams (Else v InternalName i o)
 instance MarkLightParams (Let v InternalName i o)

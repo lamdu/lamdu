@@ -56,6 +56,8 @@ instance SugarExpr (Assignment v name i o) where
     isUnfinished (BodyPlain x) = isUnfinished (x ^. apBody)
     isUnfinished BodyFunction{} = False
 
+instance SugarExpr (Composite v name i o)
+
 instance SugarExpr (Else v name i o) where
     isUnfinished (SimpleElse x) = isUnfinished x
     isUnfinished ElseIf{} = False
@@ -208,7 +210,6 @@ instance BodyAnnotations Binder where
     bodyAnnotations f (BinderLet x) = bodyAnnotations f x <&> BinderLet
     bodyAnnotations f (BinderTerm x) = bodyAnnotations f x <&> BinderTerm
 
-instance BodyAnnotations Case
 instance BodyAnnotations Composite
 
 instance BodyAnnotations Else where
@@ -229,6 +230,7 @@ instance BodyAnnotations IfElse
 instance BodyAnnotations InjectContent
 instance BodyAnnotations LabeledApply
 instance BodyAnnotations Let
+instance BodyAnnotations PostfixApply
 
 instance BodyAnnotations Term where
     bodyAnnotations _ BodyPlaceHolder = pure BodyPlaceHolder
@@ -246,3 +248,4 @@ instance BodyAnnotations Term where
     bodyAnnotations f (BodyLabeledApply x) = bodyAnnotations f x <&> BodyLabeledApply
     bodyAnnotations _ (BodyHole x) = BodyHole x & pure
     bodyAnnotations f (BodyFragment x) = bodyAnnotations f x <&> BodyFragment
+    bodyAnnotations f (BodyPostfixApply x) = bodyAnnotations f x <&> BodyPostfixApply

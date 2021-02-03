@@ -1,5 +1,5 @@
 module Lamdu.GUI.Expr.ApplyEdit
-    ( makeSimple, makeLabeled
+    ( makeSimple, makePostfix, makeLabeled
     ) where
 
 import qualified Control.Lens as Lens
@@ -12,7 +12,10 @@ import qualified GUI.Momentu.Responsive.Options as Options
 import           GUI.Momentu.Responsive.TaggedList (TaggedItem(..), taggedList)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Grid as Grid
+import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
+import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
+import qualified Lamdu.GUI.Expr.CaseEdit as CaseEdit
 import qualified Lamdu.GUI.Expr.EventMap as ExprEventMap
 import qualified Lamdu.GUI.Expr.GetVarEdit as GetVarEdit
 import qualified Lamdu.GUI.Expr.TagEdit as TagEdit
@@ -145,4 +148,24 @@ makeSimple (Ann (Const pl) (Sugar.App func arg)) =
     <*> sequenceA
     [ GuiM.makeSubexpression func
     , GuiM.makeSubexpression arg
+    ] & stdWrapParentExpr pl
+
+makePostfix ::
+    ( Monad i, Monad o
+    , Grid.HasTexts env
+    , Has (Texts.Code Text) env
+    , Has (Texts.CodeUI Text) env
+    , Has (Texts.Definitions Text) env
+    , Has (Texts.Name Text) env
+    , Has (Texts.Navigation Text) env
+    , Has (TextEdit.Texts Text) env
+    , SearchMenu.HasTexts env
+    ) =>
+    ExprGui.Expr Sugar.PostfixApply i o ->
+    GuiM env i o (Responsive o)
+makePostfix (Ann (Const pl) (Sugar.PostfixApply arg func)) =
+    (ResponsiveExpr.boxSpacedMDisamb ?? ExprGui.mParensId pl)
+    <*> sequenceA
+    [ GuiM.makeSubexpression arg
+    , CaseEdit.make func
     ] & stdWrapParentExpr pl

@@ -71,9 +71,6 @@ instance MonadTransaction m i => Order v name i o (Sugar.LabeledApply v name i o
         <*> pure punned
         >>= htraverse (Proxy @(Order v name i o) #> orderNode)
 
-orderCase :: MonadTransaction m i => OrderT i (Sugar.Body Sugar.Case v name i o a)
-orderCase = Sugar.cBody order
-
 instance MonadTransaction m i => Order v name i o (Sugar.Lambda v name i o)
 instance MonadTransaction m i => Order v name i o (Const a)
 instance MonadTransaction m i => Order v name i o (Sugar.Else v name i o)
@@ -85,6 +82,8 @@ instance MonadTransaction m i => Order v name i o (Sugar.Function v name i o) wh
         x
         & (Sugar.fParams . Sugar._Params) orderParams
         >>= Sugar.fBody orderNode
+
+instance MonadTransaction m i => Order v name i o (Sugar.PostfixApply v name i o)
 
 orderParams ::
     MonadTransaction m i =>
@@ -105,7 +104,7 @@ instance MonadTransaction m i => Order v name i o (Sugar.Term v name i o) where
     order (Sugar.BodyLam l) = order l <&> Sugar.BodyLam
     order (Sugar.BodyRecord r) = order r <&> Sugar.BodyRecord
     order (Sugar.BodyLabeledApply a) = order a <&> Sugar.BodyLabeledApply
-    order (Sugar.BodyCase c) = orderCase c <&> Sugar.BodyCase
+    order (Sugar.BodyCase c) = order c <&> Sugar.BodyCase
     order (Sugar.BodyHole a) = SugarLens.holeTransformExprs orderNode a & Sugar.BodyHole & pure
     order (Sugar.BodyFragment a) =
         a
@@ -117,6 +116,7 @@ instance MonadTransaction m i => Order v name i o (Sugar.Term v name i o) where
     order (Sugar.BodyToNom x) = Sugar.nVal orderNode x <&> Sugar.BodyToNom
     order (Sugar.BodySimpleApply x) = htraverse1 orderNode x <&> Sugar.BodySimpleApply
     order (Sugar.BodyGetField x) = Sugar.gfRecord orderNode x <&> Sugar.BodyGetField
+    order (Sugar.BodyPostfixApply x) = order x <&> Sugar.BodyPostfixApply
     order x@Sugar.BodyFromNom{} = pure x
     order x@Sugar.BodyLiteral{} = pure x
     order x@Sugar.BodyGetVar{} = pure x

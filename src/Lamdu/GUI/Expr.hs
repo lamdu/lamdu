@@ -84,6 +84,7 @@ makeEditor (Ann (Const pl) body) =
     Sugar.BodyHole         x -> editor pl (Const x) HoleEdit.make
     Sugar.BodyLabeledApply x -> editor pl x ApplyEdit.makeLabeled
     Sugar.BodySimpleApply  x -> editor pl x ApplyEdit.makeSimple
+    Sugar.BodyPostfixApply x -> editor pl x ApplyEdit.makePostfix
     Sugar.BodyLam          x -> editor pl x LambdaEdit.make
     Sugar.BodyLiteral      x -> editor pl (Const x) LiteralEdit.make
     Sugar.BodyRecord       x -> editor pl x RecordEdit.make

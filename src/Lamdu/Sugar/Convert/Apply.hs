@@ -21,9 +21,9 @@ import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Sugar.Config as Config
-import           Lamdu.Sugar.Convert.Case (convertAppliedCase)
 import           Lamdu.Sugar.Convert.Expression.Actions (addActions, addActionsWith, subexprPayloads)
 import           Lamdu.Sugar.Convert.Fragment (convertAppliedHole)
+import           Lamdu.Sugar.Convert.IfElse (convertIfElse)
 import qualified Lamdu.Sugar.Convert.Input as Input
 import           Lamdu.Sugar.Convert.Monad (ConvertM)
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
@@ -32,6 +32,7 @@ import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import           Lamdu.Sugar.Lens (childPayloads, getVarName)
 import qualified Lamdu.Sugar.PresentationModes as PresentationModes
 import           Lamdu.Sugar.Types
+import           Revision.Deltum.Transaction (Transaction)
 
 import           Lamdu.Prelude
 
@@ -62,7 +63,7 @@ convert posInfo app@(V.App funcI argI) exprPl =
                       else funcS
                     , argS
                     )
-        convertAppliedCase app funcS argS exprPl & justToLeft
+        convertPostfix app funcS argS exprPl & justToLeft
         convertLabeled app funcS argS exprPl & justToLeft
         convertPrefix app funcS argS exprPl & lift
 
@@ -85,6 +86,26 @@ defParamsMatchArgs var record frozenDeps =
                 & Set.fromList
         guard (sFields == Map.keysSet (defArgs ^. freExtends))
     & Lens.has Lens._Just
+
+convertPostfix ::
+    (Monad m, Monoid a, Recursively HFoldable h) =>
+    h # Ann (Input.Payload m a) ->
+    ExpressionU v m a -> ExpressionU v m a -> Input.Payload m a # V.Term ->
+    MaybeT (ConvertM m) (ExpressionU v m a)
+convertPostfix subexprs funcS argS applyPl =
+    do
+        postfixFunc <- maybeToMPlus (annValue (^? _BodyCase) funcS)
+        del <- makeDel applyPl & lift
+        let postfix =
+                PostfixApply
+                { _pArg = argS & annotation . pActions . delete . Lens.filteredBy _CannotDelete .~ del funcS
+                , _pFunc = postfixFunc
+                }
+        setTo <- lift ConvertM.typeProtectedSetToVal ?? applyPl ^. Input.stored
+        ifSugar <- Lens.view (ConvertM.scConfig . Config.sugarsEnabled . Config.ifExpression)
+        guard ifSugar *> convertIfElse setTo postfix
+            & maybe (BodyPostfixApply postfix) BodyIfElse
+            & addActions subexprs applyPl & lift
 
 convertLabeled ::
     (Monad m, Monoid a, Recursively HFoldable h) =>
@@ -138,12 +159,20 @@ convertPrefix ::
     ConvertM m (ExpressionU v m a)
 convertPrefix subexprs funcS argS applyPl =
     do
-        protectedSetToVal <- ConvertM.typeProtectedSetToVal
-        let del remain =
-                protectedSetToVal (applyPl ^. Input.stored)
-                (remain ^. annotation . pInput . Input.stored . ExprIRef.iref)
-                <&> EntityId.ofValI
+        del <- makeDel applyPl
         BodySimpleApply App
-            { _appFunc = funcS & annotation . pActions . delete .~ Delete (del argS)
-            , _appArg = argS & annotation . pActions . delete . Lens.filteredBy _CannotDelete .~ Delete (del funcS)
+            { _appFunc = funcS & annotation . pActions . delete .~ del argS
+            , _appArg = argS & annotation . pActions . delete . Lens.filteredBy _CannotDelete .~ del funcS
             } & addActions subexprs applyPl
+
+makeDel ::
+    Monad m =>
+    Input.Payload m a # V.Term ->
+    ConvertM m ((Annotated (ConvertPayload m a2) # h) -> Delete (Transaction m))
+makeDel applyPl =
+    ConvertM.typeProtectedSetToVal <&>
+    \protectedSetToVal remain ->
+    protectedSetToVal (applyPl ^. Input.stored)
+    (remain ^. annotation . pInput . Input.stored . ExprIRef.iref)
+    <&> EntityId.ofValI
+    & Delete

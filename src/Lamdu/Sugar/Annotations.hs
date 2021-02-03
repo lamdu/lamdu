@@ -109,12 +109,17 @@ instance Functor i => MarkBodyAnnotations v n i o IfElse where
         , IfElse (markNodeAnnotations i) (markNodeAnnotations t & hVal %~ markCaseHandler) (markNodeAnnotations e)
         )
 
+instance Functor i => MarkBodyAnnotations v n i o Composite where
+    markBodyAnnotations x =
+        ( neverShowAnnotations
+        , morphMap (Proxy @(MarkAnnotations v n i o) #?> markNodeAnnotations) x
+        )
+
 instance Functor i => MarkBodyAnnotations v n i o Term where
     markBodyAnnotations BodyPlaceHolder = (neverShowAnnotations, BodyPlaceHolder)
     markBodyAnnotations (BodyLiteral x@LiteralBytes{}) = (dontShowEval, BodyLiteral x)
     markBodyAnnotations (BodyLiteral x) = (neverShowAnnotations, BodyLiteral x)
-    markBodyAnnotations (BodyRecord x) =
-        (neverShowAnnotations, morphMap (Proxy @(MarkAnnotations v n i o) #?> markNodeAnnotations) x & BodyRecord)
+    markBodyAnnotations (BodyRecord x) = markBodyAnnotations x & _2 %~ BodyRecord
     markBodyAnnotations (BodyLam x) = lamFunc markBodyAnnotations x & _2 %~ BodyLam
     markBodyAnnotations (BodyGetVar x) =
         ( case x of
@@ -153,16 +158,7 @@ instance Functor i => MarkBodyAnnotations v n i o Term where
         , morphMap (Proxy @(MarkAnnotations v n i o) #?> markNodeAnnotations) x & BodyLabeledApply
         )
     markBodyAnnotations (BodyIfElse x) = markBodyAnnotations x & _2 %~ BodyIfElse
-    markBodyAnnotations (BodyCase x) =
-        ( showAnnotationWhenVerbose
-        , morphMap (Proxy @(MarkAnnotations v n i o) #?> markNodeAnnotations) x
-            -- cKind contains the scrutinee which is not always
-            -- visible (for case alts that aren't lambdas), so
-            -- maybe we do want to show the annotation
-            & cKind . _CaseWithArg . caVal . nonHoleAnn .~ neverShowAnnotations
-            & cBody . cItems . Lens.mapped . ciExpr . hVal %~ markCaseHandler
-            & BodyCase
-        )
+    markBodyAnnotations (BodyCase x) = markBodyAnnotations x & _2 %~ BodyCase
     markBodyAnnotations (BodyHole x) =
         ( alwaysShowAnnotations
         , x & BodyHole
@@ -176,6 +172,10 @@ instance Functor i => MarkBodyAnnotations v n i o Term where
                     else id
             ) h t o
             & BodyFragment
+        )
+    markBodyAnnotations (BodyPostfixApply x) =
+        ( neverShowAnnotations
+        , morphMap (Proxy @(MarkAnnotations v n i o) #?> markNodeAnnotations) x & BodyPostfixApply
         )
 
 nonHoleAnn ::
