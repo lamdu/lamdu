@@ -23,7 +23,6 @@ import           Lamdu.Sugar.Convert.Monad (ConvertM)
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
 import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
-import qualified Lamdu.Sugar.Lens as SugarLens
 import           Lamdu.Sugar.Types
 
 import           Lamdu.Prelude
@@ -80,15 +79,11 @@ convertAppliedCase (V.App _ arg) funcS argS exprPl =
         Lens.has (cKind . _LambdaCase) caseB & guard
         protectedSetToVal <- lift ConvertM.typeProtectedSetToVal
         let setTo = protectedSetToVal (exprPl ^. Input.stored)
-        simplify <- Lens.view (ConvertM.scConfig . Config.sugarsEnabled . Config.caseWithNominalArgument)
         let appliedCaseB =
                 caseB
                 & cKind .~ CaseWithArg
                     CaseArg
-                    { _caVal =
-                        if simplify
-                        then simplifyCaseArg argS
-                        else argS
+                    { _caVal = argS
                     , _caToLambdaCase =
                         setTo (funcS ^. annotation . pInput . Input.stored . ExprIRef.iref)
                         <&> EntityId.ofValI
@@ -101,10 +96,3 @@ convertAppliedCase (V.App _ arg) funcS argS exprPl =
             <&> annotation . pInput . Input.entityId .~ funcS ^. annotation . pInput . Input.entityId
             <&> annotation . pInput . Input.userData <>~
                 exprPl ^. Input.userData <> funcS ^. annotation . pInput . Input.userData
-
-simplifyCaseArg :: ExpressionU v m a -> ExpressionU v m a
-simplifyCaseArg argS =
-    case argS ^. hVal of
-    BodySimpleApply (V.App (Ann _ BodyFromNom{}) x)
-        | Lens.nullOf (hVal . SugarLens.bodyUnfinished) x -> x
-    _ -> argS
