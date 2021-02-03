@@ -95,9 +95,14 @@ convertLabeled subexprs funcS argS exprPl =
     do
         Lens.view (ConvertM.scConfig . Config.sugarsEnabled . Config.labeledApply) >>= guard
         -- Make sure it's a not a param, get the var
-        sBinderVar <- funcS ^? hVal . _BodyGetVar . _GetBinder & maybeToMPlus
         -- Make sure it is not a "let" but a "def" (recursive or external)
-        _ <- sBinderVar ^? bvForm . _GetDefinition & maybeToMPlus
+        funcVar <-
+            annValue
+            ( ^? _BodyGetVar . _GetBinder
+                . Lens.filteredBy (bvForm . _GetDefinition)
+                . Lens._Unwrapped
+            ) funcS
+            & maybeToMPlus
         -- Make sure the argument is a record
         record <- argS ^? hVal . _BodyRecord & maybeToMPlus
         -- that is closed
@@ -105,7 +110,7 @@ convertLabeled subexprs funcS argS exprPl =
         -- with at least 2 fields
         length (record ^. cItems) + length (record ^. cPunnedItems) >= 2 & guard
         frozenDeps <- Lens.view ConvertM.scFrozenDeps <&> Property.value
-        let var = sBinderVar ^. bvVar
+        let var = funcVar ^. hVal . Lens._Wrapped . bvVar
         -- If it is an external (non-recursive) def (i.e: not in
         -- scope), make sure the def (frozen) type is inferred to have
         -- closed record of same parameters
@@ -119,8 +124,7 @@ convertLabeled subexprs funcS argS exprPl =
                     }
         bod <-
             PresentationModes.makeLabeledApply
-            (Ann (Const (funcS ^. annotation)) (Const sBinderVar))
-            (record ^. cItems <&> getArg) (record ^. cPunnedItems) exprPl
+            funcVar (record ^. cItems <&> getArg) (record ^. cPunnedItems) exprPl
             <&> BodyLabeledApply & lift
         let userPayload =
                 subexprPayloads subexprs (bod ^.. childPayloads)
