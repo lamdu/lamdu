@@ -1,4 +1,4 @@
-{-# LANGUAGE TypeApplications, FlexibleInstances, DefaultSignatures, GADTs, MultiParamTypeClasses #-}
+{-# LANGUAGE TypeApplications, FlexibleInstances, DefaultSignatures, MultiParamTypeClasses #-}
 
 module Lamdu.Sugar.Lens
     ( SugarExpr(..), Annotations(..)
@@ -19,7 +19,6 @@ import qualified Control.Lens as Lens
 import           Hyper
 import           Hyper.Class.Morph
 import           Hyper.Recurse (Recursive(..), proxyArgument)
-import           Hyper.Type.AST.App (MorphWitness(..))
 import           Lamdu.Sugar.Types
 
 import           Lamdu.Prelude
@@ -241,8 +240,7 @@ instance BodyAnnotations Term where
     bodyAnnotations f (BodyGetField x) = (gfRecord . annotations) f x <&> BodyGetField
     bodyAnnotations f (BodyRecord x) = bodyAnnotations f x <&> BodyRecord
     bodyAnnotations f (BodyToNom x) = (nVal . annotations) f x <&> BodyToNom
-    bodyAnnotations f (BodySimpleApply x) =
-        morphTraverse (\M_App_expr -> annotations f) x <&> BodySimpleApply
+    bodyAnnotations f (BodySimpleApply x) = (morphTraverse1 . annotations) f x <&> BodySimpleApply
     bodyAnnotations f (BodyInject x) = (iContent . bodyAnnotations) f x <&> BodyInject
     bodyAnnotations f (BodyCase x) = bodyAnnotations f x <&> BodyCase
     bodyAnnotations f (BodyLabeledApply x) = bodyAnnotations f x <&> BodyLabeledApply
