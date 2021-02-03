@@ -94,7 +94,7 @@ convertPostfix ::
     MaybeT (ConvertM m) (ExpressionU v m a)
 convertPostfix subexprs funcS argS applyPl =
     do
-        postfixFunc <- maybeToMPlus (annValue (^? _BodyCase) funcS)
+        postfixFunc <- annValue (^? _BodyPostfixFunc) funcS & maybeToMPlus
         del <- makeDel applyPl & lift
         let postfix =
                 PostfixApply

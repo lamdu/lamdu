@@ -370,9 +370,13 @@ toElse v (ElseIf x) = toIfElse v x <&> ElseIf
 toIfElse :: MonadNaming m => WalkBody IfElse v0 v1 m o a
 toIfElse v (IfElse i t e) = IfElse <$> toExpression v i <*> toExpression v t <*> toNode v (toElse v) e
 
+toPostfixFunc :: MonadNaming m => WalkBody PostfixFunc v0 v1 m o a
+toPostfixFunc v (PfCase x) = toComposite v x <&> PfCase
+toPostfixFunc _ (PfFromNom x) = toTId x <&> PfFromNom
+
 toPostfixApply :: MonadNaming m => WalkBody PostfixApply v0 v1 m o a
 toPostfixApply v (PostfixApply a f) =
-    PostfixApply <$> toExpression v a <*> toNode v (toComposite v) f
+    PostfixApply <$> toExpression v a <*> toNode v (toPostfixFunc v) f
 
 toBody :: MonadNaming m => WalkBody Term v0 v1 m o a
 toBody v =
@@ -380,13 +384,12 @@ toBody v =
     BodyGetField     x -> x & toGetField v <&> BodyGetField
     BodyInject       x -> x & toInject v <&> BodyInject
     BodyRecord       x -> x & toComposite v <&> BodyRecord
-    BodyCase         x -> x & toComposite v <&> BodyCase
     BodyIfElse       x -> x & toIfElse v <&> BodyIfElse
     BodySimpleApply  x -> x & (morphTraverse1 . toExpression) v <&> BodySimpleApply
     BodyPostfixApply x -> x & toPostfixApply v <&> BodyPostfixApply
     BodyLabeledApply x -> x & toLabeledApply v <&> BodyLabeledApply
+    BodyPostfixFunc  x -> x & toPostfixFunc v <&> BodyPostfixFunc
     BodyHole         x -> x & toHole <&> BodyHole
-    BodyFromNom      x -> x & toTId <&> BodyFromNom
     BodyToNom        x -> x & toNominal v <&> BodyToNom
     BodyGetVar       x -> x & toGetVar <&> BodyGetVar
     BodyLiteral      x -> x & BodyLiteral & pure

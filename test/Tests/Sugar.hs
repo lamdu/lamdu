@@ -339,7 +339,7 @@ testInsistSubsets =
             waPanes . traverse . SugarLens.paneBinder .
             hVal . _BodyFunction . fBody .
             hVal . _BinderTerm . _BodyPostfixApply . pFunc .
-            hVal . cItems . Lens.ix 1 . ciExpr .
+            hVal . _PfCase . cItems . Lens.ix 1 . ciExpr .
             hVal . _BodyLam . lamFunc . fBody .
             hVal . _BinderTerm . _BodyLabeledApply . aSpecialArgs . _Operator
         insist =

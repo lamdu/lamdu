@@ -4,7 +4,6 @@ module Lamdu.GUI.Expr.NominalEdit
     ) where
 
 import qualified Control.Lens as Lens
-import           Control.Lens.Extended (OneOf)
 import qualified Control.Monad.Reader as Reader
 import           GUI.Momentu.Align (WithTextPos)
 import qualified GUI.Momentu.Align as Align
@@ -17,6 +16,7 @@ import qualified GUI.Momentu.Responsive.Expression as ResponsiveExpr
 import           GUI.Momentu.View (View)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Grid as Grid
+import qualified GUI.Momentu.Widgets.Label as Label
 import qualified GUI.Momentu.Widgets.TextView as TextView
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Theme as Theme
@@ -24,7 +24,7 @@ import qualified Lamdu.Config.Theme.TextColors as TextColors
 import qualified Lamdu.GUI.NameView as NameView
 import           Lamdu.GUI.Monad (GuiM)
 import qualified Lamdu.GUI.Monad as GuiM
-import           Lamdu.GUI.Styled (grammar, label)
+import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.GUI.Types as ExprGui
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.GUI.Wrap (stdWrapParentExpr)
@@ -66,7 +66,7 @@ makeToNom (Ann (Const pl) (Sugar.Nominal tid binder)) =
             <*>
             sequence
             [ (Widget.makeFocusableView ?? nameId <&> (Align.tValue %~))
-                <*> mkNomLabel Texts.toNom tid
+                <*> mkNomLabel tid
                 <&> Responsive.fromWithTextPos
                 <&> Widget.weakerEvents eventMap
             , GuiM.makeBinder binder
@@ -86,17 +86,16 @@ makeFromNom ::
     Annotated (ExprGui.Payload i o) # Const (Sugar.TId Name) ->
     GuiM env i o (Responsive o)
 makeFromNom (Ann (Const pl) (Const nom)) =
-    mkNomLabel Texts.fromNom nom <&> Responsive.fromTextView
+    Styled.grammar (Label.make ".")
+    /|/ mkNomLabel nom
+    <&> Responsive.fromTextView
     & stdWrapParentExpr pl
 
 mkNomLabel ::
-    (Monad i, Has (Texts.Code Text) env, Has (Texts.Name Text) env) =>
-    OneOf Texts.Code ->
+    (Monad i, Has (Texts.Name Text) env) =>
     Sugar.TId Name ->
     GuiM env i o (WithTextPos View)
-mkNomLabel textLens tid =
+mkNomLabel tid =
     do
         nomColor <- Lens.view (has . Theme.textColors . TextColors.nomColor)
-        grammar (label textLens)
-            /|/ NameView.make (tid ^. Sugar.tidName)
-            & Reader.local (TextView.color .~ nomColor)
+        NameView.make (tid ^. Sugar.tidName) & Reader.local (TextView.color .~ nomColor)

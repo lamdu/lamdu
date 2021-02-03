@@ -38,4 +38,4 @@ convertFromNom ::
     NominalId -> Input.Payload m a # V.Term ->
     ConvertM m (ExpressionU v m a)
 convertFromNom tid pl =
-    ConvertTId.convert tid <&> BodyFromNom >>= addActions (Const ()) pl
+    ConvertTId.convert tid <&> PfFromNom <&> BodyPostfixFunc >>= addActions (Const ()) pl

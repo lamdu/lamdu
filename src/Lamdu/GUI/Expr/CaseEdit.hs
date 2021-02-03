@@ -16,7 +16,7 @@ import qualified GUI.Momentu.Glue as Glue
 import qualified GUI.Momentu.I18N as MomentuTexts
 import           GUI.Momentu.Responsive (Responsive)
 import qualified GUI.Momentu.Responsive as Responsive
-import qualified GUI.Momentu.Responsive.Expression as ResponsiveExpr
+import qualified GUI.Momentu.Responsive.Options as Options
 import           GUI.Momentu.Responsive.TaggedList (TaggedItem(..), taggedList)
 import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.View (View)
@@ -97,7 +97,7 @@ make (Ann (Const pl) (Sugar.Composite alts punned caseTail addAlt)) =
         header <- grammar (Label.make ".") /|/ makeCaseLabel
         (Annotation.maybeAddAnnotationPl (pl ^. _1) <&> (Widget.widget %~)) <*>
             ( Styled.addValFrame <*>
-                (ResponsiveExpr.boxSpacedMDisamb ?? ExprGui.mParensId pl ?? [header, altsGui]))
+                (Options.boxSpaced ?? Options.disambiguationNone ?? [header, altsGui]))
             <&> Widget.weakerEvents addAltEventMap
     & wrap
     where

@@ -26,7 +26,7 @@ convertAbsurd ::
     Input.Payload m a # V.Term -> ConvertM m (ExpressionU v m a)
 convertAbsurd pl =
     Composite.convertEmpty DataOps.case_ pl
-    <&> BodyCase
+    <&> PfCase <&> BodyPostfixFunc
     >>= addActions (Const ()) pl
 
 convert ::
@@ -46,7 +46,7 @@ convert (RowExtend tag v rest) exprPl =
                 , Composite._extendValI = v ^. hAnn . Input.stored . ExprIRef.iref
                 , Composite._extendRest = rest ^. hAnn
                 }
-        Composite.convert DataOps.case_ V.LAbsurd mkCase _BodyCase valS restS
+        Composite.convert DataOps.case_ V.LAbsurd mkCase (_BodyPostfixFunc . _PfCase) valS restS
             exprPl caseP
     where
         mkCase t c r = RowExtend t c r & V.BCase

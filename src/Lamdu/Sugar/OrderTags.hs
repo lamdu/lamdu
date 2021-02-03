@@ -76,6 +76,7 @@ instance MonadTransaction m i => Order v name i o (Const a)
 instance MonadTransaction m i => Order v name i o (Sugar.Else v name i o)
 instance MonadTransaction m i => Order v name i o (Sugar.IfElse v name i o)
 instance MonadTransaction m i => Order v name i o (Sugar.Let v name i o)
+instance MonadTransaction m i => Order v name i o (Sugar.PostfixApply v name i o)
 
 instance MonadTransaction m i => Order v name i o (Sugar.Function v name i o) where
     order x =
@@ -83,7 +84,9 @@ instance MonadTransaction m i => Order v name i o (Sugar.Function v name i o) wh
         & (Sugar.fParams . Sugar._Params) orderParams
         >>= Sugar.fBody orderNode
 
-instance MonadTransaction m i => Order v name i o (Sugar.PostfixApply v name i o)
+instance MonadTransaction m i => Order v name i o (Sugar.PostfixFunc v name i o) where
+    order (Sugar.PfCase x) = order x <&> Sugar.PfCase
+    order (Sugar.PfFromNom x) = Sugar.PfFromNom x & pure
 
 orderParams ::
     MonadTransaction m i =>
@@ -104,7 +107,7 @@ instance MonadTransaction m i => Order v name i o (Sugar.Term v name i o) where
     order (Sugar.BodyLam l) = order l <&> Sugar.BodyLam
     order (Sugar.BodyRecord r) = order r <&> Sugar.BodyRecord
     order (Sugar.BodyLabeledApply a) = order a <&> Sugar.BodyLabeledApply
-    order (Sugar.BodyCase c) = order c <&> Sugar.BodyCase
+    order (Sugar.BodyPostfixFunc f) = order f <&> Sugar.BodyPostfixFunc
     order (Sugar.BodyHole a) = SugarLens.holeTransformExprs orderNode a & Sugar.BodyHole & pure
     order (Sugar.BodyFragment a) =
         a
@@ -117,7 +120,6 @@ instance MonadTransaction m i => Order v name i o (Sugar.Term v name i o) where
     order (Sugar.BodySimpleApply x) = htraverse1 orderNode x <&> Sugar.BodySimpleApply
     order (Sugar.BodyGetField x) = Sugar.gfRecord orderNode x <&> Sugar.BodyGetField
     order (Sugar.BodyPostfixApply x) = order x <&> Sugar.BodyPostfixApply
-    order x@Sugar.BodyFromNom{} = pure x
     order x@Sugar.BodyLiteral{} = pure x
     order x@Sugar.BodyGetVar{} = pure x
     order x@Sugar.BodyPlaceHolder{} = pure x

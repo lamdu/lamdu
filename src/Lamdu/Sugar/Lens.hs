@@ -48,6 +48,7 @@ instance Recursive SugarExpr where
 
 instance SugarExpr (Const (GetVar name o))
 instance SugarExpr (Const (NullaryVal name i o))
+instance SugarExpr (Const (TId name))
 
 instance SugarExpr (Const (BinderVarRef name o)) where
     isUnfinished (Const x) = Lens.has binderVarRefUnfinished x
@@ -56,14 +57,14 @@ instance SugarExpr (Assignment v name i o) where
     isUnfinished (BodyPlain x) = isUnfinished (x ^. apBody)
     isUnfinished BodyFunction{} = False
 
-instance SugarExpr (Composite v name i o)
-
 instance SugarExpr (Else v name i o) where
     isUnfinished (SimpleElse x) = isUnfinished x
     isUnfinished ElseIf{} = False
 
 instance SugarExpr (Function v name i o) where
     isForbiddenInLightLam = Lens.has (fParams . _Params)
+
+instance SugarExpr (PostfixFunc v name i o)
 
 instance SugarExpr (Binder v name i o) where
     isUnfinished (BinderTerm x) = isUnfinished x
@@ -231,12 +232,12 @@ instance BodyAnnotations InjectContent
 instance BodyAnnotations LabeledApply
 instance BodyAnnotations Let
 instance BodyAnnotations PostfixApply
+instance BodyAnnotations PostfixFunc
 
 instance BodyAnnotations Term where
     bodyAnnotations _ BodyPlaceHolder = pure BodyPlaceHolder
     bodyAnnotations _ (BodyLiteral x) = BodyLiteral x & pure
     bodyAnnotations _ (BodyGetVar x) = BodyGetVar x & pure
-    bodyAnnotations _ (BodyFromNom x) = BodyFromNom x & pure
     bodyAnnotations f (BodyLam x) = (lamFunc . bodyAnnotations) f x <&> BodyLam
     bodyAnnotations f (BodyIfElse x) = bodyAnnotations f x <&> BodyIfElse
     bodyAnnotations f (BodyGetField x) = (gfRecord . annotations) f x <&> BodyGetField
@@ -244,8 +245,8 @@ instance BodyAnnotations Term where
     bodyAnnotations f (BodyToNom x) = (nVal . annotations) f x <&> BodyToNom
     bodyAnnotations f (BodySimpleApply x) = (morphTraverse1 . annotations) f x <&> BodySimpleApply
     bodyAnnotations f (BodyInject x) = (iContent . bodyAnnotations) f x <&> BodyInject
-    bodyAnnotations f (BodyCase x) = bodyAnnotations f x <&> BodyCase
     bodyAnnotations f (BodyLabeledApply x) = bodyAnnotations f x <&> BodyLabeledApply
     bodyAnnotations _ (BodyHole x) = BodyHole x & pure
     bodyAnnotations f (BodyFragment x) = bodyAnnotations f x <&> BodyFragment
     bodyAnnotations f (BodyPostfixApply x) = bodyAnnotations f x <&> BodyPostfixApply
+    bodyAnnotations f (BodyPostfixFunc x) = bodyAnnotations f x <&> BodyPostfixFunc

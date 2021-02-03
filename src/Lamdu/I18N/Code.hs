@@ -14,8 +14,6 @@ data Code a = Code
     { _assign :: a -- Assignment
     , _punnedFields :: a -- Apply
     , _let_ :: a
-    , _toNom :: a
-    , _fromNom :: a
     , _repl :: a
     , -- Case
       _case_ :: a

@@ -13,7 +13,6 @@ import qualified GUI.Momentu.Widgets.Label as Label
 import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
 import qualified Lamdu.GUI.Expr.ApplyEdit as ApplyEdit
-import qualified Lamdu.GUI.Expr.CaseEdit as CaseEdit
 import qualified Lamdu.GUI.Expr.FragmentEdit as FragmentEdit
 import qualified Lamdu.GUI.Expr.GetFieldEdit as GetFieldEdit
 import qualified Lamdu.GUI.Expr.GetVarEdit as GetVarEdit
@@ -85,16 +84,15 @@ makeEditor (Ann (Const pl) body) =
     Sugar.BodyLabeledApply x -> editor pl x ApplyEdit.makeLabeled
     Sugar.BodySimpleApply  x -> editor pl x ApplyEdit.makeSimple
     Sugar.BodyPostfixApply x -> editor pl x ApplyEdit.makePostfix
+    Sugar.BodyPostfixFunc  x -> editor pl x ApplyEdit.makePostfixFunc
     Sugar.BodyLam          x -> editor pl x LambdaEdit.make
     Sugar.BodyLiteral      x -> editor pl (Const x) LiteralEdit.make
     Sugar.BodyRecord       x -> editor pl x RecordEdit.make
-    Sugar.BodyCase         x -> editor pl x CaseEdit.make
     Sugar.BodyIfElse       x -> editor pl x IfElseEdit.make
     Sugar.BodyGetField     x -> editor pl x GetFieldEdit.make
     Sugar.BodyInject       x -> editor pl x InjectEdit.make
     Sugar.BodyGetVar       x -> editor pl (Const x) GetVarEdit.make
     Sugar.BodyToNom        x -> editor pl x NominalEdit.makeToNom
-    Sugar.BodyFromNom      x -> editor pl (Const x) NominalEdit.makeFromNom
     Sugar.BodyFragment     x -> editor pl x FragmentEdit.make
     & Reader.local
         (Element.animIdPrefix .~ Widget.toAnimId (WidgetIds.fromExprPayload (pl ^. _1)))

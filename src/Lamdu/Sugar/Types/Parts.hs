@@ -160,6 +160,7 @@ data HoleTerm name
     | HoleName name
     | HoleInject name
     | HoleGetField name
+    | HoleFromNom name
     | HoleParamsRecord
     | HoleRecord
     | HoleCase

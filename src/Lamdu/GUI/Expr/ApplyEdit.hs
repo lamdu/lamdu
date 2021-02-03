@@ -1,5 +1,5 @@
 module Lamdu.GUI.Expr.ApplyEdit
-    ( makeSimple, makePostfix, makeLabeled
+    ( makeSimple, makePostfix, makeLabeled, makePostfixFunc
     ) where
 
 import qualified Control.Lens as Lens
@@ -18,6 +18,7 @@ import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
 import qualified Lamdu.GUI.Expr.CaseEdit as CaseEdit
 import qualified Lamdu.GUI.Expr.EventMap as ExprEventMap
 import qualified Lamdu.GUI.Expr.GetVarEdit as GetVarEdit
+import qualified Lamdu.GUI.Expr.NominalEdit as NominalEdit
 import qualified Lamdu.GUI.Expr.TagEdit as TagEdit
 import           Lamdu.GUI.Annotation (maybeAddAnnotationPl)
 import           Lamdu.GUI.Monad (GuiM)
@@ -167,5 +168,26 @@ makePostfix (Ann (Const pl) (Sugar.PostfixApply arg func)) =
     (ResponsiveExpr.boxSpacedMDisamb ?? ExprGui.mParensId pl)
     <*> sequenceA
     [ GuiM.makeSubexpression arg
-    , CaseEdit.make func
+    , makePostfixFunc func
     ] & stdWrapParentExpr pl
+
+makePostfixFunc ::
+    ( Monad i, Monad o
+    , Grid.HasTexts env
+    , Has (Texts.Code Text) env
+    , Has (Texts.CodeUI Text) env
+    , Has (Texts.Definitions Text) env
+    , Has (Texts.Name Text) env
+    , Has (Texts.Navigation Text) env
+    , Has (TextEdit.Texts Text) env
+    , SearchMenu.HasTexts env
+    ) =>
+    ExprGui.Expr Sugar.PostfixFunc i o ->
+    GuiM env i o (Responsive o)
+makePostfixFunc (Ann (Const pl) x) =
+    (ResponsiveExpr.boxSpacedMDisamb ?? ExprGui.mParensId pl) <*>
+    ( case x of
+        Sugar.PfCase c -> Ann (Const pl) c & CaseEdit.make
+        Sugar.PfFromNom n -> Ann (Const pl) (Const n) & NominalEdit.makeFromNom
+        <&> (:[])
+    )
