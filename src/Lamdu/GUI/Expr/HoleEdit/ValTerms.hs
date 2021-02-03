@@ -50,6 +50,7 @@ holeSearchTerm _ (HoleGetDef x) =
 holeSearchTerm _ (HoleName x) = ofName x
 holeSearchTerm _ (HoleGetField x) = ofName x <&> ("." <>)
 holeSearchTerm _ (HoleInject x) = (<>) <$> ofName x <*> [":", "."]
+holeSearchTerm _ (HoleFromNom x) = ofName x <&> ("." <>)
 holeSearchTerm e HoleLet = [e ^. has . Texts.let_]
 holeSearchTerm e HoleLambda = [e ^. has . Texts.lambda, "\\", "Λ", "λ", "->", "→"]
 holeSearchTerm e HoleIf = [e ^. has . Texts.if_, ":"]

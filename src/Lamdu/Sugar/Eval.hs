@@ -137,6 +137,7 @@ instance AddEval InjectContent
 instance AddEval LabeledApply
 instance AddEval Let
 instance AddEval PostfixApply
+instance AddEval PostfixFunc
 
 instance AddEval Term where
     addToBody r i =
@@ -144,7 +145,6 @@ instance AddEval Term where
         BodyPlaceHolder -> BodyPlaceHolder
         BodyGetVar x -> BodyGetVar x
         BodyLiteral x -> BodyLiteral x
-        BodyFromNom x -> BodyFromNom x
         BodySimpleApply (App x y) -> App (addToNode r x) (addToNode r y) & BodySimpleApply
         BodyGetField (GetField x t) -> GetField (addToNode r x) t & BodyGetField
         BodyRecord c -> addToBody r i c & BodyRecord
@@ -153,10 +153,10 @@ instance AddEval Term where
         BodyLam lam -> lam & lamFunc %~ addToBody r i & BodyLam
         BodyToNom nom -> nom & nVal %~ addToNode r & BodyToNom
         BodyHole h -> BodyHole h
-        BodyCase x -> addToBody r i x & BodyCase
         BodyLabeledApply x -> addToBody r i x & BodyLabeledApply
         BodyFragment f -> f & fExpr %~ addToNode r & BodyFragment
         BodyPostfixApply x -> addToBody r i x & BodyPostfixApply
+        BodyPostfixFunc x -> addToBody r i x & BodyPostfixFunc
 
 addToPayload ::
     Applicative i =>

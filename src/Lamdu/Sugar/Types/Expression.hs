@@ -15,11 +15,12 @@ module Lamdu.Sugar.Types.Expression
     , Term(..)
         , _BodyLam, _BodyLabeledApply, _BodySimpleApply
         , _BodyGetVar, _BodyGetField, _BodyInject, _BodyHole
-        , _BodyLiteral, _BodyCase, _BodyRecord, _BodyFragment
-        , _BodyFromNom, _BodyToNom, _BodyIfElse, _BodyPostfixApply
+        , _BodyLiteral, _BodyRecord, _BodyFragment
+        , _BodyToNom, _BodyIfElse, _BodyPostfixApply, _BodyPostfixFunc
     , AnnotatedArg(..), aaTag, aaExpr
     , LabeledApply(..), aFunc, aSpecialArgs, aAnnotatedArgs, aPunnedArgs
     , PostfixApply(..), pArg, pFunc
+    , PostfixFunc(..), _PfCase, _PfFromNom
     , App(..), appFunc, appArg
     , Fragment(..), fExpr, fHeal, fTypeMismatch, fOptions
     , Lambda(..), lamFunc, lamMode, lamApplyLimit
@@ -89,7 +90,7 @@ data LabeledApply v name i o k = LabeledApply
 
 data PostfixApply v name i o k = PostfixApply
     { _pArg :: k :# Term v name i o
-    , _pFunc :: k :# Composite v name i o -- Currently only .case
+    , _pFunc :: k :# PostfixFunc v name i o
     } deriving Generic
 
 data InjectContent v name i o k
@@ -177,6 +178,11 @@ data Nominal v name i o k = Nominal
     , _nVal :: k :# Binder v name i o
     } deriving Generic
 
+data PostfixFunc v name i o k
+    = PfCase (Composite v name i o k)
+    | PfFromNom (TId name)
+    deriving Generic
+
 data Term v name i o k
     = BodyLam (Lambda v name i o k)
     | BodySimpleApply (App (Term v name i o) k)
@@ -186,12 +192,11 @@ data Term v name i o k
     | BodyLiteral (Literal (Property o))
     | BodyRecord (Composite v name i o k)
     | BodyGetField (GetField v name i o k)
-    | BodyCase (Composite v name i o k)
     | BodyIfElse (IfElse v name i o k)
     | BodyInject (Inject v name i o k)
     | BodyGetVar (GetVar name o)
     | BodyToNom (Nominal v name i o k)
-    | BodyFromNom (TId name)
+    | BodyPostfixFunc (PostfixFunc v name i o k)
     | BodyFragment (Fragment v name i o k)
     | BodyPlaceHolder -- Used for hole results, shown as "★"
     deriving Generic
@@ -260,49 +265,50 @@ traverse Lens.makeLenses
     , ''NodeActions, ''Nominal, ''Payload, ''PostfixApply
     ] <&> concat
 traverse Lens.makePrisms
-    [''Assignment, ''Binder, ''CompositeTail, ''Else, ''InjectContent, ''Term] <&> concat
+    [''Assignment, ''Binder, ''CompositeTail, ''Else, ''InjectContent, ''PostfixFunc, ''Term] <&> concat
 
 traverse makeHTraversableAndBases
     [ ''AnnotatedArg, ''Assignment, ''AssignPlain, ''Binder
     , ''Composite, ''CompositeItem, ''CompositeTail, ''Else
     , ''Fragment, ''Function, ''GetField, ''IfElse, ''Inject, ''InjectContent
-    , ''LabeledApply, ''Lambda, ''Let, ''Nominal, ''PostfixApply, ''Term
+    , ''LabeledApply, ''Lambda, ''Let, ''Nominal, ''PostfixApply, ''PostfixFunc, ''Term
     ] <&> concat
 
 traverse makeHMorph
-    [ ''Composite, ''GetField, ''IfElse, ''Inject, ''InjectContent, ''LabeledApply, ''Let, ''PostfixApply
+    [ ''Composite, ''GetField, ''IfElse, ''Inject, ''InjectContent
+    , ''LabeledApply, ''Let, ''PostfixApply, ''PostfixFunc
     ] <&> concat
 
 -- TODO: Replace boilerplate below with TH
 
 instance RNodes (Assignment v name i o)
 instance RNodes (Binder v name i o)
-instance RNodes (Composite v name i o)
 instance RNodes (Else v name i o)
 instance RNodes (Function v name i o)
+instance RNodes (PostfixFunc v name i o)
 instance RNodes (Term v name i o)
 
 type Dep v (c :: HyperType -> Constraint) name i o =
     ( c (Assignment v name i o)
     , c (Binder v name i o)
-    , c (Composite v name i o)
     , c (Const (BinderVarRef name o))
     , c (Const (NullaryVal name i o))
     , c (Const (GetVar name o))
     , c (Else v name i o)
+    , c (PostfixFunc v name i o)
     , c (Term v name i o)
     )
 
 instance Dep v c name i o => Recursively c (Assignment v name i o)
 instance Dep v c name i o => Recursively c (Binder v name i o)
-instance Dep v c name i o => Recursively c (Composite v name i o)
 instance Dep v c name i o => Recursively c (Else v name i o)
+instance Dep v c name i o => Recursively c (PostfixFunc v name i o)
 instance Dep v c name i o => Recursively c (Term v name i o)
 
 instance (Dep v c name i o, c (Function v name i o)) => Recursively c (Function v name i o)
 
 instance RTraversable (Assignment v name i o)
 instance RTraversable (Binder v name i o)
-instance RTraversable (Composite v name i o)
 instance RTraversable (Else v name i o)
+instance RTraversable (PostfixFunc v name i o)
 instance RTraversable (Term v name i o)

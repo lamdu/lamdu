@@ -114,10 +114,9 @@ loopExprBody parentPrec body_ =
     BodyPlaceHolder    -> result False BodyPlaceHolder
     BodyLiteral      x -> result False (BodyLiteral x)
     BodyGetVar       x -> result False (BodyGetVar x)
-    BodyFromNom      x -> result False (BodyFromNom x)
     BodyHole         x -> result False (BodyHole x)
     BodyRecord       x -> hmap (p #> addToNode) x & BodyRecord & result False
-    BodyCase         x -> hmap (p #> addToNode) x & BodyCase & result (parentPrec ^. before >= 12)
+    BodyPostfixFunc  x -> hmap (p #> addToNode) x & BodyPostfixFunc & result (parentPrec ^. before >= 12)
     BodyLam          x -> leftSymbol (lamFunc . fBody) 0 BodyLam x
     BodyToNom        x -> leftSymbol nVal 0 BodyToNom x
     BodyInject       x -> inject x
@@ -177,7 +176,7 @@ loopExprBody parentPrec body_ =
             , _pFunc = Ann (Const (ParenInfo 13 False, fa)) (hmap (p #> addToNode) f)
             } & result needParens
             where
-                needParens = parentPrec ^. before >= 12 || parentPrec ^. after > 12
+                needParens = parentPrec ^. before >= 13 || parentPrec ^. after > 13
         labeledApply x =
             case x ^? bareInfix of
             Nothing ->

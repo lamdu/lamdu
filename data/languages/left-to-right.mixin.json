@@ -4,8 +4,6 @@
     "texts": {
         "code": {
             "punnedFields": "⇒",
-            "toNom": "«",
-            "fromNom": "»",
             "repl": "⋙",
             "arrow": "→",
             "textOpener": "“",

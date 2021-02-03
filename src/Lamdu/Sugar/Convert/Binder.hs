@@ -297,11 +297,12 @@ class GetParam t where
 instance Recursive GetParam where
     recurse = getParamRecursive . proxyArgument
 
-instance GetParam (Composite v InternalName i o)
 instance GetParam (Const (BinderVarRef InternalName o))
 instance GetParam (Const (NullaryVal InternalName i o))
+instance GetParam (Const (TId name))
 instance GetParam (Else v InternalName i o)
 instance GetParam (Function v InternalName i o)
+instance GetParam (PostfixFunc v InternalName i o)
 
 instance GetParam (Const (GetVar InternalName o)) where
     getParam = (^? Lens._Wrapped . _GetParam . pNameRef . nrName)
@@ -349,11 +350,11 @@ markNodeLightParams ::
 markNodeLightParams paramNames =
     hVal %~ markLightParams paramNames
 
-instance MarkLightParams (Composite v InternalName i o)
 instance MarkLightParams (Const a)
 instance MarkLightParams (Else v InternalName i o)
 instance MarkLightParams (Let v InternalName i o)
 instance MarkLightParams (Function v InternalName i o)
+instance MarkLightParams (PostfixFunc v InternalName i o)
 
 instance MarkLightParams (Assignment v InternalName i o) where
     markLightParams ps (BodyPlain x) = x & apBody %~ markLightParams ps & BodyPlain

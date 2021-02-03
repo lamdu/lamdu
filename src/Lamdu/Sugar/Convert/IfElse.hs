@@ -27,10 +27,10 @@ convertIfElse setToVal postApp =
     do
         cond <-
             postApp ^?
-            pArg . hVal . _BodySimpleApply .
-            Lens.filteredBy (appFunc . hVal . _BodyFromNom . tidTId . Lens.only boolTid) .
-            appArg
-        case postApp ^. pFunc . hVal . cItems of
+            pArg . hVal . _BodyPostfixApply .
+            Lens.filteredBy (pFunc . hVal . _PfFromNom . tidTId . Lens.only boolTid) .
+            pArg
+        case postApp ^. pFunc . hVal . _PfCase . cItems of
             [alt0, alt1]
                 | tagOf alt0 == trueTag && tagOf alt1 == falseTag -> convIfElse cond alt0 alt1
                 | tagOf alt1 == trueTag && tagOf alt0 == falseTag -> convIfElse cond alt1 alt0

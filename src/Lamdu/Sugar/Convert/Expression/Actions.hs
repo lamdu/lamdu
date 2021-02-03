@@ -220,6 +220,9 @@ instance FixReplaceParent (Const a) where
 instance FixReplaceParent (Composite v name i o) where
     fixReplaceParent _ = id
 
+instance FixReplaceParent (PostfixFunc v name i o) where
+    fixReplaceParent _ = id
+
 -- * Replace-parent with fragment sets directly to fragment expression
 -- * Replace-parent of fragment expr without "heal" available -
 --   replaces parent of fragment rather than fragment itself (i.e: replaces grandparent).
