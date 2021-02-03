@@ -29,7 +29,6 @@ import qualified GUI.Momentu.Widgets.Menu as Menu
 import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
-import           Lamdu.Calc.Type (Tag)
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Theme as Theme
@@ -84,14 +83,8 @@ make ::
 make (Ann (Const pl) (Sugar.Case mArg (Sugar.Composite alts punned caseTail addAlt))) =
     do
         env <- Lens.view id
-        mActiveTag <-
-            case mArg of
-            Sugar.LambdaCase -> pure Nothing
-            Sugar.CaseWithArg arg ->
-                Annotation.evaluationResult (arg ^. Sugar.caVal . annotation . _1)
-                <&> (>>= (^? Sugar.resBody . Sugar._RInject . Sugar.riTag))
         altsGui <-
-            makeAltsWidget (mActiveTag <&> (^. Sugar.tagVal)) alts punned addAlt altsId
+            makeAltsWidget alts punned addAlt altsId
             >>= case caseTail of
             Sugar.ClosedComposite actions ->
                 pure . Widget.weakerEvents (closedCaseEventMap env actions)
@@ -142,20 +135,16 @@ makeAltRow ::
     , Has (Texts.Name Text) env
     , Has (Texts.Navigation Text) env
     ) =>
-    Maybe Tag -> ExprGui.Body Sugar.CompositeItem i o -> GuiM env i o (TaggedItem o)
-makeAltRow mActiveTag (Sugar.CompositeItem delete tag altExpr) =
+    ExprGui.Body Sugar.CompositeItem i o -> GuiM env i o (TaggedItem o)
+makeAltRow (Sugar.CompositeItem delete tag altExpr) =
     do
         env <- Lens.view id
-        addBg <- Styled.addBgColor Theme.evaluatedPathBGColor
         let itemEventMap = caseDelEventMap env delete
         altExprGui <-
             GuiM.makeSubexpression altExpr <&> Widget.weakerEvents itemEventMap
         pre <-
             ( TagEdit.makeVariantTag tag
                 <&> Align.tValue %~ Widget.weakerEvents itemEventMap
-                <&> if mActiveTag == Just (tag ^. Sugar.tagRefTag . Sugar.tagVal)
-                    then addBg
-                    else id
             ) /|/ grammar (label Texts.injectSymbol) /|/ Spacer.stdHSpace
         pure TaggedItem
             { _tagPre = Just pre
@@ -177,13 +166,12 @@ makeAltsWidget ::
     , Has (Texts.Definitions Text) env
     , Has (Grid.Texts Text) env
     ) =>
-    Maybe Tag ->
     [ExprGui.Body Sugar.CompositeItem i o] ->
     [Sugar.PunnedVar Name o # Annotated (ExprGui.Payload i o)] ->
     Sugar.TagReplace Name i o Sugar.EntityId ->
     Widget.Id ->
     GuiM env i o (Responsive o)
-makeAltsWidget mActiveTag alts punned addAlt altsId =
+makeAltsWidget alts punned addAlt altsId =
     do
         punnedWidgets <-
             case punned of
@@ -192,7 +180,7 @@ makeAltsWidget mActiveTag alts punned addAlt altsId =
                 GetVarEdit.makePunnedVars punned
                 <&> (\x -> [TaggedItem Nothing x Nothing])
         existingAltWidgets <-
-            traverse (makeAltRow mActiveTag) alts
+            traverse makeAltRow alts
             <&> (++ punnedWidgets)
         newAlts <-
             GuiState.isSubCursor ?? addAltId altsId
