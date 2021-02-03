@@ -16,9 +16,10 @@ module Lamdu.Sugar.Types.Expression
         , _BodyLam, _BodyLabeledApply, _BodySimpleApply
         , _BodyGetVar, _BodyGetField, _BodyInject, _BodyHole
         , _BodyLiteral, _BodyCase, _BodyRecord, _BodyFragment
-        , _BodyFromNom, _BodyToNom, _BodyIfElse
+        , _BodyFromNom, _BodyToNom, _BodyIfElse, _BodyPostfixApply
     , AnnotatedArg(..), aaTag, aaExpr
     , LabeledApply(..), aFunc, aSpecialArgs, aAnnotatedArgs, aPunnedArgs
+    , PostfixApply(..), pArg, pFunc
     , App(..), appFunc, appArg
     , Fragment(..), fExpr, fHeal, fTypeMismatch, fOptions
     , Lambda(..), lamFunc, lamMode, lamApplyLimit
@@ -49,9 +50,6 @@ module Lamdu.Sugar.Types.Expression
     , CompositeItem(..), ciDelete, ciTag, ciExpr
     , CompositeTail(..), _OpenComposite, _ClosedComposite
     , PunnedVar(..), pvVar, pvTagEntityId
-    , Case(..), cKind, cBody
-    , CaseArg(..), caVal, caToLambdaCase
-    , CaseKind(..), _LambdaCase, _CaseWithArg
 
     , MorphWitness(..)
     ) where
@@ -87,6 +85,11 @@ data LabeledApply v name i o k = LabeledApply
     , _aSpecialArgs :: Meta.SpecialArgs (k :# Term v name i o)
     , _aAnnotatedArgs :: [AnnotatedArg v name i o k]
     , _aPunnedArgs :: [PunnedVar name o k]
+    } deriving Generic
+
+data PostfixApply v name i o k = PostfixApply
+    { _pArg :: k :# Term v name i o
+    , _pFunc :: k :# Composite v name i o -- Currently only .case
     } deriving Generic
 
 data InjectContent v name i o k
@@ -169,21 +172,6 @@ data Composite v name i o k = Composite
     , _cAddItem :: TagReplace name i o EntityId
     } deriving Generic
 
-data CaseArg v name i o k = CaseArg
-    { _caVal :: k :# Term v name i o
-    , _caToLambdaCase :: o EntityId
-    } deriving Generic
-
-data CaseKind v name i o k
-    = LambdaCase
-    | CaseWithArg (CaseArg v name i o k)
-    deriving Generic
-
-data Case v name i o k = Case
-    { _cKind :: CaseKind v name i o k
-    , _cBody :: Composite v name i o k
-    } deriving Generic
-
 data Nominal v name i o k = Nominal
     { _nTId :: TId name
     , _nVal :: k :# Binder v name i o
@@ -192,12 +180,13 @@ data Nominal v name i o k = Nominal
 data Term v name i o k
     = BodyLam (Lambda v name i o k)
     | BodySimpleApply (App (Term v name i o) k)
+    | BodyPostfixApply (PostfixApply v name i o k)
     | BodyLabeledApply (LabeledApply v name i o k)
     | BodyHole (Hole name i o)
     | BodyLiteral (Literal (Property o))
     | BodyRecord (Composite v name i o k)
     | BodyGetField (GetField v name i o k)
-    | BodyCase (Case v name i o k)
+    | BodyCase (Composite v name i o k)
     | BodyIfElse (IfElse v name i o k)
     | BodyInject (Inject v name i o k)
     | BodyGetVar (GetVar name o)
@@ -264,30 +253,31 @@ data Payload v name i o = Payload
     } deriving Generic
 
 traverse Lens.makeLenses
-    [ ''AnnotatedArg, ''AssignPlain, ''Case, ''CaseArg
+    [ ''AnnotatedArg, ''AssignPlain
     , ''Composite, ''CompositeItem, ''Fragment
     , ''Function, ''GetField, ''Hole, ''HoleOption, ''HoleResult
     , ''IfElse, ''Inject, ''LabeledApply, ''Lambda, ''Let
-    , ''NodeActions, ''Nominal, ''Payload
+    , ''NodeActions, ''Nominal, ''Payload, ''PostfixApply
     ] <&> concat
 traverse Lens.makePrisms
-    [''Assignment, ''Binder, ''CaseKind, ''CompositeTail, ''Else, ''InjectContent, ''Term] <&> concat
+    [''Assignment, ''Binder, ''CompositeTail, ''Else, ''InjectContent, ''Term] <&> concat
 
 traverse makeHTraversableAndBases
-    [ ''AnnotatedArg, ''Assignment, ''AssignPlain, ''Binder, ''Case, ''CaseArg
-    , ''CaseKind, ''Composite, ''CompositeItem, ''CompositeTail, ''Else
+    [ ''AnnotatedArg, ''Assignment, ''AssignPlain, ''Binder
+    , ''Composite, ''CompositeItem, ''CompositeTail, ''Else
     , ''Fragment, ''Function, ''GetField, ''IfElse, ''Inject, ''InjectContent
-    , ''LabeledApply, ''Lambda, ''Let, ''Nominal, ''Term
+    , ''LabeledApply, ''Lambda, ''Let, ''Nominal, ''PostfixApply, ''Term
     ] <&> concat
 
 traverse makeHMorph
-    [ ''Case, ''Composite, ''GetField, ''IfElse, ''Inject, ''InjectContent, ''LabeledApply, ''Let
+    [ ''Composite, ''GetField, ''IfElse, ''Inject, ''InjectContent, ''LabeledApply, ''Let, ''PostfixApply
     ] <&> concat
 
 -- TODO: Replace boilerplate below with TH
 
 instance RNodes (Assignment v name i o)
 instance RNodes (Binder v name i o)
+instance RNodes (Composite v name i o)
 instance RNodes (Else v name i o)
 instance RNodes (Function v name i o)
 instance RNodes (Term v name i o)
@@ -295,6 +285,7 @@ instance RNodes (Term v name i o)
 type Dep v (c :: HyperType -> Constraint) name i o =
     ( c (Assignment v name i o)
     , c (Binder v name i o)
+    , c (Composite v name i o)
     , c (Const (BinderVarRef name o))
     , c (Const (NullaryVal name i o))
     , c (Const (GetVar name o))
@@ -304,6 +295,7 @@ type Dep v (c :: HyperType -> Constraint) name i o =
 
 instance Dep v c name i o => Recursively c (Assignment v name i o)
 instance Dep v c name i o => Recursively c (Binder v name i o)
+instance Dep v c name i o => Recursively c (Composite v name i o)
 instance Dep v c name i o => Recursively c (Else v name i o)
 instance Dep v c name i o => Recursively c (Term v name i o)
 
@@ -311,5 +303,6 @@ instance (Dep v c name i o, c (Function v name i o)) => Recursively c (Function 
 
 instance RTraversable (Assignment v name i o)
 instance RTraversable (Binder v name i o)
+instance RTraversable (Composite v name i o)
 instance RTraversable (Else v name i o)
 instance RTraversable (Term v name i o)

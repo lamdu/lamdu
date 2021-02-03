@@ -17,7 +17,6 @@ import qualified GUI.Momentu.I18N as MomentuTexts
 import           GUI.Momentu.Responsive (Responsive)
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.Responsive.Expression as ResponsiveExpr
-import qualified GUI.Momentu.Responsive.Options as Options
 import           GUI.Momentu.Responsive.TaggedList (TaggedItem(..), taggedList)
 import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.View (View)
@@ -79,8 +78,8 @@ make ::
     , Has (Texts.Name Text) env
     , Has (Texts.Navigation Text) env
     ) =>
-    ExprGui.Expr Sugar.Case i o -> GuiM env i o (Responsive o)
-make (Ann (Const pl) (Sugar.Case mArg (Sugar.Composite alts punned caseTail addAlt))) =
+    ExprGui.Expr Sugar.Composite i o -> GuiM env i o (Responsive o)
+make (Ann (Const pl) (Sugar.Composite alts punned caseTail addAlt)) =
     do
         env <- Lens.view id
         altsGui <-
@@ -95,23 +94,10 @@ make (Ann (Const pl) (Sugar.Case mArg (Sugar.Composite alts punned caseTail addA
                 & pure
                 & E.keysEventMapMovesCursor (env ^. has . Config.caseAddAltKeys)
                     (doc env Texts.addAlt)
-        case mArg of
-            Sugar.LambdaCase ->
-                do
-                    header <- grammar (label Texts.lam) /|/ makeCaseLabel
-                    (Annotation.maybeAddAnnotationPl (pl ^. _1) <&> (Widget.widget %~)) <*>
-                        ( Styled.addValFrame <*>
-                            (Options.boxSpaced ?? Options.disambiguationNone ?? [header, altsGui]))
-            Sugar.CaseWithArg (Sugar.CaseArg arg toLambdaCase) ->
-                do
-                    header <- grammar (Label.make ".") /|/ makeCaseLabel
-                    (ResponsiveExpr.boxSpacedMDisamb ?? ExprGui.mParensId pl) <*>
-                        sequenceA
-                        [ GuiM.makeSubexpression arg
-                            <&> Widget.weakerEvents (toLambdaCaseEventMap env toLambdaCase)
-                        , (Annotation.maybeAddAnnotationPl (pl ^. _1) <&> (Widget.widget %~)) <*>
-                            (Styled.addValFrame <*> (Responsive.vboxSpaced ?? [header, altsGui]))
-                        ]
+        header <- grammar (Label.make ".") /|/ makeCaseLabel
+        (Annotation.maybeAddAnnotationPl (pl ^. _1) <&> (Widget.widget %~)) <*>
+            ( Styled.addValFrame <*>
+                (ResponsiveExpr.boxSpacedMDisamb ?? ExprGui.mParensId pl ?? [header, altsGui]))
             <&> Widget.weakerEvents addAltEventMap
     & wrap
     where
@@ -284,15 +270,3 @@ caseDelEventMap env delete =
     delete <&> WidgetIds.fromEntityId
     & E.keysEventMapMovesCursor (Config.delKeys env)
     (doc env Texts.deleteAlt)
-
-toLambdaCaseEventMap ::
-    ( Has Config env
-    , Has (MomentuTexts.Texts Text) env
-    , Has (Texts.CodeUI Text) env
-    , Monad o
-    ) =>
-    env -> o Sugar.EntityId -> EventMap (o GuiState.Update)
-toLambdaCaseEventMap env toLamCase =
-    toLamCase <&> WidgetIds.fromEntityId
-    & E.keysEventMapMovesCursor (Config.delKeys env)
-    (doc env Texts.toLambdaCase)

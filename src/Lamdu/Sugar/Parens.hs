@@ -117,13 +117,14 @@ loopExprBody parentPrec body_ =
     BodyFromNom      x -> result False (BodyFromNom x)
     BodyHole         x -> result False (BodyHole x)
     BodyRecord       x -> hmap (p #> addToNode) x & BodyRecord & result False
-    BodyCase         x -> hmap (p #> addToNode) x & BodyCase & result (caseNeedsParens x)
+    BodyCase         x -> hmap (p #> addToNode) x & BodyCase & result (parentPrec ^. before >= 12)
     BodyLam          x -> leftSymbol (lamFunc . fBody) 0 BodyLam x
     BodyToNom        x -> leftSymbol nVal 0 BodyToNom x
     BodyInject       x -> inject x
     BodyGetField     x -> rightSymbol gfRecord 12 BodyGetField x
     BodySimpleApply  x -> simpleApply x
     BodyLabeledApply x -> labeledApply x
+    BodyPostfixApply x -> postfixApply x
     BodyIfElse       x -> ifElse x
     BodyFragment     x ->
         x
@@ -140,11 +141,6 @@ loopExprBody parentPrec body_ =
             MinOpPrec -> (t -> res) -> s -> (NeedsParens, res)
         leftSymbol = sideSymbol (\_ _ -> addToNode) before after
         rightSymbol = sideSymbol loopExpr after before
-        dotSomethingNeedParens = parentPrec ^. before >= 12 || parentPrec ^. after > 12
-        caseNeedsParens x =
-            case x ^. cKind of
-            LambdaCase -> False
-            CaseWithArg{} -> dotSomethingNeedParens
         sideSymbol ::
             AnnotateAST pl body ->
             Lens.ASetter' (Precedence Prec) MinOpPrec ->
@@ -170,13 +166,18 @@ loopExprBody parentPrec body_ =
             | otherwise = parentPrec
         simpleApply (V.App f a) =
             BodySimpleApply V.App
-            { V._appFunc =
-                loopExpr 0 (newParentPrec needParens & after .~ 13) f
-            , V._appArg =
-                loopExpr 13 (newParentPrec needParens & before .~ 13) a
+            { V._appFunc = loopExpr 0 (newParentPrec needParens & after .~ 13) f
+            , V._appArg = loopExpr 13 (newParentPrec needParens & before .~ 13) a
             } & result needParens
             where
                 needParens = parentPrec ^. before > 13 || parentPrec ^. after >= 13
+        postfixApply (PostfixApply a (Ann (Const fa) f)) =
+            BodyPostfixApply PostfixApply
+            { _pArg = loopExpr 0 (newParentPrec needParens & after .~ 13) a
+            , _pFunc = Ann (Const (ParenInfo 13 False, fa)) (hmap (p #> addToNode) f)
+            } & result needParens
+            where
+                needParens = parentPrec ^. before >= 12 || parentPrec ^. after > 12
         labeledApply x =
             case x ^? bareInfix of
             Nothing ->

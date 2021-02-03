@@ -21,16 +21,16 @@ type T = Transaction
 convertIfElse ::
     Functor m =>
     (ValI m -> T m (ValI m)) ->
-    Case v InternalName (OnceT (T m)) (T m) # Annotated (ConvertPayload m a) ->
+    PostfixApply v InternalName (OnceT (T m)) (T m) # Annotated (ConvertPayload m a) ->
     Maybe (IfElse v InternalName (OnceT (T m)) (T m) # Annotated (ConvertPayload m a))
-convertIfElse setToVal caseBody =
+convertIfElse setToVal postApp =
     do
         cond <-
-            caseBody ^?
-            cKind . _CaseWithArg . caVal . hVal . _BodySimpleApply .
+            postApp ^?
+            pArg . hVal . _BodySimpleApply .
             Lens.filteredBy (appFunc . hVal . _BodyFromNom . tidTId . Lens.only boolTid) .
             appArg
-        case caseBody ^. cBody . cItems of
+        case postApp ^. pFunc . hVal . cItems of
             [alt0, alt1]
                 | tagOf alt0 == trueTag && tagOf alt1 == falseTag -> convIfElse cond alt0 alt1
                 | tagOf alt1 == trueTag && tagOf alt0 == falseTag -> convIfElse cond alt1 alt0

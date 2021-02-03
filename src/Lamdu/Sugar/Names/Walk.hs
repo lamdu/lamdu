@@ -349,9 +349,6 @@ toComposite v (Composite items punned tail_ addItem) =
     <*> (_OpenComposite . _2) (toExpression v) tail_
     <*> toTagReplace addItem
 
-toCase :: MonadNaming m => WalkBody Case v0 v1 m o a
-toCase v (Case k c) = Case <$> (_CaseWithArg . caVal) (toExpression v) k <*> toComposite v c
-
 toInjectVal :: MonadNaming m => WalkBody InjectContent v0 v1 m o a
 toInjectVal v (InjectVal x) = toExpression v x <&> InjectVal
 toInjectVal v (InjectNullary n) = toNode v (Lens._Wrapped (nullaryAddItem toTagReplace)) n <&> InjectNullary
@@ -373,15 +370,20 @@ toElse v (ElseIf x) = toIfElse v x <&> ElseIf
 toIfElse :: MonadNaming m => WalkBody IfElse v0 v1 m o a
 toIfElse v (IfElse i t e) = IfElse <$> toExpression v i <*> toExpression v t <*> toNode v (toElse v) e
 
+toPostfixApply :: MonadNaming m => WalkBody PostfixApply v0 v1 m o a
+toPostfixApply v (PostfixApply a f) =
+    PostfixApply <$> toExpression v a <*> toNode v (toComposite v) f
+
 toBody :: MonadNaming m => WalkBody Term v0 v1 m o a
 toBody v =
     \case
     BodyGetField     x -> x & toGetField v <&> BodyGetField
     BodyInject       x -> x & toInject v <&> BodyInject
     BodyRecord       x -> x & toComposite v <&> BodyRecord
-    BodyCase         x -> x & toCase v <&> BodyCase
+    BodyCase         x -> x & toComposite v <&> BodyCase
     BodyIfElse       x -> x & toIfElse v <&> BodyIfElse
     BodySimpleApply  x -> x & (morphTraverse1 . toExpression) v <&> BodySimpleApply
+    BodyPostfixApply x -> x & toPostfixApply v <&> BodyPostfixApply
     BodyLabeledApply x -> x & toLabeledApply v <&> BodyLabeledApply
     BodyHole         x -> x & toHole <&> BodyHole
     BodyFromNom      x -> x & toTId <&> BodyFromNom

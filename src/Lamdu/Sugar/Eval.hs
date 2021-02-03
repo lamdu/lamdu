@@ -77,7 +77,6 @@ instance AddEval Binder where
     addToBody r i (BinderLet x) = addToBody r i x & BinderLet
     addToBody r i (BinderTerm x) = addToBody r i x & BinderTerm
 
-instance AddEval Case
 instance AddEval Composite
 
 instance AddEval Else where
@@ -137,6 +136,7 @@ instance AddEval IfElse
 instance AddEval InjectContent
 instance AddEval LabeledApply
 instance AddEval Let
+instance AddEval PostfixApply
 
 instance AddEval Term where
     addToBody r i =
@@ -156,6 +156,7 @@ instance AddEval Term where
         BodyCase x -> addToBody r i x & BodyCase
         BodyLabeledApply x -> addToBody r i x & BodyLabeledApply
         BodyFragment f -> f & fExpr %~ addToNode r & BodyFragment
+        BodyPostfixApply x -> addToBody r i x & BodyPostfixApply
 
 addToPayload ::
     Applicative i =>
