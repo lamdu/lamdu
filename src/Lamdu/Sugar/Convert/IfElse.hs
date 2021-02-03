@@ -25,18 +25,17 @@ convertIfElse ::
     Maybe (IfElse v InternalName (OnceT (T m)) (T m) # Annotated (ConvertPayload m a))
 convertIfElse setToVal caseBody =
     do
-        arg <- caseBody ^? cKind . _CaseWithArg . caVal
-        case arg ^. hVal of
-            BodySimpleApply (App (Ann _ (BodyFromNom nom)) x)
-                | nom ^. tidTId == boolTid -> tryIfElse x
-            _ -> Nothing
-    where
-        tryIfElse cond =
-            case caseBody ^. cBody . cItems of
+        cond <-
+            caseBody ^?
+            cKind . _CaseWithArg . caVal . hVal . _BodySimpleApply .
+            Lens.filteredBy (appFunc . hVal . _BodyFromNom . tidTId . Lens.only boolTid) .
+            appArg
+        case caseBody ^. cBody . cItems of
             [alt0, alt1]
                 | tagOf alt0 == trueTag && tagOf alt1 == falseTag -> convIfElse cond alt0 alt1
                 | tagOf alt1 == trueTag && tagOf alt0 == falseTag -> convIfElse cond alt1 alt0
             _ -> Nothing
+    where
         tagOf alt = alt ^. ciTag . tagRefTag . tagVal
         convIfElse cond altTrue altFalse =
             Just IfElse
