@@ -1,6 +1,6 @@
 [
     {
-        "schemaVersion": 13
+        "schemaVersion": 14
     },
     {
         "tagOrder": 0,
@@ -183,8 +183,11 @@
             "id": "e6d81093-8a03-4a10-9c4f-8b1206d60ce3",
             "lamBody": {
                 "toNomVal": {
-                    "injectTag": "42493a636f6e73000000000000000000",
-                    "injectVal": {
+                    "applyFunc": {
+                        "inject": "42493a636f6e73000000000000000000",
+                        "id": "b21f8ab8-0aa1-5e26-b627-b756c4f22841"
+                    },
+                    "applyArg": {
                         "extendVal": {
                             "var": "b01d93c170254379b0ebca1c5f8a30a5",
                             "id": "53c57ae1-0224-4b3d-a27a-9d0da2fffcf6"
