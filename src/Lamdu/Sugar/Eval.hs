@@ -133,7 +133,6 @@ instance AddEval Function where
             EntityId u = i
 
 instance AddEval IfElse
-instance AddEval InjectContent
 instance AddEval LabeledApply
 instance AddEval Let
 instance AddEval PostfixApply
@@ -148,7 +147,7 @@ instance AddEval Term where
         BodySimpleApply (App x y) -> App (addToNode r x) (addToNode r y) & BodySimpleApply
         BodyGetField (GetField x t) -> GetField (addToNode r x) t & BodyGetField
         BodyRecord c -> addToBody r i c & BodyRecord
-        BodyInject x -> x & iContent %~ addToBody r i & BodyInject
+        BodyInject x -> x & iContent %~ addToNode r & BodyInject
         BodyIfElse x -> addToBody r i x & BodyIfElse
         BodyLam lam -> lam & lamFunc %~ addToBody r i & BodyLam
         BodyToNom nom -> nom & nVal %~ addToNode r & BodyToNom

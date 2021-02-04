@@ -24,7 +24,6 @@ module Lamdu.Sugar.Types.Expression
     , App(..), appFunc, appArg
     , Fragment(..), fExpr, fHeal, fTypeMismatch, fOptions
     , Lambda(..), lamFunc, lamMode, lamApplyLimit
-    , InjectContent(..), _InjectVal, _InjectNullary
     , Inject(..), iTag, iContent
     , GetField(..), gfRecord, gfTag
     , Nominal(..), nTId, nVal
@@ -93,14 +92,9 @@ data PostfixApply v name i o k = PostfixApply
     , _pFunc :: k :# PostfixFunc v name i o
     } deriving Generic
 
-data InjectContent v name i o k
-    = InjectNullary (k :# Const (NullaryVal name i o))
-    | InjectVal (k :# Term v name i o)
-    deriving Generic
-
-data Inject v name i o f = Inject
+data Inject v name i o k = Inject
     { _iTag :: TagRef name i o
-    , _iContent :: InjectContent v name i o f
+    , _iContent :: k :# Term v name i o
     } deriving Generic
 
 data GetField v name i o k = GetField
@@ -265,17 +259,17 @@ traverse Lens.makeLenses
     , ''NodeActions, ''Nominal, ''Payload, ''PostfixApply
     ] <&> concat
 traverse Lens.makePrisms
-    [''Assignment, ''Binder, ''CompositeTail, ''Else, ''InjectContent, ''PostfixFunc, ''Term] <&> concat
+    [''Assignment, ''Binder, ''CompositeTail, ''Else, ''PostfixFunc, ''Term] <&> concat
 
 traverse makeHTraversableAndBases
     [ ''AnnotatedArg, ''Assignment, ''AssignPlain, ''Binder
     , ''Composite, ''CompositeItem, ''CompositeTail, ''Else
-    , ''Fragment, ''Function, ''GetField, ''IfElse, ''Inject, ''InjectContent
+    , ''Fragment, ''Function, ''GetField, ''IfElse, ''Inject
     , ''LabeledApply, ''Lambda, ''Let, ''Nominal, ''PostfixApply, ''PostfixFunc, ''Term
     ] <&> concat
 
 traverse makeHMorph
-    [ ''Composite, ''GetField, ''IfElse, ''Inject, ''InjectContent
+    [ ''Composite, ''GetField, ''IfElse, ''Inject
     , ''LabeledApply, ''Let, ''PostfixApply, ''PostfixFunc
     ] <&> concat
 

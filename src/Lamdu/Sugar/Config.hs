@@ -27,7 +27,6 @@ data Sugars a = Sugars
       -- Except the underlined parameters are actually named, just don't repeat in the lambda left-hand side.
       _lightLambda :: a
     , _literalText :: a
-    , _nullaryInject :: a
     , _nullaryParameter :: a
     , _parametersRecord :: a
     } deriving stock (Eq, Show, Functor, Generic, Generic1)

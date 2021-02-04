@@ -25,7 +25,6 @@
             "else_": "אחרת",
             "elseShort": "או ",
             "injectSymbol": ":",
-            "nullaryInjectSymbol": ".",
             "paramsRecordOpener": "פרמטרים }",
             "variantTypeSep": "או: "
         },

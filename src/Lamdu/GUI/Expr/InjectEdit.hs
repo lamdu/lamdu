@@ -14,7 +14,6 @@ import qualified GUI.Momentu.I18N as MomentuTexts
 import           GUI.Momentu.Responsive (Responsive)
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.Responsive.Expression as ResponsiveExpr
-import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.View (View)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Grid as Grid
@@ -35,7 +34,6 @@ import qualified Lamdu.I18N.CodeUI as Texts
 import qualified Lamdu.I18N.Definitions as Texts
 import qualified Lamdu.I18N.Name as Texts
 import qualified Lamdu.I18N.Navigation as Texts
-import           Lamdu.Name (Name(..))
 import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
@@ -47,7 +45,7 @@ injectIndicator ::
     ) => OneOf Texts.Code -> f (WithTextPos View)
 injectIndicator l = grammar (text ["injectIndicator"] l)
 
-makeInject ::
+make ::
     ( Monad i, Monad o
     , Grid.HasTexts env
     , TextEdit.HasTexts env
@@ -58,11 +56,8 @@ makeInject ::
     , Has (Texts.Name Text) env
     , Has (Texts.Navigation Text) env
     ) =>
-    ExprGui.Expr Sugar.Term i o ->
-    Sugar.TagRef Name i o ->
-    ExprGui.Payload i o ->
-    GuiM env i o (Responsive o)
-makeInject val tag pl =
+    ExprGui.Expr Sugar.Inject i o -> GuiM env i o (Responsive o)
+make (Ann (Const pl) (Sugar.Inject tag val)) =
     do
         env <- Lens.view id
         let delDoc = E.toDoc env [has . MomentuTexts.edit, has . MomentuTexts.delete]
@@ -84,69 +79,3 @@ makeInject val tag pl =
         & stdWrapParentExpr pl
     where
         mReplaceParent = val ^. annotation . _1 . Sugar.plActions . Sugar.mReplaceParent
-
-emptyRec ::
-    Annotated a # Const (Sugar.NullaryVal name i o) ->
-    Annotated a # Sugar.Term v name i o
-emptyRec (Ann (Const pl) (Const (Sugar.NullaryVal closedActions addItem))) =
-    Sugar.Composite [] [] (Sugar.ClosedComposite closedActions) addItem
-    & Sugar.BodyRecord
-    & Ann (Const pl)
-
-makeNullaryInject ::
-    ( Monad i, Monad o
-    , Grid.HasTexts env
-    , TextEdit.HasTexts env
-    , SearchMenu.HasTexts env
-    , Has (Texts.Code Text) env
-    , Has (Texts.CodeUI Text) env
-    , Has (Texts.Definitions Text) env
-    , Has (Texts.Name Text) env
-    , Has (Texts.Navigation Text) env
-    ) =>
-    Annotated (ExprGui.Payload i o) # Const (Sugar.NullaryVal Name i o) ->
-    Sugar.TagRef Name i o ->
-    ExprGui.Payload i o ->
-    GuiM env i o (Responsive o)
-makeNullaryInject nullary tag pl =
-    GuiState.isSubCursor ?? nullaryRecEntityId
-    >>= \case
-    True -> makeInject (emptyRec nullary) tag pl
-    False ->
-        do
-            env <- Lens.view id
-            let expandNullaryVal =
-                    GuiState.updateCursor nullaryRecEntityId & pure & const
-                    & E.charGroup Nothing
-                    (E.toDoc env
-                        [ has . MomentuTexts.edit
-                        , has . Texts.inject
-                        , has . Texts.value
-                        ]) ":"
-            TagEdit.makeVariantTag tag
-                /|/ injectIndicator Texts.nullaryInjectSymbol
-                <&> Responsive.fromWithTextPos
-                <&> Widget.weakerEvents expandNullaryVal
-                & stdWrapParentExpr pl
-    where
-        nullaryRecEntityId =
-            nullary ^. annotation . _1 . Sugar.plEntityId
-            & WidgetIds.fromEntityId
-
-make ::
-    ( Monad i, Monad o
-    , Grid.HasTexts env
-    , TextEdit.HasTexts env
-    , SearchMenu.HasTexts env
-    , Has (Texts.Code Text) env
-    , Has (Texts.CodeUI Text) env
-    , Has (Texts.Definitions Text) env
-    , Has (Texts.Name Text) env
-    , Has (Texts.Navigation Text) env
-    ) =>
-    ExprGui.Expr Sugar.Inject i o -> GuiM env i o (Responsive o)
-make (Ann (Const pl) (Sugar.Inject tag mVal)) =
-    ( case mVal of
-        Sugar.InjectNullary nullary -> makeNullaryInject nullary
-        Sugar.InjectVal val -> makeInject val
-    ) tag pl

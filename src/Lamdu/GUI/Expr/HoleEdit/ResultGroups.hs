@@ -26,7 +26,6 @@ import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.I18N.Code as Texts
 import qualified Lamdu.I18N.CodeUI as Texts
 import           Lamdu.Name (Name)
-import qualified Lamdu.Sugar.Lens as SugarLens
 import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
@@ -207,27 +206,21 @@ unicodeAlts haystack =
 fuzzyMaker :: [(Text, Int)] -> Fuzzy (Set Int)
 fuzzyMaker = memo Fuzzy.make
 
-holeMatches :: Monad i => Text -> [Group i o] -> [Group i o]
-holeMatches searchTerm groups =
-    filteredGroups
-    <&> groupResults %~ ListClass.filterL (fmap isHoleResultOK . snd)
+holeMatches :: Text -> [Group i o] -> [Group i o]
+holeMatches searchTerm groups
+    | Text.null searchTerm = groups
+    | otherwise =
+        groups
+        ^@.. Lens.ifolded
+        <&> (\(idx, group) -> searchTerms group <&> ((,) ?? (idx, group)))
+        & concat
+        & (Fuzzy.memoableMake fuzzyMaker ?? searchText)
+        <&> snd
+        & nubBy ((==) `on` fst)
+        <&> snd
     where
-        filteredGroups
-            | Text.null searchTerm = groups
-            | otherwise =
-                groups
-                ^@.. Lens.ifolded
-                <&> (\(idx, group) -> searchTerms group <&> ((,) ?? (idx, group)))
-                & concat
-                & (Fuzzy.memoableMake fuzzyMaker ?? searchText)
-                <&> snd
-                & nubBy ((==) `on` fst)
-                <&> snd
         searchText = ValTerms.definitePart searchTerm
         searchTerms group =
             case group ^. groupSearchTerms of
             [] -> [""]
             terms -> terms >>= unicodeAlts
-        isHoleResultOK =
-            ValTerms.verifyInjectSuffix searchTerm .
-            (^. Sugar.holeResultConverted . SugarLens.binderResultExpr . Lens.asIndex)

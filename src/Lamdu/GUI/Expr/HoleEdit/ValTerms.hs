@@ -4,7 +4,6 @@ module Lamdu.GUI.Expr.HoleEdit.ValTerms
     , allowedSearchTermCommon
     , allowedFragmentSearchTerm
     , getSearchStringRemainder
-    , verifyInjectSuffix
     , definitePart
     ) where
 
@@ -120,16 +119,6 @@ getSearchStringRemainder ctx holeResult
         isSuffixed suffix = Text.isSuffixOf suffix (ctx ^. SearchMenu.rSearchTerm)
         fragmentExpr = _BodyFragment . fExpr
         isA x = any (`Lens.has` holeResult) [x, fragmentExpr . hVal . x]
-
-verifyInjectSuffix :: Text -> Term v name i o f -> Bool
-verifyInjectSuffix searchTerm x =
-    case suffix of
-    Just ':' | Lens.has (injectContent . _InjectNullary) x -> False
-    Just '.' | Lens.has (injectContent . _InjectVal) x -> False
-    _ -> True
-    where
-        suffix = searchTerm ^? Lens.reversed . Lens._Cons . _1
-        injectContent = _BodyInject . iContent
 
 -- | Returns the part of the search term that is DEFINITELY part of
 -- it. Some of the stripped suffix may be part of the search term,
