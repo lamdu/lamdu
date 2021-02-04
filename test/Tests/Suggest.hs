@@ -71,8 +71,9 @@ testBool =
     \case
     [s] ->
         Lens.has
-        ( hVal . V._BToNom . tnVal . hVal . V._BInject . V.injectVal
-        . hVal . V._BLeaf . V._LRecEmpty
+        ( hVal . V._BToNom . tnVal . hVal . V._BApp
+        . Lens.filteredBy (V.appFunc . hVal . V._BLeaf . V._LInject)
+        . V.appArg . hVal . V._BLeaf . V._LRecEmpty
         ) s
         & assertBool "didn't complete nullary inject in nominal"
     _ -> fail "termTransformsWithModify didn't result with 1 option"
@@ -80,7 +81,7 @@ testBool =
     where
         inferExample :: PureInfer (V.Scope # UVar) (Ann (InferResult UVar) # V.Term)
         inferExample =
-            V.BToNomP "Bool" (V.BInjectP "True" (V.BLeafP V.LHole)) ^. hPlain
+            V.BToNomP "Bool" (V.BLeafP (V.LInject "True") `V.BAppP` V.BLeafP V.LHole) ^. hPlain
             & wrap (\_ x -> Ann (Const ()) x)
             & infer
             <&> hflipped %~ hmap (const (^. _2))

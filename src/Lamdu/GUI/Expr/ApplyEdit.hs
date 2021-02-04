@@ -17,6 +17,7 @@ import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
 import qualified Lamdu.GUI.Expr.CaseEdit as CaseEdit
 import qualified Lamdu.GUI.Expr.EventMap as ExprEventMap
+import qualified Lamdu.GUI.Expr.GetFieldEdit as GetFieldEdit
 import qualified Lamdu.GUI.Expr.GetVarEdit as GetVarEdit
 import qualified Lamdu.GUI.Expr.NominalEdit as NominalEdit
 import qualified Lamdu.GUI.Expr.TagEdit as TagEdit
@@ -189,5 +190,6 @@ makePostfixFunc (Ann (Const pl) x) =
     ( case x of
         Sugar.PfCase c -> Ann (Const pl) c & CaseEdit.make
         Sugar.PfFromNom n -> Ann (Const pl) (Const n) & NominalEdit.makeFromNom
+        Sugar.PfGetField f -> GetFieldEdit.make pl f
         <&> (:[])
     )

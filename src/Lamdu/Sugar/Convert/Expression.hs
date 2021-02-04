@@ -59,8 +59,6 @@ convert ::
     ConvertM m (ExpressionU EvalPrep m a)
 convert _ (Ann pl (V.BLam x)) = ConvertBinder.convertLam x pl
 convert _ (Ann pl (V.BRecExtend x)) = ConvertRecord.convertExtend x pl
-convert _ (Ann pl (V.BGetField x)) = ConvertGetField.convert x pl
-convert _ (Ann pl (V.BInject x)) = ConvertInject.convert x pl
 convert _ (Ann pl (V.BToNom x)) = ConvertNominal.convertToNom x pl
 convert _ (Ann pl (V.BCase x)) = ConvertCase.convert x pl
 convert posInfo (Ann pl (V.BApp x)) = ConvertApply.convert posInfo x pl
@@ -76,3 +74,5 @@ convert posInfo (Ann pl (V.BLeaf l)) =
     V.LRecEmpty -> ConvertRecord.convertEmpty
     V.LAbsurd -> ConvertCase.convertAbsurd
     V.LFromNom x -> ConvertNominal.convertFromNom x
+    V.LGetField x -> ConvertGetField.convert x
+    V.LInject x -> ConvertInject.convert x

@@ -86,7 +86,8 @@ instance MonadTransaction m i => Order v name i o (Sugar.Function v name i o) wh
 
 instance MonadTransaction m i => Order v name i o (Sugar.PostfixFunc v name i o) where
     order (Sugar.PfCase x) = order x <&> Sugar.PfCase
-    order (Sugar.PfFromNom x) = Sugar.PfFromNom x & pure
+    order x@Sugar.PfFromNom{} = pure x
+    order x@Sugar.PfGetField{} = pure x
 
 orderParams ::
     MonadTransaction m i =>
@@ -115,11 +116,10 @@ instance MonadTransaction m i => Order v name i o (Sugar.Term v name i o) where
         & Sugar.fExpr orderNode
         <&> Sugar.BodyFragment
     order (Sugar.BodyIfElse x) = order x <&> Sugar.BodyIfElse
-    order (Sugar.BodyInject x) = Sugar.iContent orderNode x <&> Sugar.BodyInject
     order (Sugar.BodyToNom x) = Sugar.nVal orderNode x <&> Sugar.BodyToNom
     order (Sugar.BodySimpleApply x) = htraverse1 orderNode x <&> Sugar.BodySimpleApply
-    order (Sugar.BodyGetField x) = Sugar.gfRecord orderNode x <&> Sugar.BodyGetField
     order (Sugar.BodyPostfixApply x) = order x <&> Sugar.BodyPostfixApply
+    order x@Sugar.BodyInject{} = pure x
     order x@Sugar.BodyLiteral{} = pure x
     order x@Sugar.BodyGetVar{} = pure x
     order x@Sugar.BodyPlaceHolder{} = pure x

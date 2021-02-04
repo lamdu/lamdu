@@ -239,11 +239,10 @@ instance BodyAnnotations Term where
     bodyAnnotations _ (BodyGetVar x) = BodyGetVar x & pure
     bodyAnnotations f (BodyLam x) = (lamFunc . bodyAnnotations) f x <&> BodyLam
     bodyAnnotations f (BodyIfElse x) = bodyAnnotations f x <&> BodyIfElse
-    bodyAnnotations f (BodyGetField x) = (gfRecord . annotations) f x <&> BodyGetField
     bodyAnnotations f (BodyRecord x) = bodyAnnotations f x <&> BodyRecord
     bodyAnnotations f (BodyToNom x) = (nVal . annotations) f x <&> BodyToNom
     bodyAnnotations f (BodySimpleApply x) = (morphTraverse1 . annotations) f x <&> BodySimpleApply
-    bodyAnnotations f (BodyInject x) = (iContent . annotations) f x <&> BodyInject
+    bodyAnnotations _ (BodyInject x) = BodyInject x & pure
     bodyAnnotations f (BodyLabeledApply x) = bodyAnnotations f x <&> BodyLabeledApply
     bodyAnnotations _ (BodyHole x) = BodyHole x & pure
     bodyAnnotations f (BodyFragment x) = bodyAnnotations f x <&> BodyFragment

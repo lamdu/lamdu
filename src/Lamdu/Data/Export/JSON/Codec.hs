@@ -325,6 +325,8 @@ encodeLeaf =
         "primBytes" ~~> Aeson.toJSON (BS.unpack (Hex.encode primBytes))
     V.LFromNom (T.NominalId nomId) ->
         "fromNomId" ~~> encodeIdent nomId
+    V.LGetField tag -> "getField" ~~> encodeTagId tag
+    V.LInject tag -> "inject" ~~> encodeTagId tag
     where
         l x = x ~~> Aeson.object []
 
@@ -336,6 +338,8 @@ decodeLeaf =
     , l "absurd" V.LAbsurd
     , f "var" (fmap (V.LVar . V.Var) . decodeIdent)
     , f "fromNomId" (fmap (V.LFromNom . T.NominalId) . decodeIdent)
+    , f "getField" (fmap V.LGetField . decodeTagId)
+    , f "inject" (fmap V.LInject . decodeTagId)
     , ("primId",
         \obj ->
         do
@@ -385,16 +389,10 @@ instance Codec V.Term where
             "lamVar" ~~> encodeIdent varId <>
             "lamParamType" ~~> c paramType <>
             "lamBody" ~~> c res
-        V.BGetField (V.GetField reco tag) ->
-            "getFieldRec" ~~> c reco <>
-            "getFieldName" ~~> encodeTagId tag
         V.BRecExtend (RowExtend tag x rest) ->
             "extendTag" ~~> encodeTagId tag <>
             "extendVal" ~~> c x <>
             "extendRest" ~~> c rest
-        V.BInject (V.Inject tag x) ->
-            "injectTag" ~~> encodeTagId tag <>
-            "injectVal" ~~> c x
         V.BCase (RowExtend tag handler restHandler) ->
             "caseTag" ~~> encodeTagId tag <>
             "caseHandler" ~~> c handler <>
@@ -418,19 +416,11 @@ instance Codec V.Term where
         <*> (obj .: "lamParamType" <&> c)
         <*> (obj .: "lamBody" <&> c)
         <&> V.BLam
-        , V.GetField
-        <$> (obj .: "getFieldRec" <&> c)
-        <*> (obj .: "getFieldName" >>= decodeTagId)
-        <&> V.BGetField
         , RowExtend
         <$> (obj .: "extendTag" >>= decodeTagId)
         <*> (obj .: "extendVal" <&> c)
         <*> (obj .: "extendRest" <&> c)
         <&> V.BRecExtend
-        , V.Inject
-        <$> (obj .: "injectTag" >>= decodeTagId)
-        <*> (obj .: "injectVal" <&> c)
-        <&> V.BInject
         , RowExtend
         <$> (obj .: "caseTag" >>= decodeTagId)
         <*> (obj .: "caseHandler" <&> c)

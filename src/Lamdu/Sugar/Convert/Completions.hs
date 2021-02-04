@@ -37,22 +37,26 @@ suggestForType mkVar t =
     -- TODO: DSL for matching/deref'ing UVar structure
     lookupBody t
     >>= \case
-    Just (T.TVariant r) -> forVariant mkVar r
+    Just (T.TVariant r) -> forVariant mkVar t r
     typ -> suggestForTypeUTermWithoutSplit mkVar typ <&> (^.. Lens._Just)
     <&> Lens.mapped . Lens.mapped %~ Ann (inferResult # t)
 
 forVariant ::
     (Applicative f, UnifyGen m T.Type, UnifyGen m T.Row) =>
     f V.Var ->
+    UVarOf m # T.Type ->
     UVarOf m # T.Row ->
     m [f (V.Term # Ann (InferResult (UVarOf m)))]
-forVariant mkVar r =
+forVariant mkVar t r =
     lookupBody r >>=
     \case
     Just (T.RExtend (RowExtend tag typ rest)) ->
-        (:)
-        <$> (suggestForTypeObvious mkVar typ <&> Lens.mapped %~ V.BInject . V.Inject tag)
-        <*> forVariant mkVar rest
+        do
+            injType <- FuncType typ t & T.TFun & newTerm
+            inj <-
+                suggestForTypeObvious mkVar typ
+                <&> Lens.mapped %~ V.BApp . V.App (Ann (inferResult # injType) (V.BLeaf (V.LInject tag)))
+            forVariant mkVar t rest <&> (inj:)
     _ -> pure []
 
 suggestForTypeObvious ::

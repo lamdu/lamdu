@@ -308,6 +308,7 @@ Library
                   , Lamdu.Data.Export.JSON.Migration.ToVersion11
                   , Lamdu.Data.Export.JSON.Migration.ToVersion12
                   , Lamdu.Data.Export.JSON.Migration.ToVersion13
+                  , Lamdu.Data.Export.JSON.Migration.ToVersion14
                   , Lamdu.Data.Meta
                   , Lamdu.Data.Ops
                   , Lamdu.Data.Ops.Subexprs

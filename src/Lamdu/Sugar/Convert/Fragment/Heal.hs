@@ -52,12 +52,12 @@ class HFunctor h => Prepare h where
 instance Prepare Term where
     fixPriorities x@(Ann (Const ((cat, priority), pl)) b) =
         case b of
-        V.BGetField g ->
-            g & V.getFieldRecord . score +~ (-1) & V.BGetField
-            & res 1
         V.BRecExtend r -> V.BRecExtend r & res (-1)
         V.BCase c -> c & Row.eVal . score +~ (-1) & V.BCase & res (-1)
-        V.BApp a -> a & V.appFunc . score +~ (-1) & V.BApp & res 0
+        V.BApp a ->
+            case a ^. V.appFunc . hVal of
+            V.BLeaf V.LGetField{} -> a & V.appArg . score +~ (-1) & V.BApp & res 1
+            _ -> a & V.appFunc . score +~ (-1) & V.BApp & res 0
         _ -> x
         where
             res diff = Ann (Const ((cat, priority + diff), pl))

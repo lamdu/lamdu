@@ -128,17 +128,16 @@ mkHoleSearchTerms ctx pl x =
     V.BLeaf V.LAbsurd -> pure [HoleEmptyCase]
     V.BLeaf V.LHole -> pure []
     V.BLeaf V.LLiteral{} -> pure [] -- Literals not created from hole results
+    V.BLeaf (V.LInject i) -> pure [HoleInject (nameWithoutContext i)]
+    V.BLeaf (V.LGetField f) -> pure [HoleGetField (nameWithoutContext f)]
     V.BToNom (V.ToNom n b) -> (taggedName Nothing n <&> (:[]) . HoleName) <> mkHoleSearchTerms ctx pl b
-    V.BInject i -> pure [HoleInject (nameWithoutContext (i ^. V.injectTag))]
     V.BApp (V.App (Ann _ V.BLam{}) _) -> pure [HoleLet]
+    V.BApp (V.App (Ann _ (V.BLeaf (V.LGetField f))) (Ann _ (V.BLeaf (V.LVar v))))
+        | v `elem` recordParams -> pure [HoleName (nameWithoutContext f)]
     V.BApp a -> mkHoleSearchTerms ctx pl (a ^. V.appFunc)
     V.BLam{} -> pure [HoleLambda]
     V.BRecExtend{} -> pure [HoleRecord]
     V.BCase{} -> pure [HoleCase]
-    V.BGetField (V.GetField e f)
-        | Lens.anyOf (hVal . V._BLeaf . V._LVar) (`elem` recordParams) e ->
-            pure [HoleName (nameWithoutContext f)]
-        | otherwise -> pure [HoleGetField (nameWithoutContext f)]
     where
         recordParams =
             ctx ^.. ConvertM.scScopeInfo . ConvertM.siTagParamInfos . traverse . ConvertM._TagFieldParam
@@ -232,7 +231,8 @@ mkNominalOptions nominals =
             nominal ^..
             nScheme . sTyp . _Pure . T._TVariant .
             T.flatRow . freExtends >>= Map.keys
-            <&> (`V.BInjectP` V.BLeafP V.LHole)
+            <&> V.BLeafP . V.LInject
+            <&> (`V.BAppP` V.BLeafP V.LHole)
             <&> V.BToNomP tid
 
 genLamVar :: Monad m => T m V.Var
@@ -265,7 +265,7 @@ mkOptions posInfo resultProcessor holePl =
         concat
             [ holePl ^. Input.localsInScope <&> fst >>= getLocalScopeGetVars sugarContext
             , globals <&> V.BLeafP . V.LVar . ExprIRef.globalId
-            , tags <&> (`V.BInjectP` V.BLeafP V.LHole)
+            , tags <&> V.BLeafP . V.LInject
             , nominalOptions
             , baseForms
             ]
@@ -334,7 +334,7 @@ loadInfer sugarContext scope v =
 getLocalScopeGetVars :: ConvertM.Context m -> V.Var -> [HPlain V.Term]
 getLocalScopeGetVars sugarContext par
     | sugarContext ^. ConvertM.scScopeInfo . ConvertM.siNullParams . Lens.contains par = []
-    | otherwise = (fieldTags <&> V.BGetFieldP var) <> [var]
+    | otherwise = (fieldTags <&> V.LGetField <&> V.BLeafP <&> (`V.BAppP` var)) <> [var]
     where
         var = V.LVar par & V.BLeafP
         fieldTags =
