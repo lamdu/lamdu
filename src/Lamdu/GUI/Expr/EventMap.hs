@@ -20,7 +20,7 @@ import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import qualified Lamdu.CharClassification as Chars
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
-import           Lamdu.GUI.Expr.HoleEdit.ValTerms (allowedFragmentSearchTerm)
+import           Lamdu.GUI.Expr.HoleEdit.ValTerms (allowedSearchTerm)
 import qualified Lamdu.GUI.Expr.HoleEdit.WidgetIds as HoleWidgetIds
 import           Lamdu.GUI.Monad (GuiM)
 import qualified Lamdu.GUI.Monad as GuiM
@@ -190,7 +190,7 @@ transformSearchTerm =
         transform c =
             do
                 guard (c `notElem` Chars.operator)
-                guard (allowedFragmentSearchTerm (Text.singleton c))
+                guard (allowedSearchTerm (Text.singleton c))
                 pure (Text.singleton c)
         searchStrRemainder = eventCtx ^. Widget.ePrevTextRemainder
         acceptOp = (>= exprInfoMinOpPrec exprInfo) . precedence
@@ -198,7 +198,7 @@ transformSearchTerm =
         mkOpsGroup ops = E.charGroup Nothing opDoc ops Text.singleton
         afterDot c =
             Text.singleton c <$
-            guard (allowedFragmentSearchTerm ("." <> Text.singleton c))
+            guard (allowedSearchTerm ("." <> Text.singleton c))
     in
     case Text.uncons searchStrRemainder of
     Nothing -> mkOpsGroup (filter acceptOp Chars.operator) <> maybeTransformEventMap
@@ -306,7 +306,7 @@ makeLiteralTextEventMap =
     Lens.view id <&> E.toDoc <&>
     \toDoc makeLiteral ->
     E.charGroup Nothing
-    (toDoc [has . MomentuTexts.edit, has . Texts.literalText]) "'\""
+    (toDoc [has . MomentuTexts.edit, has . Texts.literalText]) "\""
     (const (makeLiteral (Sugar.LiteralText (Identity "")) <&> goToLiteral))
 
 makeRecordEventMap ::

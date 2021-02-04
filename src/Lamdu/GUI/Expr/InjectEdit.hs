@@ -56,8 +56,8 @@ make (Ann (Const pl) (Const tag)) =
     do
         (ResponsiveExpr.boxSpacedMDisamb ?? ExprGui.mParensId pl)
             <*>
-            ( TagEdit.makeVariantTag tag
-                /|/ injectIndicator Texts.injectSymbol
+            ( injectIndicator Texts.injectSymbol
+                /|/ TagEdit.makeVariantTag tag
                 <&> Responsive.fromWithTextPos
                 <&> (:[])
             )

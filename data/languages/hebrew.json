@@ -24,7 +24,6 @@
             "if_": "אם",
             "else_": "אחרת",
             "elseShort": "או ",
-            "injectSymbol": ":",
             "paramsRecordOpener": "פרמטרים }",
             "variantTypeSep": "או: "
         },

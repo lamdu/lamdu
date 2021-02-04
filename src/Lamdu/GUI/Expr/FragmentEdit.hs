@@ -26,7 +26,7 @@ import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.Config.Theme.ValAnnotation as ValAnnotation
 import qualified Lamdu.GUI.Expr.HoleEdit.SearchArea as SearchArea
-import           Lamdu.GUI.Expr.HoleEdit.ValTerms (allowedFragmentSearchTerm)
+import           Lamdu.GUI.Expr.HoleEdit.ValTerms (allowedSearchTerm)
 import qualified Lamdu.GUI.Expr.HoleEdit.WidgetIds as HoleWidgetIds
 import           Lamdu.GUI.Annotation (addInferredType, shrinkValAnnotationsIfNeeded)
 import           Lamdu.GUI.Monad (GuiM)
@@ -74,7 +74,7 @@ make (Ann (Const pl) fragment) =
 
         rawSearchArea <-
             SearchArea.make SearchArea.WithoutAnnotation
-            (fragment ^. Sugar.fOptions) pl allowedFragmentSearchTerm holeIds
+            (fragment ^. Sugar.fOptions) pl allowedSearchTerm holeIds
             ?? Menu.AnyPlace
 
         qmarkView <-

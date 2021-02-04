@@ -3,7 +3,7 @@
         "code": {
             "assign": "=",
             "absurd": "Ø",
-            "injectSymbol": ":",
+            "injectSymbol": "'",
             "defer": "|",
             "lam": "λ",
             "recordSep": ","

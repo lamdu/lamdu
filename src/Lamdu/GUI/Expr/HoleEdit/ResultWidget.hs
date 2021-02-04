@@ -20,13 +20,11 @@ import qualified GUI.Momentu.State as GuiState
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Grid as Grid
 import qualified GUI.Momentu.Widgets.Menu as Menu
-import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import           Hyper (htraverse, (#>), withDict)
 import           Lamdu.Config (Config(..))
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Theme as Theme
-import           Lamdu.GUI.Expr.HoleEdit.ValTerms (getSearchStringRemainder)
 import           Lamdu.GUI.Monad (GuiM)
 import qualified Lamdu.GUI.Monad as GuiM
 import qualified Lamdu.GUI.Types as ExprGui
@@ -81,9 +79,9 @@ makeWidget resultId holeResultConverted =
 
 make ::
     (Monad i, Monad o, Has (MomentuTexts.Texts Text) env) =>
-    SearchMenu.ResultsContext -> Widget.Id -> o () -> ExprGui.Expr Sugar.Binder i o ->
+    Widget.Id -> o () -> ExprGui.Expr Sugar.Binder i o ->
     GuiM env i o (Menu.RenderedOption o)
-make ctx resultId pick holeResultConverted =
+make resultId pick holeResultConverted =
     (,) <$> Lens.view (has . MomentuTexts.choose) <*>
     makeWidget resultId holeResultConverted
     & GuiState.assignCursor resultId (pickResult ^. Menu.pickDest)
@@ -94,10 +92,7 @@ make ctx resultId pick holeResultConverted =
         Widget.PreEvent
         { Widget._pDesc = pickText
         , Widget._pAction = pickResult <$ pick
-        , Widget._pTextRemainder =
-            holeResultConverted ^.
-            SugarLens.binderResultExpr . Lens.asIndex .
-            Lens.to (getSearchStringRemainder ctx)
+        , Widget._pTextRemainder = ""
         }
     , Menu._rWidget = widget
     }

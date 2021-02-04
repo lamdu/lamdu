@@ -1,17 +1,10 @@
-{-# LANGUAGE TypeFamilies #-}
 module Lamdu.GUI.Expr.HoleEdit.ValTerms
     ( holeSearchTerm
-    , allowedSearchTermCommon
-    , allowedFragmentSearchTerm
-    , getSearchStringRemainder
-    , definitePart
+    , allowedSearchTerm
     ) where
 
-import qualified Control.Lens as Lens
 import qualified Data.Char as Char
 import qualified Data.Text as Text
-import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
-import           Hyper
 import qualified Lamdu.CharClassification as Chars
 import qualified Lamdu.I18N.Code as Texts
 import qualified Lamdu.I18N.CodeUI as Texts
@@ -48,26 +41,23 @@ holeSearchTerm _ (HoleGetDef x) =
             | otherwise = [n, "." <> n]
 holeSearchTerm _ (HoleName x) = ofName x
 holeSearchTerm _ (HoleGetField x) = ofName x <&> ("." <>)
-holeSearchTerm _ (HoleInject x) = (<>) <$> ofName x <*> [":", "."]
+holeSearchTerm e (HoleInject x) = ofName x <&> (e ^. has . Texts.injectSymbol <>)
 holeSearchTerm _ (HoleFromNom x) = ofName x <&> ("." <>)
 holeSearchTerm e HoleLet = [e ^. has . Texts.let_]
 holeSearchTerm e HoleLambda = [e ^. has . Texts.lambda, "\\", "Λ", "λ", "->", "→"]
-holeSearchTerm e HoleIf = [e ^. has . Texts.if_, ":"]
+holeSearchTerm e HoleIf = [e ^. has . Texts.if_]
 holeSearchTerm e HoleCase = ["." <> e ^. has . Texts.case_]
 holeSearchTerm e HoleEmptyCase = [e ^. has . Texts.absurd]
 holeSearchTerm _ HoleRecord = ["{}", "()", "[]"]
 holeSearchTerm e HoleParamsRecord = [e ^. has . Texts.paramsRecordOpener]
 
-type Suffix = Char
-
-allowedSearchTermCommon :: [Suffix] -> Text -> Bool
-allowedSearchTermCommon suffixes searchTerm =
+allowedSearchTerm :: Text -> Bool
+allowedSearchTerm searchTerm =
     any (searchTerm &)
     [ Text.all (`elem` Chars.operator)
-    , isAlphaNumericName
+    , isNameOrPrefixed
     , (`Text.isPrefixOf` "{}")
     , (== "\\")
-    , Lens.has (Lens.reversed . Lens._Cons . Lens.filtered inj)
     , -- Allow typing records in wrong direction of keyboard input,
       -- for example when editing in right-to-left but not switching the input language.
       -- Then the '}' key would had inserted a '{' but inserts a '}'.
@@ -75,56 +65,19 @@ allowedSearchTermCommon suffixes searchTerm =
       -- as the user intended to create a record.
       (== "}")
     ]
-    where
-        inj (lastChar, revInit) =
-            lastChar `elem` suffixes && Text.all Char.isAlphaNum revInit
 
-isAlphaNumericName :: Text -> Bool
-isAlphaNumericName t =
+isNameOrPrefixed :: Text -> Bool
+isNameOrPrefixed t =
     case Text.uncons t of
     Nothing -> True
-    Just ('.', xs) -> isAlphaNumericSuffix xs
-    Just _ -> isAlphaNumericSuffix t
+    Just (x, xs) | x `elem` prefixes -> isAlphaNumericName xs
+    Just _ -> isAlphaNumericName t
     where
-        isAlphaNumericSuffix suffix =
-            case Text.uncons suffix of
-            Nothing -> True
-            Just (x, xs) -> Char.isAlpha x && Text.all Char.isAlphaNum xs
+        prefixes :: String
+        prefixes = ".'"
 
-allowedFragmentSearchTerm :: Text -> Bool
-allowedFragmentSearchTerm searchTerm =
-    allowedSearchTermCommon ":" searchTerm || isGetField searchTerm
-    where
-        isGetField t =
-            case Text.uncons t of
-            Just (c, rest) -> c == '.' && Text.all Char.isAlphaNum rest
-            Nothing -> False
-
--- | Given a hole result sugared expression, determine which part of
--- the search term is a remainder and which belongs inside the hole
--- result expr
-getSearchStringRemainder :: SearchMenu.ResultsContext -> Term v name i o # Ann a -> Text
-getSearchStringRemainder ctx holeResult
-    | isA _BodyInject = ""
-      -- NOTE: This is wrong for operator search terms like ".." which
-      -- should NOT have a remainder, but do. We might want to correct
-      -- that.  However, this does not cause any bug because search
-      -- string remainders are genreally ignored EXCEPT in
-      -- apply-operator, which does not occur when the search string
-      -- already is an operator.
-    | isSuffixed ":" = ":"
-    | isSuffixed "." = "."
-    | otherwise = ""
-    where
-        isSuffixed suffix = Text.isSuffixOf suffix (ctx ^. SearchMenu.rSearchTerm)
-        fragmentExpr = _BodyFragment . fExpr
-        isA x = any (`Lens.has` holeResult) [x, fragmentExpr . hVal . x]
-
--- | Returns the part of the search term that is DEFINITELY part of
--- it. Some of the stripped suffix may be part of the search term,
--- depending on the val.
-definitePart :: Text -> Text
-definitePart searchTerm
-    | Text.any Char.isAlphaNum searchTerm
-    && any (`Text.isSuffixOf` searchTerm) [":", "."] = Text.init searchTerm
-    | otherwise = searchTerm
+isAlphaNumericName :: Text -> Bool
+isAlphaNumericName suffix =
+    case Text.uncons suffix of
+    Nothing -> True
+    Just (x, xs) -> Char.isAlpha x && Text.all Char.isAlphaNum xs

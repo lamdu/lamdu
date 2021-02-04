@@ -101,8 +101,7 @@ makeResultGroup ctx group =
     where
         searchTerm = ctx ^. SearchMenu.rSearchTerm
         toExactMatch
-            | any (`elem` group ^. groupSearchTerms)
-              [searchTerm, ValTerms.definitePart searchTerm] = ExactMatch
+            | searchTerm `elem` group ^. groupSearchTerms = ExactMatch
             | otherwise = NotExactMatch
 
 data GoodAndBad a = GoodAndBad { _good :: a, _bad :: a }
@@ -214,12 +213,11 @@ holeMatches searchTerm groups
         ^@.. Lens.ifolded
         <&> (\(idx, group) -> searchTerms group <&> ((,) ?? (idx, group)))
         & concat
-        & (Fuzzy.memoableMake fuzzyMaker ?? searchText)
+        & (Fuzzy.memoableMake fuzzyMaker ?? searchTerm)
         <&> snd
         & nubBy ((==) `on` fst)
         <&> snd
     where
-        searchText = ValTerms.definitePart searchTerm
         searchTerms group =
             case group ^. groupSearchTerms of
             [] -> [""]

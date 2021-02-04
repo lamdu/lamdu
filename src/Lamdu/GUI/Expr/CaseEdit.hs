@@ -116,7 +116,6 @@ makeAltRow ::
     ( Monad i, Monad o
     , Glue.HasTexts env
     , TextEdit.HasTexts env, SearchMenu.HasTexts env
-    , Has (Texts.Code Text) env
     , Has (Texts.CodeUI Text) env
     , Has (Texts.Name Text) env
     , Has (Texts.Navigation Text) env
@@ -131,7 +130,7 @@ makeAltRow (Sugar.CompositeItem delete tag altExpr) =
         pre <-
             ( TagEdit.makeVariantTag tag
                 <&> Align.tValue %~ Widget.weakerEvents itemEventMap
-            ) /|/ grammar (label Texts.injectSymbol) /|/ Spacer.stdHSpace
+            ) /|/ Spacer.stdHSpace
         pure TaggedItem
             { _tagPre = Just pre
             , _taggedItem = altExprGui
