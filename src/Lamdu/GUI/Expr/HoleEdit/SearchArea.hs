@@ -82,18 +82,15 @@ fdConfig env = FocusDelegator.Config
 
 makeRenderedResult ::
     (Monad i, Monad o, Has (MomentuTexts.Texts Text) env) =>
-    ExprGui.GuiPayload -> SearchMenu.ResultsContext ->
-    Result i o ->
-    GuiM env i o (Menu.RenderedOption o)
-makeRenderedResult pl ctx result =
+    ExprGui.GuiPayload -> Result i o -> GuiM env i o (Menu.RenderedOption o)
+makeRenderedResult pl result =
     do
         -- Warning: rHoleResult should be ran at most once!
         -- Running it more than once caused a horrible bug (bugfix: 848b6c4407)
         res <- rHoleResult result & GuiM.im
         res ^. Sugar.holeResultConverted
             & postProcessSugar (pl ^. ExprGui.plParenInfo . Sugar.piMinOpPrec)
-            & ResultWidget.make ctx (rId result)
-                (res ^. Sugar.holeResultPick)
+            & ResultWidget.make (rId result) (res ^. Sugar.holeResultPick)
 
 postProcessSugar ::
     AddParens.MinOpPrec ->
@@ -114,17 +111,16 @@ postProcessSugar minOpPrec binder =
 
 makeResultOption ::
     (Monad i, Monad o, Has (MomentuTexts.Texts Text) env) =>
-    ExprGui.GuiPayload -> SearchMenu.ResultsContext ->
-    ResultGroup i o -> Menu.Option (GuiM env i o) o
-makeResultOption pl ctx results =
+    ExprGui.GuiPayload -> ResultGroup i o -> Menu.Option (GuiM env i o) o
+makeResultOption pl results =
     Menu.Option
     { Menu._oId = results ^. ResultGroups.rgPrefixId
-    , Menu._oRender = makeRenderedResult pl ctx (results ^. ResultGroups.rgMain)
+    , Menu._oRender = makeRenderedResult pl (results ^. ResultGroups.rgMain)
     , Menu._oSubmenuWidgets =
         case results ^. ResultGroups.rgExtra of
         [] -> Menu.SubmenuEmpty
         extras ->
-            traverse (makeRenderedResult pl ctx) extras
+            traverse (makeRenderedResult pl) extras
             <&> map makeSubMenu
             & Menu.SubmenuItems
     }
@@ -246,6 +242,6 @@ make annMode mkOptions pl allowedTerms widgetIds =
             }
         filteredOptions opts ctx =
             ResultGroups.makeAll opts ctx
-            <&> Lens.mapped %~ makeResultOption (pl ^. _2) ctx
+            <&> Lens.mapped %~ makeResultOption (pl ^. _2)
             <&> Lens.mapped . Menu.optionWidgets . Align.tValue . Widget.eventMapMaker . Lens.mapped %~
                 filterSearchTermEvents allowedTerms (ctx ^. SearchMenu.rSearchTerm)

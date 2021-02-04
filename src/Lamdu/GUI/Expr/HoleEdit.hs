@@ -15,7 +15,7 @@ import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
 import qualified Lamdu.GUI.Expr.EventMap as ExprEventMap
 import qualified Lamdu.GUI.Expr.HoleEdit.SearchArea as SearchArea
-import           Lamdu.GUI.Expr.HoleEdit.ValTerms (allowedSearchTermCommon)
+import           Lamdu.GUI.Expr.HoleEdit.ValTerms (allowedSearchTerm)
 import           Lamdu.GUI.Expr.HoleEdit.WidgetIds (WidgetIds(..))
 import qualified Lamdu.GUI.Expr.HoleEdit.WidgetIds as HoleWidgetIds
 import           Lamdu.GUI.Monad (GuiM)
@@ -32,7 +32,7 @@ import           Lamdu.Prelude
 allowedHoleSearchTerm :: Text -> Bool
 allowedHoleSearchTerm searchTerm =
     any (searchTerm &)
-    [ allowedSearchTermCommon ":."
+    [ allowedSearchTerm
     , isLiteralBytes
     ]
     where

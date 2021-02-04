@@ -21,6 +21,7 @@ import qualified GUI.Momentu.Responsive.Options as Options
 import           GUI.Momentu.View (View)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Grid as Grid
+import qualified GUI.Momentu.Widgets.Label as Label
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified Lamdu.Config as Config
 import qualified Lamdu.GUI.Expr.EventMap as ExprEventMap
@@ -57,7 +58,7 @@ makeIfThen prefixLabel animId ifElse =
     do
         ifGui <-
             GuiM.makeSubexpression (ifElse ^. Sugar.iIf)
-            /|/ (grammar (label Texts.injectSymbol) /|/ Spacer.stdHSpace)
+            /|/ (grammar (Label.make ":") /|/ Spacer.stdHSpace)
         thenGui <- GuiM.makeSubexpression (ifElse ^. Sugar.iThen)
         keyword <-
             pure prefixLabel
@@ -88,7 +89,7 @@ makeElse ::
 makeElse parentAnimId (Ann (Const pl) (Sugar.SimpleElse expr)) =
     Row elseAnimId
     <$> (grammar (label Texts.else_) <&> Responsive.fromTextView)
-    <*> (grammar (label Texts.injectSymbol)
+    <*> (grammar (Label.make ":")
             & Reader.local (Element.animIdPrefix .~ elseAnimId)
             <&> Responsive.fromTextView)
     <*> GuiM.makeSubexpression (Ann (Const pl) expr)
