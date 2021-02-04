@@ -23,6 +23,7 @@ import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Sugar.Config as Config
 import           Lamdu.Sugar.Convert.Expression.Actions (addActions, addActionsWith, subexprPayloads)
 import           Lamdu.Sugar.Convert.Fragment (convertAppliedHole)
+import           Lamdu.Sugar.Convert.GetField (convertGetFieldParam)
 import           Lamdu.Sugar.Convert.IfElse (convertIfElse)
 import qualified Lamdu.Sugar.Convert.Input as Input
 import           Lamdu.Sugar.Convert.Monad (ConvertM)
@@ -45,6 +46,7 @@ convert ::
 convert posInfo app@(V.App funcI argI) exprPl =
     runMatcherT $
     do
+        convertGetFieldParam app exprPl & MaybeT & justToLeft
         (funcS, argS) <-
             do
                 argS <- ConvertM.convertSubexpression argI & lift

@@ -202,12 +202,12 @@ addFieldParam =
 
 getFieldOnVar :: Lens.Traversal' (Pure # V.Term) (V.Var, T.Tag)
 getFieldOnVar =
-    _Pure . V._BGetField . inGetField
+    _Pure . V._BApp . inApp
     where
-        inGetField f (V.GetField (Pure (V.BLeaf (V.LVar v))) t) =
+        inApp f (V.App (Pure (V.BLeaf (V.LGetField t))) (Pure (V.BLeaf (V.LVar v)))) =
             f (v, t) <&> pack
-        inGetField _ other = pure other
-        pack (v, t) = V.GetField (Pure (V.BLeaf (V.LVar v))) t
+        inApp _ other = pure other
+        pack (v, t) = V.App (Pure (V.BLeaf (V.LGetField t))) (Pure (V.BLeaf (V.LVar v)))
 
 getFieldParamsToHole ::
     Monad m =>
@@ -349,10 +349,9 @@ changeGetFieldTags ::
     V.Var -> T.Tag -> T.Tag -> Ann (HRef m) # V.Term -> T m ()
 changeGetFieldTags param prevTag chosenTag x =
     case x ^. hVal of
-    V.BGetField (V.GetField (Ann a (V.BLeaf (V.LVar v))) t)
+    V.BApp (V.App (Ann a (V.BLeaf (V.LGetField t))) (Ann _ (V.BLeaf (V.LVar v))))
         | v == param && t == prevTag ->
-            V.GetField (a ^. ExprIRef.iref) chosenTag & V.BGetField
-            & ExprIRef.writeValI (x ^. hAnn . ExprIRef.iref)
+            V.LGetField chosenTag & V.BLeaf & ExprIRef.writeValI (a ^. ExprIRef.iref)
         | otherwise -> pure ()
     V.BLeaf (V.LVar v)
         | v == param -> DataOps.applyHoleTo (x ^. hAnn) & void
@@ -523,8 +522,10 @@ convertVarToGetField tagForVar paramVar =
     SubExprs.onGetVars (convertVar . (^. ExprIRef.iref)) paramVar
     where
         convertVar bodyI =
-            ExprIRef.newValI (V.BLeaf (V.LVar paramVar))
-            <&> (`V.GetField` tagForVar) <&> V.BGetField
+            V.App
+            <$> ExprIRef.newValI (V.BLeaf (V.LGetField tagForVar))
+            <*> ExprIRef.newValI (V.BLeaf (V.LVar paramVar))
+            <&> V.BApp
             >>= ExprIRef.writeValI bodyI
 
 wrapArgWithRecord ::
@@ -707,7 +708,7 @@ isParamAlwaysUsedWithGetField (V.TypedLam param _paramTyp bod) =
         go isGetFieldChild expr =
             case expr ^. hVal of
             V.BLeaf (V.LVar v) | v == param -> isGetFieldChild
-            V.BGetField (V.GetField r _) -> go True r
+            V.BApp (V.App (Ann _ (V.BLeaf V.LGetField{})) r) -> go True r
             x ->
                 hfoldMap @_ @[Bool]
                 ( \case

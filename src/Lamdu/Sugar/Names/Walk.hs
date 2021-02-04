@@ -349,12 +349,6 @@ toComposite v (Composite items punned tail_ addItem) =
     <*> (_OpenComposite . _2) (toExpression v) tail_
     <*> toTagReplace addItem
 
-toInject :: MonadNaming m => WalkBody Inject v0 v1 m o a
-toInject v (Inject t x) = Inject <$> toTagRefOf Tag t <*> toExpression v x
-
-toGetField :: MonadNaming m => WalkBody GetField v0 v1 m o a
-toGetField v (GetField r t) = GetField <$> toExpression v r <*> toTagRefOf Tag t
-
 toNominal :: MonadNaming m => WalkBody Nominal v0 v1 m o a
 toNominal v (Nominal t e) = Nominal <$> toTId t <*> toNode v (toBinder v) e
 
@@ -368,6 +362,7 @@ toIfElse v (IfElse i t e) = IfElse <$> toExpression v i <*> toExpression v t <*>
 toPostfixFunc :: MonadNaming m => WalkBody PostfixFunc v0 v1 m o a
 toPostfixFunc v (PfCase x) = toComposite v x <&> PfCase
 toPostfixFunc _ (PfFromNom x) = toTId x <&> PfFromNom
+toPostfixFunc _ (PfGetField x) = toTagRefOf Tag x <&> PfGetField
 
 toPostfixApply :: MonadNaming m => WalkBody PostfixApply v0 v1 m o a
 toPostfixApply v (PostfixApply a f) =
@@ -376,8 +371,7 @@ toPostfixApply v (PostfixApply a f) =
 toBody :: MonadNaming m => WalkBody Term v0 v1 m o a
 toBody v =
     \case
-    BodyGetField     x -> x & toGetField v <&> BodyGetField
-    BodyInject       x -> x & toInject v <&> BodyInject
+    BodyInject       x -> x & toTagRefOf Tag <&> BodyInject
     BodyRecord       x -> x & toComposite v <&> BodyRecord
     BodyIfElse       x -> x & toIfElse v <&> BodyIfElse
     BodySimpleApply  x -> x & (morphTraverse1 . toExpression) v <&> BodySimpleApply

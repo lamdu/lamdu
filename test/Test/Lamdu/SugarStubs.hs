@@ -85,11 +85,11 @@ func $$ arg =
 
 ($.) :: Expr -> T.Tag -> Expr
 r $. tag =
-    Sugar.GetField
-    { Sugar._gfRecord = r
-    , Sugar._gfTag = mkTag Nothing tag
+    Sugar.PostfixApply
+    { Sugar._pArg = r
+    , Sugar._pFunc = mkTag Nothing tag & Sugar.PfGetField & node
     }
-    & Sugar.BodyGetField
+    & Sugar.BodyPostfixApply
     & expr
 
 identity :: Expr

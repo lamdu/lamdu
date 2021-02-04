@@ -145,9 +145,8 @@ instance AddEval Term where
         BodyGetVar x -> BodyGetVar x
         BodyLiteral x -> BodyLiteral x
         BodySimpleApply (App x y) -> App (addToNode r x) (addToNode r y) & BodySimpleApply
-        BodyGetField (GetField x t) -> GetField (addToNode r x) t & BodyGetField
         BodyRecord c -> addToBody r i c & BodyRecord
-        BodyInject x -> x & iContent %~ addToNode r & BodyInject
+        BodyInject x -> BodyInject x
         BodyIfElse x -> addToBody r i x & BodyIfElse
         BodyLam lam -> lam & lamFunc %~ addToBody r i & BodyLam
         BodyToNom nom -> nom & nVal %~ addToNode r & BodyToNom

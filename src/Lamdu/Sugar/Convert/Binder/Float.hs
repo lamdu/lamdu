@@ -107,9 +107,10 @@ convertVarToGetFieldParam oldVar paramTag (V.TypedLam lamVar _paramTyp lamBody) 
     SubExprs.onGetVars toNewParam oldVar lamBody
     where
         toNewParam prop =
-            V.LVar lamVar & V.BLeaf
-            & ExprIRef.newValI
-            <&> (`V.GetField` paramTag) <&> V.BGetField
+            V.App
+            <$> ExprIRef.newValI (V.BLeaf (V.LGetField paramTag))
+            <*> ExprIRef.newValI (V.BLeaf (V.LVar lamVar))
+            <&> V.BApp
             >>= ExprIRef.writeValI (prop ^. ExprIRef.iref)
 
 convertLetParamToRecord ::

@@ -3,6 +3,7 @@ module Lamdu.Sugar.Convert.Inject
     ) where
 
 import qualified Lamdu.Calc.Term as V
+import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Expr.IRef as ExprIRef
 import           Lamdu.Sugar.Convert.Expression.Actions (addActions)
 import qualified Lamdu.Sugar.Convert.Input as Input
@@ -17,23 +18,21 @@ import           Lamdu.Prelude
 
 convert ::
     (Monad m, Monoid a) =>
-    V.Inject # Ann (Input.Payload m a) ->
+    T.Tag ->
     Input.Payload m a # V.Term ->
     ConvertM m (ExpressionU EvalPrep m a)
-convert (V.Inject tag injected) exprPl =
+convert tag exprPl =
     do
         protectedSetToVal <- ConvertM.typeProtectedSetToVal
         let typeProtect = protectedSetToVal (exprPl ^. Input.stored) valI
-        injectedS <- ConvertM.convertSubexpression injected
         let setTag newTag =
                 do
-                    V.Inject newTag injectedI & V.BInject & ExprIRef.writeValI valI
+                    V.LInject newTag & V.BLeaf & ExprIRef.writeValI valI
                     void typeProtect
         ConvertTag.ref tag nameWithoutContext mempty (EntityId.ofTag entityId) setTag
             >>= ConvertM . lift
-            <&> (`Inject` injectedS) <&> BodyInject
+            <&> BodyInject
             >>= addActions (Const ()) exprPl
     where
         entityId = exprPl ^. Input.entityId
         valI = exprPl ^. Input.stored . ExprIRef.iref
-        injectedI = injected ^. hAnn . Input.stored . ExprIRef.iref

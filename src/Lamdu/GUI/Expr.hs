@@ -14,7 +14,6 @@ import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
 import qualified Lamdu.GUI.Expr.ApplyEdit as ApplyEdit
 import qualified Lamdu.GUI.Expr.FragmentEdit as FragmentEdit
-import qualified Lamdu.GUI.Expr.GetFieldEdit as GetFieldEdit
 import qualified Lamdu.GUI.Expr.GetVarEdit as GetVarEdit
 import qualified Lamdu.GUI.Expr.HoleEdit as HoleEdit
 import qualified Lamdu.GUI.Expr.IfElseEdit as IfElseEdit
@@ -89,8 +88,7 @@ makeEditor (Ann (Const pl) body) =
     Sugar.BodyLiteral      x -> editor pl (Const x) LiteralEdit.make
     Sugar.BodyRecord       x -> editor pl x RecordEdit.make
     Sugar.BodyIfElse       x -> editor pl x IfElseEdit.make
-    Sugar.BodyGetField     x -> editor pl x GetFieldEdit.make
-    Sugar.BodyInject       x -> editor pl x InjectEdit.make
+    Sugar.BodyInject       x -> editor pl (Const x) InjectEdit.make
     Sugar.BodyGetVar       x -> editor pl (Const x) GetVarEdit.make
     Sugar.BodyToNom        x -> editor pl x NominalEdit.makeToNom
     Sugar.BodyFragment     x -> editor pl x FragmentEdit.make

@@ -499,12 +499,12 @@ compileRecExtend x =
                 ]
             & pure
 
-compileInject :: Monad m => V.Inject # Annotated ValId -> M m CodeGen
-compileInject (V.Inject tag dat) =
+compileInject :: Monad m => T.Tag -> M m CodeGen
+compileInject tag =
     do
+        var <- freshName "content" <&> Text.unpack <&> JS.ident
         tagStr <- tagString tag <&> Text.unpack <&> JS.string
-        dat' <- compileVal NotTailCall dat
-        inject tagStr (codeGenExpression dat') & codeGenFromExpr & pure
+        JS.lambda [var] [JS.returns (inject tagStr (JS.var var))] & codeGenFromExpr & pure
 
 compileCase :: Monad m => ValId -> RowExtend T.Tag V.Term V.Term # Annotated ValId -> M m CodeGen
 compileCase valId =
@@ -536,13 +536,12 @@ compileCaseOnVar isTail valId x scrutineeVar =
             <&> codeGenLamStmts
             <&> JS.casee (JS.string (Text.unpack tagStr))
 
-compileGetField :: Monad m => V.GetField # Annotated ValId -> M m CodeGen
-compileGetField (V.GetField record tag) =
+compileGetField :: Monad m => T.Tag -> M m CodeGen
+compileGetField tag =
     do
+        var <- freshName "record" <&> Text.unpack <&> JS.ident
         tagId <- tagIdent tag
-        compileVal NotTailCall record
-            <&> codeGenExpression <&> (`JS.dot` tagId)
-            <&> codeGenFromExpr
+        JS.lambda [var] [JS.returns (JS.var var `JS.dot` tagId)] & codeGenFromExpr & pure
 
 declMyScopeDepth :: Int -> JSS.Statement ()
 declMyScopeDepth depth =
@@ -725,6 +724,8 @@ compileLeaf valId x =
     V.LLiteral literal -> compileLiteral literal & pure
     V.LFromNom {} ->
         lam "x" (pure . (:[]) . JSS.ReturnStmt () . Just) <&> codeGenFromExpr
+    V.LGetField t -> compileGetField t
+    V.LInject t -> compileInject t
 
 compileToNom ::
     Monad m =>
@@ -744,11 +745,7 @@ compileVal isTail (Ann (Const valId) body) =
     case body of
     V.BLeaf x                   -> compileLeaf valId x
     V.BApp x                    -> compileApply isTail valId x
-    V.BGetField x               -> compileGetField x >>= maybeLog
     V.BLam x                    -> compileLambda valId x
-    V.BInject x                 -> compileInject x >>= maybeLog
     V.BRecExtend x              -> compileRecExtend x
     V.BCase x                   -> compileCase valId x
     V.BToNom x                  -> compileToNom isTail x
-    where
-        maybeLog = maybeLogSubexprResult valId

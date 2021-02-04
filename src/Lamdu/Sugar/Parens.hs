@@ -119,8 +119,7 @@ loopExprBody parentPrec body_ =
     BodyPostfixFunc  x -> hmap (p #> addToNode) x & BodyPostfixFunc & result (parentPrec ^. before >= 12)
     BodyLam          x -> leftSymbol (lamFunc . fBody) 0 BodyLam x
     BodyToNom        x -> leftSymbol nVal 0 BodyToNom x
-    BodyInject       x -> inject x
-    BodyGetField     x -> rightSymbol gfRecord 12 BodyGetField x
+    BodyInject       x -> result False (BodyInject x)
     BodySimpleApply  x -> simpleApply x
     BodyLabeledApply x -> labeledApply x
     BodyPostfixApply x -> postfixApply x
@@ -139,7 +138,6 @@ loopExprBody parentPrec body_ =
             Lens.ASetter s t (Annotated pl # body) (Annotated (ParenInfo, pl) # body) ->
             MinOpPrec -> (t -> res) -> s -> (NeedsParens, res)
         leftSymbol = sideSymbol (\_ _ -> addToNode) before after
-        rightSymbol = sideSymbol loopExpr after before
         sideSymbol ::
             AnnotateAST pl body ->
             Lens.ASetter' (Precedence Prec) MinOpPrec ->
@@ -154,10 +152,6 @@ loopExprBody parentPrec body_ =
                 childPrec
                     | needParens = pure 0
                     | otherwise = parentPrec & overrideSide .~ prec
-        inject (Inject t x) =
-            sideSymbol loopExpr before after id 0 cons x
-            where
-                cons = BodyInject . Inject t
         newParentPrec needParens
             | needParens = pure 0
             | otherwise = parentPrec

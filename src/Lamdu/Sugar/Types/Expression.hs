@@ -14,18 +14,16 @@ module Lamdu.Sugar.Types.Expression
 
     , Term(..)
         , _BodyLam, _BodyLabeledApply, _BodySimpleApply
-        , _BodyGetVar, _BodyGetField, _BodyInject, _BodyHole
+        , _BodyGetVar, _BodyInject, _BodyHole
         , _BodyLiteral, _BodyRecord, _BodyFragment
         , _BodyToNom, _BodyIfElse, _BodyPostfixApply, _BodyPostfixFunc
     , AnnotatedArg(..), aaTag, aaExpr
     , LabeledApply(..), aFunc, aSpecialArgs, aAnnotatedArgs, aPunnedArgs
     , PostfixApply(..), pArg, pFunc
-    , PostfixFunc(..), _PfCase, _PfFromNom
+    , PostfixFunc(..), _PfCase, _PfFromNom, _PfGetField
     , App(..), appFunc, appArg
     , Fragment(..), fExpr, fHeal, fTypeMismatch, fOptions
     , Lambda(..), lamFunc, lamMode, lamApplyLimit
-    , Inject(..), iTag, iContent
-    , GetField(..), gfRecord, gfTag
     , Nominal(..), nTId, nVal
     -- Binders
     , Let(..), lValue, lName, lUsages, lDelete, lBody
@@ -90,16 +88,6 @@ data LabeledApply v name i o k = LabeledApply
 data PostfixApply v name i o k = PostfixApply
     { _pArg :: k :# Term v name i o
     , _pFunc :: k :# PostfixFunc v name i o
-    } deriving Generic
-
-data Inject v name i o k = Inject
-    { _iTag :: TagRef name i o
-    , _iContent :: k :# Term v name i o
-    } deriving Generic
-
-data GetField v name i o k = GetField
-    { _gfRecord :: k :# Term v name i o
-    , _gfTag :: TagRef name i o
     } deriving Generic
 
 data Lambda v name i o f = Lambda
@@ -175,6 +163,7 @@ data Nominal v name i o k = Nominal
 data PostfixFunc v name i o k
     = PfCase (Composite v name i o k)
     | PfFromNom (TId name)
+    | PfGetField (TagRef name i o)
     deriving Generic
 
 data Term v name i o k
@@ -185,9 +174,8 @@ data Term v name i o k
     | BodyHole (Hole name i o)
     | BodyLiteral (Literal (Property o))
     | BodyRecord (Composite v name i o k)
-    | BodyGetField (GetField v name i o k)
     | BodyIfElse (IfElse v name i o k)
-    | BodyInject (Inject v name i o k)
+    | BodyInject (TagRef name i o)
     | BodyGetVar (GetVar name o)
     | BodyToNom (Nominal v name i o k)
     | BodyPostfixFunc (PostfixFunc v name i o k)
@@ -254,8 +242,8 @@ data Payload v name i o = Payload
 traverse Lens.makeLenses
     [ ''AnnotatedArg, ''AssignPlain
     , ''Composite, ''CompositeItem, ''Fragment
-    , ''Function, ''GetField, ''Hole, ''HoleOption, ''HoleResult
-    , ''IfElse, ''Inject, ''LabeledApply, ''Lambda, ''Let
+    , ''Function, ''Hole, ''HoleOption, ''HoleResult
+    , ''IfElse, ''LabeledApply, ''Lambda, ''Let
     , ''NodeActions, ''Nominal, ''Payload, ''PostfixApply
     ] <&> concat
 traverse Lens.makePrisms
@@ -264,13 +252,12 @@ traverse Lens.makePrisms
 traverse makeHTraversableAndBases
     [ ''AnnotatedArg, ''Assignment, ''AssignPlain, ''Binder
     , ''Composite, ''CompositeItem, ''CompositeTail, ''Else
-    , ''Fragment, ''Function, ''GetField, ''IfElse, ''Inject
+    , ''Fragment, ''Function, ''IfElse
     , ''LabeledApply, ''Lambda, ''Let, ''Nominal, ''PostfixApply, ''PostfixFunc, ''Term
     ] <&> concat
 
 traverse makeHMorph
-    [ ''Composite, ''GetField, ''IfElse, ''Inject
-    , ''LabeledApply, ''Let, ''PostfixApply, ''PostfixFunc
+    [ ''Composite, ''IfElse, ''LabeledApply, ''Let, ''PostfixApply, ''PostfixFunc
     ] <&> concat
 
 -- TODO: Replace boilerplate below with TH
