@@ -14,8 +14,7 @@ migrateTerm :: Aeson.Value -> Either Text Aeson.Value
 migrateTerm (Aeson.Object x) =
     case (x ^. Lens.at "fromNomId", x ^. Lens.at "fromNomVal", x ^. Lens.at "id" <&> Aeson.fromJSON) of
     (Just nomId, Just nomVal, Just (Aeson.Success i)) ->
-        (_Object . traverse) migrateTerm nomVal
-        <&>
+        migrateTerm nomVal <&>
         \fixedVal ->
         "id" ~~> Aeson.toJSON i
         <> "applyArg" ~~> fixedVal
