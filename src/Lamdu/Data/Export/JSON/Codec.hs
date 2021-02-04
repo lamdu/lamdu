@@ -334,7 +334,8 @@ decodeLeaf =
     [ l "hole" V.LHole
     , l "recEmpty" V.LRecEmpty
     , l "absurd" V.LAbsurd
-    , ("var", \o -> o .: "var" >>= decodeIdent <&> V.Var <&> V.LVar)
+    , f "var" (fmap (V.LVar . V.Var) . decodeIdent)
+    , f "fromNomId" (fmap (V.LFromNom . T.NominalId) . decodeIdent)
     , ("primId",
         \obj ->
         do
@@ -345,7 +346,6 @@ decodeLeaf =
             V.PrimVal primId primBytes & pure
         <&> V.LLiteral
       )
-    , ("fromNomId", \o -> o .: "fromNomId" >>= decodeIdent <&> T.NominalId <&> V.LFromNom)
     ]
     where
         l key v =
@@ -356,6 +356,7 @@ decodeLeaf =
                 Aeson.Object x | HashMap.null x -> pure v
                 x -> fail ("bad val for leaf " ++ show x)
             )
+        f key v = (key, \o -> o .: key >>= v)
 
 encodeVal :: Codec h => Encoder (Ann (Const UUID) # h)
 encodeVal (Ann uuid body) =
