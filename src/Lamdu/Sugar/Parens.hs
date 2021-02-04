@@ -154,10 +154,8 @@ loopExprBody parentPrec body_ =
                 childPrec
                     | needParens = pure 0
                     | otherwise = parentPrec & overrideSide .~ prec
-        inject (Inject t v) =
-            case v of
-            InjectNullary x -> addToNode x & InjectNullary & cons & result False
-            InjectVal x -> sideSymbol loopExpr before after id 0 (cons . InjectVal) x
+        inject (Inject t x) =
+            sideSymbol loopExpr before after id 0 cons x
             where
                 cons = BodyInject . Inject t
         newParentPrec needParens

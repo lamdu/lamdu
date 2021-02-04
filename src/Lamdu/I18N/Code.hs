@@ -24,7 +24,6 @@ data Code a = Code
     , _elseShort :: a -- "el" in "elif"
     , -- Inject
       _injectSymbol :: a
-    , _nullaryInjectSymbol :: a
     , -- Getvar
       _paramsRecordOpener :: a
     , -- Lambda:

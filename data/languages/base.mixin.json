@@ -4,7 +4,6 @@
             "assign": "=",
             "absurd": "Ø",
             "injectSymbol": ":",
-            "nullaryInjectSymbol": ".",
             "defer": "|",
             "lam": "λ",
             "recordSep": ","

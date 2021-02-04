@@ -349,13 +349,8 @@ toComposite v (Composite items punned tail_ addItem) =
     <*> (_OpenComposite . _2) (toExpression v) tail_
     <*> toTagReplace addItem
 
-toInjectVal :: MonadNaming m => WalkBody InjectContent v0 v1 m o a
-toInjectVal v (InjectVal x) = toExpression v x <&> InjectVal
-toInjectVal v (InjectNullary n) = toNode v (Lens._Wrapped (nullaryAddItem toTagReplace)) n <&> InjectNullary
-
 toInject :: MonadNaming m => WalkBody Inject v0 v1 m o a
-toInject v (Inject t x) =
-    Inject <$> toTagRefOf Tag t <*> toInjectVal v x
+toInject v (Inject t x) = Inject <$> toTagRefOf Tag t <*> toExpression v x
 
 toGetField :: MonadNaming m => WalkBody GetField v0 v1 m o a
 toGetField v (GetField r t) = GetField <$> toExpression v r <*> toTagRefOf Tag t

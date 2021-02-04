@@ -228,7 +228,6 @@ instance BodyAnnotations Fragment where
     bodyAnnotations = fExpr . annotations
 
 instance BodyAnnotations IfElse
-instance BodyAnnotations InjectContent
 instance BodyAnnotations LabeledApply
 instance BodyAnnotations Let
 instance BodyAnnotations PostfixApply
@@ -244,7 +243,7 @@ instance BodyAnnotations Term where
     bodyAnnotations f (BodyRecord x) = bodyAnnotations f x <&> BodyRecord
     bodyAnnotations f (BodyToNom x) = (nVal . annotations) f x <&> BodyToNom
     bodyAnnotations f (BodySimpleApply x) = (morphTraverse1 . annotations) f x <&> BodySimpleApply
-    bodyAnnotations f (BodyInject x) = (iContent . bodyAnnotations) f x <&> BodyInject
+    bodyAnnotations f (BodyInject x) = (iContent . annotations) f x <&> BodyInject
     bodyAnnotations f (BodyLabeledApply x) = bodyAnnotations f x <&> BodyLabeledApply
     bodyAnnotations _ (BodyHole x) = BodyHole x & pure
     bodyAnnotations f (BodyFragment x) = bodyAnnotations f x <&> BodyFragment

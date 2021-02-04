@@ -115,7 +115,7 @@ instance MonadTransaction m i => Order v name i o (Sugar.Term v name i o) where
         & Sugar.fExpr orderNode
         <&> Sugar.BodyFragment
     order (Sugar.BodyIfElse x) = order x <&> Sugar.BodyIfElse
-    order (Sugar.BodyInject x) = (Sugar.iContent . Sugar._InjectVal) orderNode x <&> Sugar.BodyInject
+    order (Sugar.BodyInject x) = Sugar.iContent orderNode x <&> Sugar.BodyInject
     order (Sugar.BodyToNom x) = Sugar.nVal orderNode x <&> Sugar.BodyToNom
     order (Sugar.BodySimpleApply x) = htraverse1 orderNode x <&> Sugar.BodySimpleApply
     order (Sugar.BodyGetField x) = Sugar.gfRecord orderNode x <&> Sugar.BodyGetField

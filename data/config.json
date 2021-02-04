@@ -26,7 +26,6 @@
             "letExpression": true,
             "lightLambda": true,
             "literalText": true,
-            "nullaryInject": true,
             "nullaryParameter": true,
             "parametersRecord": true
         }
