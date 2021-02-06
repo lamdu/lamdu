@@ -317,21 +317,18 @@ toHole hole =
     (,) <$> opRun <*> opRun
     <&>
     \(r0, r1) ->
-    hole & Sugar.holeOptions . Lens.mapped . Lens.mapped %~ toHoleOption r0 r1
+    hole & Sugar.holeOptions . Lens.mapped . Lens.mapped . Lens.mapped %~ toHoleOption r0 r1
 
 toFragment :: MonadNaming m => WalkBody Fragment v0 v1 m o a
 toFragment v Fragment{_fExpr, _fHeal, _fTypeMismatch, _fOptions} =
     do
         newTypeMismatch <- Lens._Just toType _fTypeMismatch
         newExpr <- toExpression v _fExpr
-        r0 <- opRun
-        r1 <- opRun
+        h <- toHole _fOptions
         pure Fragment
             { _fExpr = newExpr
             , _fTypeMismatch = newTypeMismatch
-            , _fOptions =
-                 _fOptions
-                 <&> Lens.mapped %~ toHoleOption r0 r1
+            , _fOptions = h
             , _fHeal
             }
 

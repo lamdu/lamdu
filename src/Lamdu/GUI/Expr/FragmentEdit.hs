@@ -74,7 +74,7 @@ make (Ann (Const pl) fragment) =
 
         rawSearchArea <-
             SearchArea.make SearchArea.WithoutAnnotation
-            (fragment ^. Sugar.fOptions) pl allowedSearchTerm holeIds
+            (fragment ^. Sugar.fOptions . Sugar.holeOptions) pl allowedSearchTerm holeIds
             ?? Menu.AnyPlace
 
         qmarkView <-

@@ -102,7 +102,7 @@ data Fragment v name i o k = Fragment
     { _fExpr :: k :# Term v name i o
     , _fHeal :: o EntityId
     , _fTypeMismatch :: Maybe (Annotated EntityId # Type name)
-    , _fOptions :: i [HoleOption name i o]
+    , _fOptions :: Hole name i o
     } deriving Generic
 
 data HoleResult name i o = HoleResult
@@ -119,7 +119,7 @@ data HoleOption name i o = HoleOption
     } deriving Generic
 
 newtype Hole name i o = Hole
-    { _holeOptions :: i [HoleOption name i o]
+    { _holeOptions :: i (OptionFilter -> [HoleOption name i o])
         -- outer "i" here is used to read index of globals
         -- inner "i" is used to type-check/sugar every val in the option
       -- TODO: Lifter from i to o?

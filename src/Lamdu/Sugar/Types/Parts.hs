@@ -7,6 +7,7 @@ module Lamdu.Sugar.Types.Parts
     , Literal(..), _LiteralNum, _LiteralBytes, _LiteralText
     , HoleResultScore(..), hrsNumFragments, hrsScore
     , HoleTerm(..), _HoleName
+    , OptionFilter(..), _OptsDot, _OptsInject, _OptsNormal
     , -- Annotations
       Annotation(..), _AnnotationVal, _AnnotationType, _AnnotationNone
     -- Node actions
@@ -170,6 +171,8 @@ data HoleTerm name
     | HoleLet
     deriving (Functor, Foldable, Traversable, Show)
 
+data OptionFilter = OptsDot | OptsInject | OptsNormal deriving Generic
+
 data ParenInfo = ParenInfo
     { _piMinOpPrec :: !Int
     , _piNeedParens :: !Bool
@@ -181,6 +184,6 @@ traverse Lens.makeLenses
     ] <&> concat
 traverse Lens.makePrisms
     [ ''AddFirstParam, ''AddNextParam, ''Annotation, ''BinderParams, ''Delete
-    , ''DetachAction, ''FuncApplyLimit, ''HoleTerm, ''Literal, ''VarInfo
+    , ''DetachAction, ''FuncApplyLimit, ''HoleTerm, ''Literal, ''OptionFilter, ''VarInfo
     ] <&> concat
 makeHTraversableAndBases ''PunnedVar

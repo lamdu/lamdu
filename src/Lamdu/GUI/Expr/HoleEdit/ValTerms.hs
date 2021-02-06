@@ -30,6 +30,11 @@ ofName (Name.NameTag x) =
     where
         Name.TagText displayName textCollision = x ^. Name.tnDisplayText
 
+ofNonOperator :: Name -> [Text]
+ofNonOperator n
+    | Name.isOperator n = []
+    | otherwise = ofName n
+
 holeSearchTerm ::
     (Has (Texts.Code Text) env, Has (Texts.CodeUI Text) env) =>
     env -> HoleTerm Name -> [Text]
@@ -40,9 +45,9 @@ holeSearchTerm _ (HoleGetDef x) =
             | Name.isOperator x = [n]
             | otherwise = [n, "." <> n]
 holeSearchTerm _ (HoleName x) = ofName x
-holeSearchTerm _ (HoleGetField x) = ofName x <&> ("." <>)
-holeSearchTerm e (HoleInject x) = ofName x <&> (e ^. has . Texts.injectSymbol <>)
-holeSearchTerm _ (HoleFromNom x) = ofName x <&> ("." <>)
+holeSearchTerm _ (HoleGetField x) = ofNonOperator x <&> ("." <>)
+holeSearchTerm e (HoleInject x) = ofNonOperator x <&> (e ^. has . Texts.injectSymbol <>)
+holeSearchTerm _ (HoleFromNom x) = ofNonOperator x <&> ("." <>)
 holeSearchTerm e HoleLet = [e ^. has . Texts.let_]
 holeSearchTerm e HoleLambda = [e ^. has . Texts.lambda, "\\", "Λ", "λ", "->", "→"]
 holeSearchTerm e HoleIf = [e ^. has . Texts.if_]
