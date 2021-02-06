@@ -33,18 +33,10 @@ allowedHoleSearchTerm :: Text -> Bool
 allowedHoleSearchTerm searchTerm =
     any (searchTerm &)
     [ allowedSearchTermCommon ":."
-    , isPositiveNumber
-    , isNegativeNumber
     , isLiteralBytes
     ]
     where
-        isPositiveNumber t =
-            case Text.splitOn "." t of
-            [digits]             -> Text.all Char.isDigit digits
-            [digits, moreDigits] -> Text.all Char.isDigit (digits <> moreDigits)
-            _ -> False
         isLiteralBytes = prefixed '#' (Text.all Char.isHexDigit)
-        isNegativeNumber = prefixed '-' isPositiveNumber
         prefixed char restPred t =
             case Text.uncons t of
             Just (c, rest) -> c == char && restPred rest
