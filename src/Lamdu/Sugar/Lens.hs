@@ -135,7 +135,7 @@ holeTransformExprs ::
     (Expr Binder (Annotation () n) n i o () -> i (Expr Binder (Annotation () n) n i o ())) ->
     Hole n i o -> Hole n i o
 holeTransformExprs onExpr =
-    holeOptions . Lens.mapped . Lens.mapped %~ holeOptionTransformExprs onExpr
+    holeOptions . Lens.mapped . Lens.mapped . Lens.mapped %~ holeOptionTransformExprs onExpr
 
 assignmentBodyAddFirstParam :: Lens' (Assignment v name i o a) (AddFirstParam name i o)
 assignmentBodyAddFirstParam f (BodyFunction x) = fAddFirstParam f x <&> BodyFunction

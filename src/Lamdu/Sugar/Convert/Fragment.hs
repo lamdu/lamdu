@@ -72,20 +72,20 @@ mkOptions ::
     Ann (Input.Payload m a) # V.Term ->
     Ann pl # Term v name i o ->
     Input.Payload m a # V.Term ->
-    ConvertM m (OnceT (T m) [HoleOption InternalName (OnceT (T m)) (T m)])
+    ConvertM m (OnceT (T m) (OptionFilter -> [HoleOption InternalName (OnceT (T m)) (T m)]))
 mkOptions posInfo sugarContext argI argS exprPl =
     Hole.mkOptions posInfo (fragmentResultProcessor topEntityId argI) exprPl
     <&> (fragmentOptions <>)
     <&>
     ( \mkOpts ->
-        Hole.addWithoutDups
-        <$> ( runStateT (mkAppliedHoleSuggesteds sugarContext argI exprPl) (sugarContext ^. ConvertM.scInferContext)
+        do
+            suggesteds <-
+                runStateT (mkAppliedHoleSuggesteds sugarContext argI exprPl) (sugarContext ^. ConvertM.scInferContext)
                 & ListClass.toList
                 <&> Lens.mapped %~ fst
-            )
-        <*> mkOpts
-        <&> Lens.mapped %~ snd
+            mkOpts <&> Lens.mapped %~ Hole.addWithoutDups suggesteds
     )
+    <&> Lens.mapped . Lens.mapped . Lens.mapped %~ snd
     >>= ConvertM.convertOnce
     where
         fragmentOptions =
@@ -95,6 +95,7 @@ mkOptions posInfo sugarContext argI argS exprPl =
                     Hole.mkOption sugarContext (fragmentResultProcessor topEntityId argI) exprPl x
                     <&> (,) x
                 )
+            <&> const
         topEntityId = exprPl ^. Input.stored . iref & EntityId.ofValI
         hole = V.BLeaf V.LHole & Ann (Const ())
 
@@ -192,7 +193,7 @@ convertAppliedHole posInfo app@(V.App funcI argI) exprPl argS =
                     )
                     <&> EntityId.ofValI
                 , _fTypeMismatch = typeMismatch
-                , _fOptions = options
+                , _fOptions = Hole options
                 } & pure
             >>= Actions.addActions app exprPl
             & lift

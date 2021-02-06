@@ -169,7 +169,7 @@ testInline =
                     replBody . _BodyLam . lamFunc . fBody .
                     hVal . _BinderLet . lBody . hVal . _BinderTerm . _BodyHole
                     . holeOptions
-                    >>= findM isY
+                    >>= findM isY . (OptsNormal &)
                     <&> fromMaybe (error "expected option")
                 mkResult <-
                     yOption ^. hoResults & List.runList
@@ -541,7 +541,7 @@ testValidHoleResult =
                     workArea ^?!
                     replBody . _BodyToNom . nVal . hVal . _BinderTerm . _BodyHole . holeOptions
                 -- The bug occured in the first suggested result
-                (_, mkHoleResult) <- opts ^?! Lens.ix 0 . hoResults & List.runList <&> List.headL
+                (_, mkHoleResult) <- opts OptsNormal ^?! Lens.ix 0 . hoResults & List.runList <&> List.headL
                 holeResult <- mkHoleResult
                 holeResult ^. holeResultPick & lift
 

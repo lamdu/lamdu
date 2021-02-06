@@ -154,6 +154,13 @@ filterSearchTermEvents allowedTerms searchTerm
 
 data AnnotationMode = WithAnnotation | WithoutAnnotation
 
+searchTermFilter :: Text -> Sugar.OptionFilter
+searchTermFilter t =
+    case t ^? Lens._Cons of
+    Just ('.', _) -> Sugar.OptsDot
+    Just ('\'', _) -> Sugar.OptsInject
+    _ -> Sugar.OptsNormal
+
 make ::
     ( Monad i, Monad o
     , Glue.HasTexts env
@@ -164,7 +171,7 @@ make ::
     , SearchMenu.HasTexts env
     ) =>
     AnnotationMode ->
-    i [Sugar.HoleOption Name i o] ->
+    i (Sugar.OptionFilter -> [Sugar.HoleOption Name i o]) ->
     ExprGui.Payload i o -> (Text -> Bool) -> WidgetIds ->
     GuiM env i o (Menu.Placement -> TextWidget o)
 make annMode mkOptions pl allowedTerms widgetIds =
@@ -190,7 +197,8 @@ make annMode mkOptions pl allowedTerms widgetIds =
                         WithAnnotation ->
                             Annotation.annotationSpacer
                             /-/ makeInferredTypeAnnotation (pl ^. _1 . Sugar.plAnnotation) animId
-                    options <- GuiM.im mkOptions
+                    searchTerm <- SearchMenu.readSearchTerm searchMenuId
+                    options <- GuiM.im mkOptions <&> (searchTermFilter searchTerm &)
                     -- ideally the fdWrap would be "inside" the
                     -- type-view addition and stdWrap, but it's not
                     -- important in the case the FD is selected, and

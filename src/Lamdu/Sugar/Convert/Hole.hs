@@ -91,7 +91,7 @@ convert ::
     ConvertM m (ExpressionU EvalPrep m a)
 convert posInfo holePl =
     mkOptions posInfo holeResultProcessor holePl
-    <&> Lens.mapped . Lens.mapped %~ snd
+    <&> Lens.mapped . Lens.mapped . Lens.mapped %~ snd
     >>= ConvertM.convertOnce
     <&> Hole <&> BodyHole
     >>= addActions (Const ()) holePl
@@ -251,7 +251,7 @@ mkOptions ::
     (Monad m, Typeable m) =>
     ConvertM.PositionInfo -> ResultProcessor m ->
     Input.Payload m a # V.Term ->
-    ConvertM m (OnceT (T m) [(Val (), HoleOption InternalName (OnceT (T m)) (T m))])
+    ConvertM m (OnceT (T m) (OptionFilter -> [(Val (), HoleOption InternalName (OnceT (T m)) (T m))]))
 mkOptions posInfo resultProcessor holePl =
     Lens.view id
     <&>
@@ -262,16 +262,27 @@ mkOptions posInfo resultProcessor holePl =
         tags <- getTags sugarContext & lift
         suggesteds <- mkHoleSuggesteds sugarContext resultProcessor holePl
         baseForms <- mkBaseForms posInfo & lift
-        concat
+        let mk l =
+                l
+                <&> wrap (const (Ann (Const ()))) . (^. hPlain)
+                & traverse (\x -> mkOption sugarContext resultProcessor holePl x <&> (,) x)
+                <&> addWithoutDups suggesteds
+        let globs = globals <&> V.BLeafP . V.LVar . ExprIRef.globalId
+        base <-
+            concat
             [ holePl ^. Input.localsInScope <&> fst >>= getLocalScopeGetVars sugarContext
-            , globals <&> V.BLeafP . V.LVar . ExprIRef.globalId
-            , tags <&> V.BLeafP . V.LInject
+            , globs
             , nominalOptions
             , baseForms
-            ]
-            <&> wrap (const (Ann (Const ()))) . (^. hPlain)
-            & traverse (\x -> mkOption sugarContext resultProcessor holePl x <&> (,) x)
-            <&> addWithoutDups suggesteds
+            ] & mk
+        injs <- tags <&> V.BLeafP . V.LInject & mk
+        dots <- (tags <&> V.BLeafP . V.LGetField) <> globs <> baseForms & mk
+        pure (
+            \case
+            OptsNormal -> base
+            OptsDot -> dots
+            OptsInject -> injs
+            )
 
 -- TODO: Generalize into a separate module?
 loadDeps :: Monad m => [V.Var] -> [T.NominalId] -> T m Deps
