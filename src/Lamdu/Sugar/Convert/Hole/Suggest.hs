@@ -197,20 +197,10 @@ termTransformsWithModify ::
     Ann a # V.Term ->
     StateT InferState m (Ann a # V.Term)
 termTransformsWithModify _ _ _ _ v@(Ann _ V.BLam {}) = pure v -- Avoid creating a surprise redex
-termTransformsWithModify _ _ _ getInferred v@(Ann pl0 (V.BInject (V.Inject tag (Ann pl1 (V.BLeaf V.LHole))))) =
-    getInferred pl1 ^. inferResult & lookupBody & liftInfer ()
-    >>=
-    \case
-    Just (T.TRecord r) ->
-        lookupBody r & liftInfer ()
-        >>=
-        \case
-        Just T.REmpty ->
-            -- Variant:<hole> ~~> Variant.
-            pure (Ann pl0 (V.BInject (V.Inject tag (Ann pl1 (V.BLeaf V.LRecEmpty)))))
-            <|> pure v
-        _ -> pure v
-    _ -> pure v
+termTransformsWithModify _ _ _ _ v@(Ann pl0 (V.BInject (V.Inject tag (Ann pl1 (V.BLeaf V.LHole))))) =
+    -- Variant:<hole> ~~> Variant.
+    pure (Ann pl0 (V.BInject (V.Inject tag (Ann pl1 (V.BLeaf V.LRecEmpty)))))
+    <|> pure v
 termTransformsWithModify mkVar srcScope mkPl getInferred src =
     getInferred (src ^. hAnn) ^. inferResult & lookupBody & liftInfer ()
     >>=
