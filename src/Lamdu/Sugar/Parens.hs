@@ -119,11 +119,14 @@ loopExprBody parentPrec body_ =
     BodyPostfixFunc  x -> hmap (p #> addToNode) x & BodyPostfixFunc & result (parentPrec ^. before >= 12)
     BodyLam          x -> leftSymbol (lamFunc . fBody) 0 BodyLam x
     BodyToNom        x -> leftSymbol nVal 0 BodyToNom x
-    BodyInject       x -> result False (BodyInject x)
+    BodyEmptyInject  x -> result False (BodyEmptyInject x)
     BodySimpleApply  x -> simpleApply x
     BodyLabeledApply x -> labeledApply x
     BodyPostfixApply x -> postfixApply x
     BodyIfElse       x -> ifElse x
+    BodyInject       x ->
+        -- TODO: Less hacky rule for parens on inject?
+        result (parentPrec ^. before >= 13 && parentPrec ^. after == 0) (BodyInject x)
     BodyFragment     x ->
         x
         & fExpr %~ loopExpr 13 (pure 0)

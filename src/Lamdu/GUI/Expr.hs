@@ -89,6 +89,7 @@ makeEditor (Ann (Const pl) body) =
     Sugar.BodyRecord       x -> editor pl x RecordEdit.make
     Sugar.BodyIfElse       x -> editor pl x IfElseEdit.make
     Sugar.BodyInject       x -> editor pl (Const x) InjectEdit.make
+    Sugar.BodyEmptyInject  x -> editor pl (Const x) InjectEdit.make
     Sugar.BodyGetVar       x -> editor pl (Const x) GetVarEdit.make
     Sugar.BodyToNom        x -> editor pl x NominalEdit.makeToNom
     Sugar.BodyFragment     x -> editor pl x FragmentEdit.make

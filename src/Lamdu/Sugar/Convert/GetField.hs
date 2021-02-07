@@ -44,7 +44,7 @@ convert ::
     (Monad m, Monoid a) =>
     T.Tag ->
     Input.Payload m a # V.Term ->
-    ConvertM m (ExpressionU EvalPrep m a)
+    ConvertM m (ExpressionU v m a)
 convert tag exprPl =
     do
         protectedSetToVal <- ConvertM.typeProtectedSetToVal

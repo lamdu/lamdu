@@ -75,4 +75,4 @@ convert posInfo (Ann pl (V.BLeaf l)) =
     V.LAbsurd -> ConvertCase.convertAbsurd
     V.LFromNom x -> ConvertNominal.convertFromNom x
     V.LGetField x -> ConvertGetField.convert x
-    V.LInject x -> ConvertInject.convert x
+    V.LInject x -> ConvertInject.convert BodyInject x

@@ -25,6 +25,7 @@ import           Lamdu.Sugar.Convert.Expression.Actions (addActions, addActionsW
 import           Lamdu.Sugar.Convert.Fragment (convertAppliedHole)
 import           Lamdu.Sugar.Convert.GetField (convertGetFieldParam)
 import           Lamdu.Sugar.Convert.IfElse (convertIfElse)
+import qualified Lamdu.Sugar.Convert.Inject as ConvertInject
 import qualified Lamdu.Sugar.Convert.Input as Input
 import           Lamdu.Sugar.Convert.Monad (ConvertM)
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
@@ -46,6 +47,7 @@ convert ::
 convert posInfo app@(V.App funcI argI) exprPl =
     runMatcherT $
     do
+        convertEmptyInject app exprPl & justToLeft
         convertGetFieldParam app exprPl & MaybeT & justToLeft
         (funcS, argS) <-
             do
@@ -88,6 +90,18 @@ defParamsMatchArgs var record frozenDeps =
                 & Set.fromList
         guard (sFields == Map.keysSet (defArgs ^. freExtends))
     & Lens.has Lens._Just
+
+convertEmptyInject ::
+    (Monad m, Monoid a) =>
+    V.App V.Term # Ann (Input.Payload m a) ->
+    Input.Payload m a # V.Term ->
+    MaybeT (ConvertM m) (ExpressionU v m a)
+convertEmptyInject app applyPl =
+    app ^?
+    Lens.filteredBy (V.appArg . hVal . V._BLeaf . V._LRecEmpty) .
+    V.appFunc . hVal . V._BLeaf . V._LInject & maybeToMPlus
+    >>= (\tag -> ConvertInject.convert BodyEmptyInject tag applyPl & lift)
+    <&> annotation . pInput . Input.userData <>~ app ^. hfolded1 . hAnn . Input.userData
 
 convertPostfix ::
     (Monad m, Monoid a, Recursively HFoldable h) =>
