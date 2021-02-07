@@ -9,6 +9,7 @@ import qualified Control.Lens as Lens
 import           Control.Monad (MonadPlus)
 import           Control.Monad.State (StateT)
 import qualified Control.Monad.State as State
+import           Data.Functor (($>))
 import           Hyper
 import           Hyper.Infer (InferResult, inferResult, inferBody)
 import           Hyper.Type.AST.FuncType
@@ -197,10 +198,14 @@ termTransformsWithModify ::
     Ann a # V.Term ->
     StateT InferState m (Ann a # V.Term)
 termTransformsWithModify _ _ _ _ v@(Ann _ V.BLam {}) = pure v -- Avoid creating a surprise redex
-termTransformsWithModify _ _ _ _ v@(Ann pl0 (V.BInject (V.Inject tag (Ann pl1 (V.BLeaf V.LHole))))) =
-    -- Variant:<hole> ~~> Variant.
-    pure (Ann pl0 (V.BInject (V.Inject tag (Ann pl1 (V.BLeaf V.LRecEmpty)))))
-    <|> pure v
+termTransformsWithModify _ srcScope _ getInferred v@(Ann pl0 (V.BInject (V.Inject tag (Ann pl1 (V.BLeaf V.LHole))))) =
+    getInferred pl1 ^. inferResult & lookupBody & liftInfer ()
+    >>=
+    \case
+    Just (T.TRecord t) ->
+        liftInfer srcScope (newTerm T.REmpty >>= unify t) $> Ann pl0 (V.BInject (V.Inject tag (Ann pl1 (V.BLeaf V.LRecEmpty))))
+        <|> pure v
+    _ -> pure v -- this shouldn't happend
 termTransformsWithModify mkVar srcScope mkPl getInferred src =
     getInferred (src ^. hAnn) ^. inferResult & lookupBody & liftInfer ()
     >>=
