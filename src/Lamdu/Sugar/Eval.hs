@@ -147,6 +147,7 @@ instance AddEval Term where
         BodySimpleApply (App x y) -> App (addToNode r x) (addToNode r y) & BodySimpleApply
         BodyRecord c -> addToBody r i c & BodyRecord
         BodyInject x -> BodyInject x
+        BodyEmptyInject x -> BodyEmptyInject x
         BodyIfElse x -> addToBody r i x & BodyIfElse
         BodyLam lam -> lam & lamFunc %~ addToBody r i & BodyLam
         BodyToNom nom -> nom & nVal %~ addToNode r & BodyToNom

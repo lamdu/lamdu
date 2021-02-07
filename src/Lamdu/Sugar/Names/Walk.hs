@@ -369,6 +369,7 @@ toBody :: MonadNaming m => WalkBody Term v0 v1 m o a
 toBody v =
     \case
     BodyInject       x -> x & toTagRefOf Tag <&> BodyInject
+    BodyEmptyInject  x -> x & toTagRefOf Tag <&> BodyEmptyInject
     BodyRecord       x -> x & toComposite v <&> BodyRecord
     BodyIfElse       x -> x & toIfElse v <&> BodyIfElse
     BodySimpleApply  x -> x & (morphTraverse1 . toExpression) v <&> BodySimpleApply

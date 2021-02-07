@@ -14,7 +14,7 @@ module Lamdu.Sugar.Types.Expression
 
     , Term(..)
         , _BodyLam, _BodyLabeledApply, _BodySimpleApply
-        , _BodyGetVar, _BodyInject, _BodyHole
+        , _BodyGetVar, _BodyInject, _BodyEmptyInject, _BodyHole
         , _BodyLiteral, _BodyRecord, _BodyFragment
         , _BodyToNom, _BodyIfElse, _BodyPostfixApply, _BodyPostfixFunc
     , AnnotatedArg(..), aaTag, aaExpr
@@ -176,6 +176,7 @@ data Term v name i o k
     | BodyRecord (Composite v name i o k)
     | BodyIfElse (IfElse v name i o k)
     | BodyInject (TagRef name i o)
+    | BodyEmptyInject (TagRef name i o) -- Inject of {}
     | BodyGetVar (GetVar name o)
     | BodyToNom (Nominal v name i o k)
     | BodyPostfixFunc (PostfixFunc v name i o k)

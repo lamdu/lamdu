@@ -119,6 +119,7 @@ instance MonadTransaction m i => Order v name i o (Sugar.Term v name i o) where
     order (Sugar.BodySimpleApply x) = htraverse1 orderNode x <&> Sugar.BodySimpleApply
     order (Sugar.BodyPostfixApply x) = order x <&> Sugar.BodyPostfixApply
     order x@Sugar.BodyInject{} = pure x
+    order x@Sugar.BodyEmptyInject{} = pure x
     order x@Sugar.BodyLiteral{} = pure x
     order x@Sugar.BodyGetVar{} = pure x
     order x@Sugar.BodyPlaceHolder{} = pure x

@@ -243,6 +243,7 @@ instance BodyAnnotations Term where
     bodyAnnotations f (BodyToNom x) = (nVal . annotations) f x <&> BodyToNom
     bodyAnnotations f (BodySimpleApply x) = (morphTraverse1 . annotations) f x <&> BodySimpleApply
     bodyAnnotations _ (BodyInject x) = BodyInject x & pure
+    bodyAnnotations _ (BodyEmptyInject x) = BodyEmptyInject x & pure
     bodyAnnotations f (BodyLabeledApply x) = bodyAnnotations f x <&> BodyLabeledApply
     bodyAnnotations _ (BodyHole x) = BodyHole x & pure
     bodyAnnotations f (BodyFragment x) = bodyAnnotations f x <&> BodyFragment
