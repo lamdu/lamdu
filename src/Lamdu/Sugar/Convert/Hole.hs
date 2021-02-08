@@ -302,10 +302,9 @@ loadNewDeps currentDeps scope x =
         scopeVars = scope ^. V.scopeVarTypes & Map.keysSet
         newDeps ::
             Ord r =>
-            Getting' Deps (Map r x) -> Folding' (Ann (Const ()) # V.Term) r -> [r]
+            Getting' Deps (Map r x) -> Folding' (Ann a # V.Term) r -> [r]
         newDeps depsLens valLens =
-            Set.fromList ((x & hflipped %~ hmap (const (const (Const ())))) ^.. valLens)
-            `Set.difference` Map.keysSet (currentDeps ^. depsLens)
+            Set.fromList (x ^.. valLens) `Set.difference` Map.keysSet (currentDeps ^. depsLens)
             & Set.toList
         newDepVars = newDeps depsGlobalTypes (ExprLens.valGlobals scopeVars)
         newNoms = newDeps depsNominals ExprLens.valNominals

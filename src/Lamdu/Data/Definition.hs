@@ -62,8 +62,5 @@ pruneDefExprDeps defExpr =
     & depsNominals %~ setMapIntersection valNoms
     where
         val = defExpr ^. expr
-        valVars =
-            (val & hflipped %~ hmap (\_ _ -> Const ()))
-            ^.. ExprLens.valGlobals mempty
-            & Set.fromList
+        valVars = val ^.. ExprLens.valGlobals mempty & Set.fromList
         valNoms = val ^.. ExprLens.valNominals & Set.fromList

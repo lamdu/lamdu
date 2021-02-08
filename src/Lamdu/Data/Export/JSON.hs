@@ -141,9 +141,7 @@ instance ExportSubexpr (HCompose Prune T.Row)
 exportVal :: Monad m => Ann (HRef m) # V.Term -> Export m ()
 exportVal x =
     do
-        (x & hflipped %~ hmap (const (const (Const ()))))
-            ^.. ExprLens.valGlobals mempty
-            & traverse_ exportDef
+        x ^.. ExprLens.valGlobals mempty & traverse_ exportDef
         x ^.. ExprLens.valTags & traverse_ exportTag
         x ^.. ExprLens.valNominals & traverse_ exportNominal
         () <$ unwrapM (Proxy @ExportSubexpr ##>> \n -> n ^. hVal <$ exportSubexpr n) x
