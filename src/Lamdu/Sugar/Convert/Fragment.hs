@@ -22,10 +22,12 @@ import           Hyper
 import           Hyper.Class.Infer.InferOf (InferOfConstraint, inferOfConstraint)
 import           Hyper.Infer (InferResult(..), inferResult, inferUVarsApplyBindings)
 import           Hyper.Type.AST.FuncType (FuncType(..))
+import qualified Hyper.Type.AST.Nominal as N
 import           Hyper.Unify (Unify(..), BindingDict(..), unify, applyBindings)
 import           Hyper.Unify.Binding (UVar)
 import           Hyper.Unify.Term (UTerm(..), UTermBody(..))
 import           Lamdu.Calc.Infer (InferState, runPureInfer, PureInfer)
+import qualified Lamdu.Calc.Infer as Infer
 import qualified Lamdu.Calc.Lens as ExprLens
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
@@ -77,11 +79,11 @@ mkOptions posInfo sugarContext argI argS exprPl =
     <&>
     ( \mkOpts ->
         Hole.addWithoutDups
-        <$> mkOpts
-        <*> ( runStateT (mkAppliedHoleSuggesteds sugarContext argI exprPl) (sugarContext ^. ConvertM.scInferContext)
+        <$> ( runStateT (mkAppliedHoleSuggesteds sugarContext argI exprPl) (sugarContext ^. ConvertM.scInferContext)
                 & ListClass.toList
                 <&> Lens.mapped %~ fst
             )
+        <*> mkOpts
         <&> Lens.mapped %~ snd
     )
     >>= ConvertM.convertOnce
@@ -105,9 +107,18 @@ mkAppliedHoleSuggesteds ::
         (V.Val (), HoleOption InternalName (OnceT (T m)) (T m))
 mkAppliedHoleSuggesteds sugarContext argI exprPl =
     do
-        (sugg, newInferCtx) <-
+        deps <-
+            argI ^.. hAnn . Input.inferredType . _Pure . T._TInst . N.nId
+            & Hole.loadDeps [] & lift & lift & lift
+        let srcScope = exprPl ^. Input.inferScope
+        let (scope, ctx0) =
+                runStateT
+                (liftPureInfer srcScope (Infer.loadDeps deps ?? srcScope))
+                (sugarContext ^. ConvertM.scInferContext)
+                ^?! Lens._Right
+        (sugg, ctx1) <-
             runStateT
-            ( Suggest.termTransforms ((lift . lift . lift) Hole.genLamVar) (exprPl ^. Input.inferScope) (WriteNew :*:) (^. _2)
+            ( Suggest.termTransforms ((lift . lift . lift) Hole.genLamVar) scope (WriteNew :*:) (^. _2)
                 ( argI & hflipped %~
                     hmap
                     ( Proxy @(Recursively (InferOfConstraint HFunctor)) #*#
@@ -117,9 +128,9 @@ mkAppliedHoleSuggesteds sugarContext argI exprPl =
                         onPl
                     )
                 )
-            ) (sugarContext ^. ConvertM.scInferContext)
+            ) ctx0
         mkOptionFromFragment
-            (sugarContext & ConvertM.scInferContext .~ newInferCtx)
+            (sugarContext & ConvertM.scInferContext .~ ctx1)
             exprPl sugg
             & lift & lift
             <&> (,) (sugg & hflipped %~ hmap (\_ _ -> Const ()))

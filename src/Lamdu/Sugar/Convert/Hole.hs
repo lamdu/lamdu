@@ -5,7 +5,7 @@ module Lamdu.Sugar.Convert.Hole
       -- Used by Convert.Fragment:
     , Preconversion, ResultGen
     , ResultProcessor(..)
-    , mkOptions, detachValIfNeeded, mkHoleSearchTerms, loadNewDeps
+    , mkOptions, detachValIfNeeded, mkHoleSearchTerms, loadNewDeps, loadDeps
     , mkResult
     , mkOption, addWithoutDups
     , assertSuccessfulInfer
@@ -278,15 +278,14 @@ loadDeps :: Monad m => [V.Var] -> [T.NominalId] -> T m Deps
 loadDeps vars noms =
     Deps
     <$> (traverse loadVar vars <&> Map.fromList)
-    <*> (traverse loadNom noms <&> Map.fromList)
+    <*> (traverse loadNom noms <&> Map.fromList . ListClass.catMaybes)
     where
         loadVar globalId =
             ExprIRef.defI globalId & Transaction.readIRef
             <&> (^. Def.defType) <&> (,) globalId
         loadNom nomId =
             Load.nominal nomId
-            <&> fromMaybe (error "Opaque nominal used!")
-            <&> (,) nomId
+            <&> Lens.mapped %~ (,) nomId
 
 type Getting' r a = Lens.Getting a r a
 type Folding' r a = Lens.Getting (Endo [a]) r a
