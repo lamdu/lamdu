@@ -390,19 +390,16 @@ mkOptionFromFragment sugarContext exprPl x =
     where
         res =
             do
-                newDeps <- Hole.loadNewDeps (depsProp ^. Property.pVal) (exprPl ^. Input.inferScope) x
+                newDeps <- Hole.loadNewDeps (depsProp ^. Property.pVal) (exprPl ^. Input.inferScope) x & lift
                 let newSugarContext =
                         sugarContext
                         & ConvertM.scInferContext .~ inferCtx
                         & ConvertM.scFrozenDeps . Property.pVal .~ newDeps
                 let updateDeps = (depsProp ^. Property.pSet) newDeps
-                pure
-                    ( resultScore resolved
-                    , Hole.mkResult (replaceFragment topEntityId 0)
-                        updateDeps exprPl result
-                        & ConvertM.run newSugarContext & join
-                    )
-                & lift
+                Hole.mkResult (replaceFragment topEntityId 0)
+                    updateDeps exprPl result
+                    & ConvertM.run newSugarContext
+                    <&> (,) (resultScore resolved)
                 <&> pure & ListClass.joinL
         depsProp = sugarContext ^. ConvertM.scFrozenDeps
         (result, inferCtx) =
