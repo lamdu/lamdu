@@ -4,22 +4,11 @@
 
 ### NodeJS
 
-To drastically speed up Lamdu's installation under any OS, you can install
-an appropriate version of NodeJS beforehand, such that `node` is in your `$PATH`. The version has to be at least 6.2.1 but below 8.0.0 (due to the removal of tail call optimization from node at version 8) <sup>1</sup>.
+To drastically speed up Lamdu's installation under any OS, you can install an appropriate version of NodeJS beforehand, such that `node` is in your `$PATH`. The version has to be at least 6.2.1.
 
-Enter `node -v` into terminal. If NodeJS is installed (and in your `$PATH`),
-this will print your current version. If it isn't, you'll get an error.
+Enter `node -v` into terminal. If NodeJS is installed (and in your `$PATH`), this will print your current version. If it isn't, you'll get an error.
 
-If you do not install NodeJS, Lamdu's installation will build it from
-source.
-
-<sup>
-**1. For Fedora Users:**
-Fedora packages have very long names. This may lead to some confusion.
-Consider `nodejs-1:6.11.2-1.fc25.x86_64`.
-This example indicates a NodeJS version of `6.11`, plus a little.
-The `-1:` is not a part of the version.
-</sup>
+If you do not install NodeJS, Lamdu's installation will build it from source.
 
 ## Platforms
 
@@ -38,25 +27,12 @@ stack install
 
 ### ubuntu
 
-Optional: Install NodeJS from node's apt repository:
-
-```shell
-curl -sL https://deb.nodesource.com/setup_6.x | sudo -E bash -
-NODE=`apt-cache policy nodejs | egrep -v "Installed" | egrep -o "(6\..*nodesource\w*)"`
-echo "About to install node version" $NODE
-```
-... check it outputs something like `About to install node version 6.14.1-1nodesource1`, and then run:
-```shell
-sudo apt-get install -y nodejs=$NODE
-```
-Run `node -v` to check you've ended up with a 6.x release rather than 8.x or later.
-
 Then to install lamdu - requires [stack](https://github.com/commercialhaskell/stack/releases) (version 1.6.1 or above):
 
 ```shell
 sudo apt-get update -qq
-sudo apt-get install git zlib1g-dev libglew-dev libleveldb-dev -yq
-sudo apt-get install libxrandr-dev libxi-dev libxcursor-dev libxinerama-dev -yq
+sudo apt-get install git nodejs zlib1g-dev libglew-dev libleveldb-dev -yq
+sudo apt-get install libxxf86vm-dev libxrandr-dev libxi-dev libxcursor-dev libxinerama-dev -yq
 git clone --recursive https://github.com/lamdu/lamdu
 cd lamdu
 stack setup
@@ -75,7 +51,7 @@ NOTE: `~/.local/bin` should be in your `$PATH` for the upgraded `stack` to take 
 
 ### fedora
 
-Optional: Install NodeJS with `sudo dnf insall nodjs`.
+Optional: Install NodeJS with `sudo dnf insall nodejs`.
 Please see the starred note under "NodeJS & Build Time".
 
 requires [stack](https://github.com/commercialhaskell/stack/releases) (1.6.1 or above)
