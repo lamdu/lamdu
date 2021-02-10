@@ -9,7 +9,6 @@ module Lamdu.GUI.Annotation
     , PostProcessAnnotation, WhichAnnotation(..), ShrinkRatio
     , postProcessAnnotationFromSelected
 
-    , evaluationResult
     , addAnnotationBackground -- used for open holes
     , maybeAddAnnotationPl
     ) where
@@ -266,17 +265,6 @@ maybeAddAnnotationPl pl =
     where
         isExprSelected = GuiState.isSubCursor ?? WidgetIds.fromExprPayload pl
         animId = WidgetIds.fromExprPayload pl & Widget.toAnimId
-
-evaluationResult ::
-    Monad i =>
-    Sugar.Payload (Sugar.Annotation (Sugar.EvaluationScopes name i) name) name i o ->
-    GuiM env i o (Maybe (Sugar.ResVal name))
-evaluationResult pl =
-    do
-        scopeId <- GuiM.readMScopeId
-        case pl ^? Sugar.plAnnotation . Sugar._AnnotationVal of
-            Nothing -> pure Nothing
-            Just x -> valOfScope x scopeId & GuiM.im <&> Lens._Just %~ erdVal
 
 data EvalAnnotationOptions
     = NormalEvalAnnotation
