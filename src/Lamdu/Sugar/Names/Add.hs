@@ -21,7 +21,6 @@ import           Data.Foldable (fold)
 import           Data.MMap (MMap(..))
 import qualified Data.MMap as MMap
 import qualified Data.Map as Map
-import           Data.Maybe (mapMaybe)
 import qualified Data.Set as Set
 import           Data.Set.Ordered (OrderedSet)
 import qualified Data.Set.Ordered as OrderedSet
@@ -289,9 +288,6 @@ initialP2Env env (P1Out globals locals contexts tvs texts) =
     , _p2TagTexts = tagTexts
     , _p2Texts = texts ^. traverse . Tag.name . Lens.to Set.singleton
     , _p2TagSuffixes = toSuffixMap collisions
-    , _p2TextsAbove =
-        globals ^.. Lens.itraversed . Lens.asIndex
-        & mapMaybe lookupText & Set.fromList
     , _p2TagsAbove = uncolliders globals
         -- all globals are "above" everything, and locals add up as
         -- we descend
@@ -299,7 +295,6 @@ initialP2Env env (P1Out globals locals contexts tvs texts) =
     , _p2NameTexts = env ^. has
     }
     where
-        lookupText tag = tagTexts ^? Lens.ix tag . ttText
         tagTexts = makeTagTexts env texts
         top = colliders locals <> globals & uncolliders
         -- TODO: Use OrderedSet for nice ordered suffixes
@@ -333,8 +328,6 @@ data P2Env = P2Env
     , _p2TagSuffixes :: Map TaggedVarId Int
         -- ^ When tags collide in the overlapping scopes, the tag gets
         -- a different suffix for each of its entities in ALL scopes
-    , _p2TextsAbove :: Set Text
-        -- ^ Used to prevent auto-names from re-using texts from above
     , _p2TagsAbove :: MMap T.Tag Clash.Info
         -- ^ All global tags AND local tags from above -- used to
         -- generate "UnknownCollision" inside hole results
@@ -456,9 +449,7 @@ p2cpsNameConvertor (P1Name (P1TagName aName isOp texts) tagsBelow isAutoGen) =
         (newNameForm, env1) <-
             p2tagName tagsBelow aName texts isAutoGen isOp
             <&> (, env0 & p2TagsAbove . Lens.at tag %~ Just . maybe isClash (Clash.collide isClash))
-        visText <- visible newNameForm <&> (^. _1 . ttText)
-        let env2 = env1 & p2TextsAbove %~ Set.insert visText
-        res <- Reader.local (const env2) inner
+        res <- Reader.local (const env1) inner
         pure (newNameForm, res)
     where
         isClash = Clash.infoOf aName
