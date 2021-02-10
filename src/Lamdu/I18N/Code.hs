@@ -19,7 +19,6 @@ data Code a = Code
     , _repl :: a
     , -- Case
       _case_ :: a
-    , _of_ :: a
     , _absurd :: a
     , -- If:
       _if_ :: a

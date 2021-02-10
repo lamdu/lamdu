@@ -20,7 +20,6 @@
         "code": {
             "let_": "let",
             "case_": "case",
-            "of_": "of",
             "if_": "if",
             "else_": "else",
             "elseShort": "el",
