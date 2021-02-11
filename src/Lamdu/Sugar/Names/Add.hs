@@ -444,13 +444,9 @@ p2cpsNameConvertor :: Walk.CPSNameConvertor (Pass2MakeNames i o)
 p2cpsNameConvertor (P1Name (P1AnonName uuid) _ _) = p2globalAnon uuid & liftCPS
 p2cpsNameConvertor (P1Name (P1TagName aName isOp texts) tagsBelow isAutoGen) =
     CPS $ \inner ->
-    do
-        env0 <- Lens.view id
-        (newNameForm, env1) <-
-            p2tagName tagsBelow aName texts isAutoGen isOp
-            <&> (, env0 & p2TagsAbove . Lens.at tag %~ Just . maybe isClash (Clash.collide isClash))
-        res <- Reader.local (const env1) inner
-        pure (newNameForm, res)
+    (,)
+    <$> p2tagName tagsBelow aName texts isAutoGen isOp
+    <*> Reader.local (p2TagsAbove . Lens.at tag %~ Just . maybe isClash (Clash.collide isClash)) inner
     where
         isClash = Clash.infoOf aName
         tag = aName ^. Annotated.tag
