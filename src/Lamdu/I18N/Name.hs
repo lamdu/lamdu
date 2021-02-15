@@ -11,8 +11,6 @@ import           Lamdu.Prelude
 data Name a = Name
     { _unnamed :: a
     , _emptyName :: a
-    , _autoNamePrefixes :: a
-    , _autoNameFuncPrefixes :: a
     } deriving (Eq, Functor, Foldable, Traversable)
 Lens.makeLenses ''Name
 

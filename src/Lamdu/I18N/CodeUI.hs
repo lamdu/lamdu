@@ -37,14 +37,10 @@ data CodeUI a = CodeUI
     , _deleteField :: a
     , _addAlt :: a
     , _deleteAlt :: a
-    , _toLambdaCase :: a
     , _open :: a
     , _close :: a
     , _shrinkLambdaParams :: a
     , _expandLambdaParams :: a
-    , _getField :: a
-    , _dot :: a
-    , _deleteDot :: a
     , _moveDown :: a
     , _moveUp :: a
     , _presentationMode :: a
@@ -77,7 +73,6 @@ data CodeUI a = CodeUI
     , _moveBefore :: a
     , _moveAfter :: a
     , _fragment :: a
-    , _showResults :: a
     , _heal :: a
     , _setToHole :: a
     , _negate :: a
