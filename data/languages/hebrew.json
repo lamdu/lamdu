@@ -97,14 +97,10 @@
             "deleteField": "מחק שדה",
             "addAlt": "הוסף אפשרות",
             "deleteAlt": "מחק אפשרות",
-            "toLambdaCase": "תרגם להתאמת למדה",
             "open": "פתח",
             "close": "סגור",
             "shrinkLambdaParams": "כווץ פרמטרי למדה",
             "expandLambdaParams": "הרחב פרמטרי למדה",
-            "getField": "גש לשדה",
-            "dot": "נקודה",
-            "deleteDot": "מחק נקודה",
             "moveDown": "הזז למטה",
             "moveUp": "הזז למעלה",
             "presentationMode": "מצב תצוגה",
@@ -135,7 +131,6 @@
             "moveBefore": "הזז ללפני",
             "moveAfter": "הזז לאחרי",
             "fragment": "רסיס",
-            "showResults": "הצג תוצאות",
             "heal": "אחה",
             "add": "הוסף",
             "letClause": "השמה",
@@ -169,9 +164,7 @@
         },
         "name": {
             "unnamed": "פלוני",
-            "emptyName": "(ריק)",
-            "autoNamePrefixes": "א ב ג ד ה ו",
-            "autoNameFuncPrefixes": "פ צ"
+            "emptyName": "(ריק)"
         },
         "versioning": {
             "branches": "ענפים",

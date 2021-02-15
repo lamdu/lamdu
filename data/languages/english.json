@@ -96,14 +96,10 @@
             "deleteField": "Delete Field",
             "addAlt": "Add Alt",
             "deleteAlt": "Delete Alt",
-            "toLambdaCase": "Turn to Lambda-Case",
             "open": "Open",
             "close": "Close",
             "shrinkLambdaParams": "Shrink Lambda Params",
             "expandLambdaParams": "Expand Lambda Params",
-            "getField": "Get field",
-            "dot": "Dot",
-            "deleteDot": "Delete dot",
             "moveDown": "Move down",
             "moveUp": "Move up",
             "presentationMode": "Presentation Mode",
@@ -134,7 +130,6 @@
             "moveBefore": "Move before",
             "moveAfter": "Move after",
             "fragment": "Fragment",
-            "showResults": "Show results",
             "heal": "Heal",
             "add": "Add",
             "letClause": "Let Clause",
@@ -156,9 +151,7 @@
         },
         "name": {
             "unnamed": "Unnamed",
-            "emptyName": "(empty)",
-            "autoNamePrefixes": "x y z w u v",
-            "autoNameFuncPrefixes": "f g"
+            "emptyName": "(empty)"
         },
         "statusBar": {
             "statusBar": "Status Bar",
