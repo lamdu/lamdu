@@ -9,9 +9,9 @@ as there would be no way for the compiler to know which variable is being referr
 
 ## Name overloading
 
-Some langauges, like C++, do have some mechanisms for "overloading".
+Some langauges, like C++, have some mechanisms for "overloading".
 
-The compiler infers which of several functions with the same name to call
+The compiler resolves which of several functions with the same name to call
 based on the "function signature" inferred at the call site.
 
 ## When names clash in Lamdu
@@ -21,7 +21,7 @@ because in the stored AST, variables are referred to by unique identifiers,
 which are different from their user-readable displayed names.
 
 But the compiler isn't the only one who needs to distinguish between variables,
-the programmer looking at the code also needs to distinguish between them!
+the programmer looking at the code should be able to distinguish between them too!
 
 For this reason when the user gives two variables the same name,
 they get displayed with "disambiguation suffixes" added to their names.
@@ -30,8 +30,7 @@ In a similar manner to "overloading",
 when it's clear from context that the same name refers to different entities,
 no disambiguation suffixes are added.
 
-As an example: `1..100` and `1..100 step=2` are two different `..` definitions.
-Their name is the same (`..`) but the usage disambiguates (different parameter list).
+As an example: `1..100` and `1..100 step=2` are two uses of functions called "`..`", but their usage disambiguates (different parameter list).
 
 ## Auto-generated names in Lamdu
 
@@ -40,12 +39,7 @@ i.e: one may create code without naming all variables.
 But variables would still need to be displayed,
 and when unnamed by the user they will get auto-generated names.
 
-Auto-generated names are often fine for small lambdas like `x → x+1`, and not having to name those
-variables is convenient.
-
-Lamdu also makes sure that the auto-generated names will never clash with other names in scope. So
-if the user renames a variable so that it has the same name as an auto-generated name had in the
-same scope, the generated name automatically changes, so that there will not be a clash!
+Auto-generated names are often fine for small lambdas like `num → num + 1`, and not having to name those variables is convenient.
 
 To clarify that the auto-generated names are not meaningful, ephemeral and could automatically
 change, they are displayed with *italic* fonts at their binding site.
@@ -64,9 +58,6 @@ each other. In this case all of them get different disambiguation suffixes.
 
 #### Clashes in hole results
 
-For any names introduced inside hole results (in lambdas), they are auto-generated so as not to
-clash with anything.
-
 When browsing global variables or Nominal types in hole results - that doesn't change the expression
 outside the hole, so currently there are no disambiguation suffixes for these. The name inside the
 hole result gets a question-mark as its disambiguation suffix in this cases.
@@ -82,7 +73,7 @@ with "syntax sugars"), and the relevant code for it is under `Lamdu.Sugar.Names`
 
 * `Lamdu.Sugar.Names.Add` is given expressions with `InternalName`s and converts them to `Name`s.
 
-To find which names clash with which, and auto-generating non-clashing names, `Add` needs to do
+To find which names clash with which, and auto-generating names, `Add` needs to do
 three passes on the expression tree.
 
 These passes "walk" on the tree and change its "name" type-parameter. Because the traversal of the
@@ -91,14 +82,6 @@ that common AST-traversal code could be used for all of them. It can be thought 
 traversal (in the lens sense) that also informs about scoping rules.
 
 * `Lamdu.Sugar.Names.Walk` defines the `MonadNaming` class and the expressions traversals for it.
-
-The `MonadNaming` class also defines three type families, `OldName`, `NewName`, and `TM` (**TODO**:
-better name?), so that the walking functions have types such as:
-
-    toWorkArea ::
-        MonadNaming m =>
-        WorkArea (OldName m) (TM m) a ->
-        m (WorkArea (NewName m) (TM m) a)
 
 The three passes each convert an `OldName m` to a `NewName m` and are:
 
