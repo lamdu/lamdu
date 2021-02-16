@@ -52,7 +52,7 @@ holeSearchTerm e HoleLet = [e ^. has . Texts.let_]
 holeSearchTerm e HoleLambda = [e ^. has . Texts.lambda, "\\", "Λ", "λ", "->", "→"]
 holeSearchTerm e HoleIf = [e ^. has . Texts.if_]
 holeSearchTerm e HoleCase = ["." <> e ^. has . Texts.case_]
-holeSearchTerm e HoleEmptyCase = [e ^. has . Texts.absurd]
+holeSearchTerm e HoleEmptyCase = [e ^. has . Texts.absurd, "." <> e ^. has . Texts.case_]
 holeSearchTerm _ HoleRecord = ["{}", "()", "[]"]
 holeSearchTerm e HoleParamsRecord = [e ^. has . Texts.paramsRecordOpener]
 
