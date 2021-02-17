@@ -12,7 +12,6 @@ module Graphics.UI.GLFW.Utils
 
 import           Control.Exception (bracket_)
 import           Control.Lens.Operators
-import           Control.Lens.Tuple
 import           Control.Monad (unless)
 import           Data.Foldable (traverse_)
 import           Data.Vector.Vector2 (Vector2(..))
@@ -67,19 +66,6 @@ getPrimaryMonitor :: IO GLFW.Monitor
 getPrimaryMonitor =
     GLFW.getPrimaryMonitor >>= maybe (fail "Cannot get primary monitor") pure
 
-guessMonitor :: GLFW.Window -> IO GLFW.Monitor
-guessMonitor window =
-    GLFW.getWindowMonitor window
-    >>= \case
-    Just monitor -> pure monitor
-    Nothing -> getPrimaryMonitor
-
-stdPixelsPerInch :: Num a => Vector2 a
-stdPixelsPerInch = Vector2 96 96
-
-stdPixelsPerMM :: Fractional a => Vector2 a
-stdPixelsPerMM = stdPixelsPerInch / 25.4
-
 windowSize :: Num a => GLFW.Window -> IO (Vector2 a)
 windowSize window =
     GLFW.getWindowSize window <&> uncurry Vector2 <&> fmap fromIntegral
@@ -91,20 +77,9 @@ framebufferSize window =
 getDisplayScale :: Fractional a => GLFW.Window -> IO (Vector2 a)
 getDisplayScale window =
     do
-        monitor <- guessMonitor window
-        unitsPerMM <-
-            do
-                monitorMM <- GLFW.getMonitorPhysicalSize monitor <&> uncurry Vector2
-                monitorUnits <- getVideoModeSize monitor
-                if monitorMM ^. _1 == 0 || monitorMM ^. _2 == 0
-                    then pure stdPixelsPerMM
-                    else (monitorUnits <&> fromIntegral) / (monitorMM <&> fromIntegral) & pure
-        pixelsPerUnit <-
-            do
-                windowUnits <- windowSize window
-                windowPixels <- framebufferSize window
-                windowPixels / windowUnits & pure
-        pixelsPerUnit * unitsPerMM / stdPixelsPerMM & pure
+        windowUnits <- windowSize window
+        windowPixels <- framebufferSize window
+        windowPixels / windowUnits & pure
 
 charOfKey :: GLFW.Key -> Maybe Char
 charOfKey key =

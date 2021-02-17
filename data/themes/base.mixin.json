@@ -2,7 +2,7 @@
     "animationTimePeriodSec": 0.11,
     "animationRemainInPeriod": 0.2,
     "stdSpacing": [1.0, 0.3],
-    "baseTextSize": 16,
+    "baseTextSize": 24,
     "maxEvalViewSize": 32,
     "valFramePadding": [7.0, 7.0],
     "letItemPadding": [5, 5],
@@ -35,7 +35,7 @@
         "debugInfo"   : { "width": "Monospace"   , "style": "Sans" , "slant": "Roman" , "weight": "Light" }
     },
     "help": {
-        "textSize": 9,
+        "textSize": 14,
         "srcLocColor": null
     },
     "searchTerm": {
