@@ -17,6 +17,7 @@ import Data.Has as X (Has(..))
 import Data.Map as X (Map)
 import Data.Maybe as X (fromMaybe)
 import Data.Text as X (Text)
+import Debug.Trace.Warned as X
 import GHC.Generics as X (Generic, Generic1)
 import GHC.Stack.Types as X (HasCallStack)
 import Generic.Data as X (Generically(..), Generically1(..))
