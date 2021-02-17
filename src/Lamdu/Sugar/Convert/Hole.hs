@@ -268,15 +268,12 @@ mkOptions posInfo resultProcessor holePl =
                 & traverse (\x -> mkOption sugarContext resultProcessor holePl x <&> (,) x)
                 <&> addWithoutDups suggesteds
         let globs = globals <&> V.BLeafP . V.LVar . ExprIRef.globalId
+        let common = globs <> nominalOptions <> baseForms
         base <-
-            concat
-            [ holePl ^. Input.localsInScope <&> fst >>= getLocalScopeGetVars sugarContext
-            , globs
-            , nominalOptions
-            , baseForms
-            ] & mk
+            (holePl ^. Input.localsInScope <&> fst >>= getLocalScopeGetVars sugarContext) <> common
+            & mk
         injs <- tags <&> V.BLeafP . V.LInject & mk
-        dots <- (tags <&> V.BLeafP . V.LGetField) <> globs <> baseForms & mk
+        dots <- (tags <&> V.BLeafP . V.LGetField) <> common & mk
         pure (
             \case
             OptsNormal -> base
