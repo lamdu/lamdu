@@ -27,8 +27,8 @@ instance Walk.MonadNaming (CollectNames name) where
     type OldName (CollectNames name) = name
     type NewName (CollectNames name) = name
     type IM (CollectNames name) = Identity
-    opGetName _ _ x = x <$ tell [x]
-    opWithName _ x = x <$ liftCPS (tell [x])
+    opGetName _ _ _ x = x <$ tell [x]
+    opWithName _ _ x = x <$ liftCPS (tell [x])
     opRun = pure (pure . fst . runWriter . runCollectNames)
 
 test :: Test

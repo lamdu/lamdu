@@ -4,6 +4,7 @@ module Lamdu.Sugar.Names.Walk
     , NameType(..), _GlobalDef, _TaggedVar, _TaggedNominal, _Tag
     , isGlobal
     , FunctionSignature(..), Disambiguator
+    , IsUnambiguous(..)
     , NameConvertor, CPSNameConvertor
     , toWorkArea, toDef, toExpression, toBody
     ) where
@@ -44,6 +45,8 @@ data FunctionSignature = FunctionSignature
 
 type Disambiguator = FunctionSignature
 
+data IsUnambiguous = Unambiguous | MayBeAmbiguous
+
 -- TODO: Rename MonadNameWalk
 class (Monad m, Monad (IM m)) => MonadNaming m where
     type OldName m
@@ -51,14 +54,15 @@ class (Monad m, Monad (IM m)) => MonadNaming m where
     type IM m :: * -> *
     opRun :: m (m a -> IM m a)
 
-    opWithName :: NameType -> CPSNameConvertor m
-    opGetName :: Maybe Disambiguator -> NameType -> NameConvertor m
+    opWithName :: IsUnambiguous -> NameType -> CPSNameConvertor m
+    opGetName :: Maybe Disambiguator -> IsUnambiguous -> NameType -> NameConvertor m
 
 toParamRef ::
     MonadNaming m =>
     ParamRef (OldName m) o ->
     m (ParamRef (NewName m) o)
-toParamRef = (pNameRef . nrName) (opGetName Nothing TaggedVar)
+toParamRef p =
+    (pNameRef . nrName) (opGetName Nothing (binderAmiguity (p ^. pBinderMode)) TaggedVar) p
 
 binderVarType :: BinderVarForm name m -> NameType
 binderVarType GetLet = TaggedVar
@@ -71,25 +75,25 @@ toCompositeFields ::
 toCompositeFields (CompositeFields fields mExt) =
     CompositeFields
     <$> traverse toField fields
-    <*> Lens._Just (opGetName Nothing TypeVar) mExt
+    <*> Lens._Just (opGetName Nothing MayBeAmbiguous TypeVar) mExt
     where
         toField (tag, typ) = (,) <$> toTagOf Tag tag <*> toType typ
 
 toTId :: MonadNaming m => TId (OldName m) -> m (TId (NewName m))
-toTId = tidName %%~ opGetName Nothing TaggedNominal
+toTId = tidName %%~ opGetName Nothing MayBeAmbiguous TaggedNominal
 
 toTBody ::
     MonadNaming m =>
     Type (OldName m) # Annotated a ->
     m (Type (NewName m) # Annotated a)
-toTBody (TVar tv) = opGetName Nothing TypeVar tv <&> TVar
+toTBody (TVar tv) = opGetName Nothing MayBeAmbiguous TypeVar tv <&> TVar
 toTBody (TFun (FuncType a b)) = FuncType <$> toType a <*> toType b <&> TFun
 toTBody (TRecord composite) = TRecord <$> toCompositeFields composite
 toTBody (TVariant composite) = TVariant <$> toCompositeFields composite
 toTBody (TInst tid params) =
     TInst <$> toTId tid <*> traverse f params
     where
-        f (k, v) = (,) <$> opGetName Nothing TypeVar k <*> toType v
+        f (k, v) = (,) <$> opGetName Nothing MayBeAmbiguous TypeVar k <*> toType v
 
 toType ::
     MonadNaming m =>
@@ -115,7 +119,7 @@ toBinderVarRef ::
 toBinderVarRef mDisambig (BinderVarRef nameRef form var inline) =
     BinderVarRef
     <$> ( nrName %%~
-          opGetName mDisambig (binderVarType form)
+          opGetName mDisambig MayBeAmbiguous (binderVarType form)
         ) nameRef
     <*> (_GetDefinition . _DefTypeChanged %%~ toDefinitionOutdatedType) form
     ?? var
@@ -128,7 +132,7 @@ toGetVar ::
 toGetVar (GetParam x) = toParamRef x <&> GetParam
 toGetVar (GetBinder x) = toBinderVarRef Nothing x <&> GetBinder
 toGetVar (GetParamsRecord x) =
-    traverse (opGetName Nothing Tag) x <&> GetParamsRecord
+    traverse (opGetName Nothing MayBeAmbiguous Tag) x <&> GetParamsRecord
 
 toNodeActions ::
     MonadNaming m =>
@@ -207,7 +211,7 @@ toLet :: MonadNaming m => WalkBody Let v0 v1 m o a
 toLet v let_@Let{_lName, _lBody, _lValue} =
     do
         (_lName, _lBody) <-
-            unCPS (withTagRef TaggedVar _lName)
+            unCPS (withTagRef MayBeAmbiguous TaggedVar _lName)
             (toNode v (toBinder v) _lBody)
         _lValue <- toAssignment v _lValue
         pure let_{_lName, _lBody, _lValue}
@@ -222,11 +226,11 @@ toAddFirstParam ::
     m (AddFirstParam (NewName m) (IM m) o)
 toAddFirstParam = _PrependParam toTagReplace
 
-toFunction :: MonadNaming m => WalkBody Function v0 v1 m o a
-toFunction v func@Function{_fParams, _fBody, _fAddFirstParam} =
+toFunction :: MonadNaming m => IsUnambiguous -> WalkBody Function v0 v1 m o a
+toFunction u v func@Function{_fParams, _fBody, _fAddFirstParam} =
     (\(_fParams, _fBody) _fAddFirstParam ->
          func{_fParams, _fBody, _fAddFirstParam})
-    <$> unCPS (withBinderParams v _fParams) (toNode v (toBinder v) _fBody)
+    <$> unCPS (withBinderParams u v _fParams) (toNode v (toBinder v) _fBody)
     <*> toAddFirstParam _fAddFirstParam
 
 toBinderPlain :: MonadNaming m => WalkBody AssignPlain v0 v1 m o a
@@ -242,11 +246,11 @@ toAssignment :: MonadNaming m => WalkExpr Assignment v0 v1 m o a
 toAssignment v =
     \case
     BodyPlain x -> toBinderPlain v x <&> BodyPlain
-    BodyFunction x -> toFunction v x <&> BodyFunction
+    BodyFunction x -> toFunction MayBeAmbiguous v x <&> BodyFunction
     & toNode v
 
 toTagOf :: MonadNaming m => NameType -> Sugar.Tag (OldName m) -> m (Sugar.Tag (NewName m))
-toTagOf nameType = tagName (opGetName Nothing nameType)
+toTagOf nameType = tagName (opGetName Nothing MayBeAmbiguous nameType)
 
 toTagReplace ::
     MonadNaming m =>
@@ -274,12 +278,12 @@ toTagRefOf nameType (Sugar.TagRef info actions jumpTo) =
 
 withTagRef ::
     MonadNaming m =>
-    NameType ->
+    IsUnambiguous -> NameType ->
     Sugar.TagRef (OldName m) (IM m) o ->
     CPS m (Sugar.TagRef (NewName m) (IM m) o)
-withTagRef nameType (Sugar.TagRef info actions jumpTo) =
+withTagRef unambig nameType (Sugar.TagRef info actions jumpTo) =
     Sugar.TagRef
-    <$> tagName (opWithName nameType) info
+    <$> tagName (opWithName unambig nameType) info
     <*> liftCPS (toTagReplace actions)
     ?? jumpTo
 
@@ -308,7 +312,7 @@ toHoleOption run0 run1 option =
     option
     { _hoSearchTerms =
         -- Hack: Just using TaggedVar as NameType because disambiguations aren't important in hole results
-        option ^. hoSearchTerms >>= traverse . traverse %%~ run1 . opGetName Nothing TaggedVar
+        option ^. hoSearchTerms >>= traverse . traverse %%~ run1 . opGetName Nothing MayBeAmbiguous TaggedVar
     , _hoResults = option ^. hoResults <&> _2 %~ (>>= holeResultConverted (run0 . toNode pure (toBinder pure)))
     }
 
@@ -365,6 +369,10 @@ toPostfixApply :: MonadNaming m => WalkBody PostfixApply v0 v1 m o a
 toPostfixApply v (PostfixApply a f) =
     PostfixApply <$> toExpression v a <*> toNode v (toPostfixFunc v) f
 
+binderAmiguity :: BinderMode -> IsUnambiguous
+binderAmiguity LightLambda = Unambiguous
+binderAmiguity _ = MayBeAmbiguous
+
 toBody :: MonadNaming m => WalkBody Term v0 v1 m o a
 toBody v =
     \case
@@ -380,7 +388,7 @@ toBody v =
     BodyToNom        x -> x & toNominal v <&> BodyToNom
     BodyGetVar       x -> x & toGetVar <&> BodyGetVar
     BodyLiteral      x -> x & BodyLiteral & pure
-    BodyLam          x -> x & lamFunc (toFunction v) <&> BodyLam
+    BodyLam          x -> x & lamFunc (toFunction (binderAmiguity (x ^. lamMode)) v) <&> BodyLam
     BodyFragment     x -> x & toFragment v <&> BodyFragment
     BodyPlaceHolder    -> pure BodyPlaceHolder
 
@@ -396,11 +404,12 @@ toExpression = toNode <*> toBody
 
 withParamInfo ::
     MonadNaming m =>
+    IsUnambiguous ->
     ParamInfo (OldName m) (IM m) o ->
     CPS m (ParamInfo (NewName m) (IM m) o)
-withParamInfo (ParamInfo tag fpActions) =
+withParamInfo unambig (ParamInfo tag fpActions) =
     ParamInfo
-    <$> withTagRef TaggedVar tag
+    <$> withTagRef unambig TaggedVar tag
     <*> liftCPS ((fpAddNext . Sugar._AddNext) toTagReplace fpActions)
 
 withFuncParam ::
@@ -419,11 +428,12 @@ withFuncParam v f (FuncParam pl varInfo, info) =
 
 withBinderParams ::
     MonadNaming m =>
+    IsUnambiguous ->
     (v0 -> m v1) ->
     SugarElem BinderParams v0 (OldName m) m o ->
     CPS m (SugarElem BinderParams v1 (NewName m) m o)
-withBinderParams v (NullParam x) = withFuncParam v pure x <&> NullParam
-withBinderParams v (Params xs) = traverse (withFuncParam v withParamInfo) xs <&> Params
+withBinderParams _ v (NullParam x) = withFuncParam v pure x <&> NullParam
+withBinderParams u v (Params xs) = traverse (withFuncParam v (withParamInfo u)) xs <&> Params
 
 type Top t n m o a = t (Annotation (EvaluationScopes n (IM m)) n) n (IM m) o (Pl (EvaluationScopes n (IM m)) n m o, a)
 type WalkTop t m o a = Top t (OldName m) m o a -> m (Top t (NewName m) m o a)
@@ -467,4 +477,4 @@ toWorkArea WorkArea { _waPanes, _waRepl, _waGlobals } =
         let globals = _waGlobals >>= run . toGlobals
         WorkArea panes repl globals & pure
     where
-        toGlobals = (traverse . nrName) (opGetName Nothing GlobalDef)
+        toGlobals = (traverse . nrName) (opGetName Nothing MayBeAmbiguous GlobalDef)
