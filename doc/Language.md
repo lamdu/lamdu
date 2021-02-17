@@ -85,23 +85,23 @@ Lamdu does not store code this way, but as an Hyper.
 These are the terms of the language
 (defined by [`Lamdu.Calc.Term`](https://github.com/lamdu/lamdu-calculus/blob/master/src/Lamdu/Calc/Term.hs):
 
-* `?` - Holes (Used to store incomplete code)
+* `_` - Holes (Used to store incomplete code)
 * `5` - Literals
 * Lambda Calculus terms
   * `a` - Variable references
   * `a → b` - Anonymous functions ("lambdas")
   * `a b` - Function application with a single argument
 * Records
-  * `()` - Unit (Empty record)
-  * `{ field : value, rest }` - "Record Extention". Adds a field to a record
+  * `{}` - Unit (Empty record)
+  * `{ field value, rest }` - "Record Extention". Adds a field to a record
   * `record.field` - Get field from a record
 * Variants
-  * `alt: injected` - Inject a value to a variant type
-  * `case λ of { alt: handler, rest }` - Pattern match a single variant constructor, "peeling off" the variant type
+  * `'alt injected` - Inject a value to a variant type
+  * `.case { alt: handler, rest }` - Pattern match a single variant constructor, "peeling off" the variant type
   * `Ø` - The "absurd" (empty variant type) handler (used as "rest" in pattern match when no more cases remain to match)
 * Nominal types
-  * `«Nom value` - Wrap a value in a nominal type
-  * `value »Nom` - Unwrap a value from a nominal type
+  * `Nom value` - Wrap a value in a nominal type
+  * `value.Nom` - Unwrap a value from a nominal type
 
 ### Structural types and Nominal types
 
@@ -187,23 +187,10 @@ one could use both `1 + 2` and `(+) 1 2`.
 Like names, presentation modes are metadata which isn't part of the
 underlying calculus.
 
-Another presentation mode option is "OO", where one of the arguments
-appears after the function name and does not have a label describing
-it because it is the grammatic
-[object](https://en.wikipedia.org/wiki/Object_\(grammar\)) of the verb.
-
-This is similar to some other languages like Objective-C and
-[Swift](https://developer.apple.com/library/content/documentation/Swift/Conceptual/Swift_Programming_Language/Functions.html#//apple_ref/doc/uid/TP40014097-CH10-ID526).
-
 #### Field parameters
 
 Multiple parameters of a function are passed as a record in the underlying
 calculus but are multiple different parameters in the Lamdu Language.
-
-Before parameters are used, type inference which acts on the
-underlying language cannot infer the record type (and its list of fields).
-Therefore parameter lists are stored in out-of-band metadata which is
-used to hint type inference about the appropriate record type and proper sugaring.
 
 In the underlying language, each use of the parameter is a get-field
 expression (`paramRecord.field`) and is sugared to a simple variable
