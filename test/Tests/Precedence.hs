@@ -27,6 +27,7 @@ test =
     , testPunnedArgOp
     , testGetFieldOfApply
     , test445
+    , test513
     ]
 
 -- | Test for issue #471
@@ -84,3 +85,13 @@ test445 =
             hVal . Sugar._BodySimpleApply . Sugar.appArg .
             hVal . Sugar._BodyLabeledApply . Sugar.aSpecialArgs . Sugar._Operator . _1
         i = Stub.litNum
+
+-- Test for https://trello.com/c/xLzHmxpZ/513-disambiguate-applied-get-field-from-operator-function
+test513 :: Test
+test513 =
+    assertBool "Expected paren" (problemPos ^. annotation . _1 . Sugar.piNeedParens)
+    & testCase "513-applied-getfield"
+    where
+        expr = h Stub.$. "minimum" $$ h & Parens.addToExprWith 0
+        problemPos = expr ^?! hVal . Sugar._BodySimpleApply . Sugar.appFunc
+        h = Stub.hole
