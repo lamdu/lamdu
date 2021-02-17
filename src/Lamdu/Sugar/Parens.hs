@@ -167,11 +167,11 @@ loopExprBody parentPrec body_ =
                 needParens = parentPrec ^. before > 13 || parentPrec ^. after >= 13
         postfixApply (PostfixApply a (Ann (Const fa) f)) =
             BodyPostfixApply PostfixApply
-            { _pArg = loopExpr 0 (newParentPrec needParens & after .~ 13) a
+            { _pArg = loopExpr 0 (newParentPrec needParens & after .~ 12) a
             , _pFunc = Ann (Const (ParenInfo 13 False, fa)) (hmap (p #> addToNode) f)
             } & result needParens
             where
-                needParens = parentPrec ^. before >= 13 || parentPrec ^. after > 13
+                needParens = parentPrec ^. before >= 13 || parentPrec ^. after > 12
         labeledApply x =
             case x ^? bareInfix of
             Nothing ->
