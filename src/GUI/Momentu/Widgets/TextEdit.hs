@@ -19,6 +19,7 @@ import qualified Data.Binary.Extended as Binary
 import           Data.Char (isSpace)
 import           Data.List.Extended (genericLength, minimumOn)
 import qualified Data.Text as Text
+import qualified Data.Text.Bidi as Bidi
 import           Data.Vector.Vector2 (Vector2(..))
 import           GUI.Momentu.Align (TextWidget)
 import qualified GUI.Momentu.Align as Align
@@ -184,8 +185,15 @@ enterFromDirection env sz str myId dir =
             FromAbove r -> Rect 0 0    & Rect.horizontalRange .~ r & fromRect
             FromBelow r -> edgeRect _2 & Rect.horizontalRange .~ r & fromRect
         edgeRect l = Rect (0 & Lens.cloneLens l .~ sz ^. Lens.cloneLens l) 0
-        cursorRect = mkCursorRect env cursor str
-        fromRect = cursorNearRect (env ^. has . sTextViewStyle) str
+        cursorRect = mkCursorRect env cursor str & maybeInvert
+        width = sz ^. _1
+        needsInvert
+            | Text.null str = env ^. has == Dir.RightToLeft
+            | otherwise = not (Bidi.isLeftToRight str)
+        maybeInvert
+            | needsInvert = Rect.horizontalRange . Rect.rangeStart %~ (width -)
+            | otherwise = id
+        fromRect = cursorNearRect (env ^. has . sTextViewStyle) str . maybeInvert
 
 eventResult :: Widget.Id -> Text -> Cursor -> (Text, State.Update)
 eventResult myId newText newCursor =
