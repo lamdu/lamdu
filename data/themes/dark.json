@@ -37,7 +37,7 @@
         "nomColor": [1.0, 1.0, 1.0, 0.4],
         "recordTailColor": [0.4, 0.4, 0.4, 1.0],
         "caseTailColor": [0.4, 0.8, 0.4, 1.0],
-        "lightLambdaUnderlineColor": [1.0, 1.0, 1.0, 0.3],
+        "lightLambdaUnderlineColor": [1.0, 1.0, 1.0, 0.8],
         "foreignModuleColor": [1.0, 0.5, 0.6, 1.0],
         "foreignVarColor": [1.0, 0.65, 0.5, 1.0],
         "presentationChoiceColor": [0.4, 0.4, 0.4, 1.0],

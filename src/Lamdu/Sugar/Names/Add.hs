@@ -69,8 +69,8 @@ instance Monad i => MonadNaming (Pass0LoadNames i) where
     type NewName (Pass0LoadNames i) = P0Name
     type IM (Pass0LoadNames i) = i
     opRun = Reader.ask <&> runPass0LoadNames
-    opWithName _ n = CPS $ \inner -> (,) <$> getP0Name n <*> inner
-    opGetName _ _ = getP0Name
+    opWithName _ _ n = CPS $ \inner -> (,) <$> getP0Name n <*> inner
+    opGetName _ _ _ = getP0Name
 
 p0lift :: Monad i => i a -> Pass0LoadNames i a
 p0lift = Pass0LoadNames . lift
@@ -136,8 +136,8 @@ instance Monad i => MonadNaming (Pass1PropagateUp i o) where
     type IM (Pass1PropagateUp i o) = i
     opRun = pure (pure . fst . runPass1PropagateUp)
     opWithName = p1Name Nothing
-    opGetName mDisambiguator nameType p0Name =
-        p1Name mDisambiguator nameType p0Name & runcps
+    opGetName mDisambiguator u nameType p0Name =
+        p1Name mDisambiguator u nameType p0Name & runcps
 
 displayOf :: Has (Texts.Name Text) env => env -> Text -> Text
 displayOf env text
@@ -145,15 +145,15 @@ displayOf env text
     | otherwise = text
 
 p1Name ::
-    Maybe Disambiguator -> Walk.NameType -> P0Name ->
+    Maybe Disambiguator -> Walk.IsUnambiguous -> Walk.NameType -> P0Name ->
     CPS (Pass1PropagateUp i o) P1Name
-p1Name mDisambiguator nameType (P0Name texts isOp internalName) =
+p1Name mDisambiguator u nameType (P0Name texts isOp internalName) =
     -- NOTE: We depend on the anonTag key in the map
     liftCPS (traverse_ tellCtx ctx) *>
     CPS (\inner ->
         tells
         *> inner
-        & Writer.censor (p1lens <>~ myTags) -- censor avoids clash-skipping monoid instance
+        & Writer.censor addTags -- censor avoids clash-skipping monoid instance
         & Writer.listen
         <&> Tuple.swap
         <&> _1 %~ \innerOut ->
@@ -171,12 +171,17 @@ p1Name mDisambiguator nameType (P0Name texts isOp internalName) =
     )
     where
         tells
-            | tag == anonTag = pure ()
-            | otherwise = tag ~~> texts & tellSome p1Texts
-        p1lens
-            | Walk.isGlobal nameType = p1Globals
-            | otherwise = p1Locals . Lens.iso colliders uncolliders  -- makes it have colliders
-        myTags = tag ~~> Collider (Clash.infoOf aName)
+            | tag /= anonTag = tag ~~> texts & tellSome p1Texts
+            | otherwise = pure ()
+        addTags =
+            case u of
+            Walk.Unambiguous -> id
+            Walk.MayBeAmbiguous
+                | Walk.isGlobal nameType -> p1Globals <>~ myTags
+                | otherwise -> p1Locals . col <>~ myTags
+            where
+                col = Lens.iso colliders uncolliders -- makes it have colliders
+                myTags = tag ~~> Collider (Clash.infoOf aName)
         tellCtx x
             | nameType == Walk.TypeVar =
                 tellSome p1TypeVars (OrderedSet.singleton x)
@@ -388,7 +393,7 @@ instance Monad i => MonadNaming (Pass2MakeNames i o) where
     type NewName (Pass2MakeNames i o) = Name
     type IM (Pass2MakeNames i o) = i
     opRun = Lens.view id <&> flip (runReader . runPass2MakeNames) <&> (pure .)
-    opWithName _ = p2cpsNameConvertor
+    opWithName u _ = p2cpsNameConvertor u
     opGetName _ = p2nameConvertor
 
 getTagText :: T.Tag -> Tag.TextsInLang -> Pass2MakeNames i o TagText
@@ -405,31 +410,34 @@ getTagText tag texts =
     & fromMaybe (TagText displayText collision)
 
 p2tagName ::
-    MMap T.Tag Clash.Info -> Annotated.Name -> Tag.TextsInLang -> Bool ->
-    Tag.IsOperator ->
+    Walk.IsUnambiguous -> MMap T.Tag Clash.Info ->
+    Annotated.Name -> Tag.TextsInLang -> Bool -> Tag.IsOperator ->
     Pass2MakeNames i o Name
-p2tagName tagsBelow aName texts isAutoGen isOp =
+p2tagName u tagsBelow aName texts isAutoGen isOp =
     TagName
     <$> getTagText tag texts
-    <*> getCollision tagsBelow aName
+    <*> c
     ?? isAutoGen
     ?? isOp == Tag.IsAnOperator
     <&> NameTag
     where
         tag = aName ^. Annotated.tag
+        c = case u of
+            Walk.Unambiguous -> pure NoCollision
+            Walk.MayBeAmbiguous -> getCollision tagsBelow aName
 
 p2globalAnon :: UUID -> Pass2MakeNames i o Name
 p2globalAnon uuid =
     Lens.view (p2TagSuffixes . Lens.at (TaggedVarId uuid anonTag))
     <&> Unnamed . fromMaybe 0
 
-p2nameConvertor :: Walk.NameType -> P1Name -> Pass2MakeNames i o Name
-p2nameConvertor nameType (P1Name (P1TagName aName isOp texts) tagsBelow isAutoGen) =
-    p2tagName tagsBelow aName texts isAutoGen isOp <&>
+p2nameConvertor :: Walk.IsUnambiguous -> Walk.NameType -> P1Name -> Pass2MakeNames i o Name
+p2nameConvertor u nameType (P1Name (P1TagName aName isOp texts) tagsBelow isAutoGen) =
+    p2tagName u tagsBelow aName texts isAutoGen isOp <&>
     case nameType of
     Walk.TaggedNominal -> _NameTag . tnDisplayText . ttText . Lens.ix 0 %~ Char.toUpper
     _ -> id
-p2nameConvertor nameType (P1Name (P1AnonName uuid) _ _) =
+p2nameConvertor _ nameType (P1Name (P1AnonName uuid) _ _) =
     case nameType of
     Walk.Tag -> error "TODO: Refactor types to rule this out"
     Walk.TaggedVar -> p2globalAnon uuid
@@ -440,16 +448,19 @@ p2nameConvertor nameType (P1Name (P1AnonName uuid) _ _) =
     Walk.TaggedNominal -> p2globalAnon uuid
     Walk.GlobalDef -> p2globalAnon uuid
 
-p2cpsNameConvertor :: Walk.CPSNameConvertor (Pass2MakeNames i o)
-p2cpsNameConvertor (P1Name (P1AnonName uuid) _ _) = p2globalAnon uuid & liftCPS
-p2cpsNameConvertor (P1Name (P1TagName aName isOp texts) tagsBelow isAutoGen) =
+p2cpsNameConvertor :: Walk.IsUnambiguous -> Walk.CPSNameConvertor (Pass2MakeNames i o)
+p2cpsNameConvertor _ (P1Name (P1AnonName uuid) _ _) = p2globalAnon uuid & liftCPS
+p2cpsNameConvertor u (P1Name (P1TagName aName isOp texts) tagsBelow isAutoGen) =
     CPS $ \inner ->
     (,)
-    <$> p2tagName tagsBelow aName texts isAutoGen isOp
-    <*> Reader.local (p2TagsAbove . Lens.at tag %~ Just . maybe isClash (Clash.collide isClash)) inner
+    <$> p2tagName u tagsBelow aName texts isAutoGen isOp
+    <*> Reader.local l inner
     where
         isClash = Clash.infoOf aName
         tag = aName ^. Annotated.tag
+        l = case u of
+            Walk.Unambiguous -> id
+            Walk.MayBeAmbiguous -> p2TagsAbove . Lens.at tag %~ Just . maybe isClash (Clash.collide isClash)
 
 runPasses ::
     ( Has (Texts.Name Text) env
