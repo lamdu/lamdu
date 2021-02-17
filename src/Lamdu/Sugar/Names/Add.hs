@@ -153,7 +153,7 @@ p1Name mDisambiguator nameType (P0Name texts isOp internalName) =
     CPS (\inner ->
         tells
         *> inner
-        & Writer.censor (p1lens <>~ myTags)
+        & Writer.censor (p1lens <>~ myTags) -- censor avoids clash-skipping monoid instance
         & Writer.listen
         <&> Tuple.swap
         <&> _1 %~ \innerOut ->
