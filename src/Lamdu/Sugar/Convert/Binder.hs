@@ -274,14 +274,12 @@ convertLam lam exprPl =
 useNormalLambda ::
     Set InternalName ->
     Function v InternalName i o # Annotated a -> Bool
-useNormalLambda paramNames func
-    | Set.size paramNames < 2 = True
-    | otherwise =
-        foldMapRecursive
-        ( Proxy @SugarLens.SugarExpr ##>>
-            Any . SugarLens.isForbiddenInLightLam
-        ) (func ^. fBody . hVal) ^. Lens._Wrapped
-        || not (allParamsUsed paramNames func)
+useNormalLambda paramNames func =
+    foldMapRecursive
+    ( Proxy @SugarLens.SugarExpr ##>>
+        Any . SugarLens.isForbiddenInLightLam
+    ) (func ^. fBody . hVal) ^. Lens._Wrapped
+    || not (allParamsUsed paramNames func)
 
 class GetParam t where
     getParam :: t f -> Maybe InternalName
