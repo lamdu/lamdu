@@ -279,7 +279,15 @@ useNormalLambda paramNames func =
     ( Proxy @SugarLens.SugarExpr ##>>
         Any . SugarLens.isForbiddenInLightLam
     ) (func ^. fBody . hVal) ^. Lens._Wrapped
-    || not (allParamsUsed paramNames func)
+    || paramsCond
+    where
+        paramsCond = not allParamsUsed && not (null usedParams)
+        allParamsUsed = Set.null (paramNames `Set.difference` usedParams)
+        usedParams =
+            foldMapRecursive
+            ( Proxy @GetParam ##>>
+                (^. Lens._Just . Lens.to Set.singleton) . getParam
+            ) func
 
 class GetParam t where
     getParam :: t f -> Maybe InternalName
@@ -313,18 +321,6 @@ instance GetParam (Binder v InternalName i o) where
 
 instance GetParam (Term v InternalName i o) where
     getParam x = x ^? _BodyGetVar <&> Const >>= getParam
-
-allParamsUsed ::
-    Set InternalName ->
-    Function v InternalName i o # Annotated a -> Bool
-allParamsUsed paramNames func =
-    Set.null (paramNames `Set.difference` usedParams)
-    where
-        usedParams =
-            foldMapRecursive
-            ( Proxy @GetParam ##>>
-                (^. Lens._Just . Lens.to Set.singleton) . getParam
-            ) func
 
 class MarkLightParams t where
     markLightParams :: Set InternalName -> t # Ann a -> t # Ann a
