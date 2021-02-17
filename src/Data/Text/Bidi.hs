@@ -2,7 +2,7 @@
 -- which simply reverses the whole thing if the first letter is an RTL letter.
 
 module Data.Text.Bidi
-    ( toVisual
+    ( toVisual, isLeftToRight
     ) where
 
 import           Data.Char.Properties.BidiCategory (BidiCategory(..), getBidiCategory)
