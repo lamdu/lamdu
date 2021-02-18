@@ -1,0 +1,54 @@
+[
+    {
+        "schemaVersion": 14
+    },
+    {
+        "tagOrder": 0,
+        "tag": "42493a6e6f7468696e67000000000000",
+        "names": {
+            "hebrew": "כלום",
+            "english": "nothing"
+        }
+    },
+    {
+        "tag": null,
+        "lamVar": "a5efa3814e714dea9e4d43e6ece9e3c6"
+    },
+    {
+        "repl": {
+            "val": {
+                "applyFunc": {
+                    "lamParamType": {
+                        "id": "5281df03-56d7-4c0c-90b2-2ddbdca0268b"
+                    },
+                    "lamVar": "a5efa3814e714dea9e4d43e6ece9e3c6",
+                    "id": "94e717ce-d180-4391-8f37-3b413f0f685b",
+                    "lamBody": {
+                        "applyFunc": {
+                            "var": "a5efa3814e714dea9e4d43e6ece9e3c6",
+                            "id": "6f46cf5b-e34b-4db1-9261-ec6815b24278"
+                        },
+                        "applyArg": {
+                            "hole": {},
+                            "id": "8e1a63d1-9aa4-4742-a009-91817769818d"
+                        },
+                        "id": "0c4ae698-3c5c-4f08-8391-c38ddfa1f646"
+                    }
+                },
+                "applyArg": {
+                    "caseRest": {
+                        "id": "badfd5b4-e453-4e2d-b9d2-ade7e52c37be",
+                        "absurd": {}
+                    },
+                    "caseHandler": {
+                        "hole": {},
+                        "id": "7fb6c12a-ac35-4b45-802d-84791c2382fd"
+                    },
+                    "caseTag": "42493a6e6f7468696e67000000000000",
+                    "id": "ab1739c5-31f6-4920-9173-efe90df446be"
+                },
+                "id": "5aa32759-045c-441b-910e-73e9d38a77d0"
+            }
+        }
+    }
+]
