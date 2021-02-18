@@ -97,7 +97,7 @@ workAreaLowLevelLoad =
     <*> (getP (panes codeAnchors) >>= traverse loadPane)
 
 validate ::
-    (NFData v, NFData t, NFData name) =>
+    (NFData v, NFData t, NFData name, HasCallStack) =>
     WorkArea v name (OnceT (T fa)) (T fb)
     (Sugar.Payload v name (OnceT (T fa)) (T fb), (t, [EntityId])) ->
     T ViewM
