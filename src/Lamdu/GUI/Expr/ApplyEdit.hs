@@ -192,4 +192,4 @@ makePostfixFunc (Ann (Const pl) x) =
         Sugar.PfFromNom n -> Ann (Const pl) (Const n) & NominalEdit.makeFromNom
         Sugar.PfGetField f -> GetFieldEdit.make pl f
         <&> (:[])
-    )
+    ) & stdWrap pl
