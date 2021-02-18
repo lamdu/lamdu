@@ -1,0 +1,65 @@
+[
+    {
+        "schemaVersion": 14
+    },
+    {
+        "tagOrder": 0,
+        "tag": "64077ff41e0a8ee59e103f93023ad302",
+        "names": {
+            "hebrew": "א",
+            "english": "a"
+        }
+    },
+    {
+        "tagOrder": 1,
+        "tag": "fa4970527c82ac935af48b0693d96cd9",
+        "names": {
+            "hebrew": "",
+            "english": "b"
+        }
+    },
+    {
+        "tag": null,
+        "lamVar": "c2a727a130bf44f0b7d0099a2389a9e1"
+    },
+    {
+        "repl": {
+            "val": {
+                "applyFunc": {
+                    "lamParamType": {
+                        "id": "928987a8-f6b6-4ef9-a814-8b5eac34904b"
+                    },
+                    "lamVar": "c2a727a130bf44f0b7d0099a2389a9e1",
+                    "id": "cd5ae1ba-933c-45fa-ab82-f85a35ff1f0a",
+                    "lamBody": {
+                        "var": "c2a727a130bf44f0b7d0099a2389a9e1",
+                        "id": "0eec420a-b766-426f-af10-19de008eba2a"
+                    }
+                },
+                "applyArg": {
+                    "extendVal": {
+                        "primBytes": "0101000000000000000700000000000010ffffffffffffffcc",
+                        "primId": "42493a666c6f61740000000000000000",
+                        "id": "37c762a6-4af1-4c6a-8031-324731c9342b"
+                    },
+                    "extendTag": "fa4970527c82ac935af48b0693d96cd9",
+                    "id": "857e96bc-f527-4198-8a51-391956667895",
+                    "extendRest": {
+                        "extendVal": {
+                            "primBytes": "00000000000000000000000000",
+                            "primId": "42493a666c6f61740000000000000000",
+                            "id": "ebd0c4dd-0ae2-43fc-8b10-f61fb79bc80d"
+                        },
+                        "extendTag": "64077ff41e0a8ee59e103f93023ad302",
+                        "id": "8f950e58-ad03-41f7-b31e-c5d195af93fe",
+                        "extendRest": {
+                            "recEmpty": {},
+                            "id": "c913a1e4-05d6-4b28-30cb-f322b5ef361b"
+                        }
+                    }
+                },
+                "id": "476c8b69-82d6-494f-a923-250da6d0fc66"
+            }
+        }
+    }
+]

@@ -1,0 +1,29 @@
+[
+    {
+        "schemaVersion": 14
+    },
+    {
+        "tagOrder": 0,
+        "tag": "42493a6e6f7468696e67000000000000",
+        "names": {
+            "hebrew": "כלום",
+            "english": "nothing"
+        }
+    },
+    {
+        "repl": {
+            "val": {
+                "caseRest": {
+                    "id": "badfd5b4-e453-4e2d-b9d2-ade7e52c37be",
+                    "absurd": {}
+                },
+                "caseHandler": {
+                    "hole": {},
+                    "id": "7fb6c12a-ac35-4b45-802d-84791c2382fd"
+                },
+                "caseTag": "42493a6e6f7468696e67000000000000",
+                "id": "ab1739c5-31f6-4920-9173-efe90df446be"
+            }
+        }
+    }
+]
