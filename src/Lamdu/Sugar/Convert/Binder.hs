@@ -234,13 +234,9 @@ makeAssignment chosenScopeProp binderKind defVar (Ann pl (V.BLam lam)) =
 makeAssignment _chosenScopeProp binderKind _defVar expr =
     do
         addFirstParam <- convertEmptyParams binderKind expr
-        convertBinder expr <&>
-            \(Ann (Const a) x) ->
-            ( Nothing
-            , AssignPlain (AddInitialParam addFirstParam) x
-                & BodyPlain
-                & Ann (Const a)
-            )
+        convertBinder expr
+            <&> annValue %~ BodyPlain . AssignPlain (AddInitialParam addFirstParam)
+    <&> (,) Nothing
 
 convertLam ::
     (Monad m, Monoid a) =>
@@ -381,13 +377,8 @@ convertAssignment binderKind defVar expr =
     \case
     False ->
         convertBinder expr
-        <&>
-        \(Ann (Const a) v) ->
-        ( Nothing
-        , AssignPlain (AddInitialParam (error "TODO: add param when assignment parameters not supported")) v
-            & BodyPlain
-            & Ann (Const a)
-        )
+        <&> annValue %~ BodyPlain . AssignPlain (AddInitialParam (error "TODO: add param when assignment parameters not supported"))
+        <&> (,) Nothing
     True -> makeAssignment (Anchors.assocScopeRef defVar) binderKind defVar expr
 
 convertDefinitionBinder ::
