@@ -28,7 +28,7 @@ import           Lamdu.Sugar.Convert.Binder.Params (ConventionalParams(..), conv
 import           Lamdu.Sugar.Convert.Binder.Redex (Redex(..))
 import qualified Lamdu.Sugar.Convert.Binder.Redex as Redex
 import           Lamdu.Sugar.Convert.Binder.Types (BinderKind(..))
-import           Lamdu.Sugar.Convert.Expression.Actions (addActions, makeActions, subexprPayloads)
+import           Lamdu.Sugar.Convert.Expression.Actions (addActions, makeActions)
 import qualified Lamdu.Sugar.Convert.Input as Input
 import           Lamdu.Sugar.Convert.Monad (ConvertM(..), scScopeInfo, siLetItems)
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
@@ -74,11 +74,7 @@ convertLet pl redex =
         tag <- ConvertTag.taggedEntity (Just vinfo) param >>= ConvertM . lift
         (value, letBody, actions) <-
             (,,)
-            <$> ( convertAssignment binderKind param (redex ^. Redex.arg)
-                    <&> (^. _2)
-                    <&> annotation . pInput . Input.entityId .~
-                        EntityId.ofValI (redex ^. Redex.arg . hAnn . Input.stored . ExprIRef.iref)
-                )
+            <$> (convertAssignment binderKind param (redex ^. Redex.arg) <&> (^. _2))
             <*> ( convertBinder bod
                     & ConvertM.local (scScopeInfo . siLetItems <>~
                         Map.singleton param (makeInline stored redex))
@@ -152,17 +148,7 @@ convertBinder expr@(Ann pl body) =
                 convertSub <- Lens.view (Lens.to ConvertM.scConvertSubexpression)
                 convertSub ConvertM.BinderPos expr
             & localNewExtractDestPos pl
-            <&>
-            \(Ann (Const a) x) ->
-            Ann
-            { _hAnn =
-                a & pInput .~
-                ( pl & Input.userData .~
-                    mconcat (subexprPayloads body (x ^.. SugarLens.childPayloads))
-                )
-                & Const
-            , _hVal = BinderTerm x
-            }
+            <&> annValue %~ BinderTerm
 
 localNewExtractDestPos ::
     Input.Payload m a # V.Term -> ConvertM m b -> ConvertM m b
