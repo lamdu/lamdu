@@ -129,7 +129,7 @@ loopExprBody parentPrec body_ =
         result (parentPrec ^. before >= 13 && parentPrec ^. after == 0) (BodyInject x)
     BodyFragment     x ->
         x
-        & fExpr %~ loopExpr 13 (pure 0)
+        & fExpr %~ loopExpr 13 (pure 1)
         & BodyFragment
         & result True
     where
