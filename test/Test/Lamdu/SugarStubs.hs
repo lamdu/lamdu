@@ -2,8 +2,8 @@
 
 module Test.Lamdu.SugarStubs where
 
-import           Control.Monad.Unit (Unit(Unit))
-import           Data.CurAndPrev (CurAndPrev(CurAndPrev))
+import           Control.Monad.Unit (Unit(..))
+import           Data.CurAndPrev (CurAndPrev(..))
 import           Data.Property (Property(..))
 import           Data.String (IsString(..))
 import           Data.UUID.Types (UUID)

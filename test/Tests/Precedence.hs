@@ -2,6 +2,7 @@
 -- | Test precedences
 module Tests.Precedence where
 
+import           Control.Monad.Unit (Unit(..))
 import qualified Control.Lens as Lens
 import           Control.Lens.Tuple
 import qualified Lamdu.Calc.Term as V
@@ -28,6 +29,7 @@ test =
     , testGetFieldOfApply
     , test445
     , test513
+    , test514
     ]
 
 -- | Test for issue #471
@@ -95,3 +97,28 @@ test513 =
         expr = h Stub.$. "minimum" $$ h & Parens.addToExprWith 0
         problemPos = expr ^?! hVal . Sugar._BodySimpleApply . Sugar.appFunc
         h = Stub.hole
+
+-- Test for https://trello.com/c/BGSSndJi/514-disambiguate-fragments-on-lambdas-vs-in-lambdas
+test514 :: Test
+test514 =
+    assertBool "Expected paren" (problemPos ^. annotation . _1 . Sugar.piNeedParens)
+    & testCase "514-lambda-in-fragment"
+    where
+        expr =
+            Sugar.BodyFragment Sugar.Fragment
+            { Sugar._fExpr =
+                Sugar.BodyLam Sugar.Lambda
+                { Sugar._lamMode = Sugar.NormalBinder
+                , Sugar._lamApplyLimit = Sugar.UnlimitedFuncApply
+                , Sugar._lamFunc =
+                    Stub.node (Sugar.BodyGetVar (Sugar.GetParam
+                        (Sugar.ParamRef (Stub.nameRef (Stub.taggedEntityName "x" "x")) Sugar.NormalBinder)))
+                    $$ Stub.hole
+                    & Stub.funcExpr [("x", "x")]
+                } & Stub.node
+            , Sugar._fHeal = Unit
+            , Sugar._fTypeMismatch = Nothing
+            , Sugar._fOptions = Sugar.Hole mempty
+            } & Stub.node
+            & Parens.addToExprWith 0
+        problemPos = expr ^?! hVal . Sugar._BodyFragment . Sugar.fExpr
