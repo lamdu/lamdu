@@ -516,4 +516,6 @@ testWYTIWYS =
     , wytiwys "sum 1..10.map 2*num " "90" -- TODO: Would be better without requiring the space at the end
     , wytiwys "sum 1..10.map 2*(num+1)" "108"
     , wytiwys "sum 1..10.map 2*(num+1" "108"
+
+    , wytiwys "if 1=2 3 4" "4" -- Type if-expressions without typing the colon and "else:"
     ]
