@@ -3,9 +3,9 @@
     , "^Paths_"
     , "\\._[A-Z][a-zA-Z0-9_]+$" -- Prisms
     -- used during development
+    , "^Debug\\."
     , "^Lamdu\\.Prelude\\.todo$"
     , "^Lamdu\\.Prelude\\.warn$"
-    , "^Lamdu\\.Prelude\\.trace"
     , "^Lamdu\\.Version\\._"
     , "^Test\\.Lamdu\\.Prelude\\.runTest$"
     -- exist with completeness as justification
