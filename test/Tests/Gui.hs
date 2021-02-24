@@ -507,6 +507,7 @@ testWYTIWYS =
     testGroup "WYTIWYS"
     [ wytiwys "1+1" "2"
 
+    , wytiwys "2*3+4" "10"
     , wytiwys "2*(3+4)" "14"
     , wytiwys "2*(3+4" "14" -- Don't have to close paren
 
