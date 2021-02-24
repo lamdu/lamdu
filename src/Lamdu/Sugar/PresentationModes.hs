@@ -67,8 +67,8 @@ makeLabeledApply func args punnedArgs exprPl =
             (punnedArgs <&>
                 \x ->
                 ( x ^?! Sugar.pvVar . hVal . Lens._Wrapped . SugarLens.getVarName . inTag
-                , x ^. Sugar.pvVar . hVal . Lens._Wrapped & Sugar.BodyGetVar &
-                    Ann (Const (x ^. Sugar.pvVar . annotation))
+                , x ^. Sugar.pvVar . hVal . Lens._Wrapped & Sugar.LeafGetVar & Sugar.BodyLeaf
+                    & Ann (Const (x ^. Sugar.pvVar . annotation))
                 ))
             & Map.fromList
         argExpr t = Map.lookup t argsMap <&> (,) t

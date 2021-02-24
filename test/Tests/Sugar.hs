@@ -107,7 +107,7 @@ testUnnamed =
     & testCase "name-of-unnamed"
     where
         verify workArea =
-            case workArea ^?! replBody . _BodyGetVar . _GetBinder . bvNameRef . nrName of
+            case workArea ^?! replBody . _BodyLeaf . _LeafGetVar . _GetBinder . bvNameRef . nrName of
             Unnamed{} -> pure ()
             _ -> error "Unexpected name"
 
@@ -167,7 +167,7 @@ testInline =
                 yOption <-
                     workArea ^?!
                     replBody . _BodyLam . lamFunc . fBody .
-                    hVal . _BinderLet . lBody . hVal . _BinderTerm . _BodyHole
+                    hVal . _BinderLet . lBody . hVal . _BinderTerm . _BodyLeaf . _LeafHole
                     . holeOptions
                     >>= findM isY . (OptsNormal &)
                     <&> fromMaybe (error "expected option")
@@ -181,7 +181,7 @@ testInline =
                 result ^. holeResultPick & lift
                 _ <-
                     result ^?! holeResultConverted . hVal . _BinderTerm
-                    . _BodyGetVar . _GetBinder . bvInline . _InlineVar
+                    . _BodyLeaf . _LeafGetVar . _GetBinder . bvInline . _InlineVar
                     & lift
                 pure ()
             where
@@ -193,7 +193,7 @@ testInline =
             | otherwise = error "Expected inline result"
         afterInline =
             replBody . _BodyLam . lamFunc . fBody .
-            hVal . _BinderTerm . _BodyLiteral . _LiteralNum
+            hVal . _BinderTerm . _BodyLeaf . _LeafLiteral . _LiteralNum
 
 findM :: Monad m => (a -> m Bool) -> [a] -> m (Maybe a)
 findM _ [] = pure Nothing
@@ -224,7 +224,7 @@ delParam =
         verify workArea
             | Lens.has afterDel workArea = pure ()
             | otherwise = error "Expected 5"
-        afterDel = replBody . _BodyLiteral . _LiteralNum
+        afterDel = replBody . _BodyLeaf . _LeafLiteral . _LiteralNum
 
 delInfixArg :: Test
 delInfixArg =
@@ -241,7 +241,7 @@ delInfixArg =
         verify workArea
             | Lens.has afterDel workArea = pure ()
             | otherwise = error "Expected 1"
-        afterDel = replBody . _BodyLiteral . _LiteralNum
+        afterDel = replBody . _BodyLeaf . _LeafLiteral . _LiteralNum
 
 testExtractForRecursion :: Test
 testExtractForRecursion =
@@ -269,7 +269,7 @@ testInsistFactorial =
     where
         openDef =
             replBody . _BodySimpleApply . appFunc .
-            hVal . _BodyGetVar . _GetBinder . bvNameRef . nrGotoDefinition
+            hVal . _BodyLeaf . _LeafGetVar . _GetBinder . bvNameRef . nrGotoDefinition
         ifElse =
             waPanes . traverse . SugarLens.paneBinder .
             hVal . _BodyFunction . fBody .
@@ -328,13 +328,12 @@ testInsistIf =
 testInsistSubsets :: Test
 testInsistSubsets =
     testSugarActions "subsets.json"
-    [ lift . void . (^?! openDef)
+    [ openTopLevelDef
     , lift . void . (^?! insist)
     , verify
     ]
     & testCase "insist-subsets"
     where
-        openDef = replBody . _BodyGetVar . _GetBinder . bvNameRef . nrGotoDefinition
         consArgs =
             waPanes . traverse . SugarLens.paneBinder .
             hVal . _BodyFunction . fBody .
@@ -377,13 +376,16 @@ testNotALightLambda =
             | otherwise = error "Expected light lambda sugar!"
         expected = replBody . _BodyLam . lamMode . _NormalBinder
 
+openTopLevelDef :: WorkArea v name i (T ViewM) a -> OnceT (T ViewM) ()
+openTopLevelDef =
+    lift . void . (^?! replBody . _BodyLeaf . _LeafGetVar . _GetBinder . bvNameRef . nrGotoDefinition)
+
 delDefParam :: Test
 delDefParam =
     testSugarActions "def-with-params.json"
-    [lift . void . (^?! openDef), lift . (^?! action)]
+    [openTopLevelDef, lift . (^?! action)]
     & testCase "del-def-param"
     where
-        openDef = replBody . _BodyGetVar . _GetBinder . bvNameRef . nrGotoDefinition
         action =
             waPanes . traverse . SugarLens.paneBinder .
             hVal . _BodyFunction .
@@ -393,10 +395,9 @@ delDefParam =
 updateDef :: Test
 updateDef =
     testSugarActions "update-def-type.json"
-    [lift . void . (^?! openDef), lift . void . (^?! action)]
+    [openTopLevelDef, lift . void . (^?! action)]
     & testCase "update-def-type"
     where
-        openDef = replBody . _BodyGetVar . _GetBinder . bvNameRef . nrGotoDefinition
         action =
             waPanes . traverse . SugarLens.paneBinder .
             hVal . _BodyFunction . fBody .
@@ -482,7 +483,7 @@ testFloatToRepl =
         innerLet ::
             Lens.Traversal' (WorkArea v name i o a) (Annotated a # Assignment v name i o)
         innerLet = replLet . lBody . hVal . _BinderLet . lValue
-        literalVal = hVal . _BodyPlain . apBody . _BinderTerm . _BodyLiteral . _LiteralNum . Property.pVal
+        literalVal = hVal . _BodyPlain . apBody . _BinderTerm . _BodyLeaf . _LeafLiteral . _LiteralNum . Property.pVal
 
 testCreateLetInLetVal :: Test
 testCreateLetInLetVal =
@@ -539,7 +540,7 @@ testValidHoleResult =
                 workArea <- convertWorkArea env
                 opts <-
                     workArea ^?!
-                    replBody . _BodyToNom . nVal . hVal . _BinderTerm . _BodyHole . holeOptions
+                    replBody . _BodyToNom . nVal . hVal . _BinderTerm . _BodyLeaf . _LeafHole . holeOptions
                 -- The bug occured in the first suggested result
                 (_, mkHoleResult) <- opts OptsNormal ^?! Lens.ix 0 . hoResults & List.runList <&> List.headL
                 holeResult <- mkHoleResult
@@ -552,5 +553,5 @@ testPunnedIso =
     Env.make >>= testProgram "punned-fields.json" . convertWorkArea
     <&> (^? replBinder . _BinderLet . lBody . hVal . _BinderLet . lBody . hVal . _BinderTerm . _BodyRecord . cItems)
     <&> Lens.mapped . Lens.mapped %~
-        (\x -> (x ^. ciTag . tagRefTag . tagName, x ^? ciExpr . hVal . _BodyGetVar . _GetBinder . bvNameRef . nrName))
+        (\x -> (x ^. ciTag . tagRefTag . tagName, x ^? ciExpr . hVal . _BodyLeaf . _LeafGetVar . _GetBinder . bvNameRef . nrName))
     >>= assertEqual "Record items expected to be punned" (Just [])

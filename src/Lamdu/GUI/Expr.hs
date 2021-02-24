@@ -78,21 +78,23 @@ makeEditor ::
     ExprGui.Expr Sugar.Term i o -> GuiM env i o (Responsive o)
 makeEditor (Ann (Const pl) body) =
     case body of
-    Sugar.BodyPlaceHolder    -> placeHolder (pl ^. _1)
-    Sugar.BodyHole         x -> editor pl (Const x) HoleEdit.make
     Sugar.BodyLabeledApply x -> editor pl x ApplyEdit.makeLabeled
     Sugar.BodySimpleApply  x -> editor pl x ApplyEdit.makeSimple
     Sugar.BodyPostfixApply x -> editor pl x ApplyEdit.makePostfix
     Sugar.BodyPostfixFunc  x -> editor pl x ApplyEdit.makePostfixFunc
     Sugar.BodyLam          x -> editor pl x LambdaEdit.make
-    Sugar.BodyLiteral      x -> editor pl (Const x) LiteralEdit.make
     Sugar.BodyRecord       x -> editor pl x RecordEdit.make
     Sugar.BodyIfElse       x -> editor pl x IfElseEdit.make
-    Sugar.BodyInject       x -> editor pl (Const x) InjectEdit.make
-    Sugar.BodyEmptyInject  x -> editor pl (Const x) InjectEdit.make
-    Sugar.BodyGetVar       x -> editor pl (Const x) GetVarEdit.make
     Sugar.BodyToNom        x -> editor pl x NominalEdit.makeToNom
     Sugar.BodyFragment     x -> editor pl x FragmentEdit.make
+    Sugar.BodyLeaf         l ->
+        case l of
+        Sugar.LeafPlaceHolder   -> placeHolder (pl ^. _1)
+        Sugar.LeafHole        x -> editor pl (Const x) HoleEdit.make
+        Sugar.LeafLiteral     x -> editor pl (Const x) LiteralEdit.make
+        Sugar.LeafInject      x -> editor pl (Const x) InjectEdit.make
+        Sugar.LeafEmptyInject x -> editor pl (Const x) InjectEdit.make
+        Sugar.LeafGetVar      x -> editor pl (Const x) GetVarEdit.make
     & Reader.local
         (Element.animIdPrefix .~ Widget.toAnimId (WidgetIds.fromExprPayload (pl ^. _1)))
 

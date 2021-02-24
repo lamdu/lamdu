@@ -373,24 +373,29 @@ binderAmiguity :: BinderMode -> IsUnambiguous
 binderAmiguity LightLambda = Unambiguous
 binderAmiguity _ = MayBeAmbiguous
 
+toLeaf :: MonadNaming m => Leaf (OldName m) (IM m) o -> m (Leaf (NewName m) (IM m) o)
+toLeaf =
+    \case
+    LeafInject       x -> x & toTagRefOf Tag <&> LeafInject
+    LeafEmptyInject  x -> x & toTagRefOf Tag <&> LeafEmptyInject
+    LeafHole         x -> x & toHole <&> LeafHole
+    LeafGetVar       x -> x & toGetVar <&> LeafGetVar
+    LeafLiteral      x -> x & LeafLiteral & pure
+    LeafPlaceHolder    -> pure LeafPlaceHolder
+
 toBody :: MonadNaming m => WalkBody Term v0 v1 m o a
 toBody v =
     \case
-    BodyInject       x -> x & toTagRefOf Tag <&> BodyInject
-    BodyEmptyInject  x -> x & toTagRefOf Tag <&> BodyEmptyInject
     BodyRecord       x -> x & toComposite v <&> BodyRecord
     BodyIfElse       x -> x & toIfElse v <&> BodyIfElse
     BodySimpleApply  x -> x & (morphTraverse1 . toExpression) v <&> BodySimpleApply
     BodyPostfixApply x -> x & toPostfixApply v <&> BodyPostfixApply
     BodyLabeledApply x -> x & toLabeledApply v <&> BodyLabeledApply
     BodyPostfixFunc  x -> x & toPostfixFunc v <&> BodyPostfixFunc
-    BodyHole         x -> x & toHole <&> BodyHole
     BodyToNom        x -> x & toNominal v <&> BodyToNom
-    BodyGetVar       x -> x & toGetVar <&> BodyGetVar
-    BodyLiteral      x -> x & BodyLiteral & pure
     BodyLam          x -> x & lamFunc (toFunction (binderAmiguity (x ^. lamMode)) v) <&> BodyLam
     BodyFragment     x -> x & toFragment v <&> BodyFragment
-    BodyPlaceHolder    -> pure BodyPlaceHolder
+    BodyLeaf         x -> toLeaf x <&> BodyLeaf
 
 funcSignature :: LabeledApply v name i o a -> FunctionSignature
 funcSignature apply =

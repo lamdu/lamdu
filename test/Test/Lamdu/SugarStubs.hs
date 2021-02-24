@@ -36,7 +36,7 @@ type Expr =
     InternalName Identity Unit ()
 
 litNum :: Double -> Expr
-litNum x = prop x & Sugar.LiteralNum & Sugar.BodyLiteral & expr
+litNum x = prop x & Sugar.LiteralNum & Sugar.LeafLiteral & Sugar.BodyLeaf & expr
 
 defRef :: String -> T.Tag -> Sugar.BinderVarRef InternalName Unit
 defRef var tag =
@@ -73,9 +73,9 @@ arithmeticInfix2 op = infix2Apply (defRef (fromString op) (fromString op))
 
 hole :: Expr
 hole =
-    Sugar.BodyHole Sugar.Hole
+    Sugar.LeafHole Sugar.Hole
     { Sugar._holeOptions = mempty
-    } & expr
+    } & Sugar.BodyLeaf & expr
 
 ($$) :: Expr -> Expr -> Expr
 func $$ arg =
@@ -93,11 +93,7 @@ r $. tag =
     & expr
 
 identity :: Expr
-identity =
-    defRef "id" "id"
-    & Sugar.GetBinder
-    & Sugar.BodyGetVar
-    & expr
+identity = defRef "id" "id" & Sugar.GetBinder & Sugar.LeafGetVar & Sugar.BodyLeaf & expr
 
 plus :: Infix2
 plus = arithmeticInfix2 "+"

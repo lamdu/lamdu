@@ -86,11 +86,6 @@ instance HasPrecedence name => AddParens (Binder v name i o) where
 instance HasPrecedence name => AddParens (Term v name i o) where
     parenInfo parentPrec =
         \case
-        BodyPlaceHolder    -> (False, BodyPlaceHolder)
-        BodyLiteral      x -> (False, BodyLiteral x)
-        BodyGetVar       x -> (False, BodyGetVar x)
-        BodyHole         x -> (False, BodyHole x)
-        BodyEmptyInject  x -> (False, BodyEmptyInject x)
         BodyRecord       x -> (False, unambiguousBody x & BodyRecord)
         BodyPostfixFunc  x -> (parentPrec ^. before >= 12, unambiguousBody x & BodyPostfixFunc)
         BodyLam          x -> (parentPrec ^. after > 0, unambiguousBody x & BodyLam)
@@ -100,9 +95,9 @@ instance HasPrecedence name => AddParens (Term v name i o) where
         BodyPostfixApply x -> postfixApply x
         BodyIfElse       x -> (parentPrec ^. after > 1, unambiguousBody x & BodyIfElse)
         BodyFragment     x -> (True, x & fExpr %~ (Const (13, pure 1) :*:) & BodyFragment)
-        BodyInject       x ->
+        BodyLeaf         x ->
             -- A quite hacky rule for inject
-            (parentPrec ^. after /= 13, BodyInject x)
+            (Lens.has _LeafInject x && parentPrec ^. after /= 13, BodyLeaf x)
         where
             simpleApply (V.App f a) =
                 ( needParens

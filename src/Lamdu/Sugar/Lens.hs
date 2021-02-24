@@ -73,9 +73,9 @@ instance SugarExpr (Binder v name i o) where
     isForbiddenInLightLam (BinderTerm x) = isForbiddenInLightLam x
 
 instance SugarExpr (Term v name i o) where
-    isUnfinished BodyHole{} = True
+    isUnfinished (BodyLeaf LeafHole{}) = True
     isUnfinished BodyFragment{} = True
-    isUnfinished (BodyGetVar (GetBinder x)) = isUnfinished (Const x)
+    isUnfinished (BodyLeaf (LeafGetVar (GetBinder x))) = isUnfinished (Const x)
     isUnfinished _ = False
     isForbiddenInLightLam (BodyLam f) = isForbiddenInLightLam (f ^. lamFunc)
     isForbiddenInLightLam x = isUnfinished x
@@ -86,9 +86,9 @@ binderVarRefUnfinished =
 
 bodyUnfinished :: Lens.Traversal' (Term v name i o # Ann a) ()
 bodyUnfinished =
-    _BodyHole . Lens.united
+    _BodyLeaf . _LeafHole . Lens.united
     & Lens.failing (_BodyFragment . Lens.united)
-    & Lens.failing (_BodyGetVar . _GetBinder . binderVarRefUnfinished)
+    & Lens.failing (_BodyLeaf . _LeafGetVar . _GetBinder . binderVarRefUnfinished)
     & Lens.failing (_BodyLabeledApply . aFunc . hVal . Lens._Wrapped . binderVarRefUnfinished)
 
 defBodySchemes :: Lens.Traversal' (DefinitionBody v name i o expr) (Scheme name)
@@ -234,18 +234,13 @@ instance BodyAnnotations PostfixApply
 instance BodyAnnotations PostfixFunc
 
 instance BodyAnnotations Term where
-    bodyAnnotations _ BodyPlaceHolder = pure BodyPlaceHolder
-    bodyAnnotations _ (BodyLiteral x) = BodyLiteral x & pure
-    bodyAnnotations _ (BodyGetVar x) = BodyGetVar x & pure
+    bodyAnnotations _ (BodyLeaf x) = BodyLeaf x & pure
     bodyAnnotations f (BodyLam x) = (lamFunc . bodyAnnotations) f x <&> BodyLam
     bodyAnnotations f (BodyIfElse x) = bodyAnnotations f x <&> BodyIfElse
     bodyAnnotations f (BodyRecord x) = bodyAnnotations f x <&> BodyRecord
     bodyAnnotations f (BodyToNom x) = (nVal . annotations) f x <&> BodyToNom
     bodyAnnotations f (BodySimpleApply x) = (morphTraverse1 . annotations) f x <&> BodySimpleApply
-    bodyAnnotations _ (BodyInject x) = BodyInject x & pure
-    bodyAnnotations _ (BodyEmptyInject x) = BodyEmptyInject x & pure
     bodyAnnotations f (BodyLabeledApply x) = bodyAnnotations f x <&> BodyLabeledApply
-    bodyAnnotations _ (BodyHole x) = BodyHole x & pure
     bodyAnnotations f (BodyFragment x) = bodyAnnotations f x <&> BodyFragment
     bodyAnnotations f (BodyPostfixApply x) = bodyAnnotations f x <&> BodyPostfixApply
     bodyAnnotations f (BodyPostfixFunc x) = bodyAnnotations f x <&> BodyPostfixFunc

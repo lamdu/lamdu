@@ -122,18 +122,18 @@ instance Functor i => MarkBodyAnnotations v n i o PostfixFunc where
         )
 
 instance Functor i => MarkBodyAnnotations v n i o Term where
-    markBodyAnnotations BodyPlaceHolder = (neverShowAnnotations, BodyPlaceHolder)
-    markBodyAnnotations (BodyLiteral x@LiteralBytes{}) = (dontShowEval, BodyLiteral x)
-    markBodyAnnotations (BodyLiteral x) = (neverShowAnnotations, BodyLiteral x)
+    markBodyAnnotations (BodyLeaf LeafPlaceHolder) = (neverShowAnnotations, BodyLeaf LeafPlaceHolder)
+    markBodyAnnotations (BodyLeaf (LeafLiteral x@LiteralBytes{})) = (dontShowEval, BodyLeaf (LeafLiteral x))
+    markBodyAnnotations (BodyLeaf (LeafLiteral x)) = (neverShowAnnotations, BodyLeaf (LeafLiteral x))
     markBodyAnnotations (BodyRecord x) = markBodyAnnotations x & _2 %~ BodyRecord
     markBodyAnnotations (BodyLam x) = lamFunc markBodyAnnotations x & _2 %~ BodyLam
-    markBodyAnnotations (BodyGetVar x) =
+    markBodyAnnotations (BodyLeaf (LeafGetVar x)) =
         ( case x of
             GetParamsRecord{} -> showAnnotationWhenVerbose
             GetParam ParamRef{ _pBinderMode = LightLambda } -> showAnnotationWhenVerbose
             GetBinder BinderVarRef { _bvForm = GetDefinition{} } -> showAnnotationWhenVerbose
             _ -> neverShowAnnotations
-        , BodyGetVar x
+        , LeafGetVar x & BodyLeaf
         )
     markBodyAnnotations (BodyPostfixFunc x) = markBodyAnnotations x & _2 %~ BodyPostfixFunc
     markBodyAnnotations (BodyToNom (Nominal tid binder)) =
@@ -149,8 +149,8 @@ instance Functor i => MarkBodyAnnotations v n i o Term where
         )
         where
             newBinder = markNodeAnnotations binder
-    markBodyAnnotations (BodyInject x) = (dontShowEval, BodyInject x)
-    markBodyAnnotations (BodyEmptyInject x) = (dontShowEval, BodyEmptyInject x)
+    markBodyAnnotations (BodyLeaf (LeafInject x)) = (dontShowEval, BodyLeaf (LeafInject x))
+    markBodyAnnotations (BodyLeaf (LeafEmptyInject x)) = (dontShowEval, BodyLeaf (LeafEmptyInject x))
     markBodyAnnotations (BodySimpleApply x) =
         ( showAnnotationWhenVerbose
         , morphMap (Proxy @(MarkAnnotations v n i o) #?> markNodeAnnotations) x
@@ -166,9 +166,9 @@ instance Functor i => MarkBodyAnnotations v n i o Term where
         , morphMap (Proxy @(MarkAnnotations v n i o) #?> markNodeAnnotations) x & BodyLabeledApply
         )
     markBodyAnnotations (BodyIfElse x) = markBodyAnnotations x & _2 %~ BodyIfElse
-    markBodyAnnotations (BodyHole x) =
+    markBodyAnnotations (BodyLeaf (LeafHole x)) =
         ( alwaysShowAnnotations
-        , x & BodyHole
+        , LeafHole x & BodyLeaf
         )
     markBodyAnnotations (BodyFragment (Fragment e h t o)) =
         ( alwaysShowAnnotations

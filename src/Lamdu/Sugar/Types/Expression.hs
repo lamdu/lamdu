@@ -14,9 +14,9 @@ module Lamdu.Sugar.Types.Expression
 
     , Term(..)
         , _BodyLam, _BodyLabeledApply, _BodySimpleApply
-        , _BodyGetVar, _BodyInject, _BodyEmptyInject, _BodyHole
-        , _BodyLiteral, _BodyRecord, _BodyFragment
+        , _BodyRecord, _BodyFragment, _BodyLeaf
         , _BodyToNom, _BodyIfElse, _BodyPostfixApply, _BodyPostfixFunc
+    , Leaf(..), _LeafLiteral, _LeafHole, _LeafGetVar, _LeafInject, _LeafEmptyInject, _LeafPlaceHolder
     , AnnotatedArg(..), aaTag, aaExpr
     , LabeledApply(..), aFunc, aSpecialArgs, aAnnotatedArgs, aPunnedArgs
     , PostfixApply(..), pArg, pFunc
@@ -166,22 +166,26 @@ data PostfixFunc v name i o k
     | PfGetField (TagRef name i o)
     deriving Generic
 
+data Leaf name i o
+    = LeafLiteral (Literal (Property o))
+    | LeafHole (Hole name i o)
+    | LeafGetVar (GetVar name o)
+    | LeafInject (TagRef name i o)
+    | LeafEmptyInject (TagRef name i o) -- Inject of {}
+    | LeafPlaceHolder -- Used for hole results, shown as "★"
+    deriving Generic
+
 data Term v name i o k
     = BodyLam (Lambda v name i o k)
     | BodySimpleApply (App (Term v name i o) k)
     | BodyPostfixApply (PostfixApply v name i o k)
     | BodyLabeledApply (LabeledApply v name i o k)
-    | BodyHole (Hole name i o)
-    | BodyLiteral (Literal (Property o))
     | BodyRecord (Composite v name i o k)
     | BodyIfElse (IfElse v name i o k)
-    | BodyInject (TagRef name i o)
-    | BodyEmptyInject (TagRef name i o) -- Inject of {}
-    | BodyGetVar (GetVar name o)
     | BodyToNom (Nominal v name i o k)
     | BodyPostfixFunc (PostfixFunc v name i o k)
     | BodyFragment (Fragment v name i o k)
-    | BodyPlaceHolder -- Used for hole results, shown as "★"
+    | BodyLeaf (Leaf name i o)
     deriving Generic
 
 data Let v name i o k = Let
@@ -248,7 +252,7 @@ traverse Lens.makeLenses
     , ''NodeActions, ''Nominal, ''Payload, ''PostfixApply
     ] <&> concat
 traverse Lens.makePrisms
-    [''Assignment, ''Binder, ''CompositeTail, ''Else, ''PostfixFunc, ''Term] <&> concat
+    [''Assignment, ''Binder, ''CompositeTail, ''Else, ''Leaf, ''PostfixFunc, ''Term] <&> concat
 
 traverse makeHTraversableAndBases
     [ ''AnnotatedArg, ''Assignment, ''AssignPlain, ''Binder

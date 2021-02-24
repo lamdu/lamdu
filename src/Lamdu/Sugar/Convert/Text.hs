@@ -48,7 +48,7 @@ text (ToNom tid c@(Ann litPl bod)) toNomPl =
             , _pSet =
                 ExprIRef.writeValI litIRef . V.BLeaf . V.LLiteral .
                 PrimVal.fromKnown . PrimVal.Bytes . encodeUtf8
-            } & LiteralText & BodyLiteral & addActions (_ANode # c) toNomPl
+            } & LiteralText & LeafLiteral & BodyLeaf & addActions (_ANode # c) toNomPl
             & lift
     where
         litIRef = litPl ^. Input.stored . ExprIRef.iref

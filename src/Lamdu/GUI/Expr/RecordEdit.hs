@@ -316,7 +316,7 @@ openRecordEventMap (Sugar.OpenCompositeActions close) restExpr
         (doc env Texts.close)
     | otherwise = pure mempty
     where
-        isHole = Lens.has (hVal . Sugar._BodyHole)
+        isHole = Lens.has (hVal . Sugar._BodyLeaf . Sugar._LeafHole)
 
 closedRecordEventMap ::
     ( MonadReader env m, Has Config env

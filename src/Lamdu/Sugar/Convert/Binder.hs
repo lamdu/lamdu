@@ -302,7 +302,7 @@ instance GetParam (Binder v InternalName i o) where
     getParam x = x ^? _BinderTerm >>= getParam
 
 instance GetParam (Term v InternalName i o) where
-    getParam x = x ^? _BodyGetVar <&> Const >>= getParam
+    getParam x = x ^? _BodyLeaf . _LeafGetVar <&> Const >>= getParam
 
 class MarkLightParams t where
     markLightParams :: Set InternalName -> t # Ann a -> t # Ann a
@@ -341,11 +341,11 @@ instance MarkLightParams (Binder v InternalName i o) where
     markLightParams ps (BinderLet x) = markLightParams ps x & BinderLet
 
 instance MarkLightParams (Term v InternalName i o) where
-    markLightParams paramNames (BodyGetVar (GetParam n))
+    markLightParams paramNames (BodyLeaf (LeafGetVar (GetParam n)))
         | paramNames ^. Lens.contains (n ^. pNameRef . nrName) =
             n
             & pBinderMode .~ LightLambda
-            & GetParam & BodyGetVar
+            & GetParam & LeafGetVar & BodyLeaf
     markLightParams paramNames bod = defaultMarkLightParams paramNames bod
 
 -- Let-item or definition (form of <name> [params] = <body>)

@@ -36,7 +36,7 @@ convertGetFieldParam (V.App g@(Ann _ (V.BLeaf (V.LGetField tag))) recExpr) exprP
                   , _nrGotoDefinition = ConvertM.tpiJumpTo paramInfo & pure
                   }
                 , _pBinderMode = NormalBinder
-                } & BodyGetVar & Just
+                } & LeafGetVar & BodyLeaf & Just
             & Lens._Just %%~ addActions (App g recExpr) exprPl
 convertGetFieldParam _ _= pure Nothing
 

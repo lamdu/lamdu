@@ -39,7 +39,7 @@ convertLiteralCommon mkLit mkBody x exprPl =
     , _pSet =
       ExprIRef.writeValI iref . V.BLeaf . V.LLiteral .
       PrimVal.fromKnown . mkBody
-    } & mkLit & BodyLiteral & addActions (Const ()) exprPl
+    } & mkLit & LeafLiteral & BodyLeaf & addActions (Const ()) exprPl
     where
         iref = exprPl ^. Input.stored . ExprIRef.iref
 
@@ -75,4 +75,4 @@ convert posInfo (Ann pl (V.BLeaf l)) =
     V.LAbsurd -> ConvertCase.convertAbsurd
     V.LFromNom x -> ConvertNominal.convertFromNom x
     V.LGetField x -> ConvertGetField.convert x
-    V.LInject x -> ConvertInject.convert BodyInject x
+    V.LInject x -> ConvertInject.convert (BodyLeaf . LeafInject) x

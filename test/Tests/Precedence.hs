@@ -74,7 +74,7 @@ testInjectInRec =
             Sugar.BodyRecord Sugar.Composite
             { Sugar._cItems =
                 [ Stub.mkTag Nothing "x"
-                    & Sugar.BodyInject & Stub.node
+                    & Sugar.LeafInject & Sugar.BodyLeaf & Stub.node
                     & Sugar.CompositeItem Unit (Stub.mkTag Nothing "x")
                 ]
             , Sugar._cPunnedItems = []
@@ -132,8 +132,8 @@ test514 =
                 { Sugar._lamMode = Sugar.NormalBinder
                 , Sugar._lamApplyLimit = Sugar.UnlimitedFuncApply
                 , Sugar._lamFunc =
-                    Stub.node (Sugar.BodyGetVar (Sugar.GetParam
-                        (Sugar.ParamRef (Stub.nameRef (Stub.taggedEntityName "x" "x")) Sugar.NormalBinder)))
+                    (Stub.node . Sugar.BodyLeaf . Sugar.LeafGetVar . Sugar.GetParam)
+                    (Sugar.ParamRef (Stub.nameRef (Stub.taggedEntityName "x" "x")) Sugar.NormalBinder)
                     $$ Stub.hole
                     & Stub.funcExpr [("x", "x")]
                 } & Stub.node

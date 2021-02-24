@@ -93,7 +93,7 @@ convert posInfo holePl =
     mkOptions posInfo holeResultProcessor holePl
     <&> Lens.mapped . Lens.mapped . Lens.mapped %~ snd
     >>= ConvertM.convertOnce
-    <&> Hole <&> BodyHole
+    <&> BodyLeaf . LeafHole . Hole
     >>= addActions (Const ()) holePl
     <&> annotation . pActions . delete .~ CannotDelete
 

@@ -56,7 +56,7 @@ convert posInfo app@(V.App funcI argI) exprPl =
                 funcS <- ConvertM.convertSubexpression funcI & lift
                 protectedSetToVal <- lift ConvertM.typeProtectedSetToVal
                 pure
-                    ( if Lens.has (hVal . _BodyHole) argS
+                    ( if Lens.has (hVal . _BodyLeaf . _LeafHole) argS
                       then
                           let dst = argI ^. hAnn . Input.stored . ExprIRef.iref
                               deleteAction =
@@ -100,7 +100,7 @@ convertEmptyInject app applyPl =
     app ^?
     Lens.filteredBy (V.appArg . hVal . V._BLeaf . V._LRecEmpty) .
     V.appFunc . hVal . V._BLeaf . V._LInject & maybeToMPlus
-    >>= (\tag -> ConvertInject.convert BodyEmptyInject tag applyPl & lift)
+    >>= (\tag -> ConvertInject.convert (BodyLeaf . LeafEmptyInject) tag applyPl & lift)
     <&> annotation . pInput . Input.userData <>~ app ^. hfolded1 . hAnn . Input.userData
 
 convertPostfix ::
@@ -135,7 +135,7 @@ convertLabeled subexprs funcS argS exprPl =
         -- Make sure it is not a "let" but a "def" (recursive or external)
         funcVar <-
             annValue
-            ( ^? _BodyGetVar . _GetBinder
+            ( ^? _BodyLeaf . _LeafGetVar . _GetBinder
                 . Lens.filteredBy (bvForm . _GetDefinition)
                 . Lens._Unwrapped
             ) funcS

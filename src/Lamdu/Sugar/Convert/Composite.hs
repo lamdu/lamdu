@@ -85,7 +85,7 @@ convertExtend cons extendOp valS exprPl extendV restC =
         let addItem =
                 do
                     guard punSugar
-                    getVar <- itemS ^? ciExpr . hVal . _BodyGetVar
+                    getVar <- itemS ^? ciExpr . hVal . _BodyLeaf . _LeafGetVar
                     name <- getVar ^? SugarLens.getVarName
                     _ <- internalNameMatch (itemS ^. ciTag . tagRefTag . tagName) name
                     let punned =
