@@ -99,10 +99,10 @@ instance HasPrecedence name => AddParens (Term v name i o) where
         BodyLabeledApply x -> labeledApply x
         BodyPostfixApply x -> postfixApply x
         BodyIfElse       x -> (parentPrec ^. after > 1, unambiguousBody x & BodyIfElse)
-        BodyInject       x ->
-            -- TODO: Less hacky rule for parens on inject?
-            (parentPrec ^. before >= 13 && parentPrec ^. after == 0, BodyInject x)
         BodyFragment     x -> (True, x & fExpr %~ (Const (13, pure 1) :*:) & BodyFragment)
+        BodyInject       x ->
+            -- A quite hacky rule for inject
+            (parentPrec ^. after /= 13, BodyInject x)
         where
             simpleApply (V.App f a) =
                 ( needParens

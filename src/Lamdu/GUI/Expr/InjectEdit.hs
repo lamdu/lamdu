@@ -53,10 +53,7 @@ make ::
     Annotated (ExprGui.Payload i o) # Const (Sugar.TagRef Name i o) ->
     GuiM env i o (Responsive o)
 make (Ann (Const pl) (Const tag)) =
-    (ResponsiveExpr.boxSpacedMDisamb ?? ExprGui.mParensId pl)
-    <*> ( injectIndicator Texts.injectSymbol
-            /|/ TagEdit.makeVariantTag tag
-            <&> Responsive.fromWithTextPos
-            <&> (:[])
-        )
+    maybe (pure id) (ResponsiveExpr.addParens ??) (ExprGui.mParensId pl)
+    <*> injectIndicator Texts.injectSymbol /|/ TagEdit.makeVariantTag tag
+    <&> Responsive.fromWithTextPos
     & stdWrap pl

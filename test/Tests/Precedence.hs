@@ -27,6 +27,7 @@ test =
     [ testMinOpPrecOperator
     , testPunnedArgOp
     , testGetFieldOfApply
+    , testInjectInRec
     , test445
     , test513
     , test514
@@ -61,6 +62,26 @@ testGetFieldOfApply =
     & testCase "get-field-of-apply"
     where
         expr = Stub.identity $$ (Stub.hole $. "a") & Parens.addToTopLevel 0
+
+testInjectInRec :: Test
+testInjectInRec =
+    expr ^?!
+    hVal . Sugar._BodyRecord . Sugar.cItems . traverse . Sugar.ciExpr . annotation . _1 . Sugar.piNeedParens
+    & assertBool "get field should disambiguate compound expression"
+    & testCase "inject-in-record"
+    where
+        expr =
+            Sugar.BodyRecord Sugar.Composite
+            { Sugar._cItems =
+                [ Stub.mkTag Nothing "x"
+                    & Sugar.BodyInject & Stub.node
+                    & Sugar.CompositeItem Unit (Stub.mkTag Nothing "x")
+                ]
+            , Sugar._cPunnedItems = []
+            , Sugar._cTail = Sugar.ClosedComposite (Sugar.ClosedCompositeActions Unit)
+            , Sugar._cAddItem = "stub" <$ Stub.tagRefReplace
+            } & Stub.node
+            & Parens.addToTopLevel 0
 
 testMinOpPrecOperator :: Test
 testMinOpPrecOperator =
