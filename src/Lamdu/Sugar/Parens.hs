@@ -1,13 +1,13 @@
 -- | A pass on the sugared AST to decide where to put parenthesis
-{-# LANGUAGE TypeApplications, TypeFamilies #-}
+{-# LANGUAGE TypeApplications, TypeFamilies, DefaultSignatures, ScopedTypeVariables #-}
 module Lamdu.Sugar.Parens
     ( MinOpPrec
-    , addToWorkArea, addToExprWith
-    , addToBinderWith
+    , addToWorkArea, addToTopLevel
     ) where
 
 import qualified Control.Lens as Lens
 import           Hyper
+import           Hyper.Recurse (Recursive(..), proxyArgument)
 import qualified Lamdu.Calc.Term as V
 import           Lamdu.Precedence (Prec, Precedence(..), HasPrecedence(..), before, after)
 import qualified Lamdu.Sugar.Lens as SugarLens
@@ -16,9 +16,7 @@ import           Lamdu.Sugar.Types
 import           Lamdu.Prelude
 
 -- | Do we need parenthesis (OR any other visual disambiguation?)
-data NeedsParens = NeedsParens | NoNeedForParens
-    deriving (Eq, Show)
-
+type NeedsParens = Bool
 type MinOpPrec = Prec
 
 addToWorkArea ::
@@ -27,59 +25,122 @@ addToWorkArea ::
     WorkArea v name i o (ParenInfo, a)
 addToWorkArea w =
     w
-    { _waRepl = w ^. waRepl & replExpr %~ addToNode
-    , _waPanes = w ^. waPanes <&> SugarLens.paneBinder %~ addToNode
+    { _waRepl = w ^. waRepl & replExpr %~ addToTopLevel 0
+    , _waPanes = w ^. waPanes <&> SugarLens.paneBinder %~ addToTopLevel 0
     }
 
-class AddParens expr where
-    addToBody :: expr # Annotated a -> expr # Annotated (ParenInfo, a)
+unambiguousChild :: h # expr -> (Const (MinOpPrec, Precedence Prec) :*: h) # expr
+unambiguousChild = (Const (0, Precedence 0 0) :*:)
 
-    addToNode :: Annotated a # expr -> Annotated (ParenInfo, a) # expr
-    addToNode (Ann (Const pl) x) = Ann (Const (ParenInfo 0 False, pl)) (addToBody x)
+unambiguousBody :: HFunctor expr => (expr # h) -> expr # (Const (MinOpPrec, Precedence Prec) :*: h)
+unambiguousBody = hmap (const unambiguousChild)
+
+class GetPrec h where
+    getPrec :: HasPrecedence name => h # Const (BinderVarRef name o) -> Prec
+
+instance GetPrec (Ann a) where
+    getPrec = precedence . (^. hVal . Lens._Wrapped . bvNameRef . nrName)
+
+class HFunctor expr => AddParens expr where
+    parenInfo ::
+        GetPrec h =>
+        Precedence Prec -> expr # h ->
+        (NeedsParens, expr # (Const (MinOpPrec, Precedence Prec) :*: h))
+    parenInfo _ = (,) False . unambiguousBody
+
+    addParensRecursive :: Proxy expr -> Dict (HNodesConstraint expr AddParens)
+    default addParensRecursive ::
+        HNodesConstraint expr AddParens =>
+        Proxy expr -> Dict (HNodesConstraint expr AddParens)
+    addParensRecursive _ = Dict
+
+instance Recursive AddParens where
+    recurse = addParensRecursive . proxyArgument
+
+addToTopLevel :: AddParens expr => MinOpPrec -> Annotated a # expr -> Annotated (ParenInfo, a) # expr
+addToTopLevel = (`addToNode` Precedence 0 0)
+
+addToNode ::
+    forall expr a.
+    AddParens expr =>
+    MinOpPrec -> Precedence Prec -> Annotated a # expr -> Annotated (ParenInfo, a) # expr
+addToNode minOpPrec parentPrec (Ann (Const pl) b0) =
+    withDict (recurse (Proxy @(AddParens expr))) $
+    hmap (Proxy @AddParens #> \(Const (opPrec, prec) :*: x) -> addToNode opPrec prec x) b1
+    & Ann (Const (ParenInfo minOpPrec r, pl))
+    where
+        (r, b1) = parenInfo parentPrec b0
+
+instance AddParens (Const a)
+instance HasPrecedence name => AddParens (Else v name i o)
+instance HasPrecedence name => AddParens (PostfixFunc v name i o)
 
 instance HasPrecedence name => AddParens (Assignment v name i o) where
-    addToBody (BodyFunction x) = x & fBody %~ addToNode & BodyFunction
-    addToBody (BodyPlain x) = x & apBody %~ addToBody & BodyPlain
-
-addToBinderWith ::
-    HasPrecedence name =>
-    MinOpPrec ->
-    Annotated a # Binder v name i o ->
-    Annotated (ParenInfo, a) # Binder v name i o
-addToBinderWith minOpPrec (Ann (Const pl) x) =
-    addToBody x
-    & Ann (Const (ParenInfo minOpPrec False, pl))
-
-instance HasPrecedence name => AddParens (Else v name i o) where
-    addToBody (SimpleElse expr) = addToBody expr & SimpleElse
-    addToBody (ElseIf elseIf) = addToBody elseIf & ElseIf
-
-instance HasPrecedence name => AddParens (IfElse v name i o) where
-    addToBody = hmap (Proxy @AddParens #> addToNode)
+    parenInfo parentPrec (BodyPlain x) = apBody (parenInfo parentPrec) x & _2 %~ BodyPlain
+    parenInfo _ (BodyFunction x) = (False, unambiguousBody x & BodyFunction)
 
 instance HasPrecedence name => AddParens (Binder v name i o) where
-    addToBody (BinderTerm x) = addToBody x & BinderTerm
-    addToBody (BinderLet x) =
-        hmap (Proxy @AddParens #> addToNode) x & BinderLet
+    parenInfo parentPrec (BinderTerm x) = parenInfo parentPrec x & _2 %~ BinderTerm
+    parenInfo _ (BinderLet x) = (False, unambiguousBody x & BinderLet)
 
 instance HasPrecedence name => AddParens (Term v name i o) where
-    addToBody =
-        loopExprBody unambiguous <&> (^. _2)
+    parenInfo parentPrec =
+        \case
+        BodyPlaceHolder    -> (False, BodyPlaceHolder)
+        BodyLiteral      x -> (False, BodyLiteral x)
+        BodyGetVar       x -> (False, BodyGetVar x)
+        BodyHole         x -> (False, BodyHole x)
+        BodyEmptyInject  x -> (False, BodyEmptyInject x)
+        BodyRecord       x -> (False, unambiguousBody x & BodyRecord)
+        BodyPostfixFunc  x -> (parentPrec ^. before >= 12, unambiguousBody x & BodyPostfixFunc)
+        BodyLam          x -> (parentPrec ^. after > 0, unambiguousBody x & BodyLam)
+        BodyToNom        x -> (parentPrec ^. after > 0, unambiguousBody x & BodyToNom)
+        BodySimpleApply  x -> simpleApply x
+        BodyLabeledApply x -> labeledApply x
+        BodyPostfixApply x -> postfixApply x
+        BodyIfElse       x -> (parentPrec ^. after > 1, unambiguousBody x & BodyIfElse)
+        BodyInject       x ->
+            -- TODO: Less hacky rule for parens on inject?
+            (parentPrec ^. before >= 13 && parentPrec ^. after == 0, BodyInject x)
+        BodyFragment     x -> (True, x & fExpr %~ (Const (13, pure 1) :*:) & BodyFragment)
         where
-            unambiguous = Precedence 0 0
-    addToNode = addToExprWith 0
-
-instance AddParens (Const a) where
-    addToBody (Const x) = Const x
-    addToNode (Ann (Const pl) (Const x)) =
-        Ann (Const (ParenInfo 0 False, pl)) (Const x)
-
-addToExprWith ::
-    HasPrecedence name =>
-    MinOpPrec ->
-    Annotated a # Term v name i o ->
-    Annotated (ParenInfo, a) # Term v name i o
-addToExprWith minOpPrec = loopExpr minOpPrec (Precedence 0 0)
+            simpleApply (V.App f a) =
+                ( needParens
+                , BodySimpleApply V.App
+                    { V._appFunc = Const (0, p & after .~ 13) :*: f
+                    , V._appArg = Const (13, p & before .~ 13) :*: a
+                    }
+                )
+                where
+                    needParens = parentPrec ^. before > 13 || parentPrec ^. after >= 13
+                    p = newParentPrec needParens
+            newParentPrec needParens
+                | needParens = pure 0
+                | otherwise = parentPrec
+            labeledApply x =
+                maybe (False, BodyLabeledApply (unambiguousBody x)) simpleInfix (x ^? bareInfix)
+            simpleInfix (l, func, r) =
+                ( needParens
+                , bareInfix #
+                    ( Const (0, p & after .~ prec) :*: l
+                    , unambiguousChild func
+                    , Const (prec+1, p & before .~ prec) :*: r
+                    ) & BodyLabeledApply
+                )
+                where
+                    prec = getPrec func
+                    needParens = parentPrec ^. before >= prec || parentPrec ^. after > prec
+                    p = newParentPrec needParens
+            postfixApply (PostfixApply a f) =
+                ( needParens
+                , BodyPostfixApply PostfixApply
+                    { _pArg = Const (0, p & after .~ 12) :*: a
+                    , _pFunc = Const (13, Precedence 0 0) :*: f
+                    }
+                )
+                where
+                    needParens = parentPrec ^. before >= 13 || parentPrec ^. after > 12
+                    p = newParentPrec needParens
 
 bareInfix ::
     Lens.Prism' (LabeledApply v name i o # h)
@@ -93,88 +154,3 @@ bareInfix =
         toLabeledApply (l, f, r) = LabeledApply f (Operator l r) [] []
         fromLabeledApply (LabeledApply f (Operator l r) [] []) = Just (l, f, r)
         fromLabeledApply _ = Nothing
-
-type AnnotateAST a body =
-    MinOpPrec -> Precedence Prec ->
-    Annotated a # body ->
-    Annotated (ParenInfo, a) # body
-
-loopExpr ::  HasPrecedence name => AnnotateAST a (Term v name i o)
-loopExpr minOpPrec parentPrec (Ann (Const pl) body_) =
-    Ann (Const (ParenInfo minOpPrec (parens == NeedsParens), pl)) newBody
-    where
-        (parens, newBody) = loopExprBody parentPrec body_
-
-loopExprBody ::
-    HasPrecedence name =>
-    Precedence Prec -> Term v name i o # Annotated a ->
-    (NeedsParens, Term v name i o # Annotated (ParenInfo, a))
-loopExprBody parentPrec body_ =
-    case body_ of
-    BodyPlaceHolder    -> result False BodyPlaceHolder
-    BodyLiteral      x -> result False (BodyLiteral x)
-    BodyGetVar       x -> result False (BodyGetVar x)
-    BodyHole         x -> result False (BodyHole x)
-    BodyRecord       x -> hmap (p #> addToNode) x & BodyRecord & result False
-    BodyPostfixFunc  x -> hmap (p #> addToNode) x & BodyPostfixFunc & result (parentPrec ^. before >= 12)
-    BodyLam          x -> leftSymbol (lamFunc . fBody) 0 BodyLam x
-    BodyToNom        x -> leftSymbol nVal 0 BodyToNom x
-    BodyEmptyInject  x -> result False (BodyEmptyInject x)
-    BodySimpleApply  x -> simpleApply x
-    BodyLabeledApply x -> labeledApply x
-    BodyPostfixApply x -> postfixApply x
-    BodyIfElse       x -> ifElse x
-    BodyInject       x ->
-        -- TODO: Less hacky rule for parens on inject?
-        result (parentPrec ^. before >= 13 && parentPrec ^. after == 0) (BodyInject x)
-    BodyFragment     x ->
-        x
-        & fExpr %~ loopExpr 13 (pure 1)
-        & BodyFragment
-        & result True
-    where
-        p = Proxy @AddParens
-        result True = (,) NeedsParens
-        result False = (,) NoNeedForParens
-        leftSymbol ::
-            AddParens body =>
-            Lens.ASetter s t (Annotated pl # body) (Annotated (ParenInfo, pl) # body) ->
-            MinOpPrec -> (t -> res) -> s -> (NeedsParens, res)
-        leftSymbol lens prec cons x =
-            x & lens %~ addToNode & cons
-            & result (parentPrec ^. after > prec)
-        newParentPrec needParens
-            | needParens = pure 0
-            | otherwise = parentPrec
-        simpleApply (V.App f a) =
-            BodySimpleApply V.App
-            { V._appFunc = loopExpr 0 (newParentPrec needParens & after .~ 13) f
-            , V._appArg = loopExpr 13 (newParentPrec needParens & before .~ 13) a
-            } & result needParens
-            where
-                needParens = parentPrec ^. before > 13 || parentPrec ^. after >= 13
-        postfixApply (PostfixApply a (Ann (Const fa) f)) =
-            BodyPostfixApply PostfixApply
-            { _pArg = loopExpr 0 (newParentPrec needParens & after .~ 12) a
-            , _pFunc = Ann (Const (ParenInfo 13 False, fa)) (hmap (p #> addToNode) f)
-            } & result needParens
-            where
-                needParens = parentPrec ^. before >= 13 || parentPrec ^. after > 12
-        labeledApply x =
-            case x ^? bareInfix of
-            Nothing ->
-                hmap (p #> addToNode) x
-                & BodyLabeledApply & result False
-            Just b -> simpleInfix b
-        simpleInfix (l, func, r) =
-            bareInfix #
-            ( loopExpr 0 (newParentPrec needParens & after .~ prec) l
-            , addToNode func
-            , loopExpr (prec+1) (newParentPrec needParens & before .~ prec) r
-            ) & BodyLabeledApply & result needParens
-            where
-                prec = func ^. hVal . Lens._Wrapped . bvNameRef . nrName & precedence
-                needParens =
-                    parentPrec ^. before >= prec || parentPrec ^. after > prec
-        ifElse x =
-            addToBody x & BodyIfElse & result (parentPrec ^. after > 1)

@@ -51,7 +51,7 @@ testPunnedArgOp =
                 [ Sugar.PunnedVar (Stub.defRef "b" "b" & Sugar.GetBinder & Const & Stub.node) "b"
                 ]
             } & Stub.node
-            & Parens.addToExprWith 0
+            & Parens.addToTopLevel 0
 
 testGetFieldOfApply :: Test
 testGetFieldOfApply =
@@ -60,7 +60,7 @@ testGetFieldOfApply =
     & assertBool "get field should disambiguate compound expression"
     & testCase "get-field-of-apply"
     where
-        expr = Stub.identity $$ (Stub.hole $. "a") & Parens.addToExprWith 0
+        expr = Stub.identity $$ (Stub.hole $. "a") & Parens.addToTopLevel 0
 
 testMinOpPrecOperator :: Test
 testMinOpPrecOperator =
@@ -70,7 +70,7 @@ testMinOpPrecOperator =
         & testCase "min-op-prec-infix"
     where
         (Sugar.ParenInfo minOpPrec needsParens, _) = expr ^?! infixArgs . _2 . annotation
-        expr = i 1 `Stub.mul` (i 2 `Stub.plus` i 3) & Parens.addToExprWith 0
+        expr = i 1 `Stub.mul` (i 2 `Stub.plus` i 3) & Parens.addToTopLevel 0
         i = Stub.litNum
 
 -- Test for https://trello.com/c/OuaLvwiJ/445-wrong-parenthesis
@@ -81,7 +81,7 @@ test445 =
     where
         expr =
             Stub.identity $$ ((i 1 `Stub.plus` i 2) `Stub.mul` i 3)
-            & Parens.addToExprWith 0
+            & Parens.addToTopLevel 0
         problemPos =
             expr ^?!
             hVal . Sugar._BodySimpleApply . Sugar.appArg .
@@ -94,7 +94,7 @@ test513 =
     assertBool "Expected paren" (problemPos ^. annotation . _1 . Sugar.piNeedParens)
     & testCase "513-applied-getfield"
     where
-        expr = h Stub.$. "minimum" $$ h & Parens.addToExprWith 0
+        expr = h Stub.$. "minimum" $$ h & Parens.addToTopLevel 0
         problemPos = expr ^?! hVal . Sugar._BodySimpleApply . Sugar.appFunc
         h = Stub.hole
 
@@ -120,5 +120,5 @@ test514 =
             , Sugar._fTypeMismatch = Nothing
             , Sugar._fOptions = Sugar.Hole mempty
             } & Stub.node
-            & Parens.addToExprWith 0
+            & Parens.addToTopLevel 0
         problemPos = expr ^?! hVal . Sugar._BodyFragment . Sugar.fExpr

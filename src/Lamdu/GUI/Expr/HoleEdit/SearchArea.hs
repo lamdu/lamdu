@@ -99,7 +99,7 @@ postProcessSugar ::
 postProcessSugar minOpPrec binder =
     binder
     & SugarLens.annotations . Sugar._AnnotationVal .~ mempty
-    & AddParens.addToBinderWith minOpPrec
+    & AddParens.addToTopLevel minOpPrec
     & hflipped %~ hmap (\_ -> Lens._Wrapped %~ pl)
     where
         pl (parenInfo, sugarPl) =
