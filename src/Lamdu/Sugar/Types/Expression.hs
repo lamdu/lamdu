@@ -14,9 +14,9 @@ module Lamdu.Sugar.Types.Expression
 
     , Term(..)
         , _BodyLam, _BodyLabeledApply, _BodySimpleApply
-        , _BodyRecord, _BodyFragment, _BodyLeaf
+        , _BodyRecord, _BodyFragment, _BodyLeaf, _BodyNullaryInject
         , _BodyToNom, _BodyIfElse, _BodyPostfixApply, _BodyPostfixFunc
-    , Leaf(..), _LeafLiteral, _LeafHole, _LeafGetVar, _LeafInject, _LeafEmptyInject, _LeafPlaceHolder
+    , Leaf(..), _LeafLiteral, _LeafHole, _LeafGetVar, _LeafInject, _LeafPlaceHolder
     , AnnotatedArg(..), aaTag, aaExpr
     , LabeledApply(..), aFunc, aSpecialArgs, aAnnotatedArgs, aPunnedArgs
     , PostfixApply(..), pArg, pFunc
@@ -171,7 +171,6 @@ data Leaf name i o
     | LeafHole (Hole name i o)
     | LeafGetVar (GetVar name o)
     | LeafInject (TagRef name i o)
-    | LeafEmptyInject (TagRef name i o) -- Inject of {}
     | LeafPlaceHolder -- Used for hole results, shown as "★"
     deriving Generic
 
@@ -184,6 +183,7 @@ data Term v name i o k
     | BodyIfElse (IfElse v name i o k)
     | BodyToNom (Nominal v name i o k)
     | BodyPostfixFunc (PostfixFunc v name i o k)
+    | BodyNullaryInject (NullaryInject name i o k)
     | BodyFragment (Fragment v name i o k)
     | BodyLeaf (Leaf name i o)
     deriving Generic
@@ -258,7 +258,8 @@ traverse makeHTraversableAndBases
     [ ''AnnotatedArg, ''Assignment, ''AssignPlain, ''Binder
     , ''Composite, ''CompositeItem, ''CompositeTail, ''Else
     , ''Fragment, ''Function, ''IfElse
-    , ''LabeledApply, ''Lambda, ''Let, ''Nominal, ''PostfixApply, ''PostfixFunc, ''Term
+    , ''LabeledApply, ''Lambda, ''Let, ''Nominal
+    , ''PostfixApply, ''PostfixFunc, ''Term
     ] <&> concat
 
 traverse makeHMorph
@@ -278,8 +279,8 @@ type Dep v (c :: HyperType -> Constraint) name i o =
     ( c (Assignment v name i o)
     , c (Binder v name i o)
     , c (Const (BinderVarRef name o))
-    , c (Const (NullaryVal name i o))
     , c (Const (GetVar name o))
+    , c (Const (TagChoice name i o EntityId))
     , c (Else v name i o)
     , c (PostfixFunc v name i o)
     , c (Term v name i o)

@@ -1,6 +1,6 @@
 -- | Different leaf types in the Sugar expressions.
 -- These don't contain more expressions in them.
-{-# LANGUAGE TemplateHaskell, DataKinds, GADTs, TypeFamilies #-}
+{-# LANGUAGE TemplateHaskell, DataKinds, GADTs, TypeFamilies, MultiParamTypeClasses #-}
 module Lamdu.Sugar.Types.Parts
     ( VarInfo(..), _VarNominal, _VarGeneric, _VarFunction, _VarRecord, _VarVariant
     , FuncApplyLimit(..), _UnlimitedFuncApply, _AtMostOneFuncApply
@@ -26,13 +26,13 @@ module Lamdu.Sugar.Types.Parts
     , -- Expressions
       ClosedCompositeActions(..), closedCompositeOpen
     , PunnedVar(..), pvVar, pvTagEntityId
-    , NullaryVal(..), nullaryClosedCompositeActions, nullaryAddItem
+    , NullaryInject(..), iTag, iContent
 
     , ParenInfo(..), piNeedParens, piMinOpPrec
     ) where
 
 import qualified Control.Lens as Lens
-import           Hyper (makeHTraversableAndBases)
+import           Hyper (makeHTraversableAndBases, makeHMorph)
 import qualified Lamdu.Calc.Type as T
 import           Lamdu.Sugar.Internal.EntityId (EntityId)
 import           Lamdu.Sugar.Types.GetVar
@@ -129,17 +129,17 @@ newtype ClosedCompositeActions o = ClosedCompositeActions
     { _closedCompositeOpen :: o EntityId
     } deriving stock Generic
 
--- | The empty record in a nullary inject
-data NullaryVal name i o = NullaryVal
-    { _nullaryClosedCompositeActions :: ClosedCompositeActions o
-    , _nullaryAddItem :: TagChoice name i o EntityId
-    } deriving Generic
-
 data Literal f
     = LiteralNum (f Double)
     | LiteralBytes (f ByteString)
     | LiteralText (f Text)
     deriving Generic
+
+data NullaryInject name i o k = NullaryInject
+    { _iTag :: TagRef name i o
+    , -- Child represents the empty record, and has action to add an item
+      _iContent :: k :# Const (TagChoice name i o EntityId)
+    } deriving Generic
 
 data PunnedVar name o k = PunnedVar
     { _pvVar :: k :# Const (GetVar name o)
@@ -175,10 +175,12 @@ data ParenInfo = ParenInfo
 
 traverse Lens.makeLenses
     [ ''ClosedCompositeActions, ''FuncParam, ''FuncParamActions, ''HoleResultScore
-    , ''NullParamActions, ''NullaryVal, ''ParamInfo, ''ParenInfo, ''PunnedVar
+    , ''NullParamActions, ''NullaryInject, ''ParamInfo, ''ParenInfo, ''PunnedVar
     ] <&> concat
 traverse Lens.makePrisms
     [ ''AddFirstParam, ''AddNextParam, ''Annotation, ''BinderParams, ''Delete
     , ''DetachAction, ''FuncApplyLimit, ''HoleTerm, ''Literal, ''OptionFilter, ''VarInfo
     ] <&> concat
+makeHTraversableAndBases ''NullaryInject
 makeHTraversableAndBases ''PunnedVar
+makeHMorph ''NullaryInject

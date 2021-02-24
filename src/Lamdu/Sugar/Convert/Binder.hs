@@ -286,7 +286,7 @@ instance Recursive GetParam where
     recurse = getParamRecursive . proxyArgument
 
 instance GetParam (Const (BinderVarRef InternalName o))
-instance GetParam (Const (NullaryVal InternalName i o))
+instance GetParam (Const (TagChoice InternalName i o EntityId))
 instance GetParam (Const (TId name))
 instance GetParam (Else v InternalName i o)
 instance GetParam (Function v InternalName i o)

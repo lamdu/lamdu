@@ -373,11 +373,20 @@ binderAmiguity :: BinderMode -> IsUnambiguous
 binderAmiguity LightLambda = Unambiguous
 binderAmiguity _ = MayBeAmbiguous
 
+toNullaryInject ::
+    MonadNaming m =>
+    (v0 -> m v1) ->
+    NullaryInject (OldName m) (IM m) o # Annotated (Payload (Annotation v0 (OldName m)) (OldName m) (IM m) o, a) ->
+    m (NullaryInject (NewName m) (IM m) o # Annotated (Payload (Annotation v1 (NewName m)) (NewName m) (IM m) o, a))
+toNullaryInject v (NullaryInject t n) =
+    NullaryInject
+    <$> toTagRefOf Tag t
+    <*> toNode v (Lens._Wrapped toTagChoice) n
+
 toLeaf :: MonadNaming m => Leaf (OldName m) (IM m) o -> m (Leaf (NewName m) (IM m) o)
 toLeaf =
     \case
     LeafInject       x -> x & toTagRefOf Tag <&> LeafInject
-    LeafEmptyInject  x -> x & toTagRefOf Tag <&> LeafEmptyInject
     LeafHole         x -> x & toHole <&> LeafHole
     LeafGetVar       x -> x & toGetVar <&> LeafGetVar
     LeafLiteral      x -> x & LeafLiteral & pure
@@ -395,6 +404,7 @@ toBody v =
     BodyToNom        x -> x & toNominal v <&> BodyToNom
     BodyLam          x -> x & lamFunc (toFunction (binderAmiguity (x ^. lamMode)) v) <&> BodyLam
     BodyFragment     x -> x & toFragment v <&> BodyFragment
+    BodyNullaryInject x -> x & toNullaryInject v <&> BodyNullaryInject
     BodyLeaf         x -> toLeaf x <&> BodyLeaf
 
 funcSignature :: LabeledApply v name i o a -> FunctionSignature

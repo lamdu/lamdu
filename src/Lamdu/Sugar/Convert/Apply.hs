@@ -25,7 +25,6 @@ import           Lamdu.Sugar.Convert.Expression.Actions (addActions, addActionsW
 import           Lamdu.Sugar.Convert.Fragment (convertAppliedHole)
 import           Lamdu.Sugar.Convert.GetField (convertGetFieldParam)
 import           Lamdu.Sugar.Convert.IfElse (convertIfElse)
-import qualified Lamdu.Sugar.Convert.Inject as ConvertInject
 import qualified Lamdu.Sugar.Convert.Input as Input
 import           Lamdu.Sugar.Convert.Monad (ConvertM)
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
@@ -47,7 +46,6 @@ convert ::
 convert posInfo app@(V.App funcI argI) exprPl =
     runMatcherT $
     do
-        convertEmptyInject app exprPl & justToLeft
         convertGetFieldParam app exprPl & MaybeT & justToLeft
         (funcS, argS) <-
             do
@@ -67,6 +65,7 @@ convert posInfo app@(V.App funcI argI) exprPl =
                       else funcS
                     , argS
                     )
+        convertEmptyInject app funcS argS exprPl & justToLeft
         convertPostfix app funcS argS exprPl & justToLeft
         convertLabeled app funcS argS exprPl & justToLeft
         convertPrefix app funcS argS exprPl & lift
@@ -92,16 +91,20 @@ defParamsMatchArgs var record frozenDeps =
     & Lens.has Lens._Just
 
 convertEmptyInject ::
-    (Monad m, Monoid a) =>
-    V.App V.Term # Ann (Input.Payload m a) ->
-    Input.Payload m a # V.Term ->
+    (Monad m, Monoid a, Recursively HFoldable h) =>
+    h # Ann (Input.Payload m a) ->
+    ExpressionU v m a -> ExpressionU v m a -> Input.Payload m a # V.Term ->
     MaybeT (ConvertM m) (ExpressionU v m a)
-convertEmptyInject app applyPl =
-    app ^?
-    Lens.filteredBy (V.appArg . hVal . V._BLeaf . V._LRecEmpty) .
-    V.appFunc . hVal . V._BLeaf . V._LInject & maybeToMPlus
-    >>= (\tag -> ConvertInject.convert (BodyLeaf . LeafEmptyInject) tag applyPl & lift)
-    <&> annotation . pInput . Input.userData <>~ app ^. hfolded1 . hAnn . Input.userData
+convertEmptyInject subexprs funcS argS applyPl =
+    do
+        injectTag <- funcS ^? hVal . _BodyLeaf . _LeafInject & maybeToMPlus
+        r <- annValue (^? _BodyRecord) argS & maybeToMPlus
+        r ^. hVal . cItems & null & guard
+        r ^. hVal . cPunnedItems & null & guard
+        Lens.has (hVal . cTail . _ClosedComposite) r & guard
+        r & annValue %~ (^. cAddItem . Lens._Unwrapped)
+            & NullaryInject injectTag & BodyNullaryInject
+            & addActions subexprs applyPl & lift
 
 convertPostfix ::
     (Monad m, Monoid a, Recursively HFoldable h) =>

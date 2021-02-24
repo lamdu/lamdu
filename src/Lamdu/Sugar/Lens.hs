@@ -47,8 +47,8 @@ instance Recursive SugarExpr where
     recurse = sugarExprRecursive . proxyArgument
 
 instance SugarExpr (Const (GetVar name o))
-instance SugarExpr (Const (NullaryVal name i o))
 instance SugarExpr (Const (TId name))
+instance SugarExpr (Const (TagChoice name i o EntityId))
 
 instance SugarExpr (Const (BinderVarRef name o)) where
     isUnfinished (Const x) = Lens.has binderVarRefUnfinished x
@@ -244,3 +244,6 @@ instance BodyAnnotations Term where
     bodyAnnotations f (BodyFragment x) = bodyAnnotations f x <&> BodyFragment
     bodyAnnotations f (BodyPostfixApply x) = bodyAnnotations f x <&> BodyPostfixApply
     bodyAnnotations f (BodyPostfixFunc x) = bodyAnnotations f x <&> BodyPostfixFunc
+    bodyAnnotations f (BodyNullaryInject x) =
+        iContent (\(Ann a (Const b)) -> (Lens._Wrapped . _1 . plAnnotation) f a <&> (`Ann` Const b)) x
+        <&> BodyNullaryInject

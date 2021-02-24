@@ -151,6 +151,7 @@ instance AddEval Term where
         BodyFragment f -> f & fExpr %~ addToNode r & BodyFragment
         BodyPostfixApply x -> addToBody r i x & BodyPostfixApply
         BodyPostfixFunc x -> addToBody r i x & BodyPostfixFunc
+        BodyNullaryInject x -> x & iContent %~ addToNode r & BodyNullaryInject
 
 addToPayload ::
     Applicative i =>

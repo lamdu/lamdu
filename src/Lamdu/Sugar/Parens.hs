@@ -95,6 +95,7 @@ instance HasPrecedence name => AddParens (Term v name i o) where
         BodyPostfixApply x -> postfixApply x
         BodyIfElse       x -> (parentPrec ^. after > 1, unambiguousBody x & BodyIfElse)
         BodyFragment     x -> (True, x & fExpr %~ (Const (13, pure 1) :*:) & BodyFragment)
+        BodyNullaryInject x -> (False, unambiguousBody x & BodyNullaryInject)
         BodyLeaf         x ->
             -- A quite hacky rule for inject
             (Lens.has _LeafInject x && parentPrec ^. after /= 13, BodyLeaf x)

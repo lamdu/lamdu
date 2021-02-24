@@ -1,5 +1,5 @@
 module Lamdu.GUI.Expr.RecordEdit
-    ( make
+    ( make, makeEmpty
     ) where
 
 import qualified Control.Lens as Lens
@@ -85,10 +85,11 @@ makeUnit pl =
     where
         myId = WidgetIds.fromExprPayload (pl ^. _1)
 
-make :: _ => ExprGui.Expr Sugar.Composite i o -> GuiM env i o (Responsive o)
-make (Ann (Const pl) (Sugar.Composite [] [] Sugar.ClosedComposite{} addField)) =
-    -- Ignore the ClosedComposite actions - it only has the open
-    -- action which is equivalent ot deletion on the unit record
+makeEmpty ::
+    _ =>
+    Annotated (ExprGui.Payload i o) # Const (Sugar.TagChoice Name i o Sugar.EntityId) ->
+    GuiM env i o (Responsive o)
+makeEmpty (Ann (Const pl) (Const addField)) =
     do
         isAddField <- GuiState.isSubCursor ?? addFieldId (WidgetIds.fromExprPayload (pl ^. _1))
         if isAddField
@@ -96,6 +97,12 @@ make (Ann (Const pl) (Sugar.Composite [] [] Sugar.ClosedComposite{} addField)) =
                 makeAddFieldRow addField (pl ^. _1) <&> (:[]) >>= makeRecord pure
                 & stdWrapParentExpr pl
             else makeUnit pl
+
+make :: _ => ExprGui.Expr Sugar.Composite i o -> GuiM env i o (Responsive o)
+make (Ann (Const pl) (Sugar.Composite [] [] Sugar.ClosedComposite{} addField)) =
+    -- Ignore the ClosedComposite actions - it only has the open
+    -- action which is equivalent ot deletion on the unit record
+    makeEmpty (Ann (Const pl) (Const addField))
 make (Ann (Const pl) (Sugar.Composite fields punned recordTail addField)) =
     do
         addFieldEventMap <- mkAddFieldEventMap (WidgetIds.fromExprPayload (pl ^. _1))

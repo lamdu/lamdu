@@ -150,7 +150,13 @@ instance Functor i => MarkBodyAnnotations v n i o Term where
         where
             newBinder = markNodeAnnotations binder
     markBodyAnnotations (BodyLeaf (LeafInject x)) = (dontShowEval, BodyLeaf (LeafInject x))
-    markBodyAnnotations (BodyLeaf (LeafEmptyInject x)) = (dontShowEval, BodyLeaf (LeafEmptyInject x))
+    markBodyAnnotations (BodyNullaryInject x) =
+        ( dontShowEval
+        , x & morphMapped1 %~
+                (\(Ann a (Const b)) ->
+                    Ann (a & Lens._Wrapped . _1 . plAnnotation %~ (,) neverShowAnnotations) (Const b))
+            & BodyNullaryInject
+        )
     markBodyAnnotations (BodySimpleApply x) =
         ( showAnnotationWhenVerbose
         , morphMap (Proxy @(MarkAnnotations v n i o) #?> markNodeAnnotations) x
