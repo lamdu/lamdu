@@ -54,7 +54,7 @@ data Annotation v name
     deriving Generic
 
 data AddNextParam name i o
-    = AddNext (TagReplace name i o ())
+    = AddNext (TagChoice name i o ())
     | -- When the param has anon tag one can't add another one,
       -- contains the EntityId of the param requiring tag.
       NeedToPickTagToAddNext EntityId
@@ -103,7 +103,7 @@ data Delete m
 data AddFirstParam name i o
     = -- The inital param is created with anon-tag
       AddInitialParam (o EntityId)
-    | PrependParam (TagReplace name i o ())
+    | PrependParam (TagChoice name i o ())
     | -- When the param has anon tag one can't add another one,
       -- contains the EntityId of the param requiring tag.
       NeedToPickTagToAddFirst EntityId
@@ -137,7 +137,7 @@ newtype OpenCompositeActions o = OpenCompositeActions
 -- | The empty record in a nullary inject
 data NullaryVal name i o = NullaryVal
     { _nullaryClosedCompositeActions :: ClosedCompositeActions o
-    , _nullaryAddItem :: TagReplace name i o EntityId
+    , _nullaryAddItem :: TagChoice name i o EntityId
     } deriving Generic
 
 data Literal f

@@ -153,7 +153,7 @@ makeAltsWidget ::
     ) =>
     [ExprGui.Body Sugar.CompositeItem i o] ->
     [Sugar.PunnedVar Name o # Annotated (ExprGui.Payload i o)] ->
-    Sugar.TagReplace Name i o Sugar.EntityId ->
+    Sugar.TagChoice Name i o Sugar.EntityId ->
     Widget.Id ->
     GuiM env i o (Responsive o)
 makeAltsWidget alts punned addAlt altsId =
@@ -187,7 +187,7 @@ makeAddAltRow ::
     , TextEdit.HasTexts env
     , SearchMenu.HasTexts env
     ) =>
-    Sugar.TagReplace Name i o Sugar.EntityId -> Widget.Id ->
+    Sugar.TagChoice Name i o Sugar.EntityId -> Widget.Id ->
     GuiM env i o (TaggedItem o)
 makeAddAltRow addAlt myId =
     TagEdit.makeTagHoleEdit addAlt mkPickResult myId

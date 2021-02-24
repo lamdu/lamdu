@@ -2,7 +2,7 @@
 module Lamdu.Sugar.Types.Tag
     ( Tag(..), tagName, tagVal, tagInstance
     , TagOption(..), toInfo, toPick
-    , TagReplace(..), tsOptions, tsNewTag, tsAnon
+    , TagChoice(..), tcOptions, tcNewTag, tcAnon
     , TagRef(..), tagRefTag, tagRefReplace, tagRefJumpTo
     ) where
 
@@ -23,20 +23,20 @@ data TagOption name o a = TagOption
     , _toPick :: o a
     } deriving (Functor, Foldable, Traversable)
 
-data TagReplace name i o a = TagReplace
-    { _tsOptions :: i [TagOption name o a]
-    , _tsNewTag :: i (TagOption name o a)
+data TagChoice name i o a = TagChoice
+    { _tcOptions :: i [TagOption name o a]
+    , _tcNewTag :: i (TagOption name o a)
     , -- In some cases, like let-items, single params,
       -- the user does not have to choose a tag and can choose to have
       -- an auto-generated name instead.
-      _tsAnon :: Maybe (o (EntityId, a))
+      _tcAnon :: Maybe (o (EntityId, a))
     } deriving (Functor, Generic)
 
 -- | A mutable tag (that can be replaced with a different tag)
 data TagRef name i o = TagRef
     { _tagRefTag :: Tag name
-    , _tagRefReplace :: TagReplace name i o ()
+    , _tagRefReplace :: TagChoice name i o ()
     , _tagRefJumpTo :: Maybe (o EntityId)
     } deriving Generic
 
-traverse Lens.makeLenses [''Tag, ''TagOption, ''TagRef, ''TagReplace] <&> concat
+traverse Lens.makeLenses [''Tag, ''TagOption, ''TagRef, ''TagChoice] <&> concat

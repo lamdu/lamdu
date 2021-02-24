@@ -138,7 +138,7 @@ toNodeActions ::
     MonadNaming m =>
     NodeActions (OldName m) (IM m) o ->
     m (NodeActions (NewName m) (IM m) o)
-toNodeActions = wrapInRecord toTagReplace
+toNodeActions = wrapInRecord toTagChoice
 
 toResRecord ::
     MonadNaming m =>
@@ -224,7 +224,7 @@ toAddFirstParam ::
     MonadNaming m =>
     AddFirstParam (OldName m) (IM m) o ->
     m (AddFirstParam (NewName m) (IM m) o)
-toAddFirstParam = _PrependParam toTagReplace
+toAddFirstParam = _PrependParam toTagChoice
 
 toFunction :: MonadNaming m => IsUnambiguous -> WalkBody Function v0 v1 m o a
 toFunction u v func@Function{_fParams, _fBody, _fAddFirstParam} =
@@ -252,18 +252,18 @@ toAssignment v =
 toTagOf :: MonadNaming m => NameType -> Sugar.Tag (OldName m) -> m (Sugar.Tag (NewName m))
 toTagOf nameType = tagName (opGetName Nothing MayBeAmbiguous nameType)
 
-toTagReplace ::
+toTagChoice ::
     MonadNaming m =>
-    TagReplace (OldName m) (IM m) o a ->
-    m (TagReplace (NewName m) (IM m) o a)
-toTagReplace (TagReplace opts new anon) =
+    TagChoice (OldName m) (IM m) o a ->
+    m (TagChoice (NewName m) (IM m) o a)
+toTagChoice (TagChoice opts new anon) =
     (,) <$> opRun <*> opRun
     <&>
     \(run0, run1) ->
-    TagReplace
-    { _tsOptions = opts >>= run0 . (traverse . toInfo) (toTagOf Tag)
-    , _tsNewTag = new >>= run1 . toInfo (toTagOf Tag)
-    , _tsAnon = anon
+    TagChoice
+    { _tcOptions = opts >>= run0 . (traverse . toInfo) (toTagOf Tag)
+    , _tcNewTag = new >>= run1 . toInfo (toTagOf Tag)
+    , _tcAnon = anon
     }
 
 toTagRefOf ::
@@ -273,7 +273,7 @@ toTagRefOf ::
 toTagRefOf nameType (Sugar.TagRef info actions jumpTo) =
     Sugar.TagRef
     <$> toTagOf nameType info
-    <*> toTagReplace actions
+    <*> toTagChoice actions
     ?? jumpTo
 
 withTagRef ::
@@ -284,7 +284,7 @@ withTagRef ::
 withTagRef unambig nameType (Sugar.TagRef info actions jumpTo) =
     Sugar.TagRef
     <$> tagName (opWithName unambig nameType) info
-    <*> liftCPS (toTagReplace actions)
+    <*> liftCPS (toTagChoice actions)
     ?? jumpTo
 
 toAnnotatedArg :: MonadNaming m => WalkBody AnnotatedArg v0 v1 m o a
@@ -348,7 +348,7 @@ toComposite v (Composite items punned tail_ addItem) =
     <$> traverse (toCompositeItem v) items
     <*> (traverse . pvVar) (toNode v (Lens._Wrapped toGetVar)) punned
     <*> (_OpenComposite . _2) (toExpression v) tail_
-    <*> toTagReplace addItem
+    <*> toTagChoice addItem
 
 toNominal :: MonadNaming m => WalkBody Nominal v0 v1 m o a
 toNominal v (Nominal t e) = Nominal <$> toTId t <*> toNode v (toBinder v) e
@@ -415,7 +415,7 @@ withParamInfo ::
 withParamInfo unambig (ParamInfo tag fpActions) =
     ParamInfo
     <$> withTagRef unambig TaggedVar tag
-    <*> liftCPS ((fpAddNext . Sugar._AddNext) toTagReplace fpActions)
+    <*> liftCPS ((fpAddNext . Sugar._AddNext) toTagChoice fpActions)
 
 withFuncParam ::
     MonadNaming m =>

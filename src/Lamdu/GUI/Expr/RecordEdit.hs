@@ -225,7 +225,7 @@ makeAddFieldRow ::
     , Has (Texts.CodeUI Text) env
     , Has (Texts.Name Text) env
     ) =>
-    Sugar.TagReplace Name i o Sugar.EntityId ->
+    Sugar.TagChoice Name i o Sugar.EntityId ->
     Sugar.Payload v name i o ->
     GuiM env i o (TaggedItem o)
 makeAddFieldRow addField pl =

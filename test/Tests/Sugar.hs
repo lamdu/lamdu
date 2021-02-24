@@ -122,7 +122,7 @@ testChangeParam =
             workArea ^?!
             replBody . _BodySimpleApply . V.appFunc .
             hVal . _BodySimpleApply . V.appArg .
-            hVal . lamFirstParam . _2 . piTag . tagRefReplace . tsNewTag
+            hVal . lamFirstParam . _2 . piTag . tagRefReplace . tcNewTag
             >>= lift . (^. toPick)
 
 -- | Test for issue #373

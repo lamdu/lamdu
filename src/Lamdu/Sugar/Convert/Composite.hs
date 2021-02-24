@@ -41,7 +41,7 @@ convertAddItem ::
     (T.Tag -> ValI m -> T m (DataOps.CompositeExtendResult m)) ->
     Set T.Tag ->
     Input.Payload m a # V.Term ->
-    ConvertM m (TagReplace InternalName (OnceT (T m)) (T m) EntityId)
+    ConvertM m (TagChoice InternalName (OnceT (T m)) (T m) EntityId)
 convertAddItem extendOp existingTags pl =
     do
         addItem <-

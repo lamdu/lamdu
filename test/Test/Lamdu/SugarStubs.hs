@@ -242,11 +242,11 @@ taggedEntityName ctx tag =
     , _inIsAutoName = False
     }
 
-tagRefReplace :: Sugar.TagReplace InternalName Identity Unit ()
+tagRefReplace :: Sugar.TagChoice InternalName Identity Unit ()
 tagRefReplace =
-    Sugar.TagReplace
-    { Sugar._tsOptions = pure []
-    , Sugar._tsNewTag =
+    Sugar.TagChoice
+    { Sugar._tcOptions = pure []
+    , Sugar._tcNewTag =
         pure Sugar.TagOption
         { Sugar._toInfo = Sugar.Tag
             { Sugar._tagName = taggedEntityName "newTag" "newTag"
@@ -255,7 +255,7 @@ tagRefReplace =
             }
         , Sugar._toPick = Unit
         }
-    , Sugar._tsAnon = Nothing
+    , Sugar._tcAnon = Nothing
     }
 
 getName :: T.Tag -> Identity (IsOperator, TextsInLang)

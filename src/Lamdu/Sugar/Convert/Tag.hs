@@ -81,7 +81,7 @@ refWith cp tag name forbiddenTags allowAnon mkInstance setTag tagsProp =
 replace ::
     (MonadTransaction n m, MonadReader env m, Anchors.HasCodeAnchors env n) =>
     (T.Tag -> name) -> Set T.Tag -> AllowAnonTag -> (T.Tag -> EntityId) -> (T.Tag -> T n a) ->
-    m (OnceT (T n) (TagReplace name (OnceT (T n)) (T n) a))
+    m (OnceT (T n) (TagChoice name (OnceT (T n)) (T n) a))
 replace name forbiddenTags allowAnon mkInstance setTag =
     Lens.view id
     <&> \env ->
@@ -93,24 +93,24 @@ replaceWith ::
     (T.Tag -> name) -> Set T.Tag -> AllowAnonTag -> (T.Tag -> EntityId) ->
     (T.Tag -> T m a) ->
     MkProperty' (T m) (Set T.Tag) ->
-    OnceT (T m) (TagReplace name (OnceT (T m)) (T m) a)
+    OnceT (T m) (TagChoice name (OnceT (T m)) (T m) a)
 replaceWith name forbiddenTags allowAnon mkInstance setTag tagsProp =
     DataOps.genNewTag & lift & once
     <&>
     \mkNewTag ->
-    TagReplace
-    { _tsOptions =
+    TagChoice
+    { _tcOptions =
         getP tagsProp & lift
         <&> (`Set.difference` forbiddenTags)
         <&> Set.toList
         <&> map toOption
-    , _tsNewTag =
+    , _tcNewTag =
         mkNewTag
         <&>
         \newTag ->
         toOption newTag
         & toPick %~ (Property.modP tagsProp (Lens.contains newTag .~ True) >>)
-    , _tsAnon =
+    , _tcAnon =
         case allowAnon of
         RequireTag -> Nothing
         AllowAnon -> setTag Anchors.anonTag <&> (,) (mkInstance Anchors.anonTag) & Just

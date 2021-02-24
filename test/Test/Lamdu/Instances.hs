@@ -219,7 +219,7 @@ deriving instance Eq n => Eq (Sugar.ResVal n)
 deriving instance Eq n => Eq (Sugar.Scheme n)
 deriving instance Eq n => Eq (Sugar.TagOption n Unit a)
 deriving instance Eq n => Eq (Sugar.TagRef n Unit Unit)
-deriving instance Eq n => Eq (Sugar.TagReplace n Unit Unit a)
+deriving instance Eq n => Eq (Sugar.TagChoice n Unit Unit a)
 
 instance (NFData a, NFData n) => NFData (Sugar.Annotation a n)
 instance (NFData a, NFData n) => NFData (Sugar.BinderParams a n (OnceT (T i)) (T o))
@@ -273,7 +273,7 @@ instance NFData (Sugar.NodeActions n (OnceT (T i)) (T o))
 instance NFData (Sugar.NullParamActions (T o))
 instance NFData (Sugar.NullaryVal n (OnceT (T i)) (T o))
 instance NFData (Sugar.OpenCompositeActions (T o))
-instance NFData (Sugar.TagReplace n (OnceT (T i)) (T o) a)
+instance NFData (Sugar.TagChoice n (OnceT (T i)) (T o) a)
 instance NFData Def.FFIName
 instance NFData EntityId
 instance NFData ExprGui.GuiPayload

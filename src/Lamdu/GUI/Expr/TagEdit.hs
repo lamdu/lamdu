@@ -161,7 +161,7 @@ makeOptions ::
     , Has (Texts.CodeUI Text) env
     , Has (MomentuTexts.Texts Text) env
     ) =>
-    Sugar.TagReplace Name i o a ->
+    Sugar.TagChoice Name i o a ->
     Sugar.TagOption Name o a ->
     (EntityId -> a -> Menu.PickResult) ->
     SearchMenu.ResultsContext ->
@@ -174,7 +174,7 @@ makeOptions tagRefReplace newTagOpt mkPickResult ctx
                 Lens.view
                 (has . Config.completion . Config.completionResultCount)
             results <-
-                tagRefReplace ^. Sugar.tsOptions
+                tagRefReplace ^. Sugar.tcOptions
                 <&> concatMap withText
                 <&> (Fuzzy.memoableMake fuzzyMaker ?? searchTerm)
                 & GuiM.im
@@ -297,13 +297,13 @@ makeTagHoleEdit ::
     , TextEdit.HasTexts env
     , SearchMenu.HasTexts env
     ) =>
-    Sugar.TagReplace Name i o a ->
+    Sugar.TagChoice Name i o a ->
     (EntityId -> a -> Menu.PickResult) ->
     Widget.Id ->
     GuiM env i o (TextWidget o)
 makeTagHoleEdit tagRefReplace mkPickResult holeId =
     do
-        newTagOption <- tagRefReplace ^. Sugar.tsNewTag & GuiM.im
+        newTagOption <- tagRefReplace ^. Sugar.tcNewTag & GuiM.im
         SearchMenu.make
             (const (makeHoleSearchTerm newTagOption mkPickResult holeId))
             (makeOptions tagRefReplace newTagOption mkPickResult) Element.empty holeId
@@ -395,7 +395,7 @@ makeTagRefEditWith onView onPickNext tag =
             , Menu._pickMNextEntry = onPickNext tagInstance
             }
         chooseAction =
-            case tag ^. Sugar.tagRefReplace . Sugar.tsAnon of
+            case tag ^. Sugar.tagRefReplace . Sugar.tcAnon of
             Nothing -> pure myId
             Just setAnon -> setAnon <&> fst <&> WidgetIds.fromEntityId
             <&> WidgetIds.tagHoleId

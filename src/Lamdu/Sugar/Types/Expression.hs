@@ -152,7 +152,7 @@ data Composite v name i o k = Composite
     , -- Punned items are like Haskell's NamedFieldPuns
       _cPunnedItems :: [PunnedVar name o k]
     , _cTail :: CompositeTail v name i o k
-    , _cAddItem :: TagReplace name i o EntityId
+    , _cAddItem :: TagChoice name i o EntityId
     } deriving Generic
 
 data Nominal v name i o k = Nominal
@@ -233,7 +233,7 @@ data NodeActions name i o = NodeActions
     , _setToEmptyRecord :: o EntityId
     , _extract :: o ExtractDestination
     , _mReplaceParent :: Maybe (o EntityId)
-    , _wrapInRecord :: TagReplace name i o ()
+    , _wrapInRecord :: TagChoice name i o ()
     , _mNewLet :: Maybe (o EntityId)
     } deriving Generic
 
