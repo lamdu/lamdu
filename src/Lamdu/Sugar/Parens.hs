@@ -141,14 +141,8 @@ loopExprBody parentPrec body_ =
             Lens.ASetter s t (Annotated pl # body) (Annotated (ParenInfo, pl) # body) ->
             MinOpPrec -> (t -> res) -> s -> (NeedsParens, res)
         leftSymbol lens prec cons x =
-            x & lens %~ loop prec childPrec & cons
-            & result needParens
-            where
-                loop _ _ = addToNode
-                needParens = parentPrec ^. after > prec
-                childPrec
-                    | needParens = pure 0
-                    | otherwise = parentPrec & before .~ prec
+            x & lens %~ addToNode & cons
+            & result (parentPrec ^. after > prec)
         newParentPrec needParens
             | needParens = pure 0
             | otherwise = parentPrec
