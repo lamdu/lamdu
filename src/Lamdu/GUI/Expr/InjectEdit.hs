@@ -20,7 +20,7 @@ import           Lamdu.Config.Theme (Theme)
 import qualified Lamdu.GUI.Expr.TagEdit as TagEdit
 import           Lamdu.GUI.Monad (GuiM)
 import           Lamdu.GUI.Styled (text, grammar)
-import           Lamdu.GUI.Wrap (stdWrapParentExpr)
+import           Lamdu.GUI.Wrap (stdWrap)
 import qualified Lamdu.GUI.Types as ExprGui
 import qualified Lamdu.I18N.Code as Texts
 import qualified Lamdu.I18N.CodeUI as Texts
@@ -53,12 +53,10 @@ make ::
     Annotated (ExprGui.Payload i o) # Const (Sugar.TagRef Name i o) ->
     GuiM env i o (Responsive o)
 make (Ann (Const pl) (Const tag)) =
-    do
-        (ResponsiveExpr.boxSpacedMDisamb ?? ExprGui.mParensId pl)
-            <*>
-            ( injectIndicator Texts.injectSymbol
-                /|/ TagEdit.makeVariantTag tag
-                <&> Responsive.fromWithTextPos
-                <&> (:[])
-            )
-        & stdWrapParentExpr pl
+    (ResponsiveExpr.boxSpacedMDisamb ?? ExprGui.mParensId pl)
+    <*> ( injectIndicator Texts.injectSymbol
+            /|/ TagEdit.makeVariantTag tag
+            <&> Responsive.fromWithTextPos
+            <&> (:[])
+        )
+    & stdWrap pl
