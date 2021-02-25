@@ -60,7 +60,7 @@ instance MonadTransaction m i => Order v name i o (Sugar.Composite v name i o) w
         <$> (orderByTag (^. Sugar.ciTag . Sugar.tagRefTag) items
             >>= (traverse . Sugar.ciExpr) orderNode)
         <*> pure punned
-        <*> (Sugar._OpenComposite . _2) orderNode tail_
+        <*> Sugar._OpenComposite orderNode tail_
         <*> pure addItem
 
 instance MonadTransaction m i => Order v name i o (Sugar.LabeledApply v name i o) where

@@ -80,10 +80,8 @@ make (Ann (Const pl) (Sugar.Composite alts punned caseTail addAlt)) =
         altsGui <-
             makeAltsWidget alts punned addAlt altsId
             >>= case caseTail of
-            Sugar.ClosedComposite actions ->
-                pure . Widget.weakerEvents (closedCaseEventMap env actions)
-            Sugar.OpenComposite actions rest ->
-                makeOpenCase actions rest (Widget.toAnimId myId)
+            Sugar.ClosedComposite actions -> pure . Widget.weakerEvents (closedCaseEventMap env actions)
+            Sugar.OpenComposite rest -> makeOpenCase rest (Widget.toAnimId myId)
         let addAltEventMap =
                 addAltId altsId
                 & pure
@@ -208,38 +206,21 @@ separationBar theme animId width =
     & M.scale (M.Vector2 width 10)
 
 makeOpenCase ::
-    ( Monad i, Monad o
-    , Has (Texts.CodeUI Text) env
-    , Grid.HasTexts env
-    ) =>
-    Sugar.OpenCompositeActions o -> ExprGui.Expr Sugar.Term i o ->
+    (Monad i, Monad o, Grid.HasTexts env) =>
+    ExprGui.Expr Sugar.Term i o ->
     M.AnimId -> Responsive o -> GuiM env i o (Responsive o)
-makeOpenCase actions rest animId altsGui =
+makeOpenCase rest animId altsGui =
     do
         theme <- Lens.view has
         vspace <- Spacer.stdVSpace
-        env <- Lens.view id
         restExpr <-
             Styled.addValPadding
             <*> GuiM.makeSubexpression rest
-            <&> Widget.weakerEvents (openCaseEventMap env actions)
         (|---|) <- Glue.mkGlue ?? Glue.Vertical
         vbox <- Responsive.vboxWithSeparator
         vbox False
             (separationBar (theme ^. Theme.textColors) animId <&> (|---| vspace))
             altsGui restExpr & pure
-
-openCaseEventMap ::
-    ( Has Config env
-    , Has (MomentuTexts.Texts Text) env
-    , Has (Texts.CodeUI Text) env
-    , Monad o
-    ) =>
-    env -> Sugar.OpenCompositeActions o ->
-    EventMap (o GuiState.Update)
-openCaseEventMap env (Sugar.OpenCompositeActions close) =
-    close <&> WidgetIds.fromEntityId
-    & E.keysEventMapMovesCursor (Config.delKeys env) (doc env Texts.close)
 
 closedCaseEventMap ::
     ( Has Config env

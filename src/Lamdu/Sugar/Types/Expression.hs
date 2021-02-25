@@ -143,7 +143,7 @@ data CompositeItem v name i o k = CompositeItem
     } deriving Generic
 
 data CompositeTail v name i o k
-    = OpenComposite (OpenCompositeActions o) (k :# Term v name i o)
+    = OpenComposite (k :# Term v name i o)
     | ClosedComposite (ClosedCompositeActions o)
     deriving Generic
 

@@ -40,6 +40,6 @@ convertExtend (RowExtend tag val rest) exprPl =
                 , Composite._extendValI = val ^. hAnn . Input.stored . ExprIRef.iref
                 , Composite._extendRest = rest ^. hAnn
                 }
-        Composite.convert DataOps.recExtend V.LRecEmpty mkRecExtend _BodyRecord valS restS exprPl recP
+        Composite.convert DataOps.recExtend mkRecExtend _BodyRecord valS restS exprPl recP
     where
         mkRecExtend t v r = RowExtend t v r & V.BRecExtend

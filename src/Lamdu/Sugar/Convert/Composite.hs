@@ -104,7 +104,6 @@ convertExtend cons extendOp valS exprPl extendV restC =
 
 convertOneItemOpenComposite ::
     Monad m =>
-    V.Leaf ->
     (T.Tag -> ValI m -> ValI m -> ExprIRef.ValBody m) ->
     (T.Tag -> ValI m -> T m (DataOps.CompositeExtendResult m)) ->
     k # Term v InternalName (OnceT (T m)) (T m) ->
@@ -112,7 +111,7 @@ convertOneItemOpenComposite ::
     Input.Payload m a # V.Term ->
     ExtendVal m (Input.Payload m a # V.Term) ->
     ConvertM m (Composite v InternalName (OnceT (T m)) (T m) # k)
-convertOneItemOpenComposite leaf cons extendOp valS restS exprPl extendV =
+convertOneItemOpenComposite cons extendOp valS restS exprPl extendV =
     Composite
     <$> ( convertItem cons
             (exprPl ^. Input.stored) (extendV ^. extendRest . Input.entityId) mempty valS
@@ -120,22 +119,8 @@ convertOneItemOpenComposite leaf cons extendOp valS restS exprPl extendV =
             <&> (:[])
         )
     <*> pure []
-    <*> (convertOpenCompositeActions leaf (extendV ^. extendRest . Input.stored) <&> (`OpenComposite` restS))
+    <*> pure (OpenComposite restS)
     <*> convertAddItem extendOp (Set.singleton (extendV ^. extendTag)) exprPl
-
-convertOpenCompositeActions ::
-    Monad m =>
-    V.Leaf -> HRef m # V.Term -> ConvertM m (OpenCompositeActions (T m))
-convertOpenCompositeActions leaf stored =
-    ConvertM.typeProtectedSetToVal
-    <&>
-    \protectedSetToVal ->
-    OpenCompositeActions
-    { _openCompositeClose =
-        ExprIRef.newValI (V.BLeaf leaf)
-        >>= protectedSetToVal stored
-        <&> EntityId.ofValI
-    }
 
 convertEmpty ::
     Monad m =>
@@ -200,13 +185,12 @@ type BodyPrism m v a =
 convert ::
     (Monad m, Monoid a) =>
     (T.Tag -> ValI m -> T m (DataOps.CompositeExtendResult m)) ->
-    V.Leaf ->
     (T.Tag -> ValI m -> ValI m -> ValBody m) -> BodyPrism m v a ->
     ExpressionU v m a ->
     ExpressionU v m a -> Input.Payload m a # V.Term ->
     ExtendVal m (Input.Payload m a # V.Term) ->
     ConvertM m (ExpressionU v m a)
-convert op empty cons prism valS restS exprPl extendV =
+convert op cons prism valS restS exprPl extendV =
     Lens.view (ConvertM.scConfig . Config.sugarsEnabled . Config.composite) >>=
     \case
     False -> convertOneItem
@@ -228,6 +212,6 @@ convert op empty cons prism valS restS exprPl extendV =
                 exprPl ^. Input.userData <> restS ^. annotation . pInput . Input.userData
     where
         convertOneItem =
-            convertOneItemOpenComposite empty cons op valS restS exprPl extendV
+            convertOneItemOpenComposite cons op valS restS exprPl extendV
             <&> (prism #)
             >>= addActions (Const ()) exprPl

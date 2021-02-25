@@ -143,10 +143,8 @@ make (Ann (Const pl) (Sugar.Composite fields punned recordTail addField)) =
         addFieldEventMap <- mkAddFieldEventMap (WidgetIds.fromExprPayload (pl ^. _1))
         tailEventMap <-
             case recordTail of
-            Sugar.ClosedComposite actions ->
-                closedRecordEventMap actions
-            Sugar.OpenComposite actions restExpr ->
-                openRecordEventMap actions restExpr
+            Sugar.ClosedComposite actions -> closedRecordEventMap actions
+            Sugar.OpenComposite{} -> pure mempty
         punnedGuis <-
             case punned of
             [] -> pure []
@@ -174,8 +172,7 @@ make (Ann (Const pl) (Sugar.Composite fields punned recordTail addField)) =
     where
         postProcess =
             case recordTail of
-            Sugar.OpenComposite actions restExpr ->
-                makeOpenRecord actions restExpr
+            Sugar.OpenComposite restExpr -> makeOpenRecord restExpr
             _ -> pure
 
 makeRecord ::
@@ -272,47 +269,20 @@ separationBar theme animId width =
     & M.scale (M.Vector2 width 10)
 
 makeOpenRecord ::
-    (Monad i, Monad o, Glue.HasTexts env, Has (Texts.CodeUI Text) env) =>
-    Sugar.OpenCompositeActions o -> ExprGui.Expr Sugar.Term i o -> Responsive o ->
+    (Monad i, Monad o, Glue.HasTexts env) =>
+    ExprGui.Expr Sugar.Term i o -> Responsive o ->
     GuiM env i o (Responsive o)
-makeOpenRecord (Sugar.OpenCompositeActions close) rest fieldsGui =
+makeOpenRecord rest fieldsGui =
     do
         theme <- Lens.view has
         vspace <- Spacer.stdVSpace
-        env <- Lens.view id
-        let restEventMap =
-                close <&> WidgetIds.fromEntityId
-                & E.keysEventMapMovesCursor (Config.delKeys env)
-                (doc env Texts.close)
         restExpr <-
             Styled.addValPadding <*> GuiM.makeSubexpression rest
-            <&> Widget.weakerEvents restEventMap
         animId <- Lens.view M.animIdPrefix
         (|---|) <- Glue.mkGlue ?? Glue.Vertical
         Responsive.vboxWithSeparator ?? False
             ?? (separationBar (theme ^. Theme.textColors) animId <&> (|---| vspace))
             ?? fieldsGui ?? restExpr
-
-openRecordEventMap ::
-    ( MonadReader env m, Has Config env
-    , Has (MomentuTexts.Texts Text) env
-    , Has (Texts.CodeUI Text) env
-    , Functor o
-    ) =>
-    Sugar.OpenCompositeActions o ->
-    Annotated a # Sugar.Term v name i o ->
-    m (EventMap (o GuiState.Update))
-openRecordEventMap (Sugar.OpenCompositeActions close) restExpr
-    | isHole restExpr =
-        Lens.view id
-        <&>
-        \env ->
-        close <&> WidgetIds.fromEntityId
-        & E.keysEventMapMovesCursor (env ^. has . Config.recordCloseKeys)
-        (doc env Texts.close)
-    | otherwise = pure mempty
-    where
-        isHole = Lens.has (hVal . Sugar._BodyLeaf . Sugar._LeafHole)
 
 closedRecordEventMap ::
     ( MonadReader env m, Has Config env

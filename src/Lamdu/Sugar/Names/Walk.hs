@@ -347,7 +347,7 @@ toComposite v (Composite items punned tail_ addItem) =
     Composite
     <$> traverse (toCompositeItem v) items
     <*> (traverse . pvVar) (toNode v (Lens._Wrapped toGetVar)) punned
-    <*> (_OpenComposite . _2) (toExpression v) tail_
+    <*> _OpenComposite (toExpression v) tail_
     <*> toTagChoice addItem
 
 toNominal :: MonadNaming m => WalkBody Nominal v0 v1 m o a

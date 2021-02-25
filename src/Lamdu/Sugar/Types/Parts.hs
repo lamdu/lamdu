@@ -25,7 +25,6 @@ module Lamdu.Sugar.Types.Parts
     , AddNextParam(..), _AddNext, _NeedToPickTagToAddNext
     , -- Expressions
       ClosedCompositeActions(..), closedCompositeOpen
-    , OpenCompositeActions(..), openCompositeClose
     , PunnedVar(..), pvVar, pvTagEntityId
     , NullaryVal(..), nullaryClosedCompositeActions, nullaryAddItem
 
@@ -130,10 +129,6 @@ newtype ClosedCompositeActions o = ClosedCompositeActions
     { _closedCompositeOpen :: o EntityId
     } deriving stock Generic
 
-newtype OpenCompositeActions o = OpenCompositeActions
-    { _openCompositeClose :: o EntityId
-    } deriving stock Generic
-
 -- | The empty record in a nullary inject
 data NullaryVal name i o = NullaryVal
     { _nullaryClosedCompositeActions :: ClosedCompositeActions o
@@ -180,7 +175,7 @@ data ParenInfo = ParenInfo
 
 traverse Lens.makeLenses
     [ ''ClosedCompositeActions, ''FuncParam, ''FuncParamActions, ''HoleResultScore
-    , ''NullParamActions, ''NullaryVal, ''OpenCompositeActions, ''ParamInfo, ''ParenInfo, ''PunnedVar
+    , ''NullParamActions, ''NullaryVal, ''ParamInfo, ''ParenInfo, ''PunnedVar
     ] <&> concat
 traverse Lens.makePrisms
     [ ''AddFirstParam, ''AddNextParam, ''Annotation, ''BinderParams, ''Delete
