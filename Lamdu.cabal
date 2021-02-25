@@ -171,7 +171,6 @@ Library
                   , safe-exceptions >= 0.1.4
                   , split
                   , StateVar
-                  , stm
                   , hypertypes
                   , template-haskell
                   , temporary
