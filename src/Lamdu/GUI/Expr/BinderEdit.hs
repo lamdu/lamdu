@@ -4,9 +4,8 @@ module Lamdu.GUI.Expr.BinderEdit
 
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
-import qualified GUI.Momentu.Element as Element
+import qualified GUI.Momentu as M
 import qualified GUI.Momentu.EventMap as E
-import           GUI.Momentu.Glue ((/|/))
 import qualified GUI.Momentu.I18N as MomentuTexts
 import           GUI.Momentu.Responsive (Responsive)
 import qualified GUI.Momentu.Responsive as Responsive
@@ -82,11 +81,11 @@ makeLetEdit item =
                     . pure . WidgetIds.fromEntityId
                 ) (item ^? Sugar.lUsages . Lens.ix 0)
         grammar (label Texts.let_)
-            /|/ Spacer.stdHSpace
-            /|/ (AssignmentEdit.make Nothing (item ^. Sugar.lName)
+            M./|/ Spacer.stdHSpace
+            M./|/ (AssignmentEdit.make Nothing (item ^. Sugar.lName)
                     TextColors.letColor binder
-                    <&> Widget.weakerEvents eventMap
-                    <&> Element.padAround (env ^. has . Theme.letItemPadding))
+                    <&> M.weakerEvents eventMap
+                    <&> M.padAround (env ^. has . Theme.letItemPadding))
     where
         bodyId = item ^. Sugar.lBody . annotation . _1 & WidgetIds.fromExprPayload
         binder = item ^. Sugar.lValue
@@ -124,11 +123,11 @@ make (Ann (Const pl) (Sugar.BinderLet l)) =
         Responsive.vboxSpaced
             <*>
             sequence
-            [ makeLetEdit l <&> Widget.weakerEvents moveToInnerEventMap
+            [ makeLetEdit l <&> M.weakerEvents moveToInnerEventMap
             , make body
             ]
         & stdWrapParentExpr pl
-        & Reader.local (Element.animIdPrefix .~ Widget.toAnimId myId)
+        & Reader.local (M.animIdPrefix .~ Widget.toAnimId myId)
     where
         myId = WidgetIds.fromExprPayload (pl ^. _1)
         body = l ^. Sugar.lBody

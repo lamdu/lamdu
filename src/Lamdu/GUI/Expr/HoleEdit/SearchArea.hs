@@ -12,18 +12,13 @@ import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
 import qualified Data.Monoid as Monoid
 import qualified Data.Text as Text
-import           GUI.Momentu.Align (TextWidget)
-import qualified GUI.Momentu.Align as Align
-import           GUI.Momentu.Animation (AnimId)
-import qualified GUI.Momentu.Draw as MDraw
+import qualified GUI.Momentu as M
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
-import           GUI.Momentu.Glue ((/-/))
 import qualified GUI.Momentu.Glue as Glue
 import qualified GUI.Momentu.I18N as MomentuTexts
 import qualified GUI.Momentu.State as GuiState
-import           GUI.Momentu.View (View)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.FocusDelegator as FocusDelegator
 import qualified GUI.Momentu.Widgets.Menu as Menu
@@ -133,16 +128,16 @@ makeResultOption pl results =
             }
 
 makeInferredTypeAnnotation ::
-    ( MonadReader env m, Has Theme env, Element.HasAnimIdPrefix env
+    ( MonadReader env m, Has Theme env, M.HasAnimIdPrefix env
     , Spacer.HasStdSpacing env, Has (Texts.Name Text) env, Glue.HasTexts env
     , Has (Texts.Code Text) env
     ) =>
-    Sugar.Annotation v Name -> AnimId -> m View
+    Sugar.Annotation v Name -> M.AnimId -> m M.View
 makeInferredTypeAnnotation ann animId =
     Annotation.addAnnotationBackground
     <*> TypeView.make (ann ^?! Sugar._AnnotationType)
-    <&> (^. Align.tValue)
-    & Reader.local (Element.animIdPrefix .~ animId)
+    <&> (^. M.tValue)
+    & Reader.local (M.animIdPrefix .~ animId)
 
 -- Filter out events which should be taken by search term event map instead.
 filterSearchTermEvents :: (Text -> Bool) -> Text -> EventMap a -> EventMap a
@@ -173,14 +168,14 @@ make ::
     AnnotationMode ->
     i (Sugar.OptionFilter -> [Sugar.HoleOption Name i o]) ->
     ExprGui.Payload i o -> (Text -> Bool) -> WidgetIds ->
-    GuiM env i o (Menu.Placement -> TextWidget o)
+    GuiM env i o (Menu.Placement -> M.TextWidget o)
 make annMode mkOptions pl allowedTerms widgetIds =
     do
         env <- Lens.view id
         let fdWrap =
                 FocusDelegator.make ?? fdConfig env
                 ?? FocusDelegator.FocusEntryParent ?? hidClosed widgetIds
-                <&> (Align.tValue %~)
+                <&> (M.tValue %~)
         term <- makeTerm Menu.NoPickFirstResult
         closedSearchTermGui <-
             maybeAddAnn <*> (fdWrap ?? term ^. SearchMenu.termWidget)
@@ -193,10 +188,10 @@ make annMode mkOptions pl allowedTerms widgetIds =
                 do
                     annotationGui <-
                         case annMode of
-                        WithoutAnnotation -> pure Element.empty
+                        WithoutAnnotation -> pure M.empty
                         WithAnnotation ->
                             Annotation.annotationSpacer
-                            /-/ makeInferredTypeAnnotation (pl ^. _1 . Sugar.plAnnotation) animId
+                            M./-/ makeInferredTypeAnnotation (pl ^. _1 . Sugar.plAnnotation) animId
                     searchTerm <- SearchMenu.readSearchTerm searchMenuId
                     options <- GuiM.im mkOptions <&> (searchTermFilter searchTerm &)
                     -- ideally the fdWrap would be "inside" the
@@ -207,7 +202,7 @@ make annMode mkOptions pl allowedTerms widgetIds =
                     (fdWrap <&> (Lens.mapped %~))
                         <*> SearchMenu.make makeTerm
                             (filteredOptions options) annotationGui searchMenuId
-                        <&> Lens.mapped . Align.tValue %~ inPlaceOfClosed
+                        <&> Lens.mapped . M.tValue %~ inPlaceOfClosed
             else
                 closedSearchTermGui
                 <&> (if isActive then Widget.setFocused else id)
@@ -225,17 +220,17 @@ make annMode mkOptions pl allowedTerms widgetIds =
         maybeAddAnn =
             case annMode of
             WithoutAnnotation -> pure id
-            WithAnnotation -> maybeAddAnnotationPl (pl ^. _1) <&> (Align.tValue %~)
+            WithAnnotation -> maybeAddAnnotationPl (pl ^. _1) <&> (M.tValue %~)
         makeTerm mPickFirst =
             do
                 theme <- Lens.view (has . Theme.hole)
                 frameWidth <- Spacer.stdFontHeight <&> pure <&> (* theme ^. Theme.holeFrameWidth)
                 addFrame <-
-                    MDraw.addInnerFrame ?? theme ^. Theme.holeFrameColor ?? frameWidth
-                    & Reader.local (Element.animIdPrefix .~ animId <> ["hole-frame"])
+                    M.addInnerFrame ?? theme ^. Theme.holeFrameColor ?? frameWidth
+                    & Reader.local (M.animIdPrefix .~ animId <> ["hole-frame"])
                 SearchMenu.searchTermEdit searchMenuId allowedTermsCtx mPickFirst
                     <&> SearchMenu.termWidget %~
-                        addFrame . Element.padAround (frameWidth & _2 .~ 0)
+                        addFrame . M.padAround (frameWidth & _2 .~ 0)
         animId = hidClosed widgetIds & Widget.toAnimId
         searchMenuId = hidOpen widgetIds
         allowedTermsCtx txt =
@@ -251,5 +246,5 @@ make annMode mkOptions pl allowedTerms widgetIds =
         filteredOptions opts ctx =
             ResultGroups.makeAll opts ctx
             <&> Lens.mapped %~ makeResultOption (pl ^. _2)
-            <&> Lens.mapped . Menu.optionWidgets . Align.tValue . Widget.eventMapMaker . Lens.mapped %~
+            <&> Lens.mapped . Menu.optionWidgets . M.tValue . Widget.eventMapMaker . Lens.mapped %~
                 filterSearchTermEvents allowedTerms (ctx ^. SearchMenu.rSearchTerm)

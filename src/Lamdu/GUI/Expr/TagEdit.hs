@@ -13,10 +13,8 @@ import qualified Data.Char as Char
 import           Data.MRUMemo (memo)
 import qualified Data.Property as Property
 import qualified Data.Text as Text
-import           GUI.Momentu.Align (WithTextPos, TextWidget)
-import qualified GUI.Momentu.Align as Align
+import qualified GUI.Momentu as M
 import qualified GUI.Momentu.Direction as Dir
-import qualified GUI.Momentu.Draw as Draw
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
@@ -25,7 +23,6 @@ import qualified GUI.Momentu.Hover as Hover
 import qualified GUI.Momentu.I18N as MomentuTexts
 import qualified GUI.Momentu.MetaKey as MetaKey
 import qualified GUI.Momentu.State as GuiState
-import           GUI.Momentu.View (View)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Menu as Menu
 import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
@@ -64,7 +61,7 @@ makePickEventMap ::
     , MonadReader env m
     ) =>
     f Menu.PickResult ->
-    m (EventMap (f GuiState.Update))
+    m (EventMap (f M.Update))
 makePickEventMap action =
     Lens.view id <&>
     \env ->
@@ -117,8 +114,8 @@ makeNewTagPreEvent tagOpt =
 
 makeAddNewTag ::
     ( Monad i, Monad o, MonadReader env f
-    , GuiState.HasCursor env, Has Theme env
-    , Has TextView.Style env, Element.HasAnimIdPrefix env, Has Dir.Layout env
+    , M.HasCursor env, Has Theme env
+    , Has TextView.Style env, M.HasAnimIdPrefix env, Has Dir.Layout env
     , Has (Texts.CodeUI Text) env
     , Has (Texts.CodeUI Text) menv
     ) =>
@@ -154,8 +151,8 @@ fuzzyMaker = memo Fuzzy.make
 
 makeOptions ::
     ( Monad i, Monad o, MonadReader menv m
-    , GuiState.HasCursor menv, Has Theme menv, Has TextView.Style menv
-    , Element.HasAnimIdPrefix menv, Glue.HasTexts menv
+    , M.HasCursor menv, Has Theme menv, Has TextView.Style menv
+    , M.HasAnimIdPrefix menv, Glue.HasTexts menv
     , Has (Texts.Name Text) menv
     , Has (Texts.CodeUI Text) menv
     , Has (Texts.CodeUI Text) env
@@ -193,7 +190,7 @@ makeOptions tagRefReplace newTagOpt mkPickResult ctx
                     , Menu._oRender =
                         (Widget.makeFocusableView ?? optionWId <&> fmap)
                         <*> NameView.make (opt ^. Sugar.toInfo . Sugar.tagName)
-                        & Reader.local (Element.animIdPrefix .~ Widget.toAnimId instanceId)
+                        & Reader.local (M.animIdPrefix .~ Widget.toAnimId instanceId)
                         <&>
                         \widget ->
                         Menu.RenderedOption
@@ -258,11 +255,11 @@ makeHoleSearchTerm newTagOption mkPickResult holeId =
             SearchMenu.addDelSearchTerm holeId
             <*> SearchMenu.basicSearchTermEdit newTagId holeId (pure . allowedSearchTerm)
                 SearchMenu.defaultEmptyStrings
-            <&> SearchMenu.termWidget . Align.tValue %~
+            <&> SearchMenu.termWidget . M.tValue %~
                 addPreEvents . Widget.weakerEvents newTagEventMap
         tooltip <- Lens.view (has . Theme.tooltip)
         if  allowNewTag &&
-            Widget.isFocused (term ^. SearchMenu.termWidget . Align.tValue)
+            Widget.isFocused (term ^. SearchMenu.termWidget . M.tValue)
             then
                 do
                     newText <- Lens.view (has . Texts.new)
@@ -278,13 +275,13 @@ makeHoleSearchTerm newTagOption mkPickResult holeId =
                             let hoverOptions =
                                     [ anchor (termW ||| space) ||| hNewTagLabel
                                     , hNewTagLabel ||| anchor (space ||| termW)
-                                    ] <&> (^. Align.tValue)
+                                    ] <&> (^. M.tValue)
                             in  anchor termW
                                 <&> Hover.hoverInPlaceOf hoverOptions
                     term & SearchMenu.termWidget %~ termWithHover & pure
                     & Reader.local (Hover.backgroundColor .~ tooltip ^. Theme.tooltipBgColor)
                     & Reader.local (TextView.color .~ tooltip ^. Theme.tooltipFgColor)
-                    & Reader.local (Element.animIdPrefix <>~ ["label"])
+                    & Reader.local (M.animIdPrefix <>~ ["label"])
             else pure term
     where
         newTagId = newTagOption ^. Sugar.toInfo . Sugar.tagInstance & WidgetIds.fromEntityId & Widget.toAnimId
@@ -300,13 +297,13 @@ makeTagHoleEdit ::
     Sugar.TagChoice Name i o a ->
     (EntityId -> a -> Menu.PickResult) ->
     Widget.Id ->
-    GuiM env i o (TextWidget o)
+    GuiM env i o (M.TextWidget o)
 makeTagHoleEdit tagRefReplace mkPickResult holeId =
     do
         newTagOption <- tagRefReplace ^. Sugar.tcNewTag & GuiM.im
         SearchMenu.make
             (const (makeHoleSearchTerm newTagOption mkPickResult holeId))
-            (makeOptions tagRefReplace newTagOption mkPickResult) Element.empty holeId
+            (makeOptions tagRefReplace newTagOption mkPickResult) M.empty holeId
             ?? Menu.AnyPlace
 
 makeTagRefEdit ::
@@ -318,7 +315,7 @@ makeTagRefEdit ::
     , Has (Texts.Navigation Text) env
     ) =>
     Sugar.TagRef Name i o ->
-    GuiM env i o (TextWidget o)
+    GuiM env i o (M.TextWidget o)
 makeTagRefEdit = makeTagRefEditWith id (const Nothing) <&> fmap snd
 
 data TagRefEditType
@@ -328,18 +325,18 @@ data TagRefEditType
 
 makeTagRefEditWith ::
     ( Monad i, Monad o, MonadReader nenv n
-    , GuiState.HasCursor nenv, Has TextView.Style nenv, Has (Texts.Name Text) nenv
-    , Element.HasAnimIdPrefix nenv, Has Theme nenv, Glue.HasTexts nenv
+    , M.HasCursor nenv, Has TextView.Style nenv, Has (Texts.Name Text) nenv
+    , M.HasAnimIdPrefix nenv, Has Theme nenv, Glue.HasTexts nenv
     , Glue.HasTexts env, TextEdit.HasTexts env, SearchMenu.HasTexts env
     , Has (Texts.CodeUI Text) env
     , Has (Texts.Navigation Text) env
     , Has (Texts.Name Text) env
     ) =>
-    (n (TextWidget o) ->
-     GuiM env i o (TextWidget o)) ->
+    (n (M.TextWidget o) ->
+     GuiM env i o (M.TextWidget o)) ->
     (Sugar.EntityId -> Maybe Widget.Id) ->
     Sugar.TagRef Name i o ->
-    GuiM env i o (TagRefEditType, TextWidget o)
+    GuiM env i o (TagRefEditType, M.TextWidget o)
 makeTagRefEditWith onView onPickNext tag =
     do
         isHole <- GuiState.isSubCursor ?? holeId
@@ -380,7 +377,7 @@ makeTagRefEditWith onView onPickNext tag =
         if isHole
             then
                 makeTagHoleEdit (tag ^. Sugar.tagRefReplace) mkPickResult holeId
-                <&> Align.tValue %~ Widget.weakerEvents leaveHoleEventMap
+                <&> M.tValue %~ Widget.weakerEvents leaveHoleEventMap
                 <&> (,) TagHole
             else pure (SimpleView, nameView)
         & GuiState.assignCursor myId viewId
@@ -409,7 +406,7 @@ makeRecordTag ::
     , Has (Texts.Navigation Text) env
     ) =>
     Sugar.TagRef Name i o ->
-    GuiM env i o (TextWidget o)
+    GuiM env i o (M.TextWidget o)
 makeRecordTag =
     makeTagRefEdit <&> Styled.withColor TextColors.recordTagColor
 
@@ -422,7 +419,7 @@ makeVariantTag ::
     , Has (Texts.Navigation Text) env
     ) =>
     Sugar.TagRef Name i o ->
-    GuiM env i o (TextWidget o)
+    GuiM env i o (M.TextWidget o)
 makeVariantTag tag =
     makeTagRefEdit tag
     & Styled.withColor TextColors.caseTagColor
@@ -438,8 +435,8 @@ makeLHSTag ::
     , Has (Texts.Navigation Text) env
     ) =>
     (Sugar.EntityId -> Maybe Widget.Id) ->
-    Lens.ALens' TextColors Draw.Color -> Sugar.TagRef Name i o ->
-    GuiM env i o (TextWidget o)
+    Lens.ALens' TextColors M.Color -> Sugar.TagRef Name i o ->
+    GuiM env i o (M.TextWidget o)
 makeLHSTag onPickNext color tag =
     do
         env <- Lens.view id
@@ -479,7 +476,7 @@ makeParamTag ::
     , Has (Texts.Navigation Text) env
     ) =>
     Sugar.TagRef Name i o ->
-    GuiM env i o (TextWidget o)
+    GuiM env i o (M.TextWidget o)
 makeParamTag =
     makeLHSTag onPickNext TextColors.parameterColor
     where
@@ -488,13 +485,13 @@ makeParamTag =
 -- | Unfocusable tag view (e.g: in apply args)
 makeArgTag ::
     ( MonadReader env m, Has Theme env, Has TextView.Style env
-    , Element.HasAnimIdPrefix env, Glue.HasTexts env, Has (Texts.Name Text) env
+    , M.HasAnimIdPrefix env, Glue.HasTexts env, Has (Texts.Name Text) env
     ) =>
-    Name -> Sugar.EntityId -> m (WithTextPos View)
+    Name -> Sugar.EntityId -> m (M.WithTextPos M.View)
 makeArgTag name tagInstance =
     NameView.make name
     & Styled.withColor TextColors.argTagColor
-    & Reader.local (Element.animIdPrefix .~ animId)
+    & Reader.local (M.animIdPrefix .~ animId)
     where
         animId = WidgetIds.fromEntityId tagInstance & Widget.toAnimId
 
@@ -507,8 +504,8 @@ makeBinderTagEdit ::
     , Has (Texts.Name Text) env
     , Has (Texts.Navigation Text) env
     ) =>
-    Lens.ALens' TextColors Draw.Color -> Sugar.TagRef Name i o ->
-    GuiM env i o (TextWidget o)
+    Lens.ALens' TextColors M.Color -> Sugar.TagRef Name i o ->
+    GuiM env i o (M.TextWidget o)
 makeBinderTagEdit color tag =
     makeLHSTag (const Nothing) color tag
     & Reader.local (has . Menu.configKeys . Menu.keysPickOptionAndGotoNext .~ [])

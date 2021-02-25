@@ -3,8 +3,7 @@ module Lamdu.GUI.Expr.FragmentEdit
     ) where
 
 import qualified Control.Lens as Lens
-import           Data.Vector.Vector2 (Vector2(..))
-import qualified GUI.Momentu.Align as Align
+import qualified GUI.Momentu as M
 import qualified GUI.Momentu.Animation as Anim
 import qualified GUI.Momentu.Direction as Dir
 import qualified GUI.Momentu.Element as Element
@@ -78,16 +77,16 @@ make (Ann (Const pl) fragment) =
             ?? Menu.AnyPlace
 
         qmarkView <-
-            (Element.padToSize ?? rawSearchArea ^. Align.tValue . Widget.wSize ?? 0.5)
+            (Element.padToSize ?? rawSearchArea ^. M.tValue . Widget.wSize ?? 0.5)
             <*> Label.make "?"
 
         searchArea <-
-            Element.padToSize ?? qmarkView ^. Align.tValue . View.vSize ?? 0.5
-            <&> (Align.tValue %~)
+            Element.padToSize ?? qmarkView ^. M.tValue . View.vSize ?? 0.5
+            <&> (M.tValue %~)
             ?? rawSearchArea
             <&> Lens.mapped %~
                 Widget.weakerEvents (healEventMap (Config.delKeys env) "" env)
-        let qmarkImage = qmarkView ^. Align.tValue . View.vAnimLayers
+        let qmarkImage = qmarkView ^. M.tValue . View.vAnimLayers
         let searchAreaQMark = searchArea <&> Element.setLayeredImage .~ qmarkImage
         let healKeys = env ^. has . Config.healKeys
         let healChars =
@@ -126,8 +125,8 @@ make (Ann (Const pl) fragment) =
             where
                 line =
                     Anim.coloredRectangle animId color
-                    & Anim.scale (Vector2 (ann ^. Element.width) spacing)
-                    & Anim.translate (Vector2 0 (ann ^. Element.height))
+                    & Anim.scale (M.Vector2 (ann ^. Element.width) spacing)
+                    & Anim.translate (M.Vector2 0 (ann ^. Element.height))
 
         myId = WidgetIds.fromExprPayload (pl ^. _1)
         holeIds = WidgetIds.fragmentHoleId myId & HoleWidgetIds.makeFrom

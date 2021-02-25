@@ -6,12 +6,8 @@ import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
 import           Data.Property (Property(..))
 import qualified Data.Text as Text
-import           GUI.Momentu.Align (TextWidget)
-import qualified GUI.Momentu.Align as Align
-import qualified GUI.Momentu.Draw as MDraw
-import qualified GUI.Momentu.Element as Element
+import qualified GUI.Momentu as M
 import qualified GUI.Momentu.EventMap as E
-import           GUI.Momentu.Glue ((/|/))
 import qualified GUI.Momentu.Glue as Glue
 import qualified GUI.Momentu.I18N as MomentuTexts
 import           GUI.Momentu.MetaKey (MetaKey(..), noMods)
@@ -54,13 +50,13 @@ makeNamePartEditor ::
     ( Applicative f, MonadReader env m, GuiState.HasCursor env
     , TextEdit.Deps env, Has (Texts.CodeUI Text) env
     ) =>
-    MDraw.Color -> Text -> (Text -> f ()) -> Widget.Id ->
-    m (TextWidget f)
+    M.Color -> Text -> (Text -> f ()) -> Widget.Id ->
+    m (M.TextWidget f)
 makeNamePartEditor color namePartStr setter myId =
     (FocusDelegator.make
         <*> (Lens.view id <&> builtinFDConfig)
         ?? FocusDelegator.FocusEntryParent
-        ?? myId <&> (Align.tValue %~))
+        ?? myId <&> (M.tValue %~))
     <*> ( TextEdits.makeWordEdit ?? empty ?? Property namePartStr setter ??
           myId `Widget.joinId` ["textedit"]
         )
@@ -74,18 +70,18 @@ makeNamePartEditor color namePartStr setter myId =
 
 make ::
     ( MonadReader env f, Monad o, Has Theme env, GuiState.HasCursor env
-    , TextEdit.Deps env, Element.HasAnimIdPrefix env
+    , TextEdit.Deps env, M.HasAnimIdPrefix env
     , Has (Texts.CodeUI Text) env, Glue.HasTexts env
     ) =>
     Sugar.DefinitionBuiltin name o -> Widget.Id ->
-    f (TextWidget o)
+    f (M.TextWidget o)
 make def myId =
     do
         colors <- Lens.view (has . Theme.textColors)
         makeNamePartEditor (colors ^. TextColors.foreignModuleColor)
             modulePathStr modulePathSetter (builtinFFIPath myId)
-            /|/ Label.make "."
-            /|/ makeNamePartEditor (colors ^. TextColors.foreignVarColor) name
+            M./|/ Label.make "."
+            M./|/ makeNamePartEditor (colors ^. TextColors.foreignVarColor) name
             nameSetter (builtinFFIName myId)
     & GuiState.assignCursor myId (builtinFFIName myId)
     where

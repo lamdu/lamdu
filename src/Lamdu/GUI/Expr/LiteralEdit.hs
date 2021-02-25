@@ -9,13 +9,11 @@ import qualified Data.Char as Char
 import           Data.Property (Property)
 import qualified Data.Property as Property
 import qualified Data.Text as Text
-import           GUI.Momentu.Align (TextWidget)
-import qualified GUI.Momentu.Align as Align
+import qualified GUI.Momentu as M
 import qualified GUI.Momentu.Direction as Dir
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
-import           GUI.Momentu.Glue ((/|/))
 import qualified GUI.Momentu.Glue as Glue
 import qualified GUI.Momentu.I18N as MomentuTexts
 import qualified GUI.Momentu.MetaKey as MetaKey
@@ -57,7 +55,7 @@ mkEditEventMap ::
     , Has (MomentuTexts.Texts Text) env, Has (Texts.CodeUI Text) env
     , Monad o
     ) =>
-    m (Text -> o Sugar.EntityId -> EventMap (o GuiState.Update))
+    m (Text -> o Sugar.EntityId -> EventMap (o M.Update))
 mkEditEventMap =
     Lens.view id
     <&> \env valText setToHole ->
@@ -73,7 +71,7 @@ withStyle whichStyle =
     Reader.local (\x -> x & has .~ x ^. has . whichStyle)
 
 genericEdit ::
-    ( Monad o, Format a, MonadReader env f, HasStyle env, GuiState.HasCursor env
+    ( Monad o, Format a, MonadReader env f, HasStyle env, M.HasCursor env
     , Has (MomentuTexts.Texts Text) env, Has (Texts.CodeUI Text) env
     , Has Dir.Layout env
     ) =>
@@ -87,7 +85,7 @@ genericEdit whichStyle prop pl =
             Sugar.SetToHole action -> mkEditEventMap ?? valText ?? action
             _ -> error "Cannot set literal to hole?!"
         TextView.makeFocusable ?? valText ?? myId
-            <&> Align.tValue %~ Widget.weakerEvents editEventMap
+            <&> M.tValue %~ M.weakerEvents editEventMap
             <&> Responsive.fromWithTextPos
             & withStyle whichStyle
     where
@@ -130,32 +128,32 @@ fdConfig =
     }
 
 withFd ::
-    ( MonadReader env m, Has Config env, GuiState.HasCursor env
+    ( MonadReader env m, Has Config env, M.HasCursor env
     , Has Menu.Config env, Applicative f
     , Has (MomentuTexts.Texts Text) env, Has (Texts.CodeUI Text) env
     ) =>
-    m (Widget.Id -> TextWidget f -> TextWidget f)
+    m (Widget.Id -> M.TextWidget f -> M.TextWidget f)
 withFd =
     FocusDelegator.make <*> fdConfig ?? FocusDelegator.FocusEntryParent
-    <&> Lens.mapped %~ (Align.tValue %~)
+    <&> Lens.mapped %~ (M.tValue %~)
 
 textEdit ::
     ( MonadReader env m, Has Config env, HasStyle env, Has Menu.Config env
-    , Element.HasAnimIdPrefix env, GuiState.HasCursor env
+    , M.HasAnimIdPrefix env, M.HasCursor env
     , Glue.HasTexts env, TextEdit.HasTexts env
     , Has (Texts.Code Text) env, Has (Texts.CodeUI Text) env
     , Monad o
     ) =>
     Property o Text ->
     Sugar.Payload v name i o ->
-    m (TextWidget o)
+    m (M.TextWidget o)
 textEdit prop pl =
     do
         text <- TextEdits.make ?? empty ?? prop ?? WidgetIds.literalEditOf myId
         (withFd ?? myId) <*>
             label Texts.textOpener
-            /|/ pure text
-            /|/ ((Align.tValue %~)
+            M./|/ pure text
+            M./|/ ((M.tValue %~)
                     <$> (Element.padToSize ?? (text ^. Element.size & _1 .~ 0) ?? 1)
                     <*> label Texts.textCloser
                 )
@@ -180,12 +178,12 @@ numEdit ::
     ) =>
     Property o Double ->
     Sugar.Payload v name i o ->
-    m (TextWidget o)
+    m (M.TextWidget o)
 numEdit prop pl =
     (withFd ?? myId) <*>
     do
         text <-
-            GuiState.readWidgetState myId
+            M.readWidgetState myId
             <&> (^? Lens._Just . Lens.filtered ((== Just prevVal) . parseNum))
             <&> fromMaybe (format prevVal)
         let preEvent =
@@ -247,13 +245,13 @@ numEdit prop pl =
             then makeLiteralEventMap ?? pl ^. Sugar.plActions
             else pure mempty
         TextEdit.make ?? empty ?? text ?? innerId
-            <&> Align.tValue . Widget.eventMapMaker . Lens.mapped %~
+            <&> M.tValue . Widget.eventMapMaker . Lens.mapped %~
                 -- Avoid taking keys that don't belong to us,
                 -- so weakerEvents with them will work.
                 E.filter (Lens.has Lens._Just . parseNum . fst)
-            <&> Align.tValue . Widget.updates %~ event
-            <&> Align.tValue %~ Widget.strongerEvents (negateEvent <> delEvent <> newLiteralEvent <> strollEvent)
-            <&> Align.tValue %~ Widget.addPreEvent preEvent
+            <&> M.tValue . Widget.updates %~ event
+            <&> M.tValue %~ Widget.strongerEvents (negateEvent <> delEvent <> newLiteralEvent <> strollEvent)
+            <&> M.tValue %~ Widget.addPreEvent preEvent
         & withStyle Style.num
     where
         prevVal = prop ^. Property.pVal

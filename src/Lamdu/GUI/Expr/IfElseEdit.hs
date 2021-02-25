@@ -7,18 +7,15 @@ import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
 import           Data.Functor.Compose (Compose(..))
 import           Data.Vector.Vector2 (Vector2(..))
-import           GUI.Momentu.Align (WithTextPos)
-import           GUI.Momentu.Animation (AnimId)
+import qualified GUI.Momentu as M
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as E
-import           GUI.Momentu.Glue ((/|/))
 import qualified GUI.Momentu.Glue as Glue
 import qualified GUI.Momentu.I18N as MomentuTexts
 import           GUI.Momentu.Responsive (Responsive)
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.Responsive.Expression as ResponsiveExpr
 import qualified GUI.Momentu.Responsive.Options as Options
-import           GUI.Momentu.View (View)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Grid as Grid
 import qualified GUI.Momentu.Widgets.Label as Label
@@ -41,7 +38,7 @@ import qualified Lamdu.Sugar.Types as Sugar
 import           Lamdu.Prelude
 
 data Row a = Row
-    { _rIndentId :: AnimId
+    { _rIndentId :: M.AnimId
     , _rKeyword :: a
     , _rPredicate :: a
     , _rResult :: a
@@ -53,17 +50,17 @@ makeIfThen ::
     , Has (Texts.Code Text) env
     , Has (MomentuTexts.Texts Text) env
     ) =>
-    WithTextPos View -> AnimId -> ExprGui.Body Sugar.IfElse i o -> GuiM env i o (Row (Responsive o))
+    M.WithTextPos M.View -> M.AnimId -> ExprGui.Body Sugar.IfElse i o -> GuiM env i o (Row (Responsive o))
 makeIfThen prefixLabel animId ifElse =
     do
         ifGui <-
             GuiM.makeSubexpression (ifElse ^. Sugar.iIf)
-            /|/ (grammar (Label.make ":") /|/ Spacer.stdHSpace)
+            M./|/ (grammar (Label.make ":") M./|/ Spacer.stdHSpace)
         thenGui <- GuiM.makeSubexpression (ifElse ^. Sugar.iThen)
         keyword <-
             pure prefixLabel
-            /|/ grammar (label Texts.if_)
-            /|/ Spacer.stdHSpace
+            M./|/ grammar (label Texts.if_)
+            M./|/ Spacer.stdHSpace
             <&> Responsive.fromTextView
         env <- Lens.view id
         let eventMap =
@@ -75,8 +72,8 @@ makeIfThen prefixLabel animId ifElse =
                 (ifElse ^. Sugar.iElse . annotation .
                  _1 . Sugar.plActions . Sugar.mReplaceParent)
         Row animId keyword
-            (Widget.weakerEvents eventMap ifGui)
-            (Widget.weakerEvents eventMap thenGui)
+            (M.weakerEvents eventMap ifGui)
+            (M.weakerEvents eventMap thenGui)
             & pure
 
 makeElse ::
@@ -85,7 +82,7 @@ makeElse ::
     , Has (Texts.CodeUI Text) env
     , Has (MomentuTexts.Texts Text) env
     ) =>
-    AnimId -> ExprGui.Expr Sugar.Else i o -> GuiM env i o [Row (Responsive o)]
+    M.AnimId -> ExprGui.Expr Sugar.Else i o -> GuiM env i o [Row (Responsive o)]
 makeElse parentAnimId (Ann (Const pl) (Sugar.SimpleElse expr)) =
     Row elseAnimId
     <$> (grammar (label Texts.else_) <&> Responsive.fromTextView)
@@ -104,7 +101,7 @@ makeElse _ (Ann pl (Sugar.ElseIf content)) =
             foldMap ExprEventMap.addLetEventMap (pl ^. Lens._Wrapped . _1 . Sugar.plActions . Sugar.mNewLet)
         (:)
             <$> ( makeIfThen elseLabel animId content
-                  <&> Lens.mapped %~ Widget.weakerEvents letEventMap
+                  <&> Lens.mapped %~ M.weakerEvents letEventMap
                 )
             <*> makeElse animId (content ^. Sugar.iElse)
             & Reader.local (Element.animIdPrefix .~ animId)
@@ -132,7 +129,7 @@ renderRows ::
     ( Monad o, MonadReader env f, Spacer.HasStdSpacing env
     , Has ResponsiveExpr.Style env
     , Grid.HasTexts env
-    ) => Maybe AnimId -> f ([Row (Responsive o)] -> Responsive o)
+    ) => Maybe M.AnimId -> f ([Row (Responsive o)] -> Responsive o)
 renderRows mParensId =
     do
         vspace <- Spacer.getSpaceSize <&> (^._2)

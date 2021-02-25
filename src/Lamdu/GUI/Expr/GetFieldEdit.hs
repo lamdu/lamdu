@@ -2,7 +2,7 @@ module Lamdu.GUI.Expr.GetFieldEdit
     ( make
     ) where
 
-import           GUI.Momentu.Glue ((/|/))
+import           GUI.Momentu ((/|/))
 import           GUI.Momentu.Responsive (Responsive)
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.Widgets.Grid as Grid

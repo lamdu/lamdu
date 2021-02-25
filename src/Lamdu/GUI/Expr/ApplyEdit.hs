@@ -3,7 +3,7 @@ module Lamdu.GUI.Expr.ApplyEdit
     ) where
 
 import qualified Control.Lens as Lens
-import           GUI.Momentu.Glue ((/|/))
+import           GUI.Momentu ((/|/))
 import qualified GUI.Momentu.Glue as Glue
 import           GUI.Momentu.Responsive (Responsive)
 import qualified GUI.Momentu.Responsive as Responsive

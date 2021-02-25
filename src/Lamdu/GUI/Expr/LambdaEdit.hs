@@ -4,9 +4,7 @@ module Lamdu.GUI.Expr.LambdaEdit
 
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
-import           GUI.Momentu.Align (WithTextPos(..))
-import qualified GUI.Momentu.Align as Align
-import qualified GUI.Momentu.Element as Element
+import qualified GUI.Momentu as M
 import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.Glue as Glue
 import qualified GUI.Momentu.I18N as MomentuTexts
@@ -17,7 +15,6 @@ import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.Responsive.Expression as ResponsiveExpr
 import qualified GUI.Momentu.Responsive.Options as Options
 import qualified GUI.Momentu.State as GuiState
-import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Grid as Grid
 import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
@@ -44,26 +41,26 @@ import           Lamdu.Prelude
 
 addScopeEdit ::
     (MonadReader env m, Applicative o, Glue.HasTexts env) =>
-    m (Maybe (Widget o) -> Responsive o -> Responsive o)
+    m (Maybe (M.Widget o) -> Responsive o -> Responsive o)
 addScopeEdit =
     Glue.mkGlue ?? Glue.Vertical
     <&> (\(|---|) mScopeEdit ->
-                (|---| maybe Element.empty (WithTextPos 0) mScopeEdit))
+                (|---| maybe M.empty (M.WithTextPos 0) mScopeEdit))
 
 mkLhsEdits ::
     (MonadReader env m, Applicative o, Glue.HasTexts env) =>
     m
     (Maybe (Responsive o) ->
-     Maybe (Widget o) -> [Responsive o])
+     Maybe (M.Widget o) -> [Responsive o])
 mkLhsEdits =
     addScopeEdit <&> \add mParamsEdit mScopeEdit ->
     mParamsEdit ^.. Lens._Just <&> add mScopeEdit
 
 mkExpanded ::
     ( Monad o, MonadReader env f, Has Theme env, Has TextView.Style env
-    , Element.HasAnimIdPrefix env, Glue.HasTexts env, Has (Texts.Code Text) env
+    , M.HasAnimIdPrefix env, Glue.HasTexts env, Has (Texts.Code Text) env
     ) =>
-    f (Maybe (Responsive o) -> Maybe (Widget o) -> [Responsive o])
+    f (Maybe (Responsive o) -> Maybe (M.Widget o) -> [Responsive o])
 mkExpanded =
     (,)
     <$> mkLhsEdits
@@ -76,12 +73,12 @@ lamId = (`Widget.joinId` ["lam"])
 
 mkShrunk ::
     ( Monad o, MonadReader env f, Has Config env, Has Theme env
-    , GuiState.HasCursor env, Element.HasAnimIdPrefix env, Has TextView.Style env
+    , GuiState.HasCursor env, M.HasAnimIdPrefix env, Has TextView.Style env
     , Glue.HasTexts env
     , Has (Texts.Code Text) env
     , Has (Texts.CodeUI Text) env
     ) => [Sugar.EntityId] -> Widget.Id ->
-    f (Maybe (Widget o) -> [Responsive o])
+    f (Maybe (M.Widget o) -> [Responsive o])
 mkShrunk paramIds myId =
     do
         env <- Lens.view id
@@ -97,19 +94,19 @@ mkShrunk paramIds myId =
                       ) . pure . WidgetIds.fromEntityId)
         theme <- Lens.view has
         lamLabel <-
-            (Widget.makeFocusableView ?? lamId myId <&> (Align.tValue %~))
+            (Widget.makeFocusableView ?? lamId myId <&> (M.tValue %~))
             <*> grammar (label Texts.lam)
             <&> Responsive.fromWithTextPos
             & Reader.local (TextView.underline ?~ LightLambda.underline theme)
         addScopeEd <- addScopeEdit
         pure $ \mScopeEdit ->
             [ addScopeEd mScopeEdit lamLabel
-              & Widget.weakerEvents expandEventMap
+              & M.weakerEvents expandEventMap
             ]
 
 mkLightLambda ::
     ( Monad o, MonadReader env f, GuiState.HasCursor env
-    , Element.HasAnimIdPrefix env, Has TextView.Style env, Has Theme env
+    , M.HasAnimIdPrefix env, Has TextView.Style env, Has Theme env
     , Has Config env
     , Has (Texts.Code Text) env
     , Has (Texts.CodeUI Text) env
@@ -117,7 +114,7 @@ mkLightLambda ::
     ) =>
     Sugar.BinderParams v a i o -> Widget.Id ->
     f
-    (Maybe (Responsive o) -> Maybe (Widget o) ->
+    (Maybe (Responsive o) -> Maybe (M.Widget o) ->
      [Responsive o])
 mkLightLambda params myId =
     do
@@ -137,7 +134,7 @@ mkLightLambda params myId =
             then
                  mkExpanded
                  <&> Lens.mapped . Lens.mapped . Lens.mapped %~
-                     Widget.weakerEvents shrinkEventMap
+                     M.weakerEvents shrinkEventMap
             else mkShrunk paramIds myId
                  <&> \mk _mParamsEdit mScopeEdit -> mk mScopeEdit
     where
@@ -174,7 +171,7 @@ make (Ann (Const pl) lam) =
                 <&> Widget.strongerEvents rhsJumperEquals
                 <&> (: [bodyEdit]))
             & stdWrapParentExpr pl
-            <&> Widget.weakerEvents eventMap
+            <&> M.weakerEvents eventMap
     where
         myId = WidgetIds.fromExprPayload (pl ^. _1)
         params = func ^. Sugar.fParams

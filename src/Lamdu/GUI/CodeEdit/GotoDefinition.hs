@@ -8,9 +8,8 @@ import qualified Control.Monad.Reader as Reader
 import qualified Data.ByteString.Char8 as BS8
 import           Data.MRUMemo (memo)
 import qualified Data.Text as Text
+import qualified GUI.Momentu as M
 import qualified GUI.Momentu.Direction as Dir
-import qualified GUI.Momentu.Draw as Draw
-import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.Glue as Glue
 import qualified GUI.Momentu.Hover as Hover
 import qualified GUI.Momentu.State as GuiState
@@ -58,7 +57,7 @@ nameSearchTerm name =
 
 makeOptions ::
     ( MonadReader env m, Has Theme env, Applicative o
-    , Has TextView.Style env, Element.HasAnimIdPrefix env, GuiState.HasCursor env
+    , Has TextView.Style env, M.HasAnimIdPrefix env, M.HasCursor env
     , Has (Navigation Text) env, Has (Texts.Name Text) env, Has Dir.Layout env
     ) =>
     m [Sugar.NameRef Name o] ->
@@ -83,7 +82,7 @@ makeOptions readGlobals (SearchMenu.ResultsContext searchTerm prefix)
             let makeOption (idx, nameRef) =
                     GetVarEdit.makeSimpleView TextColors.definitionColor name optId
                     <&> toRenderedOption nameRef
-                    & Reader.local (Element.animIdPrefix .~ Widget.toAnimId optId)
+                    & Reader.local (M.animIdPrefix .~ Widget.toAnimId optId)
                     & wrapOption optId
                     where
                         name = nameRef ^. Sugar.nrName
@@ -106,7 +105,7 @@ makeOptions readGlobals (SearchMenu.ResultsContext searchTerm prefix)
 
 make ::
     ( MonadReader env m, Applicative o
-    , Has Theme env, Element.HasAnimIdPrefix env
+    , Has Theme env, M.HasAnimIdPrefix env
     , Has Menu.Config env, Has Hover.Style env, GuiState.HasState env
     , Has SearchMenu.TermStyle env, Has (Navigation Text) env
     , Glue.HasTexts env, TextEdit.Deps env
@@ -117,7 +116,7 @@ make readGlobals =
     do
         goto <- Lens.view (has . Navigation.goto)
         SearchMenu.make (SearchMenu.searchTermEdit myId (pure . allowSearchTerm))
-            (makeOptions readGlobals) Element.empty myId ?? Menu.Below
+            (makeOptions readGlobals) M.empty myId ?? Menu.Below
             & Reader.local (has . Theme.searchTerm %~ onTermStyle goto)
             <&> \searchWidget -> StatusBar.StatusWidget
             { StatusBar._widget = searchWidget
@@ -127,4 +126,4 @@ make readGlobals =
         onTermStyle goto x =
             x
             & SearchMenu.emptyStrings . Lens.mapped .~ goto
-            & SearchMenu.bgColors . Lens.mapped .~ Draw.Color 0 0 0 0
+            & SearchMenu.bgColors . Lens.mapped .~ M.Color 0 0 0 0

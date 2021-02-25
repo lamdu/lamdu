@@ -4,14 +4,9 @@ module Lamdu.GUI.Expr.CaseEdit
 
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
-import           Data.Vector.Vector2 (Vector2(..))
-import qualified GUI.Momentu.Align as Align
-import           GUI.Momentu.Animation (AnimId)
-import qualified GUI.Momentu.Animation as Anim
-import qualified GUI.Momentu.Element as Element
+import qualified GUI.Momentu as M
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
-import           GUI.Momentu.Glue ((/|/))
 import qualified GUI.Momentu.Glue as Glue
 import qualified GUI.Momentu.I18N as MomentuTexts
 import           GUI.Momentu.Responsive (Responsive)
@@ -94,7 +89,7 @@ make (Ann (Const pl) (Sugar.Composite alts punned caseTail addAlt)) =
                 & pure
                 & E.keysEventMapMovesCursor (env ^. has . Config.caseAddAltKeys)
                     (doc env Texts.addAlt)
-        header <- grammar (Label.make ".") /|/ makeCaseLabel
+        header <- grammar (Label.make ".") M./|/ makeCaseLabel
         (Annotation.maybeAddAnnotationPl (pl ^. _1) <&> (Widget.widget %~)) <*>
             ( Styled.addValFrame <*>
                 (Options.boxSpaced ?? Options.disambiguationNone ?? [header, altsGui]))
@@ -108,7 +103,7 @@ make (Ann (Const pl) (Sugar.Composite alts punned caseTail addAlt)) =
         headerId = Widget.joinId myId ["header"]
         altsId = Widget.joinId myId ["alts"]
         makeCaseLabel =
-            (Widget.makeFocusableView ?? headerId <&> (Align.tValue %~))
+            (Widget.makeFocusableView ?? headerId <&> (M.tValue %~))
             <*> grammar (label Texts.case_)
             <&> Responsive.fromWithTextPos
 
@@ -129,14 +124,14 @@ makeAltRow (Sugar.CompositeItem delete tag altExpr) =
             GuiM.makeSubexpression altExpr <&> Widget.weakerEvents itemEventMap
         pre <-
             ( TagEdit.makeVariantTag tag
-                <&> Align.tValue %~ Widget.weakerEvents itemEventMap
-            ) /|/ Spacer.stdHSpace
+                <&> M.tValue %~ Widget.weakerEvents itemEventMap
+            ) M./|/ Spacer.stdHSpace
         pure TaggedItem
             { _tagPre = Just pre
             , _taggedItem = altExprGui
             , _tagPost = Nothing
             }
-    & Reader.local (Element.animIdPrefix .~ Widget.toAnimId altId)
+    & Reader.local (M.animIdPrefix .~ Widget.toAnimId altId)
     where
         altId = tag ^. Sugar.tagRefTag . Sugar.tagInstance & WidgetIds.fromEntityId
 
@@ -174,7 +169,7 @@ makeAltsWidget alts punned addAlt altsId =
             >>= sequenceA
         case existingAltWidgets ++ newAlts of
             [] ->
-                (Widget.makeFocusableView ?? Widget.joinId altsId ["Ø"] <&> (Align.tValue %~))
+                (Widget.makeFocusableView ?? Widget.joinId altsId ["Ø"] <&> (M.tValue %~))
                 <*> grammar (label Texts.absurd)
                 <&> Responsive.fromWithTextPos
             altWidgtes -> taggedList ?? altWidgtes
@@ -196,7 +191,7 @@ makeAddAltRow addAlt myId =
     \tagHole ->
     TaggedItem
     { _tagPre = Just tagHole
-    , _taggedItem = Element.empty
+    , _taggedItem = M.empty
     , _tagPost = Nothing
     }
     where
@@ -206,11 +201,11 @@ makeAddAltRow addAlt myId =
             , Menu._pickMNextEntry = WidgetIds.fromEntityId dst & Just
             }
 
-separationBar :: TextColors -> Anim.AnimId -> Widget.R -> View
+separationBar :: TextColors -> M.AnimId -> Widget.R -> View
 separationBar theme animId width =
     View.unitSquare (animId <> ["tailsep"])
-    & Element.tint (theme ^. TextColors.caseTailColor)
-    & Element.scale (Vector2 width 10)
+    & M.tint (theme ^. TextColors.caseTailColor)
+    & M.scale (M.Vector2 width 10)
 
 makeOpenCase ::
     ( Monad i, Monad o
@@ -218,7 +213,7 @@ makeOpenCase ::
     , Grid.HasTexts env
     ) =>
     Sugar.OpenCompositeActions o -> ExprGui.Expr Sugar.Term i o ->
-    AnimId -> Responsive o -> GuiM env i o (Responsive o)
+    M.AnimId -> Responsive o -> GuiM env i o (Responsive o)
 makeOpenCase actions rest animId altsGui =
     do
         theme <- Lens.view has

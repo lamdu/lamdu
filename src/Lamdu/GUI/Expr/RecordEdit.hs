@@ -5,21 +5,17 @@ module Lamdu.GUI.Expr.RecordEdit
 import qualified Control.Lens as Lens
 import qualified Data.Char as Char
 import qualified Data.Text as Text
-import           Data.Vector.Vector2 (Vector2(..))
-import qualified GUI.Momentu.Align as Align
-import qualified GUI.Momentu.Animation as Anim
+import qualified GUI.Momentu as M
 import qualified GUI.Momentu.Direction as Dir
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
-import           GUI.Momentu.Glue ((/|/))
 import qualified GUI.Momentu.Glue as Glue
 import qualified GUI.Momentu.I18N as MomentuTexts
 import           GUI.Momentu.Responsive (Responsive)
 import qualified GUI.Momentu.Responsive as Responsive
 import           GUI.Momentu.Responsive.TaggedList (TaggedItem(..), taggedList, tagPost)
 import qualified GUI.Momentu.State as GuiState
-import           GUI.Momentu.View (View)
 import qualified GUI.Momentu.View as View
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Grid as Grid
@@ -107,13 +103,13 @@ makeUnit ::
     ExprGui.Payload i o -> GuiM env i o (Responsive o)
 makeUnit pl =
     do
-        makeFocusable <- Widget.makeFocusableView ?? myId <&> (Align.tValue %~)
+        makeFocusable <- Widget.makeFocusableView ?? myId <&> (M.tValue %~)
         addFieldEventMap <- mkAddFieldEventMap myId
         env <- Lens.view id
         grammar (label Texts.recordOpener)
-            /|/ grammar (label Texts.recordCloser)
+            M./|/ grammar (label Texts.recordCloser)
             <&> makeFocusable
-            <&> Align.tValue %~ Widget.weakerEvents
+            <&> M.tValue %~ Widget.weakerEvents
                 (addFieldEventMap <> addFieldWithSearchTermEventMap env myId)
             <&> Responsive.fromWithTextPos
             & stdWrap pl
@@ -183,7 +179,7 @@ make (Ann (Const pl) (Sugar.Composite fields punned recordTail addField)) =
             _ -> pure
 
 makeRecord ::
-    ( MonadReader env m, Has Theme env, Element.HasAnimIdPrefix env
+    ( MonadReader env m, Has Theme env, M.HasAnimIdPrefix env
     , Spacer.HasStdSpacing env, Applicative o
     , Glue.HasTexts env, Has (Texts.Code Text) env
     ) =>
@@ -194,14 +190,14 @@ makeRecord _ [] = error "makeRecord with no fields"
 makeRecord postProcess fieldGuis =
     Styled.addValFrame <*>
     ( grammar (label Texts.recordOpener)
-        /|/ (taggedList
+        M./|/ (taggedList
                 <*> addPostTags fieldGuis
                 >>= postProcess)
     )
 
 addPostTags ::
     ( MonadReader env m, Has Theme env, Has TextView.Style env
-    , Element.HasAnimIdPrefix env, Has (Texts.Code Text) env, Has Dir.Layout env
+    , M.HasAnimIdPrefix env, Has (Texts.Code Text) env, Has Dir.Layout env
     ) =>
     [TaggedItem o] -> m [TaggedItem o]
 addPostTags items =
@@ -235,8 +231,8 @@ makeAddFieldRow addField pl =
     \tagHole ->
     TaggedItem
     { _tagPre = Just tagHole
-    , _taggedItem = Element.empty
-    , _tagPost = Just Element.empty
+    , _taggedItem = M.empty
+    , _tagPost = Just M.empty
     }
     where
         tagHoleId = addFieldId (WidgetIds.fromExprPayload pl)
@@ -261,19 +257,19 @@ makeFieldRow (Sugar.CompositeItem delete tag fieldExpr) =
         fieldGui <- GuiM.makeSubexpression fieldExpr
         pre <-
             ( TagEdit.makeRecordTag tag
-                <&> Align.tValue %~ Widget.weakerEvents itemEventMap
-            ) /|/ Spacer.stdHSpace
+                <&> M.tValue %~ Widget.weakerEvents itemEventMap
+            ) M./|/ Spacer.stdHSpace
         pure TaggedItem
             { _tagPre = Just pre
             , _taggedItem = Widget.weakerEvents itemEventMap fieldGui
-            , _tagPost = Just Element.empty
+            , _tagPost = Just M.empty
             }
 
-separationBar :: TextColors -> Anim.AnimId -> Widget.R -> View
+separationBar :: TextColors -> M.AnimId -> Widget.R -> M.View
 separationBar theme animId width =
     View.unitSquare (animId <> ["tailsep"])
-    & Element.tint (theme ^. TextColors.recordTailColor)
-    & Element.scale (Vector2 width 10)
+    & M.tint (theme ^. TextColors.recordTailColor)
+    & M.scale (M.Vector2 width 10)
 
 makeOpenRecord ::
     (Monad i, Monad o, Glue.HasTexts env, Has (Texts.CodeUI Text) env) =>
@@ -291,7 +287,7 @@ makeOpenRecord (Sugar.OpenCompositeActions close) rest fieldsGui =
         restExpr <-
             Styled.addValPadding <*> GuiM.makeSubexpression rest
             <&> Widget.weakerEvents restEventMap
-        animId <- Lens.view Element.animIdPrefix
+        animId <- Lens.view M.animIdPrefix
         (|---|) <- Glue.mkGlue ?? Glue.Vertical
         Responsive.vboxWithSeparator ?? False
             ?? (separationBar (theme ^. Theme.textColors) animId <&> (|---| vspace))

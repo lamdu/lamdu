@@ -12,11 +12,8 @@ import           Data.List.Extended (withPrevNext)
 import qualified Data.Map as Map
 import           Data.Property (Property)
 import qualified Data.Property as Property
-import           GUI.Momentu.Align (TextWidget)
-import qualified GUI.Momentu.Align as Align
+import qualified GUI.Momentu as M
 import qualified GUI.Momentu.Direction as Dir
-import qualified GUI.Momentu.Draw as Draw
-import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.FocusDirection as Direction
@@ -24,13 +21,12 @@ import qualified GUI.Momentu.Glue as Glue
 import qualified GUI.Momentu.I18N as MomentuTexts
 import           GUI.Momentu.MetaKey (MetaKey(..), noMods, toModKey)
 import qualified GUI.Momentu.MetaKey as MetaKey
-import           GUI.Momentu.Rect (Rect(Rect))
+import           GUI.Momentu.Rect (Rect(..))
 import qualified GUI.Momentu.Rect as Rect
 import           GUI.Momentu.Responsive (Responsive)
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.Responsive.Options as Options
 import qualified GUI.Momentu.State as GuiState
-import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Choice as Choice
 import qualified GUI.Momentu.Widgets.Grid as Grid
@@ -70,9 +66,9 @@ import           Lamdu.Prelude
 
 data Parts i o = Parts
     { pMParamsEdit :: Maybe (Responsive o)
-    , pMScopesEdit :: Maybe (Widget o)
+    , pMScopesEdit :: Maybe (M.Widget o)
     , pBodyEdit :: Responsive o
-    , pEventMap :: EventMap (o GuiState.Update)
+    , pEventMap :: EventMap (o M.Update)
     , pMLamPayload :: Maybe (ExprGui.Payload i o)
     , pRhsId :: Widget.Id
     }
@@ -127,7 +123,7 @@ makeScopeEventMap ::
     , Functor o
     ) =>
     env -> [MetaKey] -> [MetaKey] -> ScopeCursor -> (Sugar.BinderParamScopeId -> o ()) ->
-    EventMap (o GuiState.Update)
+    EventMap (o M.Update)
 makeScopeEventMap env prevKey nextKey cursor setter =
     mkEventMap (sMPrevParamScope, prevKey, Texts.prev) ++
     mkEventMap (sMNextParamScope, nextKey, Texts.next)
@@ -146,16 +142,16 @@ makeScopeEventMap env prevKey nextKey cursor setter =
 
 makeScopeNavArrow ::
     ( MonadReader env m, Has Theme env, Has TextView.Style env
-    , Element.HasAnimIdPrefix env, Applicative o
+    , M.HasAnimIdPrefix env, Applicative o
     , Has Dir.Layout env
     ) =>
-    (w -> o GuiState.Update) -> Text -> Maybe w -> m (TextWidget o)
+    (w -> o M.Update) -> Text -> Maybe w -> m (M.TextWidget o)
 makeScopeNavArrow setScope arrowText mScopeId =
     do
         theme <- Lens.view has
         Label.make arrowText
-            <&> Align.tValue %~ Widget.fromView
-            <&> Align.tValue %~
+            <&> M.tValue %~ Widget.fromView
+            <&> M.tValue %~
                 Widget.sizedState <. Widget._StateUnfocused . Widget.uMEnter
                 .@~ mEnter
             & Reader.local
@@ -180,7 +176,7 @@ blockEventMap ::
     ( Has (Texts.Navigation Text) env
     , Has (MomentuTexts.Texts Text) env
     , Applicative m
-    ) => env -> EventMap (m GuiState.Update)
+    ) => env -> EventMap (m M.Update)
 blockEventMap env =
     pure mempty
     & E.keyPresses (dirKeys <&> toModKey)
@@ -199,8 +195,8 @@ makeScopeNavEdit ::
     ) =>
     Sugar.Function v name i o expr -> Widget.Id -> ScopeCursor ->
     GuiM env i o
-    ( EventMap (o GuiState.Update)
-    , Maybe (Widget o)
+    ( EventMap (o M.Update)
+    , Maybe (M.Widget o)
     )
 makeScopeNavEdit func myId curCursor =
     do
@@ -222,7 +218,7 @@ makeScopeNavEdit func myId curCursor =
             Annotations.Evaluation ->
                 (Widget.makeFocusableWidget ?? myId)
                 <*> ( Glue.hbox <*> traverse (uncurry (makeScopeNavArrow setScope)) scopes
-                        <&> (^. Align.tValue)
+                        <&> (^. M.tValue)
                     )
                 <&> Widget.weakerEvents
                     (mkScopeEventMap leftKeys rightKeys <> blockEventMap env)
@@ -239,7 +235,7 @@ data IsScopeNavFocused = ScopeNavIsFocused | ScopeNavNotFocused
     deriving (Eq, Ord)
 
 nullParamEditInfo ::
-    Widget.Id -> TextWidget o ->
+    Widget.Id -> M.TextWidget o ->
     Sugar.NullParamActions o -> ParamEdit.Info i o
 nullParamEditInfo widgetId nameEdit mActions =
     ParamEdit.Info
@@ -253,7 +249,7 @@ nullParamEditInfo widgetId nameEdit mActions =
 
 namedParamEditInfo ::
     Widget.Id -> Sugar.FuncParamActions Name i o ->
-    TextWidget o ->
+    M.TextWidget o ->
     ParamEdit.Info i o
 namedParamEditInfo widgetId actions nameEdit =
     ParamEdit.Info
@@ -283,7 +279,7 @@ makeParamsEdit annotationOpts delVarBackwardsId lhsId rhsId params =
     Sugar.NullParam p ->
         do
             nullParamGui <-
-                (Widget.makeFocusableView ?? nullParamId <&> (Align.tValue %~))
+                (Widget.makeFocusableView ?? nullParamId <&> (M.tValue %~))
                 <*> grammar (label Texts.defer)
             fromParamList delVarBackwardsId rhsId
                 [p & _2 %~ nullParamEditInfo lhsId nullParamGui]
@@ -461,7 +457,7 @@ makeJumpToRhs ::
     , Has (MomentuTexts.Texts Text) env
     , Has (Texts.Navigation Text) env
     ) =>
-    Widget.Id -> GuiM env i o (EventMap (o GuiState.Update))
+    Widget.Id -> GuiM env i o (EventMap (o M.Update))
 makeJumpToRhs rhsId =
     do
         env <- Lens.view id
@@ -488,7 +484,7 @@ make ::
     , Has (Texts.Navigation Text) env
     ) =>
     Maybe (i (Property o Meta.PresentationMode)) ->
-    Sugar.TagRef Name i o -> Lens.ALens' TextColors Draw.Color ->
+    Sugar.TagRef Name i o -> Lens.ALens' TextColors M.Color ->
     ExprGui.Expr Sugar.Assignment i o ->
     GuiM env i o (Responsive o)
 make pMode tag color assignment =
@@ -508,8 +504,8 @@ make pMode tag color assignment =
         (|---|) <- Glue.mkGlue ?? Glue.Vertical
         defNameEdit <-
             TagEdit.makeBinderTagEdit color tag
-            <&> Align.tValue %~ Widget.weakerEvents (rhsJumperEquals <> addFirstParamEventMap)
-            <&> (|---| fromMaybe Element.empty mPresentationEdit)
+            <&> M.tValue %~ Widget.weakerEvents (rhsJumperEquals <> addFirstParamEventMap)
+            <&> (|---| fromMaybe M.empty mPresentationEdit)
             <&> Responsive.fromWithTextPos
         mParamEdit <-
             case mParamsEdit of
@@ -528,7 +524,7 @@ make pMode tag color assignment =
             , bodyEdit
             ]
             & pure
-        & Reader.local (Element.animIdPrefix .~ Widget.toAnimId myId)
+        & Reader.local (M.animIdPrefix .~ Widget.toAnimId myId)
         & maybe id stdWrap mLamPl
         <&> Widget.weakerEvents eventMap
     where

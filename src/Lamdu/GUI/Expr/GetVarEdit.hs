@@ -7,18 +7,15 @@ module Lamdu.GUI.Expr.GetVarEdit
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
 import qualified Data.ByteString.Char8 as SBS8
-import           Data.Vector.Vector2 (Vector2(..))
-import           GUI.Momentu.Align (TextWidget)
+import qualified GUI.Momentu as M
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Animation as Anim
 import qualified GUI.Momentu.Direction as Dir
 import qualified GUI.Momentu.Draw as Draw
-import           GUI.Momentu.Element (Element)
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Font (Underline(..))
-import           GUI.Momentu.Glue ((/|/))
 import qualified GUI.Momentu.Glue as Glue
 import qualified GUI.Momentu.Hover as Hover
 import qualified GUI.Momentu.I18N as MomentuTexts
@@ -62,11 +59,11 @@ import           Lamdu.Prelude
 
 makeSimpleView ::
     ( MonadReader env m, GuiState.HasCursor env, Has Theme env
-    , Applicative f, Element.HasAnimIdPrefix env, Has TextView.Style env
+    , Applicative f, M.HasAnimIdPrefix env, Has TextView.Style env
     , Has Dir.Layout env, Has (Texts.Name Text) env
     ) =>
     Lens.ALens' TextColors Draw.Color -> Name -> Widget.Id ->
-    m (TextWidget f)
+    m (M.TextWidget f)
 makeSimpleView color name myId =
     (Widget.makeFocusableView ?? myId <&> (Align.tValue %~))
     <*> NameView.make name
@@ -74,7 +71,7 @@ makeSimpleView color name myId =
 
 makeParamsRecord ::
     ( MonadReader env m, Has Theme env, GuiState.HasCursor env
-    , Element.HasAnimIdPrefix env, Spacer.HasStdSpacing env
+    , M.HasAnimIdPrefix env, Spacer.HasStdSpacing env
     , Glue.HasTexts env, Has (Texts.Code Text) env, Has (Texts.Name Text) env
     , Applicative f
     ) =>
@@ -95,7 +92,7 @@ makeParamsRecord myId paramsRecordVar =
                     Widget.joinId myId paramId
                     & makeSimpleView TextColors.parameterColor fieldName
                     <&> Responsive.fromWithTextPos
-                    & Reader.local (Element.animIdPrefix %~ (<> paramId))
+                    & Reader.local (M.animIdPrefix %~ (<> paramId))
                 )
               )
             , grammar (label Texts.recordCloser) <&> Responsive.fromTextView
@@ -103,8 +100,8 @@ makeParamsRecord myId paramsRecordVar =
     where
         Sugar.ParamsRecordVarRef fieldNames = paramsRecordVar
 
-infixMarker :: Vector2 Anim.R -> Draw.Image
-infixMarker (Vector2 w h) =
+infixMarker :: M.Vector2 Anim.R -> Draw.Image
+infixMarker (M.Vector2 w h) =
     () <$
     mconcat
     [ Draw.line (x, 0) (0,x)
@@ -119,7 +116,7 @@ infixMarker (Vector2 w h) =
     where
         x = min w h / 4
 
-unappliedOperatorMarker :: Element a => Widget.Id -> a -> a
+unappliedOperatorMarker :: M.Element a => Widget.Id -> a -> a
 unappliedOperatorMarker widgetId =
     Element.bottomLayer %@~
     \size -> Anim.singletonFrame 1 frameId (infixMarker size) & flip mappend
@@ -145,7 +142,7 @@ makeNameRef ::
     Role ->
     Lens.ALens' TextColors Draw.Color -> Widget.Id ->
     Sugar.NameRef Name o ->
-    GuiM env i o (TextWidget o)
+    GuiM env i o (M.TextWidget o)
 makeNameRef role color myId nameRef =
     do
         savePrecursor <- GuiM.mkPrejumpPosSaver
@@ -162,14 +159,14 @@ makeNameRef role color myId nameRef =
                 case role of
                 Operator
                     | Name.isOperator name -> id
-                    | otherwise -> (Label.make "." /|/)
+                    | otherwise -> (Label.make "." M./|/)
                 Normal
                     | Name.isOperator name -> fmap (unappliedOperatorMarker nameId)
                     | otherwise -> id
         makeSimpleView color name nameId
             & mAddMarker
             <&> Align.tValue %~ Widget.weakerEvents jumpToDefinitionEventMap
-    & Reader.local (Element.animIdPrefix .~ Widget.toAnimId nameId)
+    & Reader.local (M.animIdPrefix .~ Widget.toAnimId nameId)
     & GuiState.assignCursor myId nameId
     where
         name = nameRef ^. Sugar.nrName
@@ -195,14 +192,14 @@ makeInlineEventMap _ _ = mempty
 
 definitionTypeChangeBox ::
     ( MonadReader env m, Glue.HasTexts env, Has (Texts.Code Text) env
-    , Element.HasAnimIdPrefix env, Has (Texts.Definitions Text) env
+    , M.HasAnimIdPrefix env, Has (Texts.Definitions Text) env
     , Spacer.HasStdSpacing env, Has Theme env, GuiState.HasCursor env
     , Has Config env
     , Has (Texts.Name Text) env, Grid.HasTexts env
     , Applicative f
     ) =>
     Sugar.DefinitionOutdatedType Name f Sugar.EntityId -> Widget.Id ->
-    m (TextWidget f)
+    m (M.TextWidget f)
 definitionTypeChangeBox info getVarId =
     do
         env <- Lens.view id
@@ -213,8 +210,8 @@ definitionTypeChangeBox info getVarId =
         newTypeRow <-
             Styled.actionable myId Texts.defUpdateHeader
             updateDoc update
-            /|/ Spacer.stdHSpace
-            /|/ Styled.info (label Texts.defUpdateTo)
+            M./|/ Spacer.stdHSpace
+            M./|/ Styled.info (label Texts.defUpdateTo)
 
         oldTypeView <- mkTypeView "oldTypeView" (info ^. Sugar.defTypeWhenUsed)
         newTypeView <- mkTypeView "newTypeView" (info ^. Sugar.defTypeCurrent)
@@ -229,13 +226,13 @@ definitionTypeChangeBox info getVarId =
         update = info ^. Sugar.defTypeUseCurrent <&> WidgetIds.fromEntityId
         mkTypeView idSuffix scheme =
             TypeView.makeScheme scheme
-            & Reader.local (Element.animIdPrefix .~ animId ++ [idSuffix])
+            & Reader.local (M.animIdPrefix .~ animId ++ [idSuffix])
         myId = Widget.joinId getVarId ["type change"]
         animId = Widget.toAnimId myId
 
 processDefinitionWidget ::
     ( MonadReader env m, Spacer.HasStdSpacing env
-    , Has Theme env, Element.HasAnimIdPrefix env, Has Config env
+    , Has Theme env, M.HasAnimIdPrefix env, Has Config env
     , GuiState.HasCursor env, Has Hover.Style env
     , Has (Texts.Definitions Text) env
     , Has (Texts.Code Text) env, Has (Texts.CodeUI Text) env
@@ -243,8 +240,8 @@ processDefinitionWidget ::
     , Applicative f
     ) =>
     Sugar.DefinitionForm Name f -> Widget.Id ->
-    m (TextWidget f) ->
-    m (TextWidget f)
+    m (M.TextWidget f) ->
+    m (M.TextWidget f)
 processDefinitionWidget Sugar.DefUpToDate _myId mkLayout = mkLayout
 processDefinitionWidget Sugar.DefDeleted _myId mkLayout =
     Styled.deletedUse <*> mkLayout
@@ -300,7 +297,7 @@ makeGetBinder ::
     , Grid.HasTexts env
     ) =>
     Role -> Sugar.BinderVarRef Name o -> Widget.Id ->
-    GuiM env i o (TextWidget o)
+    GuiM env i o (M.TextWidget o)
 makeGetBinder role binderVar myId =
     do
         env <- Lens.view id
@@ -323,7 +320,7 @@ makeGetParam ::
     , Has (MomentuTexts.Texts Text) env
     ) =>
     Sugar.ParamRef Name o -> Widget.Id ->
-    GuiM env i o (TextWidget o)
+    GuiM env i o (M.TextWidget o)
 makeGetParam param myId =
     do
         underline <- Lens.view has <&> LightLambda.underline

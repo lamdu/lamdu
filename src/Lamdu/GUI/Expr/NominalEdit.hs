@@ -5,15 +5,12 @@ module Lamdu.GUI.Expr.NominalEdit
 
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
-import           GUI.Momentu.Align (WithTextPos)
-import qualified GUI.Momentu.Align as Align
+import qualified GUI.Momentu as M
 import qualified GUI.Momentu.EventMap as E
-import           GUI.Momentu.Glue ((/|/))
 import qualified GUI.Momentu.I18N as MomentuTexts
 import           GUI.Momentu.Responsive (Responsive)
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.Responsive.Expression as ResponsiveExpr
-import           GUI.Momentu.View (View)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Grid as Grid
 import qualified GUI.Momentu.Widgets.Label as Label
@@ -65,10 +62,10 @@ makeToNom (Ann (Const pl) (Sugar.Nominal tid binder)) =
         (ResponsiveExpr.boxSpacedMDisamb ?? ExprGui.mParensId pl)
             <*>
             sequence
-            [ (Widget.makeFocusableView ?? nameId <&> (Align.tValue %~))
+            [ (Widget.makeFocusableView ?? nameId <&> (M.tValue %~))
                 <*> mkNomLabel tid
                 <&> Responsive.fromWithTextPos
-                <&> Widget.weakerEvents eventMap
+                <&> M.weakerEvents eventMap
             , GuiM.makeBinder binder
             ] & stdWrapParentExpr pl
     where
@@ -87,14 +84,14 @@ makeFromNom ::
     GuiM env i o (Responsive o)
 makeFromNom (Ann (Const pl) (Const nom)) =
     Styled.grammar (Label.make ".")
-    /|/ mkNomLabel nom
+    M./|/ mkNomLabel nom
     <&> Responsive.fromTextView
     & stdWrapParentExpr pl
 
 mkNomLabel ::
     (Monad i, Has (Texts.Name Text) env) =>
     Sugar.TId Name ->
-    GuiM env i o (WithTextPos View)
+    GuiM env i o (M.WithTextPos M.View)
 mkNomLabel tid =
     do
         nomColor <- Lens.view (has . Theme.textColors . TextColors.nomColor)

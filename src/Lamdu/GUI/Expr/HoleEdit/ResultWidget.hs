@@ -6,9 +6,7 @@ module Lamdu.GUI.Expr.HoleEdit.ResultWidget
 
 import           Control.Lens (Traversal')
 import qualified Control.Lens as Lens
-import           GUI.Momentu.Align (TextWidget)
-import qualified GUI.Momentu.Align as Align
-import qualified GUI.Momentu.Element as Element
+import qualified GUI.Momentu as M
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.I18N as MomentuTexts
@@ -34,9 +32,9 @@ import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
 
-setFocalAreaToFullSize :: TextWidget a -> TextWidget a
+setFocalAreaToFullSize :: M.TextWidget a -> M.TextWidget a
 setFocalAreaToFullSize =
-    Align.tValue . Widget.sizedState <. Widget._StateFocused . Lens.mapped . Widget.fFocalAreas .@~
+    M.tValue . Widget.sizedState <. Widget._StateFocused . Lens.mapped . Widget.fFocalAreas .@~
     (:[]) . Rect 0
 
 -- | Remove unwanted event handlers from a hole result
@@ -57,12 +55,12 @@ removeUnwanted =
     <&> E.KeyEvent MetaKey.KeyState'Pressed
     & E.deleteKeys
 
-applyResultLayout :: Responsive a -> TextWidget a
+applyResultLayout :: Responsive a -> M.TextWidget a
 applyResultLayout = (^. Responsive.rWide)
 
 makeWidget ::
     (Monad i, Monad o) =>
-    Widget.Id -> ExprGui.Expr Sugar.Binder i o -> GuiM env i o (TextWidget o)
+    Widget.Id -> ExprGui.Expr Sugar.Binder i o -> GuiM env i o (M.TextWidget o)
 makeWidget resultId holeResultConverted =
     do
         remUnwanted <- removeUnwanted
@@ -74,7 +72,7 @@ makeWidget resultId holeResultConverted =
             <&> Widget.widget . Widget.eventMapMaker . Lens.mapped %~ remUnwanted
             <&> applyResultLayout
             <&> setFocalAreaToFullSize
-            <&> Element.padAround padding
+            <&> M.padAround padding
             & GuiM.withLocalIsHoleResult
 
 make ::
