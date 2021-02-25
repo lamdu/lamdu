@@ -91,6 +91,9 @@ suggestForTypeUTermObvious mkVar (Just (T.TFun (FuncType param result))) =
     <&> Just
 suggestForTypeUTermObvious _ (Just (T.TRecord r)) =
     lookupBody r <&> forRecordUTermObvious <&> Lens._Just %~ pure
+    where
+        forRecordUTermObvious (Just T.REmpty) = V.BLeaf V.LRecEmpty & Just
+        forRecordUTermObvious _ = Nothing
 suggestForTypeUTermObvious _ _ = pure Nothing
 
 suggestLam ::
@@ -120,11 +123,7 @@ forRecord mkVar r =
             restBody <- forRecord mkVar rest <&> fromMaybe (pure (V.BLeaf V.LHole))
             RowExtend tag <$> field <*> (restBody <&> Ann restType) <&> V.BRecExtend & pure
         <&> Just
-    t -> forRecordUTermObvious t <&> pure & pure
-
-forRecordUTermObvious :: Maybe (T.Row # h0) -> Maybe (V.Term # h1)
-forRecordUTermObvious (Just T.REmpty) = V.BLeaf V.LRecEmpty & Just
-forRecordUTermObvious _ = Nothing
+    _ -> V.BLeaf V.LRecEmpty & pure & Just & pure
 
 suggestCaseWith ::
     (Applicative f, UnifyGen m T.Type, UnifyGen m T.Row) =>
@@ -135,7 +134,6 @@ suggestCaseWith ::
 suggestCaseWith mkVar variantType resultType =
     lookupBody variantType >>=
     \case
-    Just T.REmpty -> V.BLeaf V.LAbsurd & pure & pure
     Just (T.RExtend (RowExtend tag fieldType rest)) ->
         do
             handlerType <- mkCaseType fieldType
@@ -145,4 +143,4 @@ suggestCaseWith mkVar variantType resultType =
             RowExtend tag <$> (field <&> Ann handlerType) <*> (restBody <&> Ann restType) <&> V.BCase & pure
         where
             mkCaseType which = FuncType which resultType & T.TFun & newTerm <&> (inferResult #)
-    _ -> suggestLam mkVar resultType
+    _ -> V.BLeaf V.LAbsurd & pure & pure
