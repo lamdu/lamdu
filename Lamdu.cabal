@@ -213,6 +213,7 @@ Library
                   , Data.Text.Bidi
                   , Data.UUID.Utils
                   , Data.Vector.Vector2
+                  , Debug.Trace.Warned
                   , Foreign.C.Types.Instances
                   , GUI.Momentu
                   , GUI.Momentu.Align

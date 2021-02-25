@@ -1,7 +1,6 @@
 {-# LANGUAGE ExplicitNamespaces #-}
 module Lamdu.Prelude
     ( module X
-    , traceId, traceIdVia, trace, traceShowM, traceM
     , todo, warn
     ) where
 
@@ -23,7 +22,7 @@ import           Data.Proxy as X (Proxy(..))
 import           Data.Semigroup as X (Semigroup(..))
 import           Data.Set as X (Set)
 import           Data.Text as X (Text)
-import qualified Debug.Trace as Trace
+import           Debug.Trace.Warned as X
 import           GHC.Generics as X (Generic, Generic1)
 import           GHC.Stack.Types as X (HasCallStack)
 import           Generic.Data as X (Generically(..), Generically1(..))
@@ -31,29 +30,9 @@ import           Hyper as X (type (#), type (:#), Ann(..), hVal, hAnn, annotatio
 
 import           Prelude.Compat as X hiding (return)
 
-{-# WARNING traceId "Leaving traces in the code" #-}
-traceId :: Show a => String -> a -> a
-traceId prefix x = Trace.trace (prefix ++ show x) x
-
-{-# WARNING traceIdVia "Leaving traces in the code" #-}
-traceIdVia :: Show b => (a -> b) -> String -> a -> a
-traceIdVia f prefix x = Trace.trace (prefix ++ show (f x)) x
-
-{-# WARNING trace "Leaving traces in the code" #-}
-trace :: String -> a -> a
-trace = Trace.trace
-
 {-# WARNING warn "Leaving warn in the code" #-}
 warn :: String -> a -> a
 warn _ = id
-
-{-# WARNING traceShowM "Leaving traces in the code" #-}
-traceShowM :: (Show a, Applicative f) => a -> f ()
-traceShowM = Trace.traceShowM
-
-{-# WARNING traceM "Leaving traces in the code" #-}
-traceM :: Applicative f => String -> f ()
-traceM = Trace.traceM
 
 {-# WARNING todo "Leaving todos in the code" #-}
 todo :: String -> a
