@@ -3,7 +3,6 @@ module Lamdu.VersionControl.Actions
     ( Actions(..), hoist
     ) where
 
-import Control.Lens
 import Data.Property (Property(..))
 import GUI.Momentu.State (GUIState)
 import Revision.Deltum.Rev.Branch (Branch)
