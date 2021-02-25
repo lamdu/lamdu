@@ -1,5 +1,5 @@
 { mkDerivation, base, bitmap, bitmap-opengl, fetchFromGitHub, freetype-gl
-, OpenGL, stb-image, stdenv, text, transformers
+, OpenGL, stb-image, lib, text, transformers
 }:
 mkDerivation {
   pname = "graphics-drawingcombinators";
@@ -18,5 +18,5 @@ mkDerivation {
   ];
   homepage = "http://github.com/luqui/graphics-drawingcombinators";
   description = "A functional interface to 2D drawing in OpenGL";
-  license = stdenv.lib.licenses.bsd3;
+  license = lib.licenses.bsd3;
 }

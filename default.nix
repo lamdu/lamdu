@@ -25,10 +25,10 @@ let config = {
         };
     };
 };
-in with import (builtins.fetchTarball "https://github.com/NixOS/nixpkgs/archive/641e5f572f1.tar.gz") {
+in with import (builtins.fetchTarball "https://github.com/NixOS/nixpkgs/archive/9e0a3e5a645.tar.gz") {
     inherit config;
 };
 
 {
-lamdu = pkgs.haskell.packages.ghc884.callPackage ./nix/lamdu.nix {};
+lamdu = pkgs.haskell.packages.ghc8103.callPackage ./nix/lamdu.nix {};
 }

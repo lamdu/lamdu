@@ -6,11 +6,11 @@
 , graphics-drawingcombinators, hashable, HUnit, lamdu-calculus
 , language-ecmascript, lattices, lens, lens-aeson, leveldb-haskell, List, mtl
 , nodejs-exec, OpenGL, optparse-applicative, pretty, process, QuickCheck
-, random, safe-exceptions, split, StateVar, stdenv, stm, hypertypes
+, random, safe-exceptions, split, StateVar, lib, stm, hypertypes
 , template-haskell, temporary, test-framework, test-framework-hunit
 , test-framework-quickcheck2, text, time, timeit, transformers
 , unicode-properties, unordered-containers, uuid, uuid-types, vector, yaml
-, zip-archive, lib, gitMinimal
+, zip-archive, gitMinimal
 }:
 mkDerivation {
   pname = "Lamdu";

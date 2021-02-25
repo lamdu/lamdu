@@ -1,4 +1,4 @@
-{ mkDerivation, base, fetchFromGitHub, stdenv, nodejs, which }:
+{ mkDerivation, base, fetchFromGitHub, lib, nodejs, which }:
 mkDerivation {
   pname = "nodejs-exec";
   version = "0.2.0.0";
@@ -13,5 +13,5 @@ mkDerivation {
   extraLibraries = [ nodejs ];
   homepage = "https://github.com/lamdu/nodejs-exec";
   description = "Package providing a nodejs installation";
-  license = stdenv.lib.licenses.bsd3;
+  license = lib.licenses.bsd3;
 }
