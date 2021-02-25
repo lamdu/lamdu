@@ -10,6 +10,8 @@ extra-deps:
   commit: abcb891cf2ed01edb2d02197ef2b354d6ff43db5
 - github: lamdu/lamdu-calculus
   commit: 76bcf5649bf04d17d30536e1ff775361d5540df8
+- github: lamdu/momentu
+  commit: 490a12d49107668ebf1e6f0cdcf90cb7dec41ab8
 - github: lamdu/hypertypes
   commit: e63d3e66dcb9b384a61734f141bc3e6924fcf873
 - github: lamdu/graphics-drawingcombinators
@@ -28,4 +30,7 @@ resolver: lts-17.1
 allow-newer: true
 
 ghc-options:
+  # this is for weeder:
   "$locals": -fwrite-ide-info
+
+# require-stack-version: ">=2.5"

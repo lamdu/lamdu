@@ -122,7 +122,7 @@ Test-Suite Tests
   build-depends:
       base, HUnit, test-framework, test-framework-hunit, test-framework-quickcheck2
     , aeson-diff, deepseq, generic-random, lens-aeson, QuickCheck, split, yaml
-    , Lamdu, lamdu-calculus, hypertypes, nodejs-exec
+    , Lamdu, lamdu-calculus, momentu, hypertypes, nodejs-exec
     , aeson, aeson-pretty, bytestring, containers, directory, filepath, GLFW-b
     , lens, List, mtl, pretty, process, random, text, uuid-types, Cabal
   ghc-options: -O0 -Wall -Widentities -Wimplicit-prelude -Wmissing-home-modules -Wincomplete-patterns -Wnoncanonical-monad-instances -Wsemigroup -Wincomplete-record-updates -Wredundant-constraints -threaded
@@ -160,6 +160,7 @@ Library
                   , lens-aeson
                   , leveldb-haskell >= 0.6
                   , List >= 0.5.1
+                  , momentu
                   , mtl >= 2.2
                   , nodejs-exec >= 0.2
                   , OpenGL
@@ -170,7 +171,6 @@ Library
                   , safe-exceptions >= 0.1.4
                   , split
                   , StateVar
-                  , stm
                   , hypertypes
                   , template-haskell
                   , temporary
@@ -187,8 +187,7 @@ Library
                   , cryptohash-sha256
                   , executable-path
 
-  exposed-modules:  Control.Concurrent.Extended
-                  , Control.Lens.Extended
+  exposed-modules:  Control.Lens.Extended
                   , Control.Monad.Once
                   , Control.Monad.Trans.Except.Extended
                   , Control.Monad.Trans.FastRWS
@@ -196,80 +195,13 @@ Library
                   , Control.Monad.Transaction
                   , Control.Monad.Unit
                   , Data.Aeson.Config
-                  , Data.Aeson.TH.Extended
-                  , Data.Binary.Extended
-                  , Data.ByteString.Extended
                   , Data.Cache.Fenced
                   , Data.CurAndPrev
-                  , Data.Has
                   , Data.IORef.Extended
-                  , Data.List.Extended
                   , Data.MMap
-                  , Data.MRUMemo
                   , Data.Map.Extended
-                  , Data.Maybe.Extended
-                  , Data.Property
                   , Data.Set.Ordered
-                  , Data.Text.Bidi
                   , Data.UUID.Utils
-                  , Data.Vector.Vector2
-                  , Debug.Trace.Warned
-                  , Foreign.C.Types.Instances
-                  , GUI.Momentu
-                  , GUI.Momentu.Align
-                  , GUI.Momentu.Animation
-                  , GUI.Momentu.Animation.Engine
-                  , GUI.Momentu.Animation.Id
-                  , GUI.Momentu.Direction
-                  , GUI.Momentu.Draw
-                  , GUI.Momentu.Draw.FPS
-                  , GUI.Momentu.Element
-                  , GUI.Momentu.EventMap
-                  , GUI.Momentu.FocusDirection
-                  , GUI.Momentu.Font
-                  , GUI.Momentu.Glue
-                  , GUI.Momentu.Hover
-                  , GUI.Momentu.I18N
-                  , GUI.Momentu.Main
-                  , GUI.Momentu.Main.Animation
-                  , GUI.Momentu.Main.Config
-                  , GUI.Momentu.Main.Events
-                  , GUI.Momentu.Main.Events.Loop
-                  , GUI.Momentu.MetaKey
-                  , GUI.Momentu.ModKey
-                  , GUI.Momentu.Prelude
-                  , GUI.Momentu.Rect
-                  , GUI.Momentu.Render
-                  , GUI.Momentu.Responsive
-                  , GUI.Momentu.Responsive.Expression
-                  , GUI.Momentu.Responsive.Options
-                  , GUI.Momentu.Responsive.TaggedList
-                  , GUI.Momentu.Scroll
-                  , GUI.Momentu.State
-                  , GUI.Momentu.Test
-                  , GUI.Momentu.View
-                  , GUI.Momentu.Widget
-                  , GUI.Momentu.Widget.Id
-                  , GUI.Momentu.Widget.Instances
-                  , GUI.Momentu.Widget.Types
-                  , GUI.Momentu.Widgets.Choice
-                  , GUI.Momentu.Widgets.Cursor
-                  , GUI.Momentu.Widgets.EventMapHelp
-                  , GUI.Momentu.Widgets.FocusDelegator
-                  , GUI.Momentu.Widgets.Grid
-                  , GUI.Momentu.Widgets.GridView
-                  , GUI.Momentu.Widgets.Label
-                  , GUI.Momentu.Widgets.Menu
-                  , GUI.Momentu.Widgets.Menu.Search
-                  , GUI.Momentu.Widgets.Spacer
-                  , GUI.Momentu.Widgets.StdKeys
-                  , GUI.Momentu.Widgets.TextEdit
-                  , GUI.Momentu.Widgets.TextEdit.Property
-                  , GUI.Momentu.Widgets.TextView
-                  , GUI.Momentu.Zoom
-                  , Graphics.DrawingCombinators.Extended
-                  , Graphics.UI.GLFW.Instances
-                  , Graphics.UI.GLFW.Utils
                   , Lamdu.Annotations
                   , Lamdu.Builtins.Anchors
                   , Lamdu.Builtins.PrimVal
@@ -462,7 +394,6 @@ Library
                   , Lamdu.Sugar.Types.Type
                   , Lamdu.VersionControl
                   , Lamdu.VersionControl.Actions
-                  , Numeric.Extended
                   , Revision.Deltum.Db
                   , Revision.Deltum.Hyper
                   , Revision.Deltum.IRef

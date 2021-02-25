@@ -3,10 +3,10 @@
 , Cabal, constraints, containers, cryptohash-sha256, data-default, deepseq
 , directory, edit-distance, ekg-core
 , executable-path, filepath, generic-random, generic-data, GLFW-b
-, graphics-drawingcombinators, hashable, HUnit, lamdu-calculus
+, graphics-drawingcombinators, hashable, HUnit, lamdu-calculus, momentu
 , language-ecmascript, lattices, lens, lens-aeson, leveldb-haskell, List, mtl
 , nodejs-exec, OpenGL, optparse-applicative, pretty, process, QuickCheck
-, random, safe-exceptions, split, StateVar, stdenv, stm, hypertypes
+, random, safe-exceptions, split, StateVar, stdenv, hypertypes
 , template-haskell, temporary, test-framework, test-framework-hunit
 , test-framework-quickcheck2, text, time, timeit, transformers
 , unicode-properties, unordered-containers, uuid, uuid-types, vector, yaml
@@ -44,10 +44,10 @@ mkDerivation {
     base16-bytestring binary bytestring constraints containers cryptohash-sha256
     data-default deepseq directory edit-distance generic-data
     ekg-core executable-path filepath GLFW-b
-    graphics-drawingcombinators hashable lamdu-calculus
+    graphics-drawingcombinators hashable lamdu-calculus momentu
     language-ecmascript lattices lens lens-aeson leveldb-haskell List mtl
     nodejs-exec OpenGL optparse-applicative pretty process random
-    safe-exceptions split StateVar stm hypertypes temporary text time timeit
+    safe-exceptions split StateVar hypertypes temporary text time timeit
     transformers unicode-properties unordered-containers uuid uuid-types vector
     zip-archive
   ];
@@ -58,7 +58,7 @@ mkDerivation {
   testHaskellDepends = [
     aeson aeson-diff aeson-pretty base bytestring Cabal
     containers deepseq directory filepath
-    generic-random GLFW-b HUnit lamdu-calculus lens lens-aeson List mtl
+    generic-random GLFW-b HUnit lamdu-calculus momentu lens lens-aeson List mtl
     nodejs-exec pretty process QuickCheck random split hypertypes test-framework
     test-framework-hunit test-framework-quickcheck2 text uuid-types
     yaml
