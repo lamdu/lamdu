@@ -1,5 +1,6 @@
 packages:
 - '.'
+- '../momentu'
 extra-deps:
 - bitmap-0.0.2
 - bitmap-opengl-0.0.1.5
@@ -28,4 +29,7 @@ resolver: lts-17.1
 allow-newer: true
 
 ghc-options:
+  # this is for weeder:
   "$locals": -fwrite-ide-info
+
+# require-stack-version: ">=2.5"

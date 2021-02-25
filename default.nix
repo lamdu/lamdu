@@ -10,6 +10,7 @@ let config = {
                         freetype-gl = self.callPackage ./nix/FreetypeGL.nix {};
                         graphics-drawingcombinators = self.callPackage ./nix/graphics-drawingcombinators.nix {};
                         hypertypes = self.callPackage ./nix/hypertypes.nix {};
+                        momentu = self.callPackage ./nix/momentu.nix {};
                         lamdu-calculus = self.callPackage ./nix/lamdu-calculus.nix {};
                         nodejs-exec = self.callPackage ./nix/nodejs-exec.nix {};
                         language-ecmascript = self.callHackageDirect
