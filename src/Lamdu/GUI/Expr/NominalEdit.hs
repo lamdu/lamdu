@@ -1,4 +1,5 @@
 {-# LANGUAGE RankNTypes #-}
+
 module Lamdu.GUI.Expr.NominalEdit
     ( makeFromNom, makeToNom
     ) where
@@ -12,7 +13,6 @@ import           GUI.Momentu.Responsive (Responsive)
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.Responsive.Expression as ResponsiveExpr
 import qualified GUI.Momentu.Widget as Widget
-import qualified GUI.Momentu.Widgets.Grid as Grid
 import qualified GUI.Momentu.Widgets.Label as Label
 import qualified GUI.Momentu.Widgets.TextView as TextView
 import qualified Lamdu.Config as Config
@@ -25,25 +25,13 @@ import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.GUI.Types as ExprGui
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.GUI.Wrap (stdWrapParentExpr)
-import qualified Lamdu.I18N.Code as Texts
 import qualified Lamdu.I18N.CodeUI as Texts
-import qualified Lamdu.I18N.Definitions as Texts
-import qualified Lamdu.I18N.Name as Texts
-import qualified Lamdu.I18N.Navigation as Texts
 import           Lamdu.Name (Name(..))
 import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
 
-makeToNom ::
-    ( Monad i, Monad o, Grid.HasTexts env
-    , Has (Texts.Navigation Text) env
-    , Has (Texts.CodeUI Text) env
-    , Has (Texts.Code Text) env
-    , Has (Texts.Name Text) env
-    , Has (Texts.Definitions Text) env
-    ) =>
-    ExprGui.Expr Sugar.Nominal i o -> GuiM env i o (Responsive o)
+makeToNom :: _ => ExprGui.Expr Sugar.Nominal i o -> GuiM env i o (Responsive o)
 makeToNom (Ann (Const pl) (Sugar.Nominal tid binder)) =
     do
         env <- Lens.view id
@@ -73,25 +61,14 @@ makeToNom (Ann (Const pl) (Sugar.Nominal tid binder)) =
         nameId = Widget.joinId myId ["name"]
 
 makeFromNom ::
-    ( Monad i, Monad o, Grid.HasTexts env
-    , Has (Texts.Navigation Text) env
-    , Has (Texts.CodeUI Text) env
-    , Has (Texts.Code Text) env
-    , Has (Texts.Name Text) env
-    , Has (Texts.Definitions Text) env
-    ) =>
-    Annotated (ExprGui.Payload i o) # Const (Sugar.TId Name) ->
-    GuiM env i o (Responsive o)
+    _ => Annotated (ExprGui.Payload i o) # Const (Sugar.TId Name) -> GuiM env i o (Responsive o)
 makeFromNom (Ann (Const pl) (Const nom)) =
     Styled.grammar (Label.make ".")
     M./|/ mkNomLabel nom
     <&> Responsive.fromTextView
     & stdWrapParentExpr pl
 
-mkNomLabel ::
-    (Monad i, Has (Texts.Name Text) env) =>
-    Sugar.TId Name ->
-    GuiM env i o (M.WithTextPos M.View)
+mkNomLabel :: _ => Sugar.TId Name -> GuiM env i o (M.WithTextPos M.View)
 mkNomLabel tid =
     do
         nomColor <- Lens.view (has . Theme.textColors . TextColors.nomColor)

@@ -8,7 +8,6 @@ import qualified GUI.Momentu.Animation as Anim
 import qualified GUI.Momentu.Direction as Dir
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as E
-import qualified GUI.Momentu.Glue as Glue
 import qualified GUI.Momentu.I18N as MomentuTexts
 import           GUI.Momentu.Responsive (Responsive(..))
 import qualified GUI.Momentu.Responsive as Responsive
@@ -18,9 +17,7 @@ import qualified GUI.Momentu.View as View
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Label as Label
 import qualified GUI.Momentu.Widgets.Menu as Menu
-import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
-import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.Config.Theme.ValAnnotation as ValAnnotation
@@ -33,36 +30,17 @@ import qualified Lamdu.GUI.Monad as GuiM
 import qualified Lamdu.GUI.Types as ExprGui
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.GUI.Wrap (stdWrapParentExpr)
-import qualified Lamdu.I18N.Code as Texts
 import qualified Lamdu.I18N.CodeUI as Texts
-import qualified Lamdu.I18N.Definitions as Texts
-import qualified Lamdu.I18N.Name as Texts
-import qualified Lamdu.I18N.Navigation as Texts
 import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
 
-fragmentDoc ::
-    ( Has (MomentuTexts.Texts Text) env
-    , Has (Texts.CodeUI Text) env
-    ) =>
-    env -> Lens.ALens' env Text -> E.Doc
+fragmentDoc :: _ => env -> Lens.ALens' env Text -> E.Doc
 fragmentDoc env lens =
     E.toDoc env
     [has . MomentuTexts.edit, has . Texts.fragment, lens]
 
-make ::
-    ( Monad i, Monad o
-    , Glue.HasTexts env
-    , Has (TextEdit.Texts Text) env
-    , Has (Texts.Name Text) env
-    , Has (Texts.Code Text) env
-    , Has (Texts.CodeUI Text) env
-    , Has (Texts.Definitions Text) env
-    , Has (Texts.Navigation Text) env
-    , SearchMenu.HasTexts env
-    ) =>
-    ExprGui.Expr Sugar.Fragment i o -> GuiM env i o (Responsive o)
+make :: _ => ExprGui.Expr Sugar.Fragment i o -> GuiM env i o (Responsive o)
 make (Ann (Const pl) fragment) =
     do
         isSelected <- GuiState.isSubCursor ?? myId

@@ -6,7 +6,6 @@ import qualified Control.Lens as Lens
 import qualified Data.Char as Char
 import qualified Data.Text as Text
 import qualified GUI.Momentu as M
-import qualified GUI.Momentu.Direction as Dir
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
@@ -18,15 +17,10 @@ import           GUI.Momentu.Responsive.TaggedList (TaggedItem(..), taggedList, 
 import qualified GUI.Momentu.State as GuiState
 import qualified GUI.Momentu.View as View
 import qualified GUI.Momentu.Widget as Widget
-import qualified GUI.Momentu.Widgets.Grid as Grid
 import qualified GUI.Momentu.Widgets.Menu as Menu
 import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
-import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
-import qualified GUI.Momentu.Widgets.TextView as TextView
-import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
-import           Lamdu.Config.Theme (Theme)
 import qualified Lamdu.Config.Theme as Theme
 import           Lamdu.Config.Theme.TextColors (TextColors)
 import qualified Lamdu.Config.Theme.TextColors as TextColors
@@ -41,32 +35,19 @@ import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.GUI.Wrap (stdWrap, stdWrapParentExpr)
 import qualified Lamdu.I18N.Code as Texts
 import qualified Lamdu.I18N.CodeUI as Texts
-import qualified Lamdu.I18N.Definitions as Texts
-import qualified Lamdu.I18N.Name as Texts
 import qualified Lamdu.I18N.Navigation as Texts
 import           Lamdu.Name (Name(..))
 import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
 
-doc ::
-    ( Has (MomentuTexts.Texts Text) env
-    , Has (Texts.CodeUI Text) env
-    ) =>
-    env -> Lens.ALens' (Texts.CodeUI Text) Text -> E.Doc
+doc :: _ => env -> Lens.ALens' (Texts.CodeUI Text) Text -> E.Doc
 doc env lens = E.toDoc env [has . MomentuTexts.edit, has . Texts.record, has . lens]
 
 addFieldId :: Widget.Id -> Widget.Id
 addFieldId = (`Widget.joinId` ["add field"])
 
-mkAddFieldEventMap ::
-    ( MonadReader env m
-    , Has Config env
-    , Has (MomentuTexts.Texts Text) env
-    , Has (Texts.CodeUI Text) env
-    , Applicative o
-    ) =>
-    Widget.Id -> m (EventMap (o GuiState.Update))
+mkAddFieldEventMap :: _ => Widget.Id -> m (EventMap (o GuiState.Update))
 mkAddFieldEventMap myId =
     Lens.view id
     <&>
@@ -76,11 +57,7 @@ mkAddFieldEventMap myId =
     & E.keysEventMapMovesCursor (env ^. has . Config.recordAddFieldKeys)
     (doc env Texts.addField)
 
-addFieldWithSearchTermEventMap ::
-    ( Has (MomentuTexts.Texts Text) env
-    , Has (Texts.CodeUI Text) env
-    , Applicative o
-    ) => env -> Widget.Id -> EventMap (o GuiState.Update)
+addFieldWithSearchTermEventMap :: _ => env -> Widget.Id -> EventMap (o GuiState.Update)
 addFieldWithSearchTermEventMap env myId =
     E.charEventMap "Letter" (doc env Texts.addField) f
     where
@@ -92,15 +69,7 @@ addFieldWithSearchTermEventMap env myId =
                 & Just
             | otherwise = Nothing
 
-makeUnit ::
-    ( Monad i, Monad o
-    , Has (Texts.Definitions Text) env
-    , Has (Texts.Code Text) env
-    , Has (Texts.CodeUI Text) env
-    , Has (Texts.Name Text) env
-    , Grid.HasTexts env
-    ) =>
-    ExprGui.Payload i o -> GuiM env i o (Responsive o)
+makeUnit :: _ => ExprGui.Payload i o -> GuiM env i o (Responsive o)
 makeUnit pl =
     do
         makeFocusable <- Widget.makeFocusableView ?? myId <&> (M.tValue %~)
@@ -116,18 +85,7 @@ makeUnit pl =
     where
         myId = WidgetIds.fromExprPayload (pl ^. _1)
 
-make ::
-    ( Monad i, Monad o
-    , SearchMenu.HasTexts env
-    , Grid.HasTexts env
-    , Has (TextEdit.Texts Text) env
-    , Has (Texts.Code Text) env
-    , Has (Texts.CodeUI Text) env
-    , Has (Texts.Definitions Text) env
-    , Has (Texts.Name Text) env
-    , Has (Texts.Navigation Text) env
-    ) =>
-    ExprGui.Expr Sugar.Composite i o -> GuiM env i o (Responsive o)
+make :: _ => ExprGui.Expr Sugar.Composite i o -> GuiM env i o (Responsive o)
 make (Ann (Const pl) (Sugar.Composite [] [] Sugar.ClosedComposite{} addField)) =
     -- Ignore the ClosedComposite actions - it only has the open
     -- action which is equivalent ot deletion on the unit record
@@ -175,14 +133,7 @@ make (Ann (Const pl) (Sugar.Composite fields punned recordTail addField)) =
             Sugar.OpenComposite restExpr -> makeOpenRecord restExpr
             _ -> pure
 
-makeRecord ::
-    ( MonadReader env m, Has Theme env, M.HasAnimIdPrefix env
-    , Spacer.HasStdSpacing env, Applicative o
-    , Glue.HasTexts env, Has (Texts.Code Text) env
-    ) =>
-    (Responsive o -> m (Responsive o)) ->
-    [TaggedItem o] ->
-    m (Responsive o)
+makeRecord :: _ => (Responsive o -> m (Responsive o)) -> [TaggedItem o] -> m (Responsive o)
 makeRecord _ [] = error "makeRecord with no fields"
 makeRecord postProcess fieldGuis =
     Styled.addValFrame <*>
@@ -192,11 +143,7 @@ makeRecord postProcess fieldGuis =
                 >>= postProcess)
     )
 
-addPostTags ::
-    ( MonadReader env m, Has Theme env, Has TextView.Style env
-    , M.HasAnimIdPrefix env, Has (Texts.Code Text) env, Has Dir.Layout env
-    ) =>
-    [TaggedItem o] -> m [TaggedItem o]
+addPostTags :: _ => [TaggedItem o] -> m [TaggedItem o]
 addPostTags items =
     do
         let f idx item =
@@ -212,12 +159,7 @@ addPostTags items =
         lastIdx = length items - 1
 
 makeAddFieldRow ::
-    ( Monad i, Monad o
-    , Glue.HasTexts env
-    , TextEdit.HasTexts env, SearchMenu.HasTexts env
-    , Has (Texts.CodeUI Text) env
-    , Has (Texts.Name Text) env
-    ) =>
+    _ =>
     Sugar.TagChoice Name i o Sugar.EntityId ->
     Sugar.Payload v name i o ->
     GuiM env i o (TaggedItem o)
@@ -239,15 +181,7 @@ makeAddFieldRow addField pl =
             , Menu._pickMNextEntry = WidgetIds.fromEntityId dst & Just
             }
 
-makeFieldRow ::
-    ( Monad i, Monad o
-    , Glue.HasTexts env
-    , TextEdit.HasTexts env, SearchMenu.HasTexts env
-    , Has (Texts.CodeUI Text) env
-    , Has (Texts.Name Text) env
-    , Has (Texts.Navigation Text) env
-    ) =>
-    ExprGui.Body Sugar.CompositeItem i o -> GuiM env i o (TaggedItem o)
+makeFieldRow :: _ => ExprGui.Body Sugar.CompositeItem i o -> GuiM env i o (TaggedItem o)
 makeFieldRow (Sugar.CompositeItem delete tag fieldExpr) =
     do
         itemEventMap <- recordDelEventMap delete
@@ -268,10 +202,7 @@ separationBar theme animId width =
     & M.tint (theme ^. TextColors.recordTailColor)
     & M.scale (M.Vector2 width 10)
 
-makeOpenRecord ::
-    (Monad i, Monad o, Glue.HasTexts env) =>
-    ExprGui.Expr Sugar.Term i o -> Responsive o ->
-    GuiM env i o (Responsive o)
+makeOpenRecord :: _ => ExprGui.Expr Sugar.Term i o -> Responsive o -> GuiM env i o (Responsive o)
 makeOpenRecord rest fieldsGui =
     do
         theme <- Lens.view has
@@ -284,13 +215,7 @@ makeOpenRecord rest fieldsGui =
             ?? (separationBar (theme ^. Theme.textColors) animId <&> (|---| vspace))
             ?? fieldsGui ?? restExpr
 
-closedRecordEventMap ::
-    ( MonadReader env m, Has Config env
-    , Has (MomentuTexts.Texts Text) env
-    , Has (Texts.CodeUI Text) env
-    , Functor o
-    ) =>
-    Sugar.ClosedCompositeActions o -> m (EventMap (o GuiState.Update))
+closedRecordEventMap :: _ => Sugar.ClosedCompositeActions o -> m (EventMap (o GuiState.Update))
 closedRecordEventMap (Sugar.ClosedCompositeActions open) =
     Lens.view id
     <&>
@@ -299,13 +224,7 @@ closedRecordEventMap (Sugar.ClosedCompositeActions open) =
     & E.keysEventMapMovesCursor (env ^. has . Config.recordOpenKeys)
     (doc env Texts.open)
 
-recordDelEventMap ::
-    ( MonadReader env m, Has Config env
-    , Has (MomentuTexts.Texts Text) env
-    , Has (Texts.CodeUI Text) env
-    , Functor o
-    ) =>
-    o Sugar.EntityId -> m (EventMap (o GuiState.Update))
+recordDelEventMap :: _ => o Sugar.EntityId -> m (EventMap (o GuiState.Update))
 recordDelEventMap delete =
     Lens.view id
     <&>

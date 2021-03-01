@@ -16,7 +16,6 @@ import qualified GUI.Momentu as M
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
-import qualified GUI.Momentu.Glue as Glue
 import qualified GUI.Momentu.I18N as MomentuTexts
 import qualified GUI.Momentu.State as GuiState
 import qualified GUI.Momentu.Widget as Widget
@@ -24,12 +23,9 @@ import qualified GUI.Momentu.Widgets.FocusDelegator as FocusDelegator
 import qualified GUI.Momentu.Widgets.Menu as Menu
 import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
-import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
-import           Hyper
+import           Hyper (HFunctor(..), hflipped)
 import qualified Lamdu.CharClassification as Chars
-import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
-import           Lamdu.Config.Theme (Theme)
 import qualified Lamdu.Config.Theme as Theme
 import           Lamdu.GUI.Expr.HoleEdit.ResultGroups (ResultGroup(..), Result(..))
 import qualified Lamdu.GUI.Expr.HoleEdit.ResultGroups as ResultGroups
@@ -42,9 +38,7 @@ import           Lamdu.GUI.Monad (GuiM)
 import qualified Lamdu.GUI.Monad as GuiM
 import qualified Lamdu.GUI.Types as ExprGui
 import qualified Lamdu.GUI.TypeView as TypeView
-import qualified Lamdu.I18N.Code as Texts
 import qualified Lamdu.I18N.CodeUI as Texts
-import qualified Lamdu.I18N.Name as Texts
 import           Lamdu.Name (Name)
 import qualified Lamdu.Sugar.Lens as SugarLens
 import qualified Lamdu.Sugar.Parens as AddParens
@@ -52,11 +46,7 @@ import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
 
-fdConfig ::
-    ( Has Config env
-    , Has (Texts.CodeUI Text) env
-    , Has (MomentuTexts.Texts Text) env
-    ) => env -> FocusDelegator.Config
+fdConfig :: _ => env -> FocusDelegator.Config
 fdConfig env = FocusDelegator.Config
     { FocusDelegator.focusChildKeys =
         env ^. has . Config.completion . Config.completionOpenKeys
@@ -76,8 +66,7 @@ fdConfig env = FocusDelegator.Config
     }
 
 makeRenderedResult ::
-    (Monad i, Monad o, Has (MomentuTexts.Texts Text) env) =>
-    ExprGui.GuiPayload -> Result i o -> GuiM env i o (Menu.RenderedOption o)
+    _ => ExprGui.GuiPayload -> Result i o -> GuiM env i o (Menu.RenderedOption o)
 makeRenderedResult pl result =
     do
         -- Warning: rHoleResult should be ran at most once!
@@ -105,8 +94,7 @@ postProcessSugar minOpPrec binder =
             <$ sugarPl
 
 makeResultOption ::
-    (Monad i, Monad o, Has (MomentuTexts.Texts Text) env) =>
-    ExprGui.GuiPayload -> ResultGroup i o -> Menu.Option (GuiM env i o) o
+    _ => ExprGui.GuiPayload -> ResultGroup i o -> Menu.Option (GuiM env i o) o
 makeResultOption pl results =
     Menu.Option
     { Menu._oId = results ^. ResultGroups.rgPrefixId
@@ -128,11 +116,7 @@ makeResultOption pl results =
             }
 
 makeInferredTypeAnnotation ::
-    ( MonadReader env m, Has Theme env, M.HasAnimIdPrefix env
-    , Spacer.HasStdSpacing env, Has (Texts.Name Text) env, Glue.HasTexts env
-    , Has (Texts.Code Text) env
-    ) =>
-    Sugar.Annotation v Name -> M.AnimId -> m M.View
+    _ => Sugar.Annotation v Name -> M.AnimId -> m M.View
 makeInferredTypeAnnotation ann animId =
     Annotation.addAnnotationBackground
     <*> TypeView.make (ann ^?! Sugar._AnnotationType)
@@ -157,14 +141,7 @@ searchTermFilter t =
     _ -> Sugar.OptsNormal
 
 make ::
-    ( Monad i, Monad o
-    , Glue.HasTexts env
-    , Has (Texts.Name Text) env
-    , Has (Texts.Code Text) env
-    , Has (Texts.CodeUI Text) env
-    , Has (TextEdit.Texts Text) env
-    , SearchMenu.HasTexts env
-    ) =>
+    _ =>
     AnnotationMode ->
     i (Sugar.OptionFilter -> [Sugar.HoleOption Name i o]) ->
     ExprGui.Payload i o -> (Text -> Bool) -> WidgetIds ->

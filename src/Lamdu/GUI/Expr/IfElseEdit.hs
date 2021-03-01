@@ -1,4 +1,5 @@
 {-# LANGUAGE TemplateHaskell #-}
+
 module Lamdu.GUI.Expr.IfElseEdit
     ( make
     ) where
@@ -10,14 +11,12 @@ import           Data.Vector.Vector2 (Vector2(..))
 import qualified GUI.Momentu as M
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as E
-import qualified GUI.Momentu.Glue as Glue
 import qualified GUI.Momentu.I18N as MomentuTexts
 import           GUI.Momentu.Responsive (Responsive)
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.Responsive.Expression as ResponsiveExpr
 import qualified GUI.Momentu.Responsive.Options as Options
 import qualified GUI.Momentu.Widget as Widget
-import qualified GUI.Momentu.Widgets.Grid as Grid
 import qualified GUI.Momentu.Widgets.Label as Label
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified Lamdu.Config as Config
@@ -29,10 +28,6 @@ import qualified Lamdu.GUI.Types as ExprGui
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.GUI.Wrap (stdWrapParentExpr)
 import qualified Lamdu.I18N.Code as Texts
-import qualified Lamdu.I18N.CodeUI as Texts
-import qualified Lamdu.I18N.Definitions as Texts
-import qualified Lamdu.I18N.Name as Texts
-import qualified Lamdu.I18N.Navigation as Texts
 import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
@@ -46,11 +41,7 @@ data Row a = Row
 Lens.makeLenses ''Row
 
 makeIfThen ::
-    ( Monad i, Monad o
-    , Has (Texts.Code Text) env
-    , Has (MomentuTexts.Texts Text) env
-    ) =>
-    M.WithTextPos M.View -> M.AnimId -> ExprGui.Body Sugar.IfElse i o -> GuiM env i o (Row (Responsive o))
+    _ => M.WithTextPos M.View -> M.AnimId -> ExprGui.Body Sugar.IfElse i o -> GuiM env i o (Row (Responsive o))
 makeIfThen prefixLabel animId ifElse =
     do
         ifGui <-
@@ -76,18 +67,12 @@ makeIfThen prefixLabel animId ifElse =
             (M.weakerEvents eventMap thenGui)
             & pure
 
-makeElse ::
-    ( Monad i, Monad o
-    , Has (Texts.Code Text) env
-    , Has (Texts.CodeUI Text) env
-    , Has (MomentuTexts.Texts Text) env
-    ) =>
-    M.AnimId -> ExprGui.Expr Sugar.Else i o -> GuiM env i o [Row (Responsive o)]
+makeElse :: _ => M.AnimId -> ExprGui.Expr Sugar.Else i o -> GuiM env i o [Row (Responsive o)]
 makeElse parentAnimId (Ann (Const pl) (Sugar.SimpleElse expr)) =
     Row elseAnimId
     <$> (grammar (label Texts.else_) <&> Responsive.fromTextView)
     <*> (grammar (Label.make ":")
-            & Reader.local (Element.animIdPrefix .~ elseAnimId)
+            & Reader.local (M.animIdPrefix .~ elseAnimId)
             <&> Responsive.fromTextView)
     <*> GuiM.makeSubexpression (Ann (Const pl) expr)
     <&> pure
@@ -104,15 +89,12 @@ makeElse _ (Ann pl (Sugar.ElseIf content)) =
                   <&> Lens.mapped %~ M.weakerEvents letEventMap
                 )
             <*> makeElse animId (content ^. Sugar.iElse)
-            & Reader.local (Element.animIdPrefix .~ animId)
+            & Reader.local (M.animIdPrefix .~ animId)
     where
         animId = WidgetIds.fromEntityId entityId & Widget.toAnimId
         entityId = pl ^. Lens._Wrapped . _1 . Sugar.plEntityId
 
-verticalRowRender ::
-    ( Monad o, MonadReader env f, Spacer.HasStdSpacing env
-    , Has ResponsiveExpr.Style env, Glue.HasTexts env
-    ) => f (Row (Responsive o) -> Responsive o)
+verticalRowRender :: _ => f (Row (Responsive o) -> Responsive o)
 verticalRowRender =
     do
         indent <- ResponsiveExpr.indent
@@ -125,11 +107,7 @@ verticalRowRender =
             , indent (row ^. rIndentId) (row ^. rResult)
             ]
 
-renderRows ::
-    ( Monad o, MonadReader env f, Spacer.HasStdSpacing env
-    , Has ResponsiveExpr.Style env
-    , Grid.HasTexts env
-    ) => Maybe M.AnimId -> f ([Row (Responsive o)] -> Responsive o)
+renderRows :: _ => Maybe M.AnimId -> f ([Row (Responsive o)] -> Responsive o)
 renderRows mParensId =
     do
         vspace <- Spacer.getSpaceSize <&> (^._2)
@@ -141,7 +119,7 @@ renderRows mParensId =
             prep2 row =
                 row
                 & rKeyword .~ obox Options.disambiguationNone [row ^. rKeyword, row ^. rPredicate]
-                & rPredicate .~ Element.empty
+                & rPredicate .~ M.empty
         let spaceAbove = (<&> pad (Vector2 0 vspace) 0)
         let prepareRows [] = []
             prepareRows [x, y] = [prep2 x, spaceAbove (prep2 y)]
@@ -156,21 +134,12 @@ renderRows mParensId =
             & Options.tryWideLayout table (Compose (prepareRows rows))
             & Responsive.rWideDisambig %~ addParens
 
-make ::
-    ( Monad i, Monad o
-    , Grid.HasTexts env
-    , Has (Texts.Code Text) env
-    , Has (Texts.CodeUI Text) env
-    , Has (Texts.Definitions Text) env
-    , Has (Texts.Name Text) env
-    , Has (Texts.Navigation Text) env
-    ) =>
-    ExprGui.Expr Sugar.IfElse i o -> GuiM env i o (Responsive o)
+make :: _ => ExprGui.Expr Sugar.IfElse i o -> GuiM env i o (Responsive o)
 make (Ann (Const pl) ifElse) =
     renderRows (ExprGui.mParensId pl)
     <*>
     ( (:)
-        <$> makeIfThen Element.empty animId ifElse
+        <$> makeIfThen M.empty animId ifElse
         <*> makeElse animId (ifElse ^. Sugar.iElse)
     ) & stdWrapParentExpr pl
     where

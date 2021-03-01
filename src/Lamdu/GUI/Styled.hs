@@ -18,27 +18,19 @@ module Lamdu.GUI.Styled
 import qualified Control.Lens as Lens
 import           Control.Lens.Extended (OneOf)
 import qualified Control.Monad.Reader as Reader
-import           Data.Vector.Vector2 (Vector2(..))
-import           GUI.Momentu.Align (WithTextPos(..), TextWidget)
+import qualified GUI.Momentu as M
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Animation as Anim
-import           GUI.Momentu.Animation.Id (AnimId, ElemIds(..))
-import qualified GUI.Momentu.Direction as Dir
-import           GUI.Momentu.Draw (Sprite)
+import           GUI.Momentu.Animation.Id (ElemIds(..))
 import qualified GUI.Momentu.Draw as Draw
-import           GUI.Momentu.Element (Element)
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.Font as Font
-import qualified GUI.Momentu.State as GuiState
-import qualified GUI.Momentu.State as State
-import           GUI.Momentu.View (View)
 import qualified GUI.Momentu.View as View
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.TextView as TextView
 import           Graphics.DrawingCombinators.Extended ((%%))
 import qualified Graphics.DrawingCombinators.Extended as GLDraw
-import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
 import           Lamdu.Config.Theme (Theme)
 import qualified Lamdu.Config.Theme as Theme
@@ -51,25 +43,17 @@ import qualified Lamdu.Style as Style
 
 import           Lamdu.Prelude
 
-info :: (MonadReader env m, Has Theme env, Has TextView.Style env) => m a -> m a
+info :: _ => m a -> m a
 info = withColor TextColors.infoTextColor
 
-grammar :: (MonadReader env m, Has Theme env, Has TextView.Style env) => m a -> m a
+grammar :: _ => m a -> m a
 grammar = withColor TextColors.grammarColor
 
-rawText ::
-    ( MonadReader env f, Has TextView.Style env, Element.HasAnimIdPrefix env
-    , Has Dir.Layout env
-    ) =>
-    AnimId -> Text -> f (WithTextPos View)
+rawText :: _ => M.AnimId -> Text -> f (M.WithTextPos M.View)
 rawText animIdSuffix txt =
     (TextView.make ?? txt) <*> (Element.subAnimId ?? animIdSuffix)
 
-text ::
-    ( MonadReader env f, Has TextView.Style env, Element.HasAnimIdPrefix env
-    , Has (t Text) env, Has Dir.Layout env
-    ) =>
-    AnimId -> OneOf t -> f (WithTextPos View)
+text :: _ => M.AnimId -> OneOf t -> f (M.WithTextPos M.View)
 text animIdSuffix txtLens =
     Lens.view (has . Lens.cloneLens txtLens)
     >>= rawText animIdSuffix
@@ -77,63 +61,37 @@ text animIdSuffix txtLens =
 -- work around lack of impredicative types
 newtype OneOfT a = OneOf (OneOf a)
 
-mkLabel ::
-    ( MonadReader env m, Has TextView.Style env, Element.HasAnimIdPrefix env
-    , Has (t Text) env, Has Dir.Layout env, ElemIds t
-    ) =>
-    m (OneOfT t -> WithTextPos View)
+mkLabel :: _ => m (OneOfT t -> M.WithTextPos M.View)
 mkLabel =
     (,,) <$> TextView.make <*> Element.subAnimId <*> Lens.view has
     <&> \(textView, subAnimId, texts) (OneOf lens) ->
     textView (texts ^# lens) (subAnimId (elemIds ^# lens))
 
-mkFocusableLabel ::
-    ( MonadReader env m, Applicative f, State.HasCursor env
-    , Has TextView.Style env, Element.HasAnimIdPrefix env
-    , Has (t Text) env, ElemIds t, Has Dir.Layout env
-    ) =>
-    m (OneOfT t -> TextWidget f)
+mkFocusableLabel :: _ => m (OneOfT t -> M.TextWidget f)
 mkFocusableLabel =
     (,,) <$> Widget.makeFocusableView <*> Lens.view Element.animIdPrefix <*> mkLabel
     <&> \(toFocusable, animIdPrefix, lbl) (OneOf lens) ->
         let widgetId = animIdPrefix <> elemIds ^# lens & Widget.Id
         in  lbl (OneOf lens) & Align.tValue %~ toFocusable widgetId
 
-label ::
-    ( MonadReader env m, Has TextView.Style env, Element.HasAnimIdPrefix env
-    , Has (t Text) env, ElemIds t, Has Dir.Layout env
-    ) =>
-    OneOf t -> m (WithTextPos View)
+label :: _ => OneOf t -> m (M.WithTextPos M.View)
 label lens = mkLabel ?? OneOf lens
 
-focusableLabel ::
-    ( MonadReader env m, Applicative f, State.HasCursor env
-    , Has TextView.Style env, Element.HasAnimIdPrefix env
-    , Has (t Text) env, ElemIds t, Has Dir.Layout env
-    ) =>
-    OneOf t -> m (TextWidget f)
+focusableLabel :: _ => OneOf t -> m (M.TextWidget f)
 focusableLabel lens = mkFocusableLabel ?? OneOf lens
 
-addValBG ::
-    ( MonadReader env m, Element a
-    , Element.HasAnimIdPrefix env, Has Theme env
-    ) => m (a -> a)
+addValBG :: _ => m (a -> a)
 addValBG = addBgColor Theme.valFrameBGColor
 
-addBgColor ::
-    ( MonadReader env m, Element a
-    , Element.HasAnimIdPrefix env, Has Theme env
-    ) => Lens.ALens' Theme Draw.Color -> m (a -> a)
+addBgColor :: _ => Lens.ALens' Theme Draw.Color -> m (a -> a)
 addBgColor getColor =
     Draw.backgroundColor <*> Lens.view (has . Lens.cloneLens getColor)
 
-addValPadding :: (MonadReader env m, Element a, Has Theme env) => m (a -> a)
+addValPadding :: _ => m (a -> a)
 addValPadding =
     Lens.view (has . Theme.valFramePadding) <&> Element.padAround
 
-addValFrame ::
-    ( MonadReader env m, Element a, Element.HasAnimIdPrefix env, Has Theme env
-    ) => m (a -> a)
+addValFrame :: _ => m (a -> a)
 addValFrame =
     (.)
     <$> addValBG
@@ -141,9 +99,7 @@ addValFrame =
     & Reader.local (Element.animIdPrefix <>~ ["val"])
 
 -- | Add a diagonal line (top-left to right-bottom).
-addDiagonal ::
-    (MonadReader env m, Element.HasAnimIdPrefix env, Element a) =>
-    m (Draw.Color -> Draw.R -> a -> a)
+addDiagonal :: _ => m (Draw.Color -> Draw.R -> a -> a)
 addDiagonal =
     Element.subAnimId ?? ["diagonal"] <&>
     \animId color thickness ->
@@ -164,43 +120,28 @@ addDiagonal =
     where
         snoc x xs = xs ++ [x]
 
-deletedDiagonal ::
-    ( MonadReader env m, Has Theme env, Element a, Element.HasAnimIdPrefix env
-    ) =>
-    Lens.Getting Widget.R Theme.Deleted Widget.R -> m (a -> a)
+deletedDiagonal :: _ => Lens.Getting Widget.R Theme.Deleted Widget.R -> m (a -> a)
 deletedDiagonal widthLens =
     do
         width <- Lens.view (has . Theme.deleted . widthLens)
         addDiagonal <*> Lens.view (has . Theme.errorColor) ?? width
 
-deletedUse ::
-    (MonadReader env m, Element a, Element.HasAnimIdPrefix env, Has Theme env) =>
-    m (a -> a)
+deletedUse :: _ => m (a -> a)
 deletedUse = deletedDiagonal Theme.deletedUseDiagonalWidth
 
-deletedDef ::
-    (MonadReader env m, Element a, Element.HasAnimIdPrefix env, Has Theme env) =>
-    m (a -> a)
+deletedDef :: _ => m (a -> a)
 deletedDef =
     (.)
     <$> deletedDiagonal Theme.deletedDefDiagonalWidth
     <*> (Lens.view (has . Theme.deleted . Theme.deletedDefTint) <&> Element.tint)
 
-withColor ::
-    (MonadReader env m, Has Theme env, Has TextView.Style env) =>
-    Lens.ALens' TextColors Draw.Color -> m a -> m a
+withColor :: _ => Lens.ALens' TextColors Draw.Color -> m a -> m a
 withColor textColor act =
     do
         color <- Lens.view (has . Theme.textColors . Lens.cloneLens textColor)
         Reader.local (TextView.color .~ color) act
 
-actionable ::
-    ( Element.HasAnimIdPrefix env, Has TextView.Style env
-    , GuiState.HasCursor env, Has Config env, Has Theme env
-    , Applicative f, MonadReader env m, Has Dir.Layout env
-    , Has (t Text) env, ElemIds t
-    ) =>
-    Widget.Id -> OneOf t -> E.Doc -> f Widget.Id -> m (TextWidget f)
+actionable :: _ => Widget.Id -> OneOf t -> E.Doc -> f Widget.Id -> m (M.TextWidget f)
 actionable myId txtLens doc action =
     do
         color <- Lens.view (has . Theme.textColors . TextColors.actionTextColor)
@@ -218,8 +159,7 @@ actionable myId txtLens doc action =
             & Reader.local (TextView.underline ?~ underline)
             <&> Align.tValue %~ Widget.weakerEvents eventMap
 
-nameAtBinder ::
-    (MonadReader env m, Style.HasStyle env) => Name -> m a -> m a
+nameAtBinder :: _ => Name -> m a -> m a
 nameAtBinder name act =
     do
         textEditStyle <- Lens.view (has . style)
@@ -233,26 +173,22 @@ nameAtBinder name act =
             _ -> Style.autoNameOrigin
 
 -- Sprite the size of unit (1 pixel)
-unitSprite ::
-    (MonadReader env m, Has (Sprites Sprite) env) =>
-    OneOf Sprites -> m View
+unitSprite :: _ => OneOf Sprites -> m M.View
 unitSprite lens =
     Lens.view id
     <&> \env ->
     Draw.sprite (env ^. has . Lens.cloneLens lens)
     & void
     -- Y goes up by default in DrawingCombinators, switch that
-    & (GLDraw.scaleV (Vector2 1 (-1)) %%)
+    & (GLDraw.scaleV (M.Vector2 1 (-1)) %%)
     -- (-1..1) -> (0..2)
     & (GLDraw.translateV 1 %%)
     -- (0..2) -> (0..1)
-    & (GLDraw.scaleV (Vector2 0.5 0.5) %%)
+    & (GLDraw.scaleV (M.Vector2 0.5 0.5) %%)
     & Anim.singletonFrame 1 (elemIds ^# lens)
     & View.make 1
 
-sprite ::
-    (MonadReader env m, Has (Sprites Sprite) env, Has TextView.Style env) =>
-    OneOf Sprites -> m View
+sprite :: _ => OneOf Sprites -> m M.View
 sprite lens =
     do
         height <- Lens.view has <&> TextView.lineHeight

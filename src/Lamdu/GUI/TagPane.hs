@@ -11,12 +11,9 @@ import qualified Data.Property as Property
 import qualified Data.Set as Set
 import           GUI.Momentu.Align (TextWidget, Aligned(..), WithTextPos(..))
 import qualified GUI.Momentu.Align as Align
-import qualified GUI.Momentu.Direction as Dir
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Glue ((/-/), (/|/))
-import qualified GUI.Momentu.Glue as Glue
-import qualified GUI.Momentu.Hover as Hover
 import qualified GUI.Momentu.I18N as MomentuTexts
 import           GUI.Momentu.MetaKey (MetaKey(..), noMods)
 import qualified GUI.Momentu.MetaKey as MetaKey
@@ -27,12 +24,10 @@ import qualified GUI.Momentu.Widgets.Choice as Choice
 import qualified GUI.Momentu.Widgets.FocusDelegator as FocusDelegator
 import qualified GUI.Momentu.Widgets.Grid as Grid
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
-import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
 import qualified GUI.Momentu.Widgets.TextEdit.Property as TextEdits
 import qualified GUI.Momentu.Widgets.TextView as TextView
 import qualified Lamdu.CharClassification as Chars
 import qualified Lamdu.Config as Config
-import           Lamdu.Config.Theme (Theme)
 import qualified Lamdu.Config.Theme.TextColors as TextColors
 import           Lamdu.Data.Tag (TextsInLang(..))
 import qualified Lamdu.Data.Tag as Tag
@@ -51,12 +46,7 @@ tagRenameId = (`Widget.joinId` ["rename"])
 disallowedNameChars :: Set Char
 disallowedNameChars = Set.fromList ",[]\\`()"
 
-makeTagNameEdit ::
-    ( MonadReader env m, Applicative f
-    , TextEdit.Deps env, GuiState.HasCursor env
-    ) =>
-    Property f Text -> Widget.Id ->
-    m (TextWidget f)
+makeTagNameEdit :: _ => Property f Text -> Widget.Id -> m (TextWidget f)
 makeTagNameEdit prop myId =
     TextEdits.makeWordEdit
     ?? pure "  "
@@ -64,13 +54,7 @@ makeTagNameEdit prop myId =
     ?? tagRenameId myId
     <&> Align.tValue . Widget.eventMapMaker . Lens.mapped %~ E.filterChars (`Set.notMember` disallowedNameChars)
 
-makeSymbolNameEdit ::
-    ( MonadReader env m, Applicative f
-    , Has (Texts.CodeUI Text) env
-    , TextEdit.Deps env, GuiState.HasCursor env
-    ) =>
-    Property f Text -> Widget.Id ->
-    m (TextWidget f)
+makeSymbolNameEdit :: _ => Property f Text -> Widget.Id -> m (TextWidget f)
 makeSymbolNameEdit prop myId =
     TextEdits.makeWordEdit
     <*> (Lens.view (has . Texts.typeOperatorHere) <&> pure)
@@ -82,15 +66,7 @@ makeSymbolNameEdit prop myId =
             Set.member
             ?? Set.fromList Chars.operator `Set.difference` disallowedNameChars
 
-makeFocusableTagNameEdit ::
-    ( MonadReader env m
-    , Applicative o
-    , Has (Texts.CodeUI Text) env
-    , TextEdit.Deps env
-    , GuiState.HasCursor env
-    , Has Config.Config env
-    ) =>
-    Widget.Id -> Property o Text -> m (TextWidget o)
+makeFocusableTagNameEdit :: _ => Widget.Id -> Property o Text -> m (TextWidget o)
 makeFocusableTagNameEdit myId prop =
     do
         env <- Lens.view id
@@ -118,12 +94,7 @@ makeFocusableTagNameEdit myId prop =
             <&> (Align.tValue %~))
             <*> makeTagNameEdit prop myId
 
-makeLanguageTitle ::
-    ( MonadReader env m
-    , Has TextView.Style env, Has Dir.Layout env
-    , Has (Map LangId Text) env
-    ) =>
-    Widget.Id -> LangId -> m (TextWidget o)
+makeLanguageTitle :: _ => Widget.Id -> LangId -> m (TextWidget o)
 makeLanguageTitle myId lang =
     TextView.make
     <*> (Lens.view has <&> getLang)
@@ -152,12 +123,12 @@ langWidgetId parentId lang =
 nameId :: Widget.Id -> Widget.Id
 nameId = (`Widget.joinId` ["name"])
 
-hspace :: (MonadReader env m, Spacer.HasStdSpacing env) => m (TextWidget f)
+hspace :: _ => m (TextWidget f)
 hspace =
     Spacer.stdHSpace <&> WithTextPos 0 <&> Align.tValue %~ Widget.fromView
 
 textsRow ::
-    (MonadReader env m, Spacer.HasStdSpacing env, Functor f) =>
+    _ =>
     m (TextWidget f) ->
     m (TextWidget f) ->
     m (TextWidget f) ->
@@ -169,12 +140,7 @@ textsRow lang name abbrev disambig =
     <&> Lens.mapped %~ Align.fromWithTextPos 0
 
 makeLangRow ::
-    ( Applicative o
-    , MonadReader env m
-    , Spacer.HasStdSpacing env
-    , Has Theme env, Has (Map LangId Text) env, Has (Texts.CodeUI Text) env
-    , TextEdit.Deps env, GuiState.HasCursor env, Has Config.Config env
-    ) =>
+    _ =>
     Widget.Id -> (LangId -> TextsInLang -> o ()) -> LangId -> TextsInLang ->
     m (TextsRow (Aligned (Widget o)))
 makeLangRow parentId setName lang langNames =
@@ -195,11 +161,7 @@ makeLangRow parentId setName lang langNames =
             & Property (langNames ^. Lens.cloneLens l . Lens._Just)
 
 makeMissingLangRow ::
-    ( Applicative o
-    , MonadReader env m, Spacer.HasStdSpacing env, Has Theme env
-    , Has (Map LangId Text) env, Has (Texts.CodeUI Text) env
-    , TextEdit.Deps env, GuiState.HasCursor env, Has Config.Config env
-    ) =>
+    _ =>
     Widget.Id -> (LangId -> TextsInLang -> o ()) -> LangId ->
     m (TextsRow (Aligned (Widget o)))
 makeMissingLangRow parentId setName lang =
@@ -215,15 +177,7 @@ makeMissingLangRow parentId setName lang =
             & Property ""
 
 makeLangsTable ::
-    ( MonadReader env m
-    , Applicative o
-    , Has (Texts.CodeUI Text) env, Has (Grid.Texts Text) env, Has Theme env
-    , TextEdit.Deps env, Glue.HasTexts env
-    , GuiState.HasCursor env
-    , Element.HasAnimIdPrefix env, Has Config.Config env
-    , Spacer.HasStdSpacing env
-    , Has LangId env, Has (Map LangId Text) env
-    ) =>
+    (MonadReader env m, _) =>
     Widget.Id -> Map LangId TextsInLang ->
     (LangId -> TextsInLang -> o ()) -> m (Widget o)
 makeLangsTable myId tagTexts setName =
@@ -256,18 +210,7 @@ makeLangsTable myId tagTexts setName =
 data SymType = NoSymbol | UniversalSymbol | DirectionalSymbol
     deriving Eq
 
-makeSymbol ::
-    ( MonadReader env m
-    , Applicative o
-    , Has Theme env
-    , Has (Texts.CodeUI Text) env
-    , Has (Choice.Texts Text) env, Has Hover.Style env
-    , TextEdit.Deps env, Glue.HasTexts env
-    , GuiState.HasCursor env
-    , Element.HasAnimIdPrefix env
-    , Spacer.HasStdSpacing env
-    ) =>
-    Widget.Id -> Property o Tag.Symbol -> m (TextWidget o)
+makeSymbol :: _ => Widget.Id -> Property o Tag.Symbol -> m (TextWidget o)
 makeSymbol myId symProp =
     case symProp ^. pVal of
     Tag.NoSymbol -> makeChoice NoSymbol (toSym "" "")
@@ -309,18 +252,7 @@ makeSymbol myId symProp =
                     ?? defConf ?? mkId "symType"
                 & withColor TextColors.actionTextColor
 
-make ::
-    ( MonadReader env m
-    , Applicative o
-    , Has (Texts.CodeUI Text) env, Has (Grid.Texts Text) env
-    , Has (Choice.Texts Text) env, Has Hover.Style env
-    , TextEdit.Deps env, Glue.HasTexts env
-    , GuiState.HasCursor env, Has Theme env
-    , Element.HasAnimIdPrefix env, Has Config.Config env
-    , Spacer.HasStdSpacing env
-    , Has LangId env, Has (Map LangId Text) env
-    ) =>
-    Sugar.TagPane Name o -> m (Widget o)
+make :: _ => Sugar.TagPane Name o -> m (Widget o)
 make tagPane =
     addValFrame <*>
     do

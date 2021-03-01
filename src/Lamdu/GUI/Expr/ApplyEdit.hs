@@ -4,17 +4,13 @@ module Lamdu.GUI.Expr.ApplyEdit
 
 import qualified Control.Lens as Lens
 import           GUI.Momentu ((/|/))
-import qualified GUI.Momentu.Glue as Glue
 import           GUI.Momentu.Responsive (Responsive)
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.Responsive.Expression as ResponsiveExpr
 import qualified GUI.Momentu.Responsive.Options as Options
 import           GUI.Momentu.Responsive.TaggedList (TaggedItem(..), taggedList)
 import qualified GUI.Momentu.Widget as Widget
-import qualified GUI.Momentu.Widgets.Grid as Grid
-import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
-import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
 import qualified Lamdu.GUI.Expr.CaseEdit as CaseEdit
 import qualified Lamdu.GUI.Expr.EventMap as ExprEventMap
 import qualified Lamdu.GUI.Expr.GetFieldEdit as GetFieldEdit
@@ -29,25 +25,13 @@ import qualified Lamdu.GUI.Types as ExprGui
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.GUI.Wrap (stdWrap, stdWrapParentExpr)
 import qualified Lamdu.GUI.Wrap as Wrap
-import qualified Lamdu.I18N.Code as Texts
-import qualified Lamdu.I18N.CodeUI as Texts
-import qualified Lamdu.I18N.Definitions as Texts
-import qualified Lamdu.I18N.Name as Texts
-import qualified Lamdu.I18N.Navigation as Texts
 import           Lamdu.Name (Name(..))
 import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
 
 makeFunc ::
-    ( Monad i, Monad o
-    , Grid.HasTexts env
-    , Has (Texts.Name Text) env
-    , Has (Texts.Code Text) env
-    , Has (Texts.CodeUI Text) env
-    , Has (Texts.Definitions Text) env
-    , Has (Texts.Navigation Text) env
-    ) =>
+    _ =>
     GetVarEdit.Role ->
     Annotated (ExprGui.Payload i o) # Const (Sugar.BinderVarRef Name o) ->
     GuiM env i o (Responsive o)
@@ -59,16 +43,7 @@ makeFunc role func =
         pl = func ^. annotation
         myId = WidgetIds.fromExprPayload (pl ^. _1)
 
-makeLabeled ::
-    ( Monad i, Monad o
-    , Grid.HasTexts env
-    , Has (Texts.Code Text) env
-    , Has (Texts.CodeUI Text) env
-    , Has (Texts.Definitions Text) env
-    , Has (Texts.Name Text) env
-    , Has (Texts.Navigation Text) env
-    ) =>
-    ExprGui.Expr Sugar.LabeledApply i o -> GuiM env i o (Responsive o)
+makeLabeled :: _ => ExprGui.Expr Sugar.LabeledApply i o -> GuiM env i o (Responsive o)
 makeLabeled (Ann (Const pl) apply) =
     ExprEventMap.add ExprEventMap.defaultOptions pl <*>
     ( Wrap.parentDelegator (WidgetIds.fromExprPayload (pl ^. _1)) <*>
@@ -92,9 +67,7 @@ makeLabeled (Ann (Const pl) apply) =
             addArgs apply x
         func = apply ^. Sugar.aFunc
 
-makeArgRow ::
-    (Monad i, Glue.HasTexts env, Has (Texts.Name Text) env) =>
-    ExprGui.Body Sugar.AnnotatedArg i o -> GuiM env i o (TaggedItem o)
+makeArgRow :: _ => ExprGui.Body Sugar.AnnotatedArg i o -> GuiM env i o (TaggedItem o)
 makeArgRow arg =
     do
         expr <- GuiM.makeSubexpression (arg ^. Sugar.aaExpr)
@@ -108,14 +81,7 @@ makeArgRow arg =
             , _tagPost = Nothing
             }
 
-addArgs ::
-    ( Monad i, Monad o
-    , Glue.HasTexts env
-    , Has (Texts.Definitions Text) env, Has (Texts.Navigation Text) env
-    , Has (Texts.Code Text) env, Has (Texts.CodeUI Text) env
-    , Has (Texts.Name Text) env, Grid.HasTexts env
-    ) =>
-    ExprGui.Body Sugar.LabeledApply i o -> Responsive o -> GuiM env i o (Responsive o)
+addArgs :: _ => ExprGui.Body Sugar.LabeledApply i o -> Responsive o -> GuiM env i o (Responsive o)
 addArgs apply funcRow =
     do
         argRows <-
@@ -134,14 +100,7 @@ addArgs apply funcRow =
                 <*> (Responsive.vboxSpaced ?? (funcRow : extraRows))
 
 makeSimple ::
-    ( Monad i, Monad o
-    , Grid.HasTexts env
-    , Has (Texts.Code Text) env
-    , Has (Texts.CodeUI Text) env
-    , Has (Texts.Definitions Text) env
-    , Has (Texts.Name Text) env
-    , Has (Texts.Navigation Text) env
-    ) =>
+    _ =>
     Annotated (ExprGui.Payload i o)
         # Sugar.App (Sugar.Term (Sugar.Annotation (Sugar.EvaluationScopes Name i) Name) Name i o) ->
     GuiM env i o (Responsive o)
@@ -152,19 +111,7 @@ makeSimple (Ann (Const pl) (Sugar.App func arg)) =
     , GuiM.makeSubexpression arg
     ] & stdWrapParentExpr pl
 
-makePostfix ::
-    ( Monad i, Monad o
-    , Grid.HasTexts env
-    , Has (Texts.Code Text) env
-    , Has (Texts.CodeUI Text) env
-    , Has (Texts.Definitions Text) env
-    , Has (Texts.Name Text) env
-    , Has (Texts.Navigation Text) env
-    , Has (TextEdit.Texts Text) env
-    , SearchMenu.HasTexts env
-    ) =>
-    ExprGui.Expr Sugar.PostfixApply i o ->
-    GuiM env i o (Responsive o)
+makePostfix :: _ => ExprGui.Expr Sugar.PostfixApply i o -> GuiM env i o (Responsive o)
 makePostfix (Ann (Const pl) (Sugar.PostfixApply arg func)) =
     (ResponsiveExpr.boxSpacedMDisamb ?? ExprGui.mParensId pl)
     <*> sequenceA
@@ -172,19 +119,7 @@ makePostfix (Ann (Const pl) (Sugar.PostfixApply arg func)) =
     , makePostfixFunc func
     ] & stdWrapParentExpr pl
 
-makePostfixFunc ::
-    ( Monad i, Monad o
-    , Grid.HasTexts env
-    , Has (Texts.Code Text) env
-    , Has (Texts.CodeUI Text) env
-    , Has (Texts.Definitions Text) env
-    , Has (Texts.Name Text) env
-    , Has (Texts.Navigation Text) env
-    , Has (TextEdit.Texts Text) env
-    , SearchMenu.HasTexts env
-    ) =>
-    ExprGui.Expr Sugar.PostfixFunc i o ->
-    GuiM env i o (Responsive o)
+makePostfixFunc :: _ => ExprGui.Expr Sugar.PostfixFunc i o -> GuiM env i o (Responsive o)
 makePostfixFunc (Ann (Const pl) x) =
     (ResponsiveExpr.boxSpacedMDisamb ?? ExprGui.mParensId pl) <*>
     ( case x of

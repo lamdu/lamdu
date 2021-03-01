@@ -10,11 +10,7 @@ import qualified GUI.Momentu.I18N as MomentuTexts
 import           GUI.Momentu.Responsive (Responsive)
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.Widget as Widget
-import qualified GUI.Momentu.Widgets.Choice as Choice
-import qualified GUI.Momentu.Widgets.Grid as Grid
-import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
-import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.Config.Theme.TextColors as TextColors
@@ -28,28 +24,13 @@ import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.GUI.Wrap (stdWrapParentExpr)
 import qualified Lamdu.I18N.Code as Texts
 import qualified Lamdu.I18N.CodeUI as CodeUI
-import qualified Lamdu.I18N.CodeUI as Texts
 import qualified Lamdu.I18N.Definitions as Definitions
-import qualified Lamdu.I18N.Definitions as Texts
-import qualified Lamdu.I18N.Name as Texts
 import qualified Lamdu.I18N.Navigation as Texts
 import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
 
-makeLetEdit ::
-    ( Monad i, Monad o
-    , Grid.HasTexts env
-    , TextEdit.HasTexts env
-    , SearchMenu.HasTexts env
-    , Has (Choice.Texts Text) env
-    , Has (Texts.Code Text) env
-    , Has (Texts.CodeUI Text) env
-    , Has (Texts.Definitions Text) env
-    , Has (Texts.Name Text) env
-    , Has (Texts.Navigation Text) env
-    ) =>
-    ExprGui.Body Sugar.Let i o -> GuiM env i o (Responsive o)
+makeLetEdit :: _ => ExprGui.Body Sugar.Let i o -> GuiM env i o (Responsive o)
 makeLetEdit item =
     do
         env <- Lens.view id
@@ -90,19 +71,7 @@ makeLetEdit item =
         bodyId = item ^. Sugar.lBody . annotation . _1 & WidgetIds.fromExprPayload
         binder = item ^. Sugar.lValue
 
-make ::
-    ( Monad i, Monad o
-    , Grid.HasTexts env
-    , TextEdit.HasTexts env
-    , SearchMenu.HasTexts env
-    , Has (Choice.Texts Text) env
-    , Has (Texts.Code Text) env
-    , Has (Texts.CodeUI Text) env
-    , Has (Texts.Definitions Text) env
-    , Has (Texts.Name Text) env
-    , Has (Texts.Navigation Text) env
-    ) =>
-    ExprGui.Expr Sugar.Binder i o -> GuiM env i o (Responsive o)
+make :: _ => ExprGui.Expr Sugar.Binder i o -> GuiM env i o (Responsive o)
 make (Ann (Const pl) (Sugar.BinderTerm assignmentBody)) =
     Ann (Const pl) assignmentBody & GuiM.makeSubexpression
 make (Ann (Const pl) (Sugar.BinderLet l)) =

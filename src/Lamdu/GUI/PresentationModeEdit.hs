@@ -9,13 +9,9 @@ import qualified Control.Monad.Reader as Reader
 import           Data.Property (Property)
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Element as Element
-import qualified GUI.Momentu.Glue as Glue
-import qualified GUI.Momentu.Hover as Hover
-import qualified GUI.Momentu.State as GuiState
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Choice as Choice
 import qualified GUI.Momentu.Widgets.TextView as TextView
-import           Lamdu.Config.Theme (Theme)
 import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.Config.Theme.TextColors as TextColors
 import qualified Lamdu.GUI.Styled as Styled
@@ -32,13 +28,7 @@ lens mode =
 
 {-# ANN make ("HLint: ignore Use head"::String) #-}
 make ::
-    ( Applicative f, MonadReader env m, Has Theme env
-    , Element.HasAnimIdPrefix env, Has TextView.Style env, GuiState.HasCursor env
-    , Has Hover.Style env
-    , Has (Texts.CodeUI Text) env
-    , Has (Choice.Texts Text) env
-    , Glue.HasTexts env
-    ) =>
+    _ =>
     Widget.Id ->
     Sugar.BinderParams v name i o ->
     Property f Sugar.PresentationMode ->

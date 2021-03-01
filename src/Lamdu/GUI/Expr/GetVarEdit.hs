@@ -9,11 +9,9 @@ import qualified Control.Monad.Reader as Reader
 import qualified Data.ByteString.Char8 as SBS8
 import qualified GUI.Momentu as M
 import qualified GUI.Momentu.Align as Align
-import qualified GUI.Momentu.Direction as Dir
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Font (Underline(..))
-import qualified GUI.Momentu.Glue as Glue
 import qualified GUI.Momentu.Hover as Hover
 import qualified GUI.Momentu.I18N as MomentuTexts
 import           GUI.Momentu.MetaKey (MetaKey(..), noMods)
@@ -27,9 +25,7 @@ import qualified GUI.Momentu.Widgets.Grid as Grid
 import qualified GUI.Momentu.Widgets.Label as Label
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified GUI.Momentu.Widgets.TextView as TextView
-import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
-import           Lamdu.Config.Theme (Theme)
 import qualified Lamdu.Config.Theme as Theme
 import           Lamdu.Config.Theme.TextColors (TextColors)
 import qualified Lamdu.Config.Theme.TextColors as TextColors
@@ -46,7 +42,6 @@ import           Lamdu.GUI.Wrap (stdWrap)
 import qualified Lamdu.I18N.Code as Texts
 import qualified Lamdu.I18N.CodeUI as Texts
 import qualified Lamdu.I18N.Definitions as Texts
-import qualified Lamdu.I18N.Name as Texts
 import qualified Lamdu.I18N.Navigation as Texts
 import           Lamdu.Name (Name(..))
 import qualified Lamdu.Name as Name
@@ -54,25 +49,13 @@ import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
 
-makeSimpleView ::
-    ( MonadReader env m, GuiState.HasCursor env, Has Theme env
-    , Applicative f, M.HasAnimIdPrefix env, Has TextView.Style env
-    , Has Dir.Layout env, Has (Texts.Name Text) env
-    ) =>
-    Lens.ALens' TextColors M.Color -> Name -> Widget.Id ->
-    m (M.TextWidget f)
+makeSimpleView :: _ => Lens.ALens' TextColors M.Color -> Name -> Widget.Id -> m (M.TextWidget f)
 makeSimpleView color name myId =
     (Widget.makeFocusableView ?? myId <&> (Align.tValue %~))
     <*> NameView.make name
     & Styled.withColor (Lens.cloneLens color)
 
-makeParamsRecord ::
-    ( MonadReader env m, Has Theme env, GuiState.HasCursor env
-    , M.HasAnimIdPrefix env, Spacer.HasStdSpacing env
-    , Glue.HasTexts env, Has (Texts.Code Text) env, Has (Texts.Name Text) env
-    , Applicative f
-    ) =>
-    Widget.Id -> Sugar.ParamsRecordVarRef Name -> m (Responsive f)
+makeParamsRecord :: _ => Widget.Id -> Sugar.ParamsRecordVarRef Name -> m (Responsive f)
 makeParamsRecord myId paramsRecordVar =
     do
         respondToCursor <- Widget.respondToCursorPrefix ?? myId
@@ -99,20 +82,12 @@ makeParamsRecord myId paramsRecordVar =
 
 data Role = Normal | Operator deriving Eq
 
-navDoc ::
-    ( Has (Texts.Navigation Text) env
-    , Has (MomentuTexts.Texts Text) env
-    ) =>
-    env -> Lens.ALens' (Texts.Navigation Text) Text -> E.Doc
+navDoc :: _ => env -> Lens.ALens' (Texts.Navigation Text) Text -> E.Doc
 navDoc env lens =
     E.toDoc env [has . MomentuTexts.navigation, has . lens]
 
 makeNameRef ::
-    ( Monad i, Monad o
-    , Has (Texts.Navigation Text) env
-    , Has (Texts.Name Text) env
-    , Has (MomentuTexts.Texts Text) env
-    ) =>
+    _ =>
     Role ->
     Lens.ALens' TextColors M.Color -> Widget.Id ->
     Sugar.NameRef Name o ->
@@ -146,14 +121,7 @@ makeNameRef role color myId nameRef =
         name = nameRef ^. Sugar.nrName
         nameId = Widget.joinId myId ["name"]
 
-makeInlineEventMap ::
-    ( Has Config env, Has (MomentuTexts.Texts Text) env
-    , Has (Texts.CodeUI Text) env
-    , Has (Texts.Navigation Text) env
-    , Applicative f
-    ) =>
-    env -> Sugar.BinderVarInline f ->
-    EventMap (f GuiState.Update)
+makeInlineEventMap :: _ => env -> Sugar.BinderVarInline f -> EventMap (f GuiState.Update)
 makeInlineEventMap env (Sugar.InlineVar inline) =
     inline <&> WidgetIds.fromEntityId
     & E.keysEventMapMovesCursor (env ^. has . Config.inlineKeys)
@@ -165,15 +133,7 @@ makeInlineEventMap env (Sugar.CannotInlineDueToUses (x:_)) =
 makeInlineEventMap _ _ = mempty
 
 definitionTypeChangeBox ::
-    ( MonadReader env m, Glue.HasTexts env, Has (Texts.Code Text) env
-    , M.HasAnimIdPrefix env, Has (Texts.Definitions Text) env
-    , Spacer.HasStdSpacing env, Has Theme env, GuiState.HasCursor env
-    , Has Config env
-    , Has (Texts.Name Text) env, Grid.HasTexts env
-    , Applicative f
-    ) =>
-    Sugar.DefinitionOutdatedType Name f Sugar.EntityId -> Widget.Id ->
-    m (M.TextWidget f)
+    _ => Sugar.DefinitionOutdatedType Name f Sugar.EntityId -> Widget.Id -> m (M.TextWidget f)
 definitionTypeChangeBox info getVarId =
     do
         env <- Lens.view id
@@ -205,17 +165,7 @@ definitionTypeChangeBox info getVarId =
         animId = Widget.toAnimId myId
 
 processDefinitionWidget ::
-    ( MonadReader env m, Spacer.HasStdSpacing env
-    , Has Theme env, M.HasAnimIdPrefix env, Has Config env
-    , GuiState.HasCursor env, Has Hover.Style env
-    , Has (Texts.Definitions Text) env
-    , Has (Texts.Code Text) env, Has (Texts.CodeUI Text) env
-    , Has (Texts.Name Text) env, Grid.HasTexts env
-    , Applicative f
-    ) =>
-    Sugar.DefinitionForm Name f -> Widget.Id ->
-    m (M.TextWidget f) ->
-    m (M.TextWidget f)
+    _ => Sugar.DefinitionForm Name f -> Widget.Id -> m (M.TextWidget f) -> m (M.TextWidget f)
 processDefinitionWidget Sugar.DefUpToDate _myId mkLayout = mkLayout
 processDefinitionWidget Sugar.DefDeleted _myId mkLayout =
     Styled.deletedUse <*> mkLayout
@@ -262,16 +212,7 @@ processDefinitionWidget (Sugar.DefTypeChanged info) myId mkLayout =
         hiddenId = myId `Widget.joinId` ["hidden"]
 
 makeGetBinder ::
-    ( Monad i, Monad o
-    , Has (Texts.Definitions Text) env
-    , Has (Texts.Navigation Text) env
-    , Has (Texts.Code Text) env
-    , Has (Texts.CodeUI Text) env
-    , Has (Texts.Name Text) env
-    , Grid.HasTexts env
-    ) =>
-    Role -> Sugar.BinderVarRef Name o -> Widget.Id ->
-    GuiM env i o (M.TextWidget o)
+    _ => Role -> Sugar.BinderVarRef Name o -> Widget.Id -> GuiM env i o (M.TextWidget o)
 makeGetBinder role binderVar myId =
     do
         env <- Lens.view id
@@ -287,14 +228,7 @@ makeGetBinder role binderVar myId =
                 (makeInlineEventMap env (binderVar ^. Sugar.bvInline))
             & processDef
 
-makeGetParam ::
-    ( Monad i, Monad o
-    , Has (Texts.Navigation Text) env
-    , Has (Texts.Name Text) env
-    , Has (MomentuTexts.Texts Text) env
-    ) =>
-    Sugar.ParamRef Name o -> Widget.Id ->
-    GuiM env i o (M.TextWidget o)
+makeGetParam :: _ => Sugar.ParamRef Name o -> Widget.Id -> GuiM env i o (M.TextWidget o)
 makeGetParam param myId =
     do
         underline <- Lens.view has <&> LightLambda.underline
@@ -309,11 +243,7 @@ makeGetParam param myId =
         name = param ^. Sugar.pNameRef . Sugar.nrName
 
 make ::
-    ( Monad i, Monad o
-    , Has (Texts.Definitions Text) env, Has (Texts.Navigation Text) env
-    , Has (Texts.Code Text) env, Has (Texts.CodeUI Text) env
-    , Has (Texts.Name Text) env, Grid.HasTexts env
-    ) =>
+    _ =>
     Annotated (ExprGui.Payload i o) # Const (Sugar.GetVar Name o) ->
     GuiM env i o (Responsive o)
 make (Ann (Const pl) (Const getVar)) =
@@ -329,11 +259,7 @@ make (Ann (Const pl) (Const getVar)) =
         myId = pl ^. _1 & WidgetIds.fromExprPayload
 
 makePunnedVar ::
-    ( Monad i, Monad o
-    , Has (Texts.Definitions Text) env, Has (Texts.Navigation Text) env
-    , Has (Texts.Code Text) env, Has (Texts.CodeUI Text) env
-    , Has (Texts.Name Text) env, Grid.HasTexts env
-    ) =>
+    _ =>
     Sugar.PunnedVar Name o # Annotated (ExprGui.Payload i o) ->
     GuiM env i o (Responsive o)
 makePunnedVar (Sugar.PunnedVar var tagId) =
@@ -343,11 +269,7 @@ makePunnedVar (Sugar.PunnedVar var tagId) =
         (WidgetIds.fromExprPayload (var ^. annotation . _1))
 
 makePunnedVars ::
-    ( Monad i, Monad o
-    , Has (Texts.Definitions Text) env, Has (Texts.Navigation Text) env
-    , Has (Texts.Code Text) env, Has (Texts.CodeUI Text) env
-    , Has (Texts.Name Text) env, Grid.HasTexts env
-    ) =>
+    _ =>
     [Sugar.PunnedVar Name o # Annotated (ExprGui.Payload i o)] ->
     GuiM env i o (Responsive o)
 makePunnedVars args =

@@ -1,7 +1,6 @@
 {-# LANGUAGE TemplateHaskell, FlexibleInstances, MultiParamTypeClasses #-}
-{-# LANGUAGE ConstraintKinds #-}
 module Lamdu.GUI.EvalView
-    ( make, Deps
+    ( make
     ) where
 
 import qualified Control.Lens as Lens
@@ -32,7 +31,6 @@ import qualified Lamdu.Config.Theme as Theme
 import           Lamdu.Formatting (Format(..))
 import qualified Lamdu.GUI.TagView as TagView
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
-import qualified Lamdu.I18N.Name as Texts
 import           Lamdu.Name (Name(..))
 import           Lamdu.Sugar.Types (ResVal)
 import qualified Lamdu.Sugar.Types as Sugar
@@ -51,11 +49,6 @@ instance Spacer.HasStdSpacing env => Spacer.HasStdSpacing (Env env) where
     stdSpacing = base . Spacer.stdSpacing
 instance Has r env => Has r (Env env) where has = base . has
 
-type Deps env =
-    ( Has TextView.Style env, Element.HasAnimIdPrefix env
-    , Has Theme.Theme env, Has Dir.Layout env, Has (Texts.Name Text) env
-    , Spacer.HasStdSpacing env
-    )
 type M env = ReaderT (Env env)
 
 -- NOTE: We are hard-coded to GuiM because of the expression depth
@@ -67,9 +60,7 @@ textView ::
     ) => Text -> m (WithTextPos View)
 textView text = (TextView.make ?? text) <*> Lens.view Element.animIdPrefix
 
-makeField ::
-    (Monad m, Deps env) =>
-    Sugar.Tag Name -> ResVal Name -> M env m [Aligned View]
+makeField :: _ => Sugar.Tag Name -> ResVal Name -> M env m [Aligned View]
 makeField tag val =
     do
         tagView <- TagView.make tag
@@ -92,7 +83,7 @@ makeError ::
 makeError (Sugar.EvalTypeError msg) =
     textView msg & Reader.local (Element.animIdPrefix <>~ ["error"])
 
-advanceDepth :: (Monad m, Deps env) => M env m (WithTextPos View) -> M env m (WithTextPos View)
+advanceDepth :: _ => M env m (WithTextPos View) -> M env m (WithTextPos View)
 advanceDepth action =
     do
         depth <- Lens.view depthLeft
@@ -106,9 +97,7 @@ arrayCutoff = 10
 tableCutoff :: Int
 tableCutoff = 6
 
-makeTable ::
-    (Monad m, Deps env) =>
-    Sugar.ResTable Name (ResVal Name) -> M env m (WithTextPos View)
+makeTable :: _ => Sugar.ResTable Name (ResVal Name) -> M env m (WithTextPos View)
 makeTable (Sugar.ResTable headers valss) =
     do
         header <- traverse TagView.make headers
@@ -127,9 +116,7 @@ makeTable (Sugar.ResTable headers valss) =
         pure (Aligned 0.5 table) /-/ pure (Aligned 0.5 remainView)
             <&> (^. Align.value)
 
-makeArray ::
-    (Monad m, Deps env) =>
-    [ResVal Name] -> M env m (WithTextPos View)
+makeArray :: _ => [ResVal Name] -> M env m (WithTextPos View)
 makeArray items =
     do
         itemViews <- zipWithM makeItem [0..arrayCutoff] items
@@ -152,9 +139,7 @@ makeArray items =
                 )
             & Element.locallyAugmented (idx :: Int)
 
-makeTree ::
-    (Monad m, Deps env) =>
-    Sugar.ResTree (ResVal Name) -> M env m (WithTextPos View)
+makeTree :: _ => Sugar.ResTree (ResVal Name) -> M env m (WithTextPos View)
 makeTree (Sugar.ResTree root subtrees) =
     do
         rootView <- makeInner root
@@ -172,16 +157,12 @@ makeTree (Sugar.ResTree root subtrees) =
         cutoff = 4
 
 
-makeRecord ::
-    (Monad m, Deps env) =>
-    Sugar.ResRecord Name (ResVal Name) -> M env m (WithTextPos View)
+makeRecord :: _ => Sugar.ResRecord Name (ResVal Name) -> M env m (WithTextPos View)
 makeRecord (Sugar.ResRecord fields) =
     GridView.make <*> traverse (uncurry makeField) fields <&> snd
     <&> Align.WithTextPos 0
 
-makeList ::
-    (Monad m, Deps env) =>
-    Sugar.ResList (ResVal Name) -> M env m (WithTextPos View)
+makeList :: _ => Sugar.ResList (ResVal Name) -> M env m (WithTextPos View)
 makeList (Sugar.ResList head_) =
     do
         (preLabel, postLabel) <-
@@ -196,10 +177,7 @@ makeList (Sugar.ResList head_) =
         hGlueAlign align l r =
             (pure (Aligned align l) /|/ pure (Aligned align r)) <&> (^. Align.value)
 
-makeInject ::
-    (Monad m, Deps env) =>
-    Sugar.ResInject Name (ResVal Name) ->
-    M env m (WithTextPos View)
+makeInject :: _ => Sugar.ResInject Name (ResVal Name) -> M env m (WithTextPos View)
 makeInject (Sugar.ResInject tag mVal) =
     case mVal of
     Nothing -> TagView.make tag
@@ -226,9 +204,7 @@ fixSize view =
             & Anim.iUnitImage %~
             (Draw.scaleV (image ^. Anim.iRect . Rect.size / view ^. Element.size) %%)
 
-makeInner ::
-    (Monad m, Deps env) =>
-    ResVal Name -> M env m (WithTextPos View)
+makeInner :: _ => ResVal Name -> M env m (WithTextPos View)
 makeInner (Sugar.ResVal entityId body) =
     case body of
     Sugar.RError err -> makeError err
@@ -251,10 +227,7 @@ makeInner (Sugar.ResVal entityId body) =
             | Lens.has Lens.folded body = advanceDepth
             | otherwise = id
 
-toText ::
-    ( Format r, MonadReader env m, Has TextView.Style env
-    , Element.HasAnimIdPrefix env, Has Dir.Layout env
-    ) => r -> m (WithTextPos View)
+toText :: _ => r -> m (WithTextPos View)
 toText val =
     textView cut
     where
@@ -276,7 +249,7 @@ toText val =
             where
                 (start, rest) = Text.splitAt 100 ln
 
-make :: (MonadReader env m, Deps env) => ResVal Name -> m (WithTextPos View)
+make :: _ => ResVal Name -> m (WithTextPos View)
 make v =
     do
         env <- Lens.view id

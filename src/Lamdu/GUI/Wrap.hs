@@ -7,7 +7,6 @@ module Lamdu.GUI.Wrap
 
 import qualified Control.Lens as Lens
 import qualified GUI.Momentu.EventMap as E
-import qualified GUI.Momentu.Glue as Glue
 import qualified GUI.Momentu.I18N as MomentuTexts
 import           GUI.Momentu.Responsive (Responsive(..))
 import qualified GUI.Momentu.State as GuiState
@@ -15,28 +14,18 @@ import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
 import           GUI.Momentu.Widget.Id (subId)
 import qualified GUI.Momentu.Widgets.FocusDelegator as FocusDelegator
-import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
 import qualified Lamdu.GUI.Expr.EventMap as ExprEventMap
 import           Lamdu.GUI.Annotation (maybeAddAnnotationPl)
 import           Lamdu.GUI.Monad (GuiM)
 import qualified Lamdu.GUI.Types as ExprGui
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
-import qualified Lamdu.I18N.Code as Texts
-import qualified Lamdu.I18N.CodeUI as Texts
-import qualified Lamdu.I18N.Definitions as Texts
-import qualified Lamdu.I18N.Name as Texts
 import qualified Lamdu.I18N.Navigation as Texts
 import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
 
-parentExprFDConfig ::
-    ( MonadReader env m, Has Config env
-    , Has (MomentuTexts.Texts Text) env
-    , Has (Texts.Navigation Text) env
-    ) =>
-    m FocusDelegator.Config
+parentExprFDConfig :: _ => m FocusDelegator.Config
 parentExprFDConfig =
     Lens.view id <&>
     \env ->
@@ -51,15 +40,7 @@ parentExprFDConfig =
     , FocusDelegator.focusParentDoc = doc Texts.leaveSubexpression
     }
 
-stdWrap ::
-    ( Monad i, Monad o
-    , Has (Texts.Name Text) env
-    , Has (Texts.Code Text) env
-    , Has (Texts.CodeUI Text) env
-    , Has (Texts.Definitions Text) env
-    , Glue.HasTexts env
-    ) =>
-    ExprGui.Payload i o -> GuiM env i o (Responsive o) -> GuiM env i o (Responsive o)
+stdWrap :: _ => ExprGui.Payload i o -> GuiM env i o (Responsive o) -> GuiM env i o (Responsive o)
 stdWrap pl act =
     act
     >>> (takeFocusIfNeeded pl <&> (Widget.widget %~))
@@ -68,28 +49,12 @@ stdWrap pl act =
     where
         a >>> f = f <*> a
 
-parentDelegator ::
-    ( HasCallStack, MonadReader env m, Has Config env
-    , Has (MomentuTexts.Texts Text) env
-    , Has (Texts.Navigation Text) env
-    , GuiState.HasCursor env
-    , Applicative o
-    ) => Widget.Id ->
-    m (Responsive o -> Responsive o)
+parentDelegator :: _ => Widget.Id -> m (Responsive o -> Responsive o)
 parentDelegator myId =
     FocusDelegator.make <*> parentExprFDConfig
     ?? FocusDelegator.FocusEntryChild ?? myId
 
-stdWrapParentExpr ::
-    ( Monad i, Monad o
-    , Glue.HasTexts env
-    , Has (Texts.Code Text) env
-    , Has (Texts.CodeUI Text) env
-    , Has (Texts.Definitions Text) env
-    , Has (Texts.Name Text) env
-    , Has (Texts.Navigation Text) env
-    ) =>
-    ExprGui.Payload i o -> GuiM env i o (Responsive o) -> GuiM env i o (Responsive o)
+stdWrapParentExpr :: _ => ExprGui.Payload i o -> GuiM env i o (Responsive o) -> GuiM env i o (Responsive o)
 stdWrapParentExpr pl act =
     parentDelegator (WidgetIds.fromExprPayload (pl ^. _1)) <*> act & stdWrap pl
 

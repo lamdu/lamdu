@@ -9,7 +9,6 @@ import           GUI.Momentu.Align (TextWidget)
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
-import qualified GUI.Momentu.Glue as Glue
 import qualified GUI.Momentu.I18N as MomentuTexts
 import           GUI.Momentu.MetaKey (MetaKey, toModKey)
 import           GUI.Momentu.Responsive (Responsive)
@@ -17,8 +16,6 @@ import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.State as GuiState
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Menu as Menu
-import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
-import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Theme.TextColors as TextColors
@@ -27,22 +24,14 @@ import qualified Lamdu.GUI.Annotation as Annotation
 import           Lamdu.GUI.Monad (GuiM)
 import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
-import qualified Lamdu.I18N.Code as Texts
 import qualified Lamdu.I18N.CodeUI as Texts
-import qualified Lamdu.I18N.Name as Texts
 import           Lamdu.Name (Name)
 import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
 
 eventMapAddFirstParam ::
-    ( MonadReader env m, Applicative o, Has Config env
-    , Has (MomentuTexts.Texts Text) env
-    , Has (Texts.CodeUI Text) env
-    ) =>
-    Widget.Id ->
-    Sugar.AddFirstParam name i o ->
-    m (EventMap (o GuiState.Update))
+    _ => Widget.Id -> Sugar.AddFirstParam name i o -> m (EventMap (o GuiState.Update))
 eventMapAddFirstParam binderId addFirst =
     Lens.view id
     <&>
@@ -61,13 +50,7 @@ eventMapAddFirstParam binderId addFirst =
                 (x <&> enterParam, Texts.addParameter)
 
 eventMapAddNextParam ::
-    ( Applicative o
-    , Has (MomentuTexts.Texts Text) env
-    , Has (Texts.CodeUI Text) env
-    , Has Config env
-    ) =>
-    env -> Widget.Id -> Sugar.AddNextParam name i o ->
-    EventMap (o GuiState.Update)
+    _ => env -> Widget.Id -> Sugar.AddNextParam name i o -> EventMap (o GuiState.Update)
 eventMapAddNextParam env myId addNext =
     E.keysEventMapMovesCursor (env ^. has . Config.addNextParamKeys)
     (E.toDoc env [has . MomentuTexts.edit, has . doc]) (pure dst)
@@ -82,11 +65,7 @@ eventMapAddNextParam env myId addNext =
                 )
 
 eventMapOrderParam ::
-    ( Monad m
-    , Has Config env
-    , Has (MomentuTexts.Texts Text) env
-    , Has (Texts.CodeUI Text) env
-    ) =>
+    _ =>
     env ->
     Lens.ALens' Config [MetaKey] ->
     Lens.ALens' (Texts.CodeUI Text) Text -> m () ->
@@ -97,10 +76,7 @@ eventMapOrderParam env keys moveDoc =
         [has . MomentuTexts.edit, has . Texts.parameter, has . moveDoc])
 
 eventParamDelEventMap ::
-    ( Monad m, Has Config env
-    , Has (MomentuTexts.Texts Text) env
-    , Has (Texts.CodeUI Text) env
-    ) =>
+    _ =>
     env -> m () ->
     Lens.ALens' Config [MetaKey] ->
     Lens.ALens' (Texts.CodeUI Text) Text -> Widget.Id -> EventMap (m GuiState.Update)
@@ -128,13 +104,7 @@ mkParamPickResult tagInstance _ =
 
 -- exported for use in definition sugaring.
 make ::
-    ( Monad i, Monad o
-    , Has (TextEdit.Texts Text) env
-    , Has (Texts.Name Text) env
-    , Has (Texts.CodeUI Text) env
-    , Has (Texts.Code Text) env
-    , Glue.HasTexts env, SearchMenu.HasTexts env
-    ) =>
+    _ =>
     Annotation.EvalAnnotationOptions ->
     Widget.Id -> Widget.Id ->
     (Sugar.FuncParam (Sugar.Annotation (Sugar.EvaluationScopes Name i) Name) Name, Info i o) ->

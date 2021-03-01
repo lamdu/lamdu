@@ -1,4 +1,5 @@
 {-# LANGUAGE TypeFamilies, TupleSections #-}
+
 module Lamdu.GUI.Annotation
     ( annotationSpacer
     , NeighborVals(..)
@@ -18,7 +19,6 @@ import qualified Control.Monad.Reader as Reader
 import           Data.CurAndPrev (CurAndPrev(..), CurPrevTag(..), curPrevTag, fallbackToPrev)
 import qualified GUI.Momentu as M
 import qualified GUI.Momentu.Align as Align
-import qualified GUI.Momentu.Direction as Dir
 import qualified GUI.Momentu.Draw as Draw
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.Glue as Glue
@@ -26,8 +26,6 @@ import qualified GUI.Momentu.State as GuiState
 import qualified GUI.Momentu.View as View
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
-import qualified GUI.Momentu.Widgets.TextView as TextView
-import           Lamdu.Config.Theme (Theme)
 import qualified Lamdu.Config.Theme as Theme
 import           Lamdu.Config.Theme.ValAnnotation (ValAnnotation)
 import qualified Lamdu.Config.Theme.ValAnnotation as ValAnnotation
@@ -37,29 +35,22 @@ import qualified Lamdu.GUI.Monad as GuiM
 import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.GUI.TypeView as TypeView
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
-import qualified Lamdu.I18N.Code as Texts
-import qualified Lamdu.I18N.Name as Texts
 import           Lamdu.Name (Name)
 import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
 
-addAnnotationBackgroundH ::
-    (MonadReader env m, Has Theme env, M.Element a, M.HasAnimIdPrefix env) =>
-    Lens.ALens' ValAnnotation Draw.Color -> m (a -> a)
+addAnnotationBackgroundH :: _ => Lens.ALens' ValAnnotation Draw.Color -> m (a -> a)
 addAnnotationBackgroundH color =
     do
         t <- Lens.view has
         bgAnimId <- Element.subAnimId ?? ["annotation background"]
         Draw.backgroundColor bgAnimId (t ^# Theme.valAnnotation . color) & pure
 
-addAnnotationBackground ::
-    (MonadReader env m, Has Theme env, M.Element a, M.HasAnimIdPrefix env) =>
-    m (a -> a)
+addAnnotationBackground :: _ => m (a -> a)
 addAnnotationBackground = addAnnotationBackgroundH ValAnnotation.valAnnotationBGColor
 
-addAnnotationHoverBackground ::
-    (MonadReader env m, Has Theme env, M.Element a, M.HasAnimIdPrefix env) => m (a -> a)
+addAnnotationHoverBackground :: _ => m (a -> a)
 addAnnotationHoverBackground = addAnnotationBackgroundH ValAnnotation.valAnnotationHoverBGColor
 
 data WhichAnnotation = TypeAnnotation | ValAnnotation
@@ -68,30 +59,22 @@ type ShrinkRatio = M.Vector2 Widget.R
 
 type PostProcessAnnotation m = WhichAnnotation -> m (ShrinkRatio -> M.View -> M.View)
 
-postProcessAnnotationFromSelected ::
-    (MonadReader env m, Has Theme env, Has Dir.Layout env, M.HasAnimIdPrefix env) =>
-    Bool -> PostProcessAnnotation m
+postProcessAnnotationFromSelected :: _ => Bool -> PostProcessAnnotation m
 postProcessAnnotationFromSelected False = shrinkIfNeeded
 postProcessAnnotationFromSelected True = hoverWideAnnotation
 
-shrinkValAnnotationsIfNeeded ::
-    (MonadReader env m, Has Theme env, M.HasAnimIdPrefix env) =>
-    PostProcessAnnotation m
+shrinkValAnnotationsIfNeeded :: _ => PostProcessAnnotation m
 shrinkValAnnotationsIfNeeded TypeAnnotation = addAnnotationBackground <&> const
 shrinkValAnnotationsIfNeeded ValAnnotation = shrinkIfNeeded ValAnnotation
 
-shrinkIfNeeded ::
-    (MonadReader env m, Has Theme env, M.HasAnimIdPrefix env) =>
-    PostProcessAnnotation m
+shrinkIfNeeded :: _ => PostProcessAnnotation m
 shrinkIfNeeded _ =
     addAnnotationBackground
     <&>
     \addBg shrinkRatio view ->
     M.scale shrinkRatio view & addBg
 
-hoverWideAnnotation ::
-    (MonadReader env m, Has Theme env, Has Dir.Layout env, M.HasAnimIdPrefix env) =>
-    PostProcessAnnotation m
+hoverWideAnnotation :: _ => PostProcessAnnotation m
 hoverWideAnnotation which =
     do
         shrinker <- shrinkIfNeeded which
@@ -107,9 +90,7 @@ hoverWideAnnotation which =
                 & pad 0 (shrunkView ^. View.vSize - wideView ^. View.vSize)
                 & Element.hoverLayeredImage
 
-processAnnotationGui ::
-    (MonadReader env m, Has Theme env, Spacer.HasStdSpacing env) =>
-    m (ShrinkRatio -> M.View -> M.View) -> m (Widget.R -> M.View -> M.View)
+processAnnotationGui :: _ => m (ShrinkRatio -> M.View -> M.View) -> m (Widget.R -> M.View -> M.View)
 processAnnotationGui postProcessAnnotation =
     f
     <$> Lens.view (has . Theme.valAnnotation)
@@ -143,10 +124,7 @@ data EvalResDisplay name = EvalResDisplay
     , erdVal :: Sugar.ResVal name
     }
 
-makeEvaluationResultView ::
-    (Monad i, Has (Texts.Name Text) env) =>
-    EvalResDisplay Name ->
-    GuiM env i o (M.WithTextPos M.View)
+makeEvaluationResultView :: _ => EvalResDisplay Name -> GuiM env i o (M.WithTextPos M.View)
 makeEvaluationResultView res =
     do
         th <- Lens.view has
@@ -162,7 +140,7 @@ data NeighborVals a = NeighborVals
     } deriving (Functor, Foldable, Traversable)
 
 makeEvalView ::
-    (Monad i, Has (Texts.Name Text) env) =>
+    _ =>
     Maybe (NeighborVals (Maybe (EvalResDisplay Name))) ->
     EvalResDisplay Name -> GuiM env i o (M.WithTextPos M.View)
 makeEvalView mNeighbours evalRes =
@@ -196,19 +174,13 @@ makeEvalView mNeighbours evalRes =
             ) <*> makeEvaluationResultView res
             <&> (^. Align.tValue)
 
-annotationSpacer ::
-    (MonadReader env m, Has Theme env, Has TextView.Style env) => m M.View
+annotationSpacer :: _ => m M.View
 annotationSpacer =
     Lens.view (has . Theme.valAnnotation . ValAnnotation.valAnnotationSpacing)
     >>= Spacer.vspaceLines
 
 addAnnotationH ::
-    ( Functor f, MonadReader env m, Has Theme env, Has Dir.Layout env
-    , Spacer.HasStdSpacing env
-    ) =>
-    m (M.WithTextPos M.View) ->
-    m (ShrinkRatio -> M.View -> M.View) ->
-    m (M.Widget f -> M.Widget f)
+    _ => m (M.WithTextPos M.View) -> m (ShrinkRatio -> M.View -> M.View) -> m (M.Widget f -> M.Widget f)
 addAnnotationH f postProcess =
     do
         vspace <- annotationSpacer
@@ -224,17 +196,14 @@ addAnnotationH f postProcess =
         pure (\w -> w |---| vspace |---| ann w)
 
 addInferredType ::
-    ( Functor f, MonadReader env m, Spacer.HasStdSpacing env, Has Theme env
-    , M.HasAnimIdPrefix env, Glue.HasTexts env
-    , Has (Texts.Code Text) env, Has (Texts.Name Text) env
-    ) =>
+    _ =>
     Annotated Sugar.EntityId # Sugar.Type Name -> PostProcessAnnotation m ->
     m (M.Widget f -> M.Widget f)
 addInferredType typ postProcess =
     addAnnotationH (TypeView.make typ) (postProcess TypeAnnotation)
 
 addEvaluationResult ::
-    (Monad i, Functor f, Has (Texts.Name Text) env) =>
+    _ =>
     Maybe (NeighborVals (Maybe (EvalResDisplay Name))) ->
     EvalResDisplay Name -> PostProcessAnnotation (GuiM env i o) ->
     GuiM env i o (M.Widget f -> M.Widget f)
@@ -245,10 +214,9 @@ addEvaluationResult mNeigh resDisp postProcess =
     _ -> addAnnotationH (makeEvalView mNeigh resDisp) (postProcess ValAnnotation)
 
 maybeAddAnnotationPl ::
-    ( Monad i, Monad o, Glue.HasTexts env, Has (Texts.Code Text) env
-    , Has (Texts.Name Text) env
-    ) =>
-    Sugar.Payload (Sugar.Annotation (Sugar.EvaluationScopes Name i) Name) Name i o1 -> GuiM env i o (M.Widget o -> M.Widget o)
+    _ =>
+    Sugar.Payload (Sugar.Annotation (Sugar.EvaluationScopes Name i) Name) Name i o1 ->
+    GuiM env i o (M.Widget o -> M.Widget o)
 maybeAddAnnotationPl pl =
     do
         postProcessAnnotation <-
@@ -287,9 +255,7 @@ getAnnotationMode opt ann =
             <&> Lens.mapped %~ (, neighbourVals)
 
 maybeAddAnnotationWith ::
-    ( Monad i, Monad o, Glue.HasTexts env
-    , Has (Texts.Code Text) env, Has (Texts.Name Text) env
-    ) =>
+    _ =>
     EvalAnnotationOptions -> PostProcessAnnotation (GuiM env i o) ->
     Sugar.Annotation (Sugar.EvaluationScopes Name i) Name ->
     GuiM env i o (M.Widget o -> M.Widget o)
@@ -300,9 +266,7 @@ maybeAddAnnotationWith opt postProcessAnnotation ann =
     Sugar.AnnotationVal val -> maybeAddValAnnotationWith opt postProcessAnnotation val
 
 maybeAddValAnnotationWith ::
-    ( Monad i, Monad o
-    , Has (Texts.Name Text) env
-    ) =>
+    _ =>
     EvalAnnotationOptions -> PostProcessAnnotation (GuiM env i o) ->
     Sugar.EvaluationScopes Name i ->
     GuiM env i o (M.Widget o -> M.Widget o)
@@ -315,9 +279,7 @@ maybeAddValAnnotationWith opt postProcessAnnotation ann =
         addEvaluationResult mNeighborVals scopeAndVal postProcessAnnotation
 
 maybeAddAnnotation ::
-    ( Monad i, Monad o, Glue.HasTexts env, Has (Texts.Code Text) env
-    , Has (Texts.Name Text) env
-    ) =>
+    _ =>
     PostProcessAnnotation (GuiM env i o) ->
     Sugar.Annotation (Sugar.EvaluationScopes Name i) Name ->
     GuiM env i o (M.Widget o -> M.Widget o)

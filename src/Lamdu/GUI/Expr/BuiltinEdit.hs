@@ -8,7 +8,6 @@ import           Data.Property (Property(..))
 import qualified Data.Text as Text
 import qualified GUI.Momentu as M
 import qualified GUI.Momentu.EventMap as E
-import qualified GUI.Momentu.Glue as Glue
 import qualified GUI.Momentu.I18N as MomentuTexts
 import           GUI.Momentu.MetaKey (MetaKey(..), noMods)
 import qualified GUI.Momentu.MetaKey as MetaKey
@@ -19,7 +18,6 @@ import qualified GUI.Momentu.Widgets.Label as Label
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
 import qualified GUI.Momentu.Widgets.TextEdit.Property as TextEdits
 import qualified GUI.Momentu.Widgets.TextView as TextView
-import           Lamdu.Config.Theme (Theme)
 import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.Config.Theme.TextColors as TextColors
 import qualified Lamdu.Data.Definition as Definition
@@ -28,9 +26,7 @@ import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
 
-builtinFDConfig ::
-    (Has (Texts.CodeUI Text) env, Has (MomentuTexts.Texts Text) env) =>
-    env -> FocusDelegator.Config
+builtinFDConfig :: _ => env -> FocusDelegator.Config
 builtinFDConfig env = FocusDelegator.Config
     { FocusDelegator.focusChildKeys = [MetaKey noMods MetaKey.Key'Enter]
     , FocusDelegator.focusChildDoc = doc Texts.changeImportedName
@@ -47,11 +43,7 @@ builtinFFIName :: Widget.Id -> Widget.Id
 builtinFFIName = flip Widget.joinId ["FFIName"]
 
 makeNamePartEditor ::
-    ( Applicative f, MonadReader env m, GuiState.HasCursor env
-    , TextEdit.Deps env, Has (Texts.CodeUI Text) env
-    ) =>
-    M.Color -> Text -> (Text -> f ()) -> Widget.Id ->
-    m (M.TextWidget f)
+    _ => M.Color -> Text -> (Text -> f ()) -> Widget.Id -> m (M.TextWidget f)
 makeNamePartEditor color namePartStr setter myId =
     (FocusDelegator.make
         <*> (Lens.view id <&> builtinFDConfig)
@@ -68,13 +60,7 @@ makeNamePartEditor color namePartStr setter myId =
             , TextEdit._focused = ""
             }
 
-make ::
-    ( MonadReader env f, Monad o, Has Theme env, GuiState.HasCursor env
-    , TextEdit.Deps env, M.HasAnimIdPrefix env
-    , Has (Texts.CodeUI Text) env, Glue.HasTexts env
-    ) =>
-    Sugar.DefinitionBuiltin name o -> Widget.Id ->
-    f (M.TextWidget o)
+make :: _ => Sugar.DefinitionBuiltin name o -> Widget.Id -> f (M.TextWidget o)
 make def myId =
     do
         colors <- Lens.view (has . Theme.textColors)

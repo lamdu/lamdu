@@ -16,13 +16,8 @@ import qualified GUI.Momentu.Responsive.Expression as ResponsiveExpr
 import qualified GUI.Momentu.Responsive.Options as Options
 import qualified GUI.Momentu.State as GuiState
 import qualified GUI.Momentu.Widget as Widget
-import qualified GUI.Momentu.Widgets.Grid as Grid
-import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
-import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
 import qualified GUI.Momentu.Widgets.TextView as TextView
-import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
-import           Lamdu.Config.Theme (Theme)
 import qualified Lamdu.GUI.Expr.AssignmentEdit as AssignmentEdit
 import qualified Lamdu.GUI.LightLambda as LightLambda
 import           Lamdu.GUI.Monad (GuiM)
@@ -32,35 +27,22 @@ import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.GUI.Wrap (stdWrapParentExpr)
 import qualified Lamdu.I18N.Code as Texts
 import qualified Lamdu.I18N.CodeUI as Texts
-import qualified Lamdu.I18N.Definitions as Texts
-import qualified Lamdu.I18N.Name as Texts
-import qualified Lamdu.I18N.Navigation as Texts
 import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
 
-addScopeEdit ::
-    (MonadReader env m, Applicative o, Glue.HasTexts env) =>
-    m (Maybe (M.Widget o) -> Responsive o -> Responsive o)
+addScopeEdit :: _ => m (Maybe (M.Widget o) -> Responsive o -> Responsive o)
 addScopeEdit =
     Glue.mkGlue ?? Glue.Vertical
     <&> (\(|---|) mScopeEdit ->
                 (|---| maybe M.empty (M.WithTextPos 0) mScopeEdit))
 
-mkLhsEdits ::
-    (MonadReader env m, Applicative o, Glue.HasTexts env) =>
-    m
-    (Maybe (Responsive o) ->
-     Maybe (M.Widget o) -> [Responsive o])
+mkLhsEdits :: _ => m (Maybe (Responsive o) -> Maybe (M.Widget o) -> [Responsive o])
 mkLhsEdits =
     addScopeEdit <&> \add mParamsEdit mScopeEdit ->
     mParamsEdit ^.. Lens._Just <&> add mScopeEdit
 
-mkExpanded ::
-    ( Monad o, MonadReader env f, Has Theme env, Has TextView.Style env
-    , M.HasAnimIdPrefix env, Glue.HasTexts env, Has (Texts.Code Text) env
-    ) =>
-    f (Maybe (Responsive o) -> Maybe (M.Widget o) -> [Responsive o])
+mkExpanded :: _ => f (Maybe (Responsive o) -> Maybe (M.Widget o) -> [Responsive o])
 mkExpanded =
     (,)
     <$> mkLhsEdits
@@ -71,14 +53,7 @@ mkExpanded =
 lamId :: Widget.Id -> Widget.Id
 lamId = (`Widget.joinId` ["lam"])
 
-mkShrunk ::
-    ( Monad o, MonadReader env f, Has Config env, Has Theme env
-    , GuiState.HasCursor env, M.HasAnimIdPrefix env, Has TextView.Style env
-    , Glue.HasTexts env
-    , Has (Texts.Code Text) env
-    , Has (Texts.CodeUI Text) env
-    ) => [Sugar.EntityId] -> Widget.Id ->
-    f (Maybe (M.Widget o) -> [Responsive o])
+mkShrunk :: _ => [Sugar.EntityId] -> Widget.Id -> f (Maybe (M.Widget o) -> [Responsive o])
 mkShrunk paramIds myId =
     do
         env <- Lens.view id
@@ -105,17 +80,9 @@ mkShrunk paramIds myId =
             ]
 
 mkLightLambda ::
-    ( Monad o, MonadReader env f, GuiState.HasCursor env
-    , M.HasAnimIdPrefix env, Has TextView.Style env, Has Theme env
-    , Has Config env
-    , Has (Texts.Code Text) env
-    , Has (Texts.CodeUI Text) env
-    , Glue.HasTexts env
-    ) =>
+    _ =>
     Sugar.BinderParams v a i o -> Widget.Id ->
-    f
-    (Maybe (Responsive o) -> Maybe (M.Widget o) ->
-     [Responsive o])
+    f (Maybe (Responsive o) -> Maybe (M.Widget o) -> [Responsive o])
 mkLightLambda params myId =
     do
         isSelected <-
@@ -143,18 +110,7 @@ mkLightLambda params myId =
             Sugar.NullParam{} -> []
             Sugar.Params ps -> ps <&> (^. _2 . Sugar.piTag . Sugar.tagRefTag . Sugar.tagInstance)
 
-make ::
-    ( Monad i, Monad o
-    , Grid.HasTexts env
-    , TextEdit.HasTexts env
-    , SearchMenu.HasTexts env
-    , Has (Texts.Code Text) env
-    , Has (Texts.CodeUI Text) env
-    , Has (Texts.Definitions Text) env
-    , Has (Texts.Name Text) env
-    , Has (Texts.Navigation Text) env
-    ) =>
-    ExprGui.Expr Sugar.Lambda i o -> GuiM env i o (Responsive o)
+make :: _ => ExprGui.Expr Sugar.Lambda i o -> GuiM env i o (Responsive o)
 make (Ann (Const pl) lam) =
     do
         AssignmentEdit.Parts mParamsEdit mScopeEdit bodyEdit eventMap _wrap rhsId <-

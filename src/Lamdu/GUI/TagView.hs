@@ -5,29 +5,19 @@ module Lamdu.GUI.TagView
     ) where
 
 import qualified Control.Monad.Reader as Reader
-import           GUI.Momentu.Align (WithTextPos)
-import qualified GUI.Momentu.Direction as Dir
-import qualified GUI.Momentu.Element as Element
-import           GUI.Momentu.View (View)
+import qualified GUI.Momentu as M
 import qualified GUI.Momentu.Widget as Widget
-import qualified GUI.Momentu.Widgets.TextView as TextView
-import           Lamdu.Config.Theme (Theme)
 import qualified Lamdu.GUI.NameView as NameView
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
-import qualified Lamdu.I18N.Name as Texts
 import           Lamdu.Name (Name(..))
 import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
 
-make ::
-    ( MonadReader env m, Has TextView.Style env, Element.HasAnimIdPrefix env
-    , Has Theme env, Has Dir.Layout env, Has (Texts.Name Text) env
-    ) =>
-    Sugar.Tag Name -> m (WithTextPos View)
+make :: _ => Sugar.Tag Name -> m (M.WithTextPos M.View)
 make tag =
     NameView.make (tag ^. Sugar.tagName)
-    & Reader.local (Element.animIdPrefix .~ animId)
+    & Reader.local (M.animIdPrefix .~ animId)
     where
         animId =
             tag ^. Sugar.tagInstance

@@ -9,11 +9,8 @@ import qualified Data.List.Extended as List
 import qualified Data.Property as Property
 import           GUI.Momentu.Align (TextWidget)
 import qualified GUI.Momentu.Align as Align
-import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
-import qualified GUI.Momentu.Glue as Glue
-import qualified GUI.Momentu.Hover as Hover
 import qualified GUI.Momentu.I18N as MomentuTexts
 import           GUI.Momentu.MetaKey (MetaKey(..), noMods, toModKey)
 import qualified GUI.Momentu.MetaKey as MetaKey
@@ -36,9 +33,7 @@ import           Revision.Deltum.Transaction (Transaction)
 
 import           Lamdu.Prelude
 
-branchNameFDConfig ::
-    (Has (Texts.Versioning Text) env, Has (Texts.CodeUI Text) env) =>
-    env -> FocusDelegator.Config
+branchNameFDConfig :: _ => env -> FocusDelegator.Config
 branchNameFDConfig txt = FocusDelegator.Config
     { FocusDelegator.focusChildKeys = [MetaKey noMods MetaKey.Key'F2]
     , FocusDelegator.focusChildDoc =
@@ -49,26 +44,20 @@ branchNameFDConfig txt = FocusDelegator.Config
     }
 
 undoEventMap ::
-    (Has (MomentuTexts.Texts Text) env, Has (Texts.Versioning Text) env) =>
-    env -> VersionControl.Config -> Maybe (m GuiState.Update) -> EventMap (m GuiState.Update)
+    _ => env -> VersionControl.Config -> Maybe (m GuiState.Update) -> EventMap (m GuiState.Update)
 undoEventMap env config =
     E.keyPresses (config ^. VersionControl.undoKeys <&> toModKey)
     (E.toDoc env [has . MomentuTexts.edit, has . Texts.undo])
     & foldMap
 
 redoEventMap ::
-    (Has (MomentuTexts.Texts Text) env, Has (Texts.Versioning Text) env) =>
-    env -> VersionControl.Config -> Maybe (m GuiState.Update) -> EventMap (m GuiState.Update)
+    _ => env -> VersionControl.Config -> Maybe (m GuiState.Update) -> EventMap (m GuiState.Update)
 redoEventMap env config =
     E.keyPresses (config ^. VersionControl.redoKeys <&> toModKey)
     (E.toDoc env [has . MomentuTexts.edit, has . Texts.redo])
     & foldMap
 
-eventMap ::
-    ( MonadReader env m, Has (Texts.Versioning Text) env, Has (Texts.CodeUI Text) env
-    , Has (MomentuTexts.Texts Text) env, Applicative f
-    ) =>
-    m (VersionControl.Config -> A.Actions t f -> EventMap (f GuiState.Update))
+eventMap :: _ => m (VersionControl.Config -> A.Actions t f -> EventMap (f GuiState.Update))
 eventMap =
     Lens.view id
     <&> \env config actions ->
@@ -93,13 +82,7 @@ branchTextEditId :: Branch t -> Widget.Id
 branchTextEditId = (`Widget.joinId` ["textedit"]) . branchDelegatorId
 
 makeBranchSelector ::
-    ( MonadReader env mr, Monad n, GuiState.HasCursor env, TextEdit.Deps env
-    , Applicative mw, Has Hover.Style env, Element.HasAnimIdPrefix env
-    , Has VersionControl.Config env, Has VersionControl.Theme env
-    , Has (Texts.Versioning Text) env, Has (Texts.CodeUI Text) env
-    , Has (Choice.Texts Text) env
-    , Has (Glue.Texts Text) env
-    ) =>
+    _ =>
     (forall a. Transaction n a -> mw a) ->
     (forall a. Transaction n a -> mr a) ->
     A.Actions n mw -> mr (TextWidget mw)
