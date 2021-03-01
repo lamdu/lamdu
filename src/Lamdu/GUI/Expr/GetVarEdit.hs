@@ -9,10 +9,7 @@ import qualified Control.Monad.Reader as Reader
 import qualified Data.ByteString.Char8 as SBS8
 import qualified GUI.Momentu as M
 import qualified GUI.Momentu.Align as Align
-import qualified GUI.Momentu.Animation as Anim
 import qualified GUI.Momentu.Direction as Dir
-import qualified GUI.Momentu.Draw as Draw
-import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Font (Underline(..))
@@ -62,7 +59,7 @@ makeSimpleView ::
     , Applicative f, M.HasAnimIdPrefix env, Has TextView.Style env
     , Has Dir.Layout env, Has (Texts.Name Text) env
     ) =>
-    Lens.ALens' TextColors Draw.Color -> Name -> Widget.Id ->
+    Lens.ALens' TextColors M.Color -> Name -> Widget.Id ->
     m (M.TextWidget f)
 makeSimpleView color name myId =
     (Widget.makeFocusableView ?? myId <&> (Align.tValue %~))
@@ -100,29 +97,6 @@ makeParamsRecord myId paramsRecordVar =
     where
         Sugar.ParamsRecordVarRef fieldNames = paramsRecordVar
 
-infixMarker :: M.Vector2 Anim.R -> Draw.Image
-infixMarker (M.Vector2 w h) =
-    () <$
-    mconcat
-    [ Draw.line (x, 0) (0,x)
-    , Draw.line (w-x, 0) (w,x)
-    , Draw.line (w-x, h) (w,h-x)
-    , Draw.line (x, h) (0,h-x)
-    , Draw.line (0, x) (0, h-x)
-    , Draw.line (w, x) (w, h-x)
-    , Draw.line (x, 0) (w-x, 0)
-    , Draw.line (x, h) (w-x, h)
-    ]
-    where
-        x = min w h / 4
-
-unappliedOperatorMarker :: M.Element a => Widget.Id -> a -> a
-unappliedOperatorMarker widgetId =
-    Element.bottomLayer %@~
-    \size -> Anim.singletonFrame 1 frameId (infixMarker size) & flip mappend
-    where
-        frameId = Widget.toAnimId widgetId ++ ["infix"]
-
 data Role = Normal | Operator deriving Eq
 
 navDoc ::
@@ -140,7 +114,7 @@ makeNameRef ::
     , Has (MomentuTexts.Texts Text) env
     ) =>
     Role ->
-    Lens.ALens' TextColors Draw.Color -> Widget.Id ->
+    Lens.ALens' TextColors M.Color -> Widget.Id ->
     Sugar.NameRef Name o ->
     GuiM env i o (M.TextWidget o)
 makeNameRef role color myId nameRef =
@@ -161,7 +135,7 @@ makeNameRef role color myId nameRef =
                     | Name.isOperator name -> id
                     | otherwise -> (Label.make "." M./|/)
                 Normal
-                    | Name.isOperator name -> fmap (unappliedOperatorMarker nameId)
+                    | Name.isOperator name -> \x -> Label.make "(" M./|/ x M./|/ Label.make ")"
                     | otherwise -> id
         makeSimpleView color name nameId
             & mAddMarker
