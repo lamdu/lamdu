@@ -20,7 +20,6 @@ import qualified GUI.Momentu.Widgets.Grid as Grid
 import qualified GUI.Momentu.Widgets.Menu as Menu
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import           Hyper (htraverse, (#>), withDict)
-import           Lamdu.Config (Config(..))
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Theme as Theme
 import           Lamdu.GUI.Monad (GuiM)
@@ -38,8 +37,7 @@ setFocalAreaToFullSize =
     (:[]) . Rect 0
 
 -- | Remove unwanted event handlers from a hole result
-removeUnwanted ::
-    (MonadReader env m, Has Config env) => m (EventMap a -> EventMap a)
+removeUnwanted :: _ => m (EventMap a -> EventMap a)
 removeUnwanted =
     Lens.view has
     <&>
@@ -76,7 +74,7 @@ makeWidget resultId holeResultConverted =
             & GuiM.withLocalIsHoleResult
 
 make ::
-    (Monad i, Monad o, Has (MomentuTexts.Texts Text) env) =>
+    _ =>
     Widget.Id -> o () -> ExprGui.Expr Sugar.Binder i o ->
     GuiM env i o (Menu.RenderedOption o)
 make resultId pick holeResultConverted =

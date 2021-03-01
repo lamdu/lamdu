@@ -86,7 +86,7 @@ type WorkArea =
     Name (OnceT (T ViewM)) (T ViewM)
     (Sugar.Payload SugarAnn Name (OnceT (T ViewM)) (T ViewM), ExprGui.GuiPayload)
 
-makeWorkArea :: HasCallStack => Env -> OnceT (T ViewM) WorkArea
+makeWorkArea :: Env -> OnceT (T ViewM) WorkArea
 makeWorkArea env = convertWorkArea env <&> (fmap . fmap) (uncurry ExprGui.GuiPayload)
 
 makeGui ::

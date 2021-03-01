@@ -1,4 +1,3 @@
-{-# LANGUAGE ConstraintKinds #-}
 module Lamdu.GUI.Expr.TagEdit
     ( makeRecordTag, makeVariantTag
     , makeParamTag, addParamId
@@ -14,7 +13,6 @@ import           Data.MRUMemo (memo)
 import qualified Data.Property as Property
 import qualified Data.Text as Text
 import qualified GUI.Momentu as M
-import qualified GUI.Momentu.Direction as Dir
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
@@ -27,11 +25,8 @@ import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Menu as Menu
 import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
-import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
 import qualified GUI.Momentu.Widgets.TextView as TextView
-import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
-import           Lamdu.Config.Theme (Theme)
 import qualified Lamdu.Config.Theme as Theme
 import           Lamdu.Config.Theme.TextColors (TextColors)
 import qualified Lamdu.Config.Theme.TextColors as TextColors
@@ -44,7 +39,6 @@ import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.GUI.TagView as TagView
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.I18N.CodeUI as Texts
-import qualified Lamdu.I18N.Name as Texts
 import qualified Lamdu.I18N.Navigation as Texts
 import           Lamdu.Name (Name(..))
 import qualified Lamdu.Name as Name
@@ -54,14 +48,7 @@ import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
 
-makePickEventMap ::
-    ( Functor f, Has Config env
-    , Has (MomentuTexts.Texts Text) env
-    , Has (Texts.CodeUI Text) env
-    , MonadReader env m
-    ) =>
-    f Menu.PickResult ->
-    m (EventMap (f M.Update))
+makePickEventMap :: _ => f Menu.PickResult -> m (EventMap (f M.Update))
 makePickEventMap action =
     Lens.view id <&>
     \env ->
@@ -96,7 +83,7 @@ makeNewTag tagOpt =
         tagOpt ^. Sugar.toPick <&> mkPickResult (tagOpt ^. Sugar.toInfo . Sugar.tagInstance)
 
 makeNewTagPreEvent ::
-    (Has (Texts.CodeUI Text) env, Monad i, Monad o) =>
+    _ =>
     Sugar.TagOption Name o a ->
     GuiM env i o (Text -> (EntityId -> a -> r) -> Maybe (Widget.PreEvent (o r)))
 makeNewTagPreEvent tagOpt =
@@ -113,12 +100,7 @@ makeNewTagPreEvent tagOpt =
         }
 
 makeAddNewTag ::
-    ( Monad i, Monad o, MonadReader env f
-    , M.HasCursor env, Has Theme env
-    , Has TextView.Style env, M.HasAnimIdPrefix env, Has Dir.Layout env
-    , Has (Texts.CodeUI Text) env
-    , Has (Texts.CodeUI Text) menv
-    ) =>
+    _ =>
     Sugar.TagOption Name o a ->
     GuiM menv i o
     ( (EntityId -> a -> Menu.PickResult) ->
@@ -150,14 +132,7 @@ fuzzyMaker :: [(Text, Int)] -> Fuzzy (Set Int)
 fuzzyMaker = memo Fuzzy.make
 
 makeOptions ::
-    ( Monad i, Monad o, MonadReader menv m
-    , M.HasCursor menv, Has Theme menv, Has TextView.Style menv
-    , M.HasAnimIdPrefix menv, Glue.HasTexts menv
-    , Has (Texts.Name Text) menv
-    , Has (Texts.CodeUI Text) menv
-    , Has (Texts.CodeUI Text) env
-    , Has (MomentuTexts.Texts Text) env
-    ) =>
+    _ =>
     Sugar.TagChoice Name i o a ->
     Sugar.TagOption Name o a ->
     (EntityId -> a -> Menu.PickResult) ->
@@ -226,11 +201,7 @@ allowedSearchTerm :: Text -> Bool
 allowedSearchTerm = Name.isValidText
 
 makeHoleSearchTerm ::
-    ( Monad i, Monad o
-    , TextEdit.HasTexts env
-    , SearchMenu.HasTexts env
-    , Has (Texts.CodeUI Text) env
-    ) =>
+    _ =>
     Sugar.TagOption Name o a ->
     (EntityId -> a -> Menu.PickResult) -> Widget.Id ->
     GuiM env i o (SearchMenu.Term o)
@@ -287,13 +258,7 @@ makeHoleSearchTerm newTagOption mkPickResult holeId =
         newTagId = newTagOption ^. Sugar.toInfo . Sugar.tagInstance & WidgetIds.fromEntityId & Widget.toAnimId
 
 makeTagHoleEdit ::
-    ( Monad i, Monad o
-    , Has (Texts.Name Text) env
-    , Has (Texts.CodeUI Text) env
-    , Glue.HasTexts env
-    , TextEdit.HasTexts env
-    , SearchMenu.HasTexts env
-    ) =>
+    _ =>
     Sugar.TagChoice Name i o a ->
     (EntityId -> a -> Menu.PickResult) ->
     Widget.Id ->
@@ -306,16 +271,7 @@ makeTagHoleEdit tagRefReplace mkPickResult holeId =
             (makeOptions tagRefReplace newTagOption mkPickResult) M.empty holeId
             ?? Menu.AnyPlace
 
-makeTagRefEdit ::
-    ( Monad i, Monad o
-    , Glue.HasTexts env
-    , TextEdit.HasTexts env, SearchMenu.HasTexts env
-    , Has (Texts.CodeUI Text) env
-    , Has (Texts.Name Text) env
-    , Has (Texts.Navigation Text) env
-    ) =>
-    Sugar.TagRef Name i o ->
-    GuiM env i o (M.TextWidget o)
+makeTagRefEdit :: _ => Sugar.TagRef Name i o -> GuiM env i o (M.TextWidget o)
 makeTagRefEdit = makeTagRefEditWith id (const Nothing) <&> fmap snd
 
 data TagRefEditType
@@ -324,14 +280,7 @@ data TagRefEditType
     deriving (Eq)
 
 makeTagRefEditWith ::
-    ( Monad i, Monad o, MonadReader nenv n
-    , M.HasCursor nenv, Has TextView.Style nenv, Has (Texts.Name Text) nenv
-    , M.HasAnimIdPrefix nenv, Has Theme nenv, Glue.HasTexts nenv
-    , Glue.HasTexts env, TextEdit.HasTexts env, SearchMenu.HasTexts env
-    , Has (Texts.CodeUI Text) env
-    , Has (Texts.Navigation Text) env
-    , Has (Texts.Name Text) env
-    ) =>
+    _ =>
     (n (M.TextWidget o) ->
      GuiM env i o (M.TextWidget o)) ->
     (Sugar.EntityId -> Maybe Widget.Id) ->
@@ -397,29 +346,11 @@ makeTagRefEditWith onView onPickNext tag =
             Just setAnon -> setAnon <&> fst <&> WidgetIds.fromEntityId
             <&> WidgetIds.tagHoleId
 
-makeRecordTag ::
-    ( Monad i, Monad o
-    , Glue.HasTexts env
-    , TextEdit.HasTexts env, SearchMenu.HasTexts env
-    , Has (Texts.CodeUI Text) env
-    , Has (Texts.Name Text) env
-    , Has (Texts.Navigation Text) env
-    ) =>
-    Sugar.TagRef Name i o ->
-    GuiM env i o (M.TextWidget o)
+makeRecordTag :: _ => Sugar.TagRef Name i o -> GuiM env i o (M.TextWidget o)
 makeRecordTag =
     makeTagRefEdit <&> Styled.withColor TextColors.recordTagColor
 
-makeVariantTag ::
-    ( Monad i, Monad o
-    , Glue.HasTexts env
-    , TextEdit.HasTexts env, SearchMenu.HasTexts env
-    , Has (Texts.CodeUI Text) env
-    , Has (Texts.Name Text) env
-    , Has (Texts.Navigation Text) env
-    ) =>
-    Sugar.TagRef Name i o ->
-    GuiM env i o (M.TextWidget o)
+makeVariantTag :: _ => Sugar.TagRef Name i o -> GuiM env i o (M.TextWidget o)
 makeVariantTag tag =
     makeTagRefEdit tag
     & Styled.withColor TextColors.caseTagColor
@@ -428,12 +359,7 @@ addParamId :: Widget.Id -> Widget.Id
 addParamId = (`Widget.joinId` ["add param"])
 
 makeLHSTag ::
-    ( Monad i, Monad o
-    , Glue.HasTexts env, TextEdit.HasTexts env, SearchMenu.HasTexts env
-    , Has (Texts.CodeUI Text) env
-    , Has (Texts.Name Text) env
-    , Has (Texts.Navigation Text) env
-    ) =>
+    _ =>
     (Sugar.EntityId -> Maybe Widget.Id) ->
     Lens.ALens' TextColors M.Color -> Sugar.TagRef Name i o ->
     GuiM env i o (M.TextWidget o)
@@ -468,26 +394,14 @@ makeLHSTag onPickNext color tag =
             Styled.nameAtBinder (tag ^. Sugar.tagRefTag . Sugar.tagName) .
             Styled.withColor color
 
-makeParamTag ::
-    ( Monad i, Monad o
-    , Glue.HasTexts env, TextEdit.HasTexts env, SearchMenu.HasTexts env
-    , Has (Texts.CodeUI Text) env
-    , Has (Texts.Name Text) env
-    , Has (Texts.Navigation Text) env
-    ) =>
-    Sugar.TagRef Name i o ->
-    GuiM env i o (M.TextWidget o)
+makeParamTag :: _ => Sugar.TagRef Name i o -> GuiM env i o (M.TextWidget o)
 makeParamTag =
     makeLHSTag onPickNext TextColors.parameterColor
     where
         onPickNext pos = WidgetIds.fromEntityId pos & addParamId & Just
 
 -- | Unfocusable tag view (e.g: in apply args)
-makeArgTag ::
-    ( MonadReader env m, Has Theme env, Has TextView.Style env
-    , M.HasAnimIdPrefix env, Glue.HasTexts env, Has (Texts.Name Text) env
-    ) =>
-    Name -> Sugar.EntityId -> m (M.WithTextPos M.View)
+makeArgTag :: _ => Name -> Sugar.EntityId -> m (M.WithTextPos M.View)
 makeArgTag name tagInstance =
     NameView.make name
     & Styled.withColor TextColors.argTagColor
@@ -496,14 +410,7 @@ makeArgTag name tagInstance =
         animId = WidgetIds.fromEntityId tagInstance & Widget.toAnimId
 
 makeBinderTagEdit ::
-    ( Monad i, Monad o
-    , Glue.HasTexts env
-    , TextEdit.HasTexts env
-    , SearchMenu.HasTexts env
-    , Has (Texts.CodeUI Text) env
-    , Has (Texts.Name Text) env
-    , Has (Texts.Navigation Text) env
-    ) =>
+    _ =>
     Lens.ALens' TextColors M.Color -> Sugar.TagRef Name i o ->
     GuiM env i o (M.TextWidget o)
 makeBinderTagEdit color tag =

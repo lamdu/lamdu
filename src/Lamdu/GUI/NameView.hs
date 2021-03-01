@@ -6,28 +6,23 @@ import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
 import           GUI.Momentu.Align (Aligned(..), WithTextPos(..))
 import qualified GUI.Momentu.Align as Align
-import qualified GUI.Momentu.Direction as Dir
 import qualified GUI.Momentu.Draw as Draw
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.Glue as Glue
 import           GUI.Momentu.View (View)
 import qualified GUI.Momentu.Widgets.Label as Label
 import qualified GUI.Momentu.Widgets.TextView as TextView
-import           Lamdu.Config.Theme (Theme)
 import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.Config.Theme.Name as NameTheme
 import qualified Lamdu.Config.Theme.TextColors as TextColors
 import qualified Lamdu.GUI.Styled as Styled
-import qualified Lamdu.I18N.Name as Texts
 import           Lamdu.Name (Name(..))
 import qualified Lamdu.Name as Name
 
 import           Lamdu.Prelude
 
 makeCollisionSuffixLabel ::
-    ( MonadReader env m, Has Dir.Layout env
-    , Has TextView.Style env, Element.HasAnimIdPrefix env, Has Theme env
-    ) => Lens.ALens' NameTheme.Name Draw.Color -> Name.Collision -> m (Maybe View)
+    _ => Lens.ALens' NameTheme.Name Draw.Color -> Name.Collision -> m (Maybe View)
 makeCollisionSuffixLabel collisionColor mCollision =
     case mCollision of
     Name.NoCollision -> pure Nothing
@@ -45,12 +40,7 @@ makeCollisionSuffixLabel collisionColor mCollision =
             <&> (^. Align.tValue)
             <&> Just
 
-make ::
-    ( MonadReader env m
-    , Has Theme env, Element.HasAnimIdPrefix env, Has TextView.Style env
-    , Has Dir.Layout env, Has (Texts.Name Text) env
-    ) =>
-    Name -> m (WithTextPos View)
+make :: _ => Name -> m (WithTextPos View)
 make name =
     do
         (Name.TagText visibleName textCollision, tagCollision) <- Name.visible name

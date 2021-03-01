@@ -9,16 +9,9 @@ import qualified Data.ByteString.Char8 as BS8
 import           Data.MRUMemo (memo)
 import qualified Data.Text as Text
 import qualified GUI.Momentu as M
-import qualified GUI.Momentu.Direction as Dir
-import qualified GUI.Momentu.Glue as Glue
-import qualified GUI.Momentu.Hover as Hover
-import qualified GUI.Momentu.State as GuiState
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Menu as Menu
 import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
-import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
-import qualified GUI.Momentu.Widgets.TextView as TextView
-import           Lamdu.Config.Theme (Theme)
 import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.Config.Theme.TextColors as TextColors
 import           Lamdu.Fuzzy (Fuzzy)
@@ -26,8 +19,6 @@ import qualified Lamdu.Fuzzy as Fuzzy
 import qualified Lamdu.GUI.Expr.GetVarEdit as GetVarEdit
 import qualified Lamdu.GUI.StatusBar.Common as StatusBar
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
-import qualified Lamdu.I18N.Name as Texts
-import           Lamdu.I18N.Navigation (Navigation)
 import qualified Lamdu.I18N.Navigation as Navigation
 import           Lamdu.Name (Name)
 import qualified Lamdu.Name as Name
@@ -45,7 +36,7 @@ allowSearchTerm = Name.isValidText
 fuzzyMaker :: [(Text, Int)] -> Fuzzy (Set Int)
 fuzzyMaker = memo Fuzzy.make
 
-nameSearchTerm :: (MonadReader env m, Has (Texts.Name Text) env) => Name -> m Text
+nameSearchTerm :: _ => Name -> m Text
 nameSearchTerm name =
     Name.visible name <&>
     \(Name.TagText text textCol, tagCol) ->
@@ -56,12 +47,7 @@ nameSearchTerm name =
         collisionText Name.UnknownCollision = "?"
 
 makeOptions ::
-    ( MonadReader env m, Has Theme env, Applicative o
-    , Has TextView.Style env, M.HasAnimIdPrefix env, M.HasCursor env
-    , Has (Navigation Text) env, Has (Texts.Name Text) env, Has Dir.Layout env
-    ) =>
-    m [Sugar.NameRef Name o] ->
-    SearchMenu.ResultsContext -> m (Menu.OptionList (Menu.Option m o))
+    _ => m [Sugar.NameRef Name o] -> SearchMenu.ResultsContext -> m (Menu.OptionList (Menu.Option m o))
 makeOptions readGlobals (SearchMenu.ResultsContext searchTerm prefix)
     | Text.null searchTerm = pure Menu.TooMany
     | otherwise =
@@ -103,15 +89,7 @@ makeOptions readGlobals (SearchMenu.ResultsContext searchTerm prefix)
             }
         toPickResult x = Menu.PickResult x (Just x)
 
-make ::
-    ( MonadReader env m, Applicative o
-    , Has Theme env, M.HasAnimIdPrefix env
-    , Has Menu.Config env, Has Hover.Style env, GuiState.HasState env
-    , Has SearchMenu.TermStyle env, Has (Navigation Text) env
-    , Glue.HasTexts env, TextEdit.Deps env
-    , SearchMenu.HasTexts env, Has (Texts.Name Text) env
-    ) =>
-    m [Sugar.NameRef Name o] -> m (StatusBar.StatusWidget o)
+make :: _ => m [Sugar.NameRef Name o] -> m (StatusBar.StatusWidget o)
 make readGlobals =
     do
         goto <- Lens.view (has . Navigation.goto)

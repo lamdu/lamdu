@@ -1,4 +1,5 @@
 {-# LANGUAGE NamedFieldPuns, DisambiguateRecordFields #-}
+
 module Lamdu.GUI.CodeEdit
     ( make
     , Model
@@ -20,26 +21,17 @@ import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
-import qualified GUI.Momentu.Hover as Hover
 import qualified GUI.Momentu.I18N as MomentuTexts
 import           GUI.Momentu.Responsive (Responsive)
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
-import qualified GUI.Momentu.Widgets.Choice as Choice
-import qualified GUI.Momentu.Widgets.Grid as Grid
-import qualified GUI.Momentu.Widgets.Menu as Menu
-import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
-import qualified GUI.Momentu.Widgets.Spacer as Spacer
-import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
 import           Hyper.Type.AST.Scheme (Scheme(..), QVars(..))
 import qualified Lamdu.Builtins.Anchors as Builtins
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
-import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
-import           Lamdu.Config.Theme (Theme)
 import qualified Lamdu.Data.Anchors as Anchors
 import           Lamdu.Data.Definition (Definition(..))
 import qualified Lamdu.Data.Definition as Definition
@@ -60,17 +52,11 @@ import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.GUI.TagPane as TagPaneEdit
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.GUI.Types as ExprGui
-import qualified Lamdu.I18N.Code as Texts
 import qualified Lamdu.I18N.CodeUI as Texts
 import qualified Lamdu.I18N.Collaboration as Texts
 import qualified Lamdu.I18N.Definitions as Texts
-import           Lamdu.I18N.LangId (LangId)
-import qualified Lamdu.I18N.Language as Language
-import qualified Lamdu.I18N.Name as Texts
 import qualified Lamdu.I18N.Navigation as Texts
 import           Lamdu.Name (Name)
-import           Lamdu.Settings (Settings)
-import           Lamdu.Style (HasStyle)
 import qualified Lamdu.Sugar.Types as Sugar
 import           Revision.Deltum.Transaction (Transaction)
 
@@ -100,17 +86,7 @@ type Model env m =
     )
 
 make ::
-    ( Has Config env
-    , Has Theme env, GuiState.HasState env
-    , Spacer.HasStdSpacing env
-    , Has (ExportActions m) env
-    , Has Settings env, HasStyle env
-    , Has Hover.Style env, Has Menu.Config env
-    , Has SearchMenu.TermStyle env
-    , Element.HasAnimIdPrefix env
-    , Language.HasLanguage env
-    , Monad m
-    ) =>
+    _ =>
     Anchors.CodeAnchors m -> Anchors.GuiAnchors (T m) (T m) -> Widget.R -> Model env m ->
     ReaderT env (OnceT (T m)) (StatusBar.StatusWidget (IOTrans m), Widget (IOTrans m))
 make cp gp width mkWorkArea =
@@ -157,10 +133,7 @@ make cp gp width mkWorkArea =
             }
 
 exportPaneEventMap ::
-    ( Functor m
-    , Has Config env
-    , Has (Texts.Collaboration Text) env
-    ) =>
+    _ =>
     env -> ExportActions m -> Sugar.PaneBody v name i o dummy ->
     EventMap (IOTrans m GuiState.Update)
 exportPaneEventMap env theExportActions paneBody =
@@ -176,15 +149,7 @@ exportPaneEventMap env theExportActions paneBody =
             & E.keysEventMap exportKeys
             (E.toDoc (env ^. has) [Texts.collaboration, docLens])
 
-makePaneBodyEdit ::
-    ( Monad i, Monad o
-    , Grid.HasTexts env, TextEdit.HasTexts env, SearchMenu.HasTexts env
-    , Has (Choice.Texts Text) env, Has (Texts.Code Text) env
-    , Has (Texts.CodeUI Text) env, Has (Texts.Definitions Text) env
-    , Has (Texts.Name Text) env, Has (Texts.Navigation Text) env
-    , Has LangId env, Has (Map LangId Text) env
-    ) =>
-    ExprGui.Top Sugar.Pane i o -> GuiM env i o (Responsive o)
+makePaneBodyEdit :: _ => ExprGui.Top Sugar.Pane i o -> GuiM env i o (Responsive o)
 makePaneBodyEdit pane =
     case pane ^. Sugar.paneBody of
     Sugar.PaneTag tag -> TagPaneEdit.make tag <&> Responsive.fromWidget
@@ -205,7 +170,7 @@ makePaneBodyEdit pane =
             DefinitionEdit.make eventMap def
 
 makePaneEdit ::
-    (Monad m, Language.HasLanguage env) =>
+    _ =>
     ExportActions m ->
     ExprGui.Top Sugar.Pane (OnceT (T m)) (T m) ->
     GuiM env (OnceT (T m)) (T m) (Responsive (IOTrans m))
@@ -255,17 +220,12 @@ makeNewDefinition cp =
             & DataOps.newPublicDefinitionWithPane cp
     <&> WidgetIds.fromIRef
 
-newDefinitionDoc ::
-    ( MonadReader env m
-    , Has (MomentuTexts.Texts Text) env, Has (Texts.CodeUI Text) env
-    ) => m E.Doc
+newDefinitionDoc :: _ => m E.Doc
 newDefinitionDoc =
     Lens.view id
     <&> (`E.toDoc` [has . MomentuTexts.edit, has . Texts.new])
 
-makeNewDefinitionButton ::
-    (Monad m, Language.HasLanguage env) =>
-    Anchors.CodeAnchors m -> GuiM env (OnceT (T m)) (T m) (Widget (T m))
+makeNewDefinitionButton :: _ => Anchors.CodeAnchors m -> GuiM env (OnceT (T m)) (T m) (Widget (T m))
 makeNewDefinitionButton cp =
     do
         newDefId <- Element.subAnimId ?? ["New definition"] <&> Widget.Id
@@ -282,7 +242,7 @@ jumpBack gp =
     (j:js) -> j <$ Property.setP (Anchors.preJumps gp) js & Just
 
 panesEventMap ::
-    (Monad m, Language.HasLanguage env) =>
+    _ =>
     ExportActions m -> Anchors.CodeAnchors m -> Anchors.GuiAnchors (T m) (T m) ->
     Sugar.VarInfo -> GuiM env (OnceT (T m)) (T m) (EventMap (IOTrans m GuiState.Update))
 panesEventMap theExportActions cp gp replVarInfo =

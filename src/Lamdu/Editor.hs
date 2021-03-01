@@ -223,7 +223,6 @@ runMainLoop ekg stateStorage subpixel win mainLoop configSampler
             }
 
 makeMainGui ::
-    HasCallStack =>
     [TitledSelection Folder.Theme] -> [TitledSelection Folder.Language] ->
     (forall a. T DbLayout.DbM a -> IO a) ->
     Env -> GUIMain.Model Env DbLayout.ViewM ->

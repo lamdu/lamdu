@@ -73,7 +73,7 @@ Executable lamdu
   default-extensions: NoImplicitPrelude, OverloadedStrings, PartialTypeSignatures, LambdaCase, DeriveTraversable, DeriveGeneric, DeriveAnyClass, DerivingStrategies, FlexibleContexts
   default-language: Haskell2010
   build-depends: Lamdu, base, directory, process, template-haskell, time, base-compat
-  ghc-options: -rtsopts -with-rtsopts=-A128M -O2 -Wall -Widentities -Wimplicit-prelude -Wmissing-home-modules -Wincomplete-patterns -Wnoncanonical-monad-instances -Wsemigroup -Wincomplete-record-updates -Wredundant-constraints -threaded
+  ghc-options: -rtsopts -with-rtsopts=-A128M -O2 -Wall -Wno-partial-type-signatures -Widentities -Wimplicit-prelude -Wmissing-home-modules -Wincomplete-patterns -Wnoncanonical-monad-instances -Wsemigroup -Wincomplete-record-updates -Wredundant-constraints -threaded
   ghc-prof-options: -fprof-auto -fprof-cafs -rtsopts
   if flag(ekg)
     ghc-options: -with-rtsopts=-T
@@ -125,7 +125,7 @@ Test-Suite Tests
     , Lamdu, lamdu-calculus, momentu, hypertypes, nodejs-exec
     , aeson, aeson-pretty, bytestring, containers, directory, filepath, GLFW-b
     , lens, List, mtl, pretty, process, random, text, uuid-types, Cabal
-  ghc-options: -O0 -Wall -Widentities -Wimplicit-prelude -Wmissing-home-modules -Wincomplete-patterns -Wnoncanonical-monad-instances -Wsemigroup -Wincomplete-record-updates -Wredundant-constraints -threaded
+  ghc-options: -O0 -Wall -Wno-partial-type-signatures -Widentities -Wimplicit-prelude -Wmissing-home-modules -Wincomplete-patterns -Wnoncanonical-monad-instances -Wsemigroup -Wincomplete-record-updates -Wredundant-constraints -threaded
   ghc-prof-options: -fprof-auto -fprof-cafs -rtsopts
 
 Library
@@ -409,7 +409,7 @@ Library
 
   other-modules:    Paths_Lamdu
 
-  ghc-options:         -O2 -Wall -Widentities -Wimplicit-prelude -Wmissing-home-modules -Wincomplete-patterns -Wnoncanonical-monad-instances -Wsemigroup -Wincomplete-record-updates -Wredundant-constraints
+  ghc-options:         -O2 -Wall -Wno-partial-type-signatures -Widentities -Wimplicit-prelude -Wmissing-home-modules -Wincomplete-patterns -Wnoncanonical-monad-instances -Wsemigroup -Wincomplete-record-updates -Wredundant-constraints
   ghc-prof-options:    -fprof-auto -fprof-cafs
   if flag(ekg)
     cpp-options: -DWITH_EKG

@@ -1,6 +1,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving, TemplateHaskell #-}
 {-# LANGUAGE MultiParamTypeClasses, FlexibleInstances, DerivingVia #-}
 {-# LANGUAGE UndecidableInstances, PolymorphicComponents #-}
+
 module Lamdu.GUI.Monad
     ( StoredEntityIds(..)
     --
@@ -59,7 +60,7 @@ import qualified Lamdu.GUI.Types as ExprGui
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.I18N.LangId (LangId)
 import           Lamdu.Settings (Settings)
-import           Lamdu.Style (Style, HasStyle)
+import           Lamdu.Style (Style)
 import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
@@ -192,10 +193,7 @@ withLocalIsHoleResult :: MonadReader (Askable env i o) m => m a -> m a
 withLocalIsHoleResult = Reader.local (aIsHoleResult .~ True)
 
 run ::
-    ( GuiState.HasState env, Spacer.HasStdSpacing env, Has Dir.Layout env
-    , Has Config env, Has Theme env
-    , Has Settings env, HasStyle env
-    ) =>
+    _ =>
     (T.Tag -> MkProperty' o Text) ->
     (ExprGui.Expr Sugar.Term i o -> GuiM env i o (Responsive o)) ->
     (ExprGui.Expr Sugar.Binder i o -> GuiM env i o (Responsive o)) ->

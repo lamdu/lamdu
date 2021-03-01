@@ -23,8 +23,6 @@ import qualified Lamdu.GUI.Expr.HoleEdit.ValTerms as ValTerms
 import           Lamdu.GUI.Monad (GuiM)
 import qualified Lamdu.GUI.Monad as GuiM
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
-import qualified Lamdu.I18N.Code as Texts
-import qualified Lamdu.I18N.CodeUI as Texts
 import           Lamdu.Name (Name)
 import qualified Lamdu.Sugar.Types as Sugar
 
@@ -151,10 +149,7 @@ isGoodResult :: Sugar.HoleResultScore -> Bool
 isGoodResult hrs = hrs ^. Sugar.hrsNumFragments == 0
 
 makeAll ::
-    ( Monad i
-    , Has (Texts.Code Text) env
-    , Has (Texts.CodeUI Text) env
-    ) =>
+    _ =>
     [Sugar.HoleOption Name i o1] ->
     SearchMenu.ResultsContext ->
     GuiM env i o (Menu.OptionList (ResultGroup i o1))
@@ -172,12 +167,7 @@ makeAll options ctx =
     where
         searchTerm = ctx ^. SearchMenu.rSearchTerm
 
-mkGroup ::
-    ( Monad i
-    , Has (Texts.Code Text) env
-    , Has (Texts.CodeUI Text) env
-    ) =>
-    env -> Sugar.HoleOption Name i o -> i (Group i o)
+mkGroup :: _ => env -> Sugar.HoleOption Name i o -> i (Group i o)
 mkGroup env option =
     option ^. Sugar.hoSearchTerms
     <&>

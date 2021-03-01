@@ -14,11 +14,10 @@ import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.I18N as MomentuTexts
 import qualified GUI.Momentu.State as GuiState
-import           GUI.Momentu.Widget (HasWidget(..), EventContext)
+import           GUI.Momentu.Widget (EventContext)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import qualified Lamdu.CharClassification as Chars
-import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
 import           Lamdu.GUI.Expr.HoleEdit.ValTerms (allowedSearchTerm)
 import qualified Lamdu.GUI.Expr.HoleEdit.WidgetIds as HoleWidgetIds
@@ -75,22 +74,12 @@ exprInfoFromPl =
     }
 
 add ::
-    ( HasWidget w, Monad i, Monad o
-    , Has (Texts.CodeUI Text) env
-    , Has (Texts.Definitions Text) env
-    , Has (MomentuTexts.Texts Text) env
-    ) =>
+    _ =>
     Options -> (Sugar.Payload v name i o, ExprGui.GuiPayload) ->
     GuiM env i o (w o -> w o)
 add options pl = exprInfoFromPl ?? pl >>= addWith options
 
-addWith ::
-    ( HasWidget w, Monad i, Monad o
-    , Has (Texts.CodeUI Text) env
-    , Has (Texts.Definitions Text) env
-    , Has (MomentuTexts.Texts Text) env
-    ) =>
-    Options -> ExprInfo name i o -> GuiM env i o (w o -> w o)
+addWith :: _ => Options -> ExprInfo name i o -> GuiM env i o (w o -> w o)
 addWith options exprInfo =
     actionsEventMap options exprInfo <&> Widget.weakerEventsWithContext
 
@@ -98,13 +87,7 @@ extractCursor :: Sugar.ExtractDestination -> Widget.Id
 extractCursor (Sugar.ExtractToLet letId) = WidgetIds.fromEntityId letId
 extractCursor (Sugar.ExtractToDef defId) = WidgetIds.fromEntityId defId
 
-extractEventMap ::
-    ( MonadReader env m, Has Config env
-    , Has (MomentuTexts.Texts Text) env
-    , Has (Texts.Definitions Text) env
-    , Functor o
-    ) =>
-    m (Sugar.NodeActions name i o -> EventMap (o GuiState.Update))
+extractEventMap :: _ => m (Sugar.NodeActions name i o -> EventMap (o GuiState.Update))
 extractEventMap =
     Lens.view id
     <&>
@@ -136,11 +119,7 @@ addLetEventMap addLet =
             & pure
 
 actionsEventMap ::
-    ( Monad i, Monad o
-    , Has (Texts.CodeUI Text) env
-    , Has (Texts.Definitions Text) env
-    , Has (MomentuTexts.Texts Text) env
-    ) =>
+    _ =>
     Options -> ExprInfo name i o ->
     GuiM env i o (EventContext -> EventMap (o GuiState.Update))
 actionsEventMap options exprInfo =
@@ -174,9 +153,7 @@ actionsEventMap options exprInfo =
 -- | Create the hole search term for new apply operators,
 -- given the extra search term chars from another hole.
 transformSearchTerm ::
-    ( MonadReader env m
-    , Has (MomentuTexts.Texts Text) env, Has (Texts.CodeUI Text) env
-    ) =>
+    _ =>
     m (ExprInfo name i o -> EventContext -> EventMap Text)
 transformSearchTerm =
     Lens.view id <&>
@@ -211,10 +188,7 @@ transformSearchTerm =
     <&> (searchStrRemainder <>)
 
 transformEventMap ::
-    ( MonadReader env m, Applicative o
-    , Has (MomentuTexts.Texts Text) env, Has (Texts.CodeUI Text) env
-    ) =>
-    m (Options -> ExprInfo name i o -> EventContext -> EventMap (o GuiState.Update))
+    _ => m (Options -> ExprInfo name i o -> EventContext -> EventMap (o GuiState.Update))
 transformEventMap =
     transformSearchTerm <&>
     \transform options exprInfo eventCtx ->
@@ -233,12 +207,7 @@ transformEventMap =
     where
         widgetId = pure . WidgetIds.fromEntityId
 
-detachEventMap ::
-    ( MonadReader env m, Has Config env, Has Dir.Layout env
-    , Has (MomentuTexts.Texts Text) env, Has (Texts.CodeUI Text) env
-    , Functor o
-    ) =>
-    m (ExprInfo name i o -> EventMap (o GuiState.Update))
+detachEventMap :: _ => m (ExprInfo name i o -> EventMap (o GuiState.Update))
 detachEventMap =
     Lens.view id
     <&>
@@ -260,12 +229,7 @@ detachEventMap =
                 Dir.RightToLeft -> ")]"
     _ -> mempty
 
-replaceEventMap ::
-    ( MonadReader env m, Has Config env
-    , Has (MomentuTexts.Texts Text) env, Has (Texts.CodeUI Text) env
-    , Functor f
-    ) =>
-    Sugar.Delete f -> m (EventMap (f GuiState.Update))
+replaceEventMap :: _ => Sugar.Delete f -> m (EventMap (f GuiState.Update))
 replaceEventMap x =
     Lens.view id
     <&>
@@ -284,9 +248,7 @@ goToLiteral :: Sugar.EntityId -> GuiState.Update
 goToLiteral = GuiState.updateCursor . WidgetIds.literalEditOf . WidgetIds.fromEntityId
 
 makeLiteralNumberEventMap ::
-    ( MonadReader env m, Monad o
-    , Has (MomentuTexts.Texts Text) env, Has (Texts.CodeUI Text) env
-    ) =>
+    _ =>
     String ->
     m ((Sugar.Literal Identity -> o Sugar.EntityId) -> EventMap (o GuiState.Update))
 makeLiteralNumberEventMap prefix =
@@ -298,10 +260,7 @@ makeLiteralNumberEventMap prefix =
     (fmap goToLiteral . makeLiteral . Sugar.LiteralNum . Identity . read . (prefix <>) . (: []))
 
 makeLiteralTextEventMap ::
-    ( MonadReader env m, Monad o
-    , Has (MomentuTexts.Texts Text) env, Has (Texts.CodeUI Text) env
-    ) =>
-    m ((Sugar.Literal Identity -> o Sugar.EntityId) -> EventMap (o GuiState.Update))
+    _ => m ((Sugar.Literal Identity -> o Sugar.EntityId) -> EventMap (o GuiState.Update))
 makeLiteralTextEventMap =
     Lens.view id <&> E.toDoc <&>
     \toDoc makeLiteral ->
@@ -309,12 +268,7 @@ makeLiteralTextEventMap =
     (toDoc [has . MomentuTexts.edit, has . Texts.literalText]) "\""
     (const (makeLiteral (Sugar.LiteralText (Identity "")) <&> goToLiteral))
 
-makeRecordEventMap ::
-    ( MonadReader env m, Monad o
-    , Has (MomentuTexts.Texts Text) env, Has (Texts.CodeUI Text) env
-    , Has Dir.Layout env
-    ) =>
-    m (o Sugar.EntityId -> EventMap (o GuiState.Update))
+makeRecordEventMap :: _ => m (o Sugar.EntityId -> EventMap (o GuiState.Update))
 makeRecordEventMap =
     Lens.view id <&>
     \env makeRec ->
@@ -325,12 +279,7 @@ makeRecordEventMap =
         Dir.RightToLeft -> "}"
     ) (const (makeRec <&> WidgetIds.fromEntityId <&> GuiState.updateCursor))
 
-makeLiteralEventMap ::
-    ( MonadReader env m, Monad o
-    , Has (MomentuTexts.Texts Text) env, Has (Texts.CodeUI Text) env
-    , Has Dir.Layout env
-    ) =>
-    m (Sugar.NodeActions name i o -> EventMap (o GuiState.Update))
+makeLiteralEventMap :: _ => m (Sugar.NodeActions name i o -> EventMap (o GuiState.Update))
 makeLiteralEventMap =
     (<>)
     <$> ( (<>) <$> makeLiteralTextEventMap <*> makeLiteralNumberEventMap ""

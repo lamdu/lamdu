@@ -12,7 +12,6 @@ import           GUI.Momentu.Align (Aligned(..), WithTextPos(..))
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Direction as Dir
 import qualified GUI.Momentu.Draw as MDraw
-import           GUI.Momentu.Element (Element)
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.Glue ((/-/), (/|/))
 import qualified GUI.Momentu.Glue as Glue
@@ -22,9 +21,7 @@ import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.GridView as GridView
 import qualified GUI.Momentu.Widgets.Label as Label
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
-import qualified GUI.Momentu.Widgets.TextView as TextView
 import           Hyper.Type.AST.FuncType (FuncType(..))
-import           Lamdu.Config.Theme (Theme)
 import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.Config.Theme.TextColors as TextColors
 import qualified Lamdu.GUI.NameView as NameView
@@ -32,7 +29,6 @@ import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.GUI.TagView as TagView
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.I18N.Code as Texts
-import qualified Lamdu.I18N.Name as Texts
 import           Lamdu.Name (Name)
 import qualified Lamdu.Sugar.Types as Sugar
 
@@ -63,38 +59,23 @@ horizSetCompositeRow r =
 sanitize :: Text -> Text
 sanitize = Text.replace "\0" ""
 
-grammar ::
-    ( MonadReader env m, Has TextView.Style env, Has Theme env
-    , Element.HasAnimIdPrefix env, Has Dir.Layout env
-    ) =>
-    Text -> m (WithTextPos View)
+grammar :: _ => Text -> m (WithTextPos View)
 grammar = Styled.grammar . Label.make . sanitize
 
-parensAround ::
-    ( MonadReader env m, Has TextView.Style env, Has Theme env
-    , Element.HasAnimIdPrefix env, Has Dir.Layout env
-    ) =>
-    WithTextPos View -> m (WithTextPos View)
+parensAround :: _ => WithTextPos View -> m (WithTextPos View)
 parensAround view =
     do
         openParenView <- grammar "("
         closeParenView <- grammar ")"
         Glue.hbox Dir.LeftToRight [openParenView, view, closeParenView] & pure
 
-parens ::
-    ( MonadReader env m, Has TextView.Style env, Has Theme env
-    , Element.HasAnimIdPrefix env, Has Dir.Layout env
-    ) =>
-    Prec -> Prec -> WithTextPos View -> m (WithTextPos View)
+parens :: _ => Prec -> Prec -> WithTextPos View -> m (WithTextPos View)
 parens parent my view
     | parent > my = parensAround view
     | otherwise = pure view
 
 makeTFun ::
-    ( MonadReader env m, Has Theme env, Spacer.HasStdSpacing env
-    , Element.HasAnimIdPrefix env, Glue.HasTexts env
-    , Has (Texts.Code Text) env, Has (Texts.Name Text) env
-    ) =>
+    _ =>
     Prec ->
     Annotated Sugar.EntityId # Sugar.Type Name ->
     Annotated Sugar.EntityId # Sugar.Type Name ->
@@ -115,10 +96,7 @@ makeTFun parentPrecedence a b =
     ) >>= parens parentPrecedence (Prec 0)
 
 makeTInst ::
-    ( MonadReader env m, Spacer.HasStdSpacing env, Has Theme env
-    , Element.HasAnimIdPrefix env, Has (Texts.Name Text) env
-    , Glue.HasTexts env, Has (Texts.Code Text) env
-    ) =>
+    (MonadReader env m, _) =>
     Prec -> Sugar.TId Name ->
     [(Name, Annotated Sugar.EntityId # Sugar.Type Name)] ->
     m (WithTextPos View)
@@ -154,9 +132,7 @@ makeTInst parentPrecedence tid typeParams =
         disambAnimId suffixes =
             Reader.local (Element.animIdPrefix <>~ (suffixes <&> BS8.pack))
 
-addTypeBG ::
-    (Element a, MonadReader env m, Has Theme env, Element.HasAnimIdPrefix env) =>
-    a -> m a
+addTypeBG :: _ => a -> m a
 addTypeBG view =
     do
         color <- Lens.view (has . Theme.typeFrameBGColor)
@@ -165,18 +141,11 @@ addTypeBG view =
             & MDraw.backgroundColor bgId color
             & pure
 
-makeEmptyComposite ::
-    ( MonadReader env m, Has TextView.Style env, Has Theme env
-    , Element.HasAnimIdPrefix env, Has Dir.Layout env
-    ) =>
-    m (WithTextPos View)
+makeEmptyComposite :: _ => m (WithTextPos View)
 makeEmptyComposite = grammar "Ø"
 
 makeField ::
-    ( MonadReader env m, Has Theme env
-    , Spacer.HasStdSpacing env, Element.HasAnimIdPrefix env
-    , Has (Texts.Name Text) env, Glue.HasTexts env, Has (Texts.Code Text) env
-    ) =>
+    _ =>
     (Sugar.Tag Name, Annotated Sugar.EntityId # Sugar.Type Name) ->
     m (WithTextPos View, WithTextPos View)
 makeField (tag, fieldType) =
@@ -185,21 +154,14 @@ makeField (tag, fieldType) =
     <*> makeInternal (Prec 0) fieldType
 
 makeVariantField ::
-    ( MonadReader env m, Spacer.HasStdSpacing env
-    , Has Theme env, Element.HasAnimIdPrefix env
-    , Has (Texts.Name Text) env, Glue.HasTexts env, Has (Texts.Code Text) env
-    ) =>
+    _ =>
     (Sugar.Tag Name, Annotated Sugar.EntityId # Sugar.Type Name) ->
     m (WithTextPos View, WithTextPos View)
 makeVariantField (tag, Ann _ (Sugar.TRecord (Sugar.CompositeFields [] Nothing))) =
     TagView.make tag <&> (, Element.empty)
 makeVariantField (tag, fieldType) = makeField (tag, fieldType)
 
-gridViewTopLeftAlign ::
-    ( MonadReader env m, Has Dir.Layout env
-    , Traversable vert, Traversable horiz
-    ) =>
-    m (vert (horiz (Aligned View)) -> Aligned View)
+gridViewTopLeftAlign :: _ => m (vert (horiz (Aligned View)) -> Aligned View)
 gridViewTopLeftAlign =
     GridView.make <&>
     \mkGrid views ->
@@ -209,10 +171,7 @@ gridViewTopLeftAlign =
         Just x -> x & Align.value .~ view
 
 makeComposite ::
-    ( MonadReader env m, Has Theme env, Spacer.HasStdSpacing env
-    , Element.HasAnimIdPrefix env, Has Dir.Layout env
-    , Has (Texts.Name Text) env, Has (Texts.Code Text) env
-    ) =>
+    _ =>
     m (WithTextPos View) -> m (WithTextPos View) -> m (WithTextPos View) ->
     ((Sugar.Tag Name, Annotated Sugar.EntityId # Sugar.Type Name) ->
          m (WithTextPos View, WithTextPos View)) ->
@@ -260,13 +219,7 @@ makeComposite mkOpener mkPre mkPost mkField composite =
                     | v ^. Align.tValue . Element.width == 0 = pure Element.empty
                     | otherwise = Spacer.stdHSpace <&> WithTextPos 0
 
-makeInternal ::
-    ( MonadReader env m, Spacer.HasStdSpacing env, Has Theme env
-    , Element.HasAnimIdPrefix env
-    , Has (Texts.Name Text) env
-    , Glue.HasTexts env, Has (Texts.Code Text) env
-    ) =>
-    Prec -> Annotated Sugar.EntityId # Sugar.Type Name -> m (WithTextPos View)
+makeInternal :: _ => Prec -> Annotated Sugar.EntityId # Sugar.Type Name -> m (WithTextPos View)
 makeInternal parentPrecedence (Ann (Const entityId) tbody) =
     case tbody of
     Sugar.TVar var -> NameView.make var
@@ -284,21 +237,8 @@ makeInternal parentPrecedence (Ann (Const entityId) tbody) =
     where
         animId = WidgetIds.fromEntityId entityId & Widget.toAnimId
 
-make ::
-    ( MonadReader env m, Has Theme env, Spacer.HasStdSpacing env
-    , Element.HasAnimIdPrefix env
-    , Has (Texts.Code Text) env
-    , Has (Texts.Name Text) env
-    , Glue.HasTexts env
-    ) =>
-    Annotated Sugar.EntityId # Sugar.Type Name ->
-    m (WithTextPos View)
+make :: _ => Annotated Sugar.EntityId # Sugar.Type Name -> m (WithTextPos View)
 make t = makeInternal (Prec 0) t & Styled.withColor TextColors.typeTextColor
 
-makeScheme ::
-    ( MonadReader env m, Has Theme env, Spacer.HasStdSpacing env
-    , Element.HasAnimIdPrefix env, Has (Texts.Code Text) env
-    , Glue.HasTexts env, Has (Texts.Name Text) env
-    ) =>
-    Sugar.Scheme Name -> m (WithTextPos View)
+makeScheme :: _ => Sugar.Scheme Name -> m (WithTextPos View)
 makeScheme s = make (s ^. Sugar.schemeType)

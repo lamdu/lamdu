@@ -10,11 +10,9 @@ import           Data.Property (Property)
 import qualified Data.Property as Property
 import qualified Data.Text as Text
 import qualified GUI.Momentu as M
-import qualified GUI.Momentu.Direction as Dir
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
-import qualified GUI.Momentu.Glue as Glue
 import qualified GUI.Momentu.I18N as MomentuTexts
 import qualified GUI.Momentu.MetaKey as MetaKey
 import           GUI.Momentu.ModKey (ModKey(..))
@@ -23,13 +21,11 @@ import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.State as GuiState
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.FocusDelegator as FocusDelegator
-import qualified GUI.Momentu.Widgets.Grid as Grid
 import qualified GUI.Momentu.Widgets.Menu as Menu
 import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
 import qualified GUI.Momentu.Widgets.TextEdit.Property as TextEdits
 import qualified GUI.Momentu.Widgets.TextView as TextView
-import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
 import           Lamdu.Formatting (Format(..))
 import           Lamdu.GUI.Expr.EventMap (makeLiteralEventMap)
@@ -41,21 +37,14 @@ import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.GUI.Wrap (stdWrap)
 import qualified Lamdu.I18N.Code as Texts
 import qualified Lamdu.I18N.CodeUI as Texts
-import qualified Lamdu.I18N.Definitions as Texts
-import qualified Lamdu.I18N.Name as Texts
 import qualified Lamdu.I18N.Navigation as Texts
-import           Lamdu.Style (Style, HasStyle)
+import           Lamdu.Style (Style)
 import qualified Lamdu.Style as Style
 import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
 
-mkEditEventMap ::
-    ( MonadReader env m
-    , Has (MomentuTexts.Texts Text) env, Has (Texts.CodeUI Text) env
-    , Monad o
-    ) =>
-    m (Text -> o Sugar.EntityId -> EventMap (o M.Update))
+mkEditEventMap :: _ => m (Text -> o Sugar.EntityId -> EventMap (o M.Update))
 mkEditEventMap =
     Lens.view id
     <&> \env valText setToHole ->
@@ -64,17 +53,12 @@ mkEditEventMap =
     & E.keyPresses [ModKey mempty MetaKey.Key'Enter]
     (E.toDoc env [has . MomentuTexts.edit, has . Texts.value])
 
-withStyle ::
-    (MonadReader env m, HasStyle env) =>
-    Lens.Getting TextEdit.Style Style TextEdit.Style -> m a -> m a
+withStyle :: _ => Lens.Getting TextEdit.Style Style TextEdit.Style -> m a -> m a
 withStyle whichStyle =
     Reader.local (\x -> x & has .~ x ^. has . whichStyle)
 
 genericEdit ::
-    ( Monad o, Format a, MonadReader env f, HasStyle env, M.HasCursor env
-    , Has (MomentuTexts.Texts Text) env, Has (Texts.CodeUI Text) env
-    , Has Dir.Layout env
-    ) =>
+    _ =>
     LensLike' (Const TextEdit.Style) Style TextEdit.Style ->
     Property o a ->
     Sugar.Payload v name i o -> f (Responsive o)
@@ -92,11 +76,7 @@ genericEdit whichStyle prop pl =
         myId = WidgetIds.fromExprPayload pl
         valText = prop ^. Property.pVal & format
 
-fdConfig ::
-    ( MonadReader env m, Has Config env, Has Menu.Config env
-    , Has (MomentuTexts.Texts Text) env, Has (Texts.CodeUI Text) env
-    ) =>
-    m FocusDelegator.Config
+fdConfig :: _ => m FocusDelegator.Config
 fdConfig =
     Lens.view id
     <&> \env ->
@@ -127,26 +107,12 @@ fdConfig =
         ]
     }
 
-withFd ::
-    ( MonadReader env m, Has Config env, M.HasCursor env
-    , Has Menu.Config env, Applicative f
-    , Has (MomentuTexts.Texts Text) env, Has (Texts.CodeUI Text) env
-    ) =>
-    m (Widget.Id -> M.TextWidget f -> M.TextWidget f)
+withFd :: _ => m (Widget.Id -> M.TextWidget f -> M.TextWidget f)
 withFd =
     FocusDelegator.make <*> fdConfig ?? FocusDelegator.FocusEntryParent
     <&> Lens.mapped %~ (M.tValue %~)
 
-textEdit ::
-    ( MonadReader env m, Has Config env, HasStyle env, Has Menu.Config env
-    , M.HasAnimIdPrefix env, M.HasCursor env
-    , Glue.HasTexts env, TextEdit.HasTexts env
-    , Has (Texts.Code Text) env, Has (Texts.CodeUI Text) env
-    , Monad o
-    ) =>
-    Property o Text ->
-    Sugar.Payload v name i o ->
-    m (M.TextWidget o)
+textEdit :: _ => Property o Text -> Sugar.Payload v name i o -> m (M.TextWidget o)
 textEdit prop pl =
     do
         text <- TextEdits.make ?? empty ?? prop ?? WidgetIds.literalEditOf myId
@@ -168,17 +134,7 @@ parseNum newText
     | newText `elem` ["", "-", ".", "-."] = Just 0
     | otherwise = tryParse newText
 
-numEdit ::
-    ( MonadReader env m, Monad o
-    , Has Config env, HasStyle env, Has Menu.Config env
-    , Has (Texts.CodeUI Text) env, Has (MomentuTexts.Texts Text) env
-    , Has (Dir.Texts Text) env, Has (Texts.Navigation Text) env
-    , Has (TextEdit.Texts Text) env, Has Dir.Layout env
-    , GuiState.HasState env
-    ) =>
-    Property o Double ->
-    Sugar.Payload v name i o ->
-    m (M.TextWidget o)
+numEdit :: _ => Property o Double -> Sugar.Payload v name i o -> m (M.TextWidget o)
 numEdit prop pl =
     (withFd ?? myId) <*>
     do
@@ -269,15 +225,7 @@ numEdit prop pl =
         myId = WidgetIds.fromExprPayload pl
 
 make ::
-    ( Monad i, Monad o
-    , Has (Texts.Name Text) env
-    , Has (Texts.Code Text) env
-    , Has (Texts.CodeUI Text) env
-    , Has (Texts.Definitions Text) env
-    , Has (Texts.Navigation Text) env
-    , TextEdit.HasTexts env
-    , Grid.HasTexts env
-    ) =>
+    _ =>
     Annotated (ExprGui.Payload i o) # Const (Sugar.Literal (Property o)) ->
     GuiM env i o (Responsive o)
 make (Ann (Const pl) (Const lit)) =

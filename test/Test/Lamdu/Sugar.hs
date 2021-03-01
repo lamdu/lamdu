@@ -7,11 +7,8 @@ import           Control.Monad.Once (OnceT, evalOnceT)
 import           Control.Monad.Transaction (getP)
 import qualified Data.Map as Map
 import qualified Data.Set as Set
-import qualified GUI.Momentu.Direction as Dir
 import           Hyper
 import           Hyper.Type.Functor
-import qualified Lamdu.Annotations as Annotations
-import qualified Lamdu.Cache as Cache
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
 import           Lamdu.Data.Anchors (Code(..))
@@ -19,22 +16,16 @@ import qualified Lamdu.Data.Anchors as Anchors
 import           Lamdu.Data.Db.Layout (ViewM, codeAnchors, runDbTransaction)
 import qualified Lamdu.Data.Definition as Def
 import qualified Lamdu.Data.Tag as Tag
-import qualified Lamdu.Debug as Debug
 import           Lamdu.Expr.IRef (DefI, HRef, iref)
 import qualified Lamdu.Expr.Load as ExprLoad
-import qualified Lamdu.I18N.Code as Texts
-import           Lamdu.I18N.LangId (LangId)
-import qualified Lamdu.I18N.Name as Texts
 import           Lamdu.Name (Name)
 import           Lamdu.Sugar (sugarWorkArea)
-import           Lamdu.Sugar.Config (Config(..))
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import           Lamdu.Sugar.Types as Sugar
 import           Lamdu.VersionControl (runAction)
 import           Revision.Deltum.IRef (IRef(..))
 import           Revision.Deltum.Transaction (Transaction)
 import           Test.Lamdu.Db (withDB)
-import           Test.Lamdu.Env (EvalResults)
 
 import           Test.Lamdu.Prelude
 
@@ -97,7 +88,7 @@ workAreaLowLevelLoad =
     <*> (getP (panes codeAnchors) >>= traverse loadPane)
 
 validate ::
-    (NFData v, NFData t, NFData name, HasCallStack) =>
+    (NFData v, NFData t, NFData name) =>
     WorkArea v name (OnceT (T fa)) (T fb)
     (Sugar.Payload v name (OnceT (T fa)) (T fb), (t, [EntityId])) ->
     T ViewM
@@ -124,16 +115,7 @@ validate workArea
         sugarEntityIdsSet = Set.fromList (sugarEntityIds <&> fst)
 
 convertWorkArea ::
-    ( HasCallStack
-    , Has LangId env
-    , Has (Texts.Name Text) env
-    , Has (Texts.Code Text) env
-    , Has Dir.Layout env
-    , Has Debug.Monitors env
-    , Has EvalResults env
-    , Has Config env
-    , Has Cache.Functions env, Has Annotations.Mode env
-    ) =>
+    _ =>
     env ->
     OnceT (T ViewM)
     ( WorkArea (Annotation (EvaluationScopes Name (OnceT (T ViewM))) Name) Name (OnceT (T ViewM)) (T ViewM)

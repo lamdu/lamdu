@@ -9,30 +9,22 @@ import           Control.Lens.Extended (OneOf)
 import           Control.Monad.Once (OnceT)
 import qualified Control.Monad.Reader as Reader
 import           Data.CurAndPrev (CurPrevTag(..), curPrevTag, fallbackToPrev)
-import           GUI.Momentu.Align (Aligned(..), value, TextWidget)
-import qualified GUI.Momentu.Align as Align
-import qualified GUI.Momentu.Direction as Dir
-import qualified GUI.Momentu.Draw as Draw
-import           GUI.Momentu.Element (Element)
+import qualified GUI.Momentu as M
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
-import           GUI.Momentu.Glue ((/|/))
 import qualified GUI.Momentu.Glue as Glue
 import qualified GUI.Momentu.Hover as Hover
 import qualified GUI.Momentu.I18N as MomentuTexts
-import           GUI.Momentu.MetaKey (MetaKey)
 import           GUI.Momentu.Responsive (Responsive)
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.Responsive.Options as Options
 import qualified GUI.Momentu.State as GuiState
-import           GUI.Momentu.View (View)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Label as Label
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified GUI.Momentu.Widgets.TextView as TextView
 import qualified Lamdu.Builtins.Anchors as Builtins
-import           Lamdu.Config (Config(..))
 import qualified Lamdu.Config as Config
 import           Lamdu.Config.Theme (Theme)
 import qualified Lamdu.Config.Theme as Theme
@@ -70,10 +62,7 @@ data ExportRepl m = ExportRepl
     }
 
 extractEventMap ::
-    ( Functor m
-    , Has (MomentuTexts.Texts Text) env, Has (Texts.Definitions Text) env
-    ) =>
-    env -> Sugar.Payload v name i (T m) -> [MetaKey] -> EventMap (T m GuiState.Update)
+    _ => env -> Sugar.Payload v name i (T m) -> [M.MetaKey] -> EventMap (T m M.Update)
 extractEventMap env pl keys =
     pl ^. Sugar.plActions . Sugar.extract
     <&> ExprEventMap.extractCursor & E.keysEventMapMovesCursor keys doc
@@ -83,12 +72,7 @@ extractEventMap env pl keys =
             [has . MomentuTexts.edit, has . Texts.extractReplToDef]
 
 replEventMap ::
-    ( Monad m
-    , Has Config env, Has (MomentuTexts.Texts Text) env, Has (Texts.Definitions Text) env
-    , Has (Texts.Collaboration Text) env
-    ) =>
-    env -> ExportRepl m -> Sugar.Payload v name i (T m) ->
-    EventMap (IOTrans m GuiState.Update)
+    _ => env -> ExportRepl m -> Sugar.Payload v name i (T m) -> EventMap (IOTrans m M.Update)
 replEventMap env (ExportRepl expRepl expFancy _execRepl) replExprPl =
     mconcat
     [ extractEventMap env replExprPl (env ^. has . Config.extractKeys)
@@ -102,17 +86,11 @@ replEventMap env (ExportRepl expRepl expFancy _execRepl) replExprPl =
         toDoc = E.toDoc (env ^. has)
         exportConfig = env ^. has . Config.export
 
-indicatorColor ::
-    (MonadReader env m, Has Theme env) =>
-    CurPrevTag -> Lens' Theme Draw.Color -> m Draw.Color
+indicatorColor :: _ => CurPrevTag -> Lens' Theme M.Color -> m M.Color
 indicatorColor Current color = Lens.view (has . color)
 indicatorColor Prev _ = Lens.view (has . Theme.disabledColor)
 
-makeIndicator ::
-    ( MonadReader env m, Has Theme env, Has TextView.Style env
-    , Element.HasAnimIdPrefix env, Has Dir.Layout env
-    ) =>
-    CurPrevTag -> Lens' Theme Draw.Color -> Text -> m (Align.WithTextPos View)
+makeIndicator :: _ => CurPrevTag -> Lens' Theme M.Color -> Text -> m (M.WithTextPos M.View)
 makeIndicator tag enabledColor text =
     do
         color <- indicatorColor tag enabledColor
@@ -123,13 +101,7 @@ compiledErrorDesc Sugar.ReachedHole = Texts.jsReachedAHole
 compiledErrorDesc Sugar.DependencyTypeOutOfDate = Texts.jsStaleDep
 compiledErrorDesc Sugar.UnhandledCase = Texts.jsUnhandledCase
 
-errorDesc ::
-    ( MonadReader env m, Has Theme env
-    , Element.HasAnimIdPrefix env, Has TextView.Style env
-    , Has (Texts.CodeUI Text) env
-    , Glue.HasTexts env
-    ) =>
-    Sugar.Error -> m (Align.WithTextPos View)
+errorDesc :: _ => Sugar.Error -> m (M.WithTextPos M.View)
 errorDesc err =
     do
         errorColor <- Lens.view (has . Theme.errorColor)
@@ -138,19 +110,11 @@ errorDesc err =
                 label (compiledErrorDesc cErr)
             Sugar.RuntimeError exc ->
                 label Texts.jsException
-                /|/ ((TextView.make ?? exc)
+                M./|/ ((TextView.make ?? exc)
                         <*> (Element.subAnimId ?? ["exception text"]))
             & Reader.local (TextView.color .~ errorColor)
 
-errorIndicator ::
-    ( MonadReader env m, Applicative o, Element.HasAnimIdPrefix env
-    , Spacer.HasStdSpacing env, Has Hover.Style env, GuiState.HasCursor env
-    , Has Theme env, Has Config env, Glue.HasTexts env
-    , Has (Texts.CodeUI Text) env
-    , Has (Texts.Navigation Text) env
-    ) =>
-    Widget.Id -> CurPrevTag -> Sugar.EvalException o ->
-    m (Align.TextWidget o)
+errorIndicator :: _ => Widget.Id -> CurPrevTag -> Sugar.EvalException o -> m (M.TextWidget o)
 errorIndicator myId tag (Sugar.EvalException errorType jumpToErr) =
     do
         actionKeys <- Lens.view (has . Config.actionKeys)
@@ -162,10 +126,10 @@ errorIndicator myId tag (Sugar.EvalException errorType jumpToErr) =
                 j <&> WidgetIds.fromEntityId
                 & E.keysEventMapMovesCursor actionKeys jumpDoc
         indicator <-
-            (Widget.makeFocusableView ?? myId <&> (Align.tValue %~))
+            (Widget.makeFocusableView ?? myId <&> (M.tValue %~))
             <*> makeIndicator tag Theme.errorColor  "⚠"
             <&> Lens.mapped %~ Widget.weakerEvents (foldMap jumpEventMap jumpToErr)
-        if Widget.isFocused (indicator ^. Align.tValue)
+        if Widget.isFocused (indicator ^. M.tValue)
             then
             do
                 descLabel <- errorDesc errorType
@@ -179,7 +143,7 @@ errorIndicator myId tag (Sugar.EvalException errorType jumpToErr) =
                 let hoverOptions =
                         [ anchor indicator ||| hDescLabel (hspace |||)
                         , anchor indicator |---| hDescLabel (vspace |---|)
-                        ] <&> (^. Align.tValue)
+                        ] <&> (^. M.tValue)
                 anchor indicator
                     <&> Hover.hoverInPlaceOf hoverOptions
                     & pure
@@ -190,16 +154,9 @@ indicatorId :: Widget.Id
 indicatorId = Widget.joinId WidgetIds.replId ["result indicator"]
 
 resultWidget ::
-    ( MonadReader env m, GuiState.HasCursor env, Monad o
-    , Spacer.HasStdSpacing env, Element.HasAnimIdPrefix env, Has Hover.Style env
-    , Has Theme env, Has Config env
-    , Has (Texts.CodeUI Text) env
-    , Has (Texts.Definitions Text) env
-    , Has (Texts.Navigation Text) env
-    , Glue.HasTexts env
-    ) =>
+    _ =>
     ExportRepl o -> Sugar.VarInfo -> CurPrevTag -> Sugar.EvalCompletionResult (T o) ->
-    m (TextWidget (IOTrans o))
+    m (M.TextWidget (IOTrans o))
 resultWidget expRepl varInfo tag Sugar.EvalSuccess{} =
     do
         view <- makeIndicator tag Theme.successColor "✔"
@@ -212,29 +169,18 @@ resultWidget expRepl varInfo tag Sugar.EvalSuccess{} =
                             executeIOProcess expRepl
                             & IOTrans.liftIO
                             & E.keysEventMap actionKeys (toDoc [Texts.execRepl])
-                    Widget.makeFocusableView ?? indicatorId <&> (Align.tValue %~) ?? view
-                        <&> Align.tValue %~ Widget.weakerEvents executeEventMap
-            _ -> view & Align.tValue %~ Widget.fromView & pure
+                    Widget.makeFocusableView ?? indicatorId <&> (M.tValue %~) ?? view
+                        <&> M.tValue %~ Widget.weakerEvents executeEventMap
+            _ -> view & M.tValue %~ Widget.fromView & pure
 resultWidget _ _ tag (Sugar.EvalError err) =
     errorIndicator indicatorId tag err
-    <&> Align.tValue . Widget.updates %~ IOTrans.liftTrans
+    <&> M.tValue . Widget.updates %~ IOTrans.liftTrans
 
-noIndicator ::
-    ( MonadReader env m, GuiState.HasCursor env, Widget.HasWidget w
-    , Element (w a)
-    ) =>
-    m (w a)
-noIndicator = Widget.respondToCursorPrefix ?? indicatorId ?? Element.empty
+noIndicator :: _ => m (w a)
+noIndicator = Widget.respondToCursorPrefix ?? indicatorId ?? M.empty
 
 make ::
-    ( Monad m
-    , Glue.HasTexts env
-    , Has (Texts.Collaboration Text) env
-    , Has (Texts.Code Text) env
-    , Has (Texts.CodeUI Text) env
-    , Has (Texts.Definitions Text) env
-    , Has (Texts.Navigation Text) env
-    ) =>
+    _ =>
     ExportRepl m ->
     ExprGui.Top Sugar.Repl (OnceT (T m)) (T m) ->
     GuiM env (OnceT (T m)) (T m) (Responsive (IOTrans m))
@@ -245,16 +191,16 @@ make expRepl (Sugar.Repl replExpr varInfo replResult) =
         result <-
             (resultWidget expRepl varInfo <$> curPrevTag <&> fmap) <*> replResult
             & fallbackToPrev
-            & fromMaybe (noIndicator <&> Align.WithTextPos 0)
-            & Reader.local (Element.animIdPrefix <>~ ["result widget"])
+            & fromMaybe (noIndicator <&> M.WithTextPos 0)
+            & Reader.local (M.animIdPrefix <>~ ["result widget"])
         (|---|) <- Glue.mkGlue ?? Glue.Vertical
         let centeredBelow down up =
-                (Aligned 0.5 up |---| Aligned 0.5 down) ^. value
+                (M.Aligned 0.5 up |---| M.Aligned 0.5 down) ^. M.value
         let extractEvents = extractEventMap env replExprPl buttonExtractKeys
         (Options.boxSpaced ?? Options.disambiguationNone)
             <*>
             sequence
-            [ (Widget.makeFocusableView ?? replSymId <&> (Align.tValue %~))
+            [ (Widget.makeFocusableView ?? replSymId <&> (M.tValue %~))
               <*> label Texts.repl
               <&> Lens.mapped %~ Widget.weakerEvents extractEvents
               <&> Lens.mapped . Widget.updates %~ IOTrans.liftTrans
