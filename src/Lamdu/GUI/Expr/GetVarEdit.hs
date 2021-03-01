@@ -1,5 +1,5 @@
 module Lamdu.GUI.Expr.GetVarEdit
-    ( make, makeGetBinder, makeNoActions, makeSimpleView
+    ( make, makeGetBinder, makeSimpleView
     , makePunnedVars
     , Role(..)
     ) where
@@ -334,24 +334,6 @@ makeGetParam param myId =
     where
         name = param ^. Sugar.pNameRef . Sugar.nrName
 
-makeNoActions ::
-    ( Monad i, Monad o
-    , Has (Texts.Definitions Text) env, Has (Texts.Navigation Text) env
-    , Has (Texts.Code Text) env, Has (Texts.CodeUI Text) env
-    , Has (Texts.Name Text) env, Grid.HasTexts env
-    ) =>
-    Sugar.GetVar Name o ->
-    Widget.Id ->
-    GuiM env i o (Responsive o)
-makeNoActions getVar myId =
-    case getVar of
-    Sugar.GetBinder binderVar ->
-        makeGetBinder Normal binderVar myId <&> Responsive.fromWithTextPos
-    Sugar.GetParamsRecord paramsRecordVar ->
-        makeParamsRecord myId paramsRecordVar
-    Sugar.GetParam param ->
-        makeGetParam param myId <&> Responsive.fromWithTextPos
-
 make ::
     ( Monad i, Monad o
     , Has (Texts.Definitions Text) env, Has (Texts.Navigation Text) env
@@ -361,8 +343,16 @@ make ::
     Annotated (ExprGui.Payload i o) # Const (Sugar.GetVar Name o) ->
     GuiM env i o (Responsive o)
 make (Ann (Const pl) (Const getVar)) =
-    makeNoActions getVar (WidgetIds.fromExprPayload (pl ^. _1))
+    case getVar of
+    Sugar.GetBinder binderVar ->
+        makeGetBinder Normal binderVar myId <&> Responsive.fromWithTextPos
+    Sugar.GetParamsRecord paramsRecordVar ->
+        makeParamsRecord myId paramsRecordVar
+    Sugar.GetParam param ->
+        makeGetParam param myId <&> Responsive.fromWithTextPos
     & stdWrap pl
+    where
+        myId = pl ^. _1 & WidgetIds.fromExprPayload
 
 makePunnedVar ::
     ( Monad i, Monad o
