@@ -75,6 +75,7 @@ Lens.makeLenses ''Literal
 data Debug = Debug
     { _debugShowFPS :: Bool
     , _printCursor :: Bool
+    , _showSearchTerms :: Bool
     , _virtualCursorShown :: Bool
     , _breakpoints :: Debug.Tasks Bool
     , _jumpToSourceKeys :: [MetaKey]

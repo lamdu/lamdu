@@ -6,6 +6,7 @@ module Lamdu.GUI.Expr.HoleEdit.ResultWidget
 
 import           Control.Lens (Traversal')
 import qualified Control.Lens as Lens
+import qualified Data.Text as Text
 import qualified GUI.Momentu as M
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
@@ -19,6 +20,7 @@ import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Grid as Grid
 import qualified GUI.Momentu.Widgets.Menu as Menu
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
+import qualified GUI.Momentu.Widgets.TextView as TextView
 import           Hyper (htraverse, (#>), withDict)
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Theme as Theme
@@ -57,29 +59,38 @@ applyResultLayout :: Responsive a -> M.TextWidget a
 applyResultLayout = (^. Responsive.rWide)
 
 makeWidget ::
-    (Monad i, Monad o) =>
-    Widget.Id -> ExprGui.Expr Sugar.Binder i o -> GuiM env i o (M.TextWidget o)
-makeWidget resultId holeResultConverted =
+    _ =>
+    [Text] -> Widget.Id -> ExprGui.Expr Sugar.Binder i o -> GuiM env i o (M.TextWidget o)
+makeWidget searchTerms resultId holeResultConverted =
     do
+        showSearchTerms <- Lens.view (has . Config.debug . Config.showSearchTerms)
         remUnwanted <- removeUnwanted
         theme <- Lens.view (has . Theme.hole)
         stdSpacing <- Spacer.getSpaceSize
         let padding = theme ^. Theme.holeResultPadding & (* stdSpacing)
-        GuiM.makeBinder holeResultConverted
+        ( GuiM.makeBinder holeResultConverted
             <&> Widget.enterResultCursor .~ resultId
             <&> Widget.widget . Widget.eventMapMaker . Lens.mapped %~ remUnwanted
             <&> applyResultLayout
             <&> setFocalAreaToFullSize
             <&> M.padAround padding
+            ) M./-/
+            ( if showSearchTerms
+                then
+                    TextView.make
+                    ?? Text.unwords searchTerms
+                    ?? Widget.toAnimId resultId
+                else pure M.empty
+            )
             & GuiM.withLocalIsHoleResult
 
 make ::
     _ =>
-    Widget.Id -> o () -> ExprGui.Expr Sugar.Binder i o ->
+    [Text] -> Widget.Id -> o () -> ExprGui.Expr Sugar.Binder i o ->
     GuiM env i o (Menu.RenderedOption o)
-make resultId pick holeResultConverted =
+make searchTerms resultId pick holeResultConverted =
     (,) <$> Lens.view (has . MomentuTexts.choose) <*>
-    makeWidget resultId holeResultConverted
+    makeWidget searchTerms resultId holeResultConverted
     & GuiState.assignCursor resultId (pickResult ^. Menu.pickDest)
     <&>
     \(pickText, widget) ->

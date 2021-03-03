@@ -66,15 +66,15 @@ fdConfig env = FocusDelegator.Config
     }
 
 makeRenderedResult ::
-    _ => ExprGui.GuiPayload -> Result i o -> GuiM env i o (Menu.RenderedOption o)
-makeRenderedResult pl result =
+    _ => [Text] -> ExprGui.GuiPayload -> Result i o -> GuiM env i o (Menu.RenderedOption o)
+makeRenderedResult searchTerms pl result =
     do
         -- Warning: rHoleResult should be ran at most once!
         -- Running it more than once caused a horrible bug (bugfix: 848b6c4407)
         res <- rHoleResult result & GuiM.im
         res ^. Sugar.holeResultConverted
             & postProcessSugar (pl ^. ExprGui.plParenInfo . Sugar.piMinOpPrec)
-            & ResultWidget.make (rId result) (res ^. Sugar.holeResultPick)
+            & ResultWidget.make searchTerms (rId result) (res ^. Sugar.holeResultPick)
 
 postProcessSugar ::
     AddParens.MinOpPrec ->
@@ -98,16 +98,17 @@ makeResultOption ::
 makeResultOption pl results =
     Menu.Option
     { Menu._oId = results ^. ResultGroups.rgPrefixId
-    , Menu._oRender = makeRenderedResult pl (results ^. ResultGroups.rgMain)
+    , Menu._oRender = makeRenderedResult searchTerms pl (results ^. ResultGroups.rgMain)
     , Menu._oSubmenuWidgets =
         case results ^. ResultGroups.rgExtra of
         [] -> Menu.SubmenuEmpty
         extras ->
-            traverse (makeRenderedResult pl) extras
+            traverse (makeRenderedResult searchTerms pl) extras
             <&> map makeSubMenu
             & Menu.SubmenuItems
     }
     where
+        searchTerms = results ^. ResultGroups.rgTerms
         makeSubMenu extraResultWidget =
             Menu.Option
             { Menu._oId = results ^. ResultGroups.rgPrefixId -- UGLY HACK

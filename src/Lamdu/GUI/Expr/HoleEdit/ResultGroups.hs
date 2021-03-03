@@ -2,7 +2,7 @@
 module Lamdu.GUI.Expr.HoleEdit.ResultGroups
     ( makeAll
     , Result(..)
-    , ResultGroup(..), rgPrefixId, rgMain, rgExtra
+    , ResultGroup(..), rgPrefixId, rgMain, rgExtra, rgTerms
     ) where
 
 import qualified Control.Lens as Lens
@@ -57,23 +57,26 @@ data ResultGroup i o = ResultGroup
     , _rgPrefixId :: WidgetId.Id
     , _rgMain :: Result i o
     , _rgExtra :: [Result i o]
+    , _rgTerms :: [Text] -- for debugging
     }
 Lens.makeLenses ''ResultGroup
 
 mResultGroupOf ::
+    [Text] ->
     WidgetId.Id ->
     [ ( Sugar.HoleResultScore
       , i (Sugar.HoleResult Name i o)
       )
     ] ->
     Maybe (ResultGroup i o)
-mResultGroupOf _ [] = Nothing
-mResultGroupOf prefixId (x:xs) = Just
+mResultGroupOf _ _ [] = Nothing
+mResultGroupOf terms prefixId (x:xs) = Just
     ResultGroup
     { _rgExactMatch = NotExactMatch
     , _rgPrefixId = prefixId
     , _rgMain = mkResult prefixId x
     , _rgExtra = Lens.imap mkExtra xs
+    , _rgTerms = terms
     }
     where
         mkExtra = mkResult . extraResultId
@@ -94,12 +97,13 @@ makeResultGroup ctx group =
     group ^. groupResults
     & ListClass.toList
     <&> sortOn fst
-    <&> mResultGroupOf (ctx ^. SearchMenu.rResultIdPrefix <> group ^. groupId)
+    <&> mResultGroupOf terms (ctx ^. SearchMenu.rResultIdPrefix <> group ^. groupId)
     <&> Lens.mapped %~ rgExactMatch .~ toExactMatch
     where
+        terms = group ^. groupSearchTerms
         searchTerm = ctx ^. SearchMenu.rSearchTerm
         toExactMatch
-            | searchTerm `elem` group ^. groupSearchTerms = ExactMatch
+            | searchTerm `elem` terms = ExactMatch
             | otherwise = NotExactMatch
 
 data GoodAndBad a = GoodAndBad { _good :: a, _bad :: a }
