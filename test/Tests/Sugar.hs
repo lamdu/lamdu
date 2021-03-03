@@ -55,7 +55,6 @@ test =
     ]
 
 testSugarActionsWith ::
-    HasCallStack =>
     FilePath ->
     [WorkArea (Annotation (EvaluationScopes Name (OnceT (T ViewM))) Name) Name (OnceT (T ViewM)) (T ViewM)
         ( Sugar.Payload (Annotation (EvaluationScopes Name (OnceT (T ViewM))) Name) Name (OnceT (T ViewM)) (T ViewM)
@@ -70,7 +69,6 @@ testSugarActionsWith program actions env =
 
 -- | Verify that a sugar action does not result in a crash
 testSugarActions ::
-    HasCallStack =>
     FilePath ->
     [WorkArea (Annotation (EvaluationScopes Name (OnceT (T ViewM))) Name) Name (OnceT (T ViewM)) (T ViewM)
         ( Sugar.Payload (Annotation (EvaluationScopes Name (OnceT (T ViewM))) Name) Name (OnceT (T ViewM)) (T ViewM)
