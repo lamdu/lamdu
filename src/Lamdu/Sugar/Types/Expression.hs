@@ -1,9 +1,3 @@
--- TODO:
--- The makeHTraversableAndBases calls below generate redundant constraints.
--- hypertypes's TH needs to support generating instances for a whole group,
--- so that it knows which other instances it will create.
-{-# OPTIONS -Wno-redundant-constraints #-}
-
 {-# LANGUAGE TemplateHaskell, TypeFamilies, MultiParamTypeClasses, UndecidableInstances, DataKinds, GADTs, ConstraintKinds, FlexibleInstances #-}
 module Lamdu.Sugar.Types.Expression
     ( Expr, Body
