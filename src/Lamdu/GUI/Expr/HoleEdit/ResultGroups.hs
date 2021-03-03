@@ -10,16 +10,13 @@ import qualified Control.Lens as Lens
 import           Control.Monad.ListT (ListT)
 import qualified Data.ByteString.Char8 as BS8
 import           Data.Function (on)
-import           Data.List (sortOn, nubBy)
+import           Data.List (sortOn)
 import qualified Data.List.Class as ListClass
-import           Data.MRUMemo (memo)
 import qualified Data.Text as Text
 import qualified GUI.Momentu.Widget.Id as WidgetId
 import qualified GUI.Momentu.Widgets.Menu as Menu
 import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import qualified Lamdu.Config as Config
-import           Lamdu.Fuzzy (Fuzzy)
-import qualified Lamdu.Fuzzy as Fuzzy
 import qualified Lamdu.GUI.Expr.HoleEdit.ValTerms as ValTerms
 import           Lamdu.GUI.Monad (GuiM)
 import qualified Lamdu.GUI.Monad as GuiM
@@ -190,6 +187,9 @@ mkGroup env option =
     , _groupId = option ^. Sugar.hoEntityId & WidgetIds.fromEntityId
     }
 
+insensitivePrefixOf :: Text -> Text -> Bool
+insensitivePrefixOf = Text.isPrefixOf `on` Text.toLower
+
 unicodeAlts :: Text -> [Text]
 unicodeAlts haystack =
     traverse alts (Text.unpack haystack)
@@ -203,24 +203,20 @@ unicodeAlts haystack =
         extras '⋲' = ["<"]
         extras _ = []
 
-{-# NOINLINE fuzzyMaker #-}
-fuzzyMaker :: [(Text, Int)] -> Fuzzy (Set Int)
-fuzzyMaker = memo Fuzzy.make
+groupOrdering :: Text -> Group i o -> [Bool]
+groupOrdering searchTerm group =
+    map not
+    [ null (group ^. groupSearchTerms)
+    , match (==)
+    , match Text.isPrefixOf
+    , match insensitivePrefixOf
+    , match Text.isInfixOf
+    ]
+    where
+        match f = any (f searchTerm) searchTerms
+        searchTerms = group ^. groupSearchTerms >>= unicodeAlts
 
 holeMatches :: Text -> [Group i o] -> [Group i o]
 holeMatches searchTerm groups
     | Text.null searchTerm = groups
-    | otherwise =
-        groups
-        ^@.. Lens.ifolded
-        <&> (\(idx, group) -> searchTerms group <&> ((,) ?? (idx, group)))
-        & concat
-        & (Fuzzy.memoableMake fuzzyMaker ?? searchTerm)
-        <&> snd
-        & nubBy ((==) `on` fst)
-        <&> snd
-    where
-        searchTerms group =
-            case group ^. groupSearchTerms of
-            [] -> [""]
-            terms -> terms >>= unicodeAlts
+    | otherwise = sortOn (groupOrdering searchTerm) groups
