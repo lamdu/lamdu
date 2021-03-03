@@ -13,14 +13,14 @@
         "tagOrder": 0,
         "tag": "42493a696e6669786c00000000000000",
         "names": {
-            "english": "infixl"
+            "english": "leftHandSide"
         }
     },
     {
         "tagOrder": 1,
         "tag": "42493a696e6669787200000000000000",
         "names": {
-            "english": "infixr"
+            "english": "rightHandSide"
         }
     },
     {

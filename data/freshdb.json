@@ -542,16 +542,28 @@
         "tagOrder": 0,
         "tag": "42493a696e6669786c00000000000000",
         "names": {
-            "hebrew": "תוכית_שמאל",
-            "english": "infixl"
+            "english": {
+                "abbreviation": "lhs",
+                "name": "leftHandSide"
+            },
+            "hebrew": {
+                "abbreviation": "ימני",
+                "name": "מימין_לאופרטור"
+            }
         }
     },
     {
         "tagOrder": 1,
         "tag": "42493a696e6669787200000000000000",
         "names": {
-            "hebrew": "תוכית_ימין",
-            "english": "infixr"
+            "english": {
+                "abbreviation": "rhs",
+                "name": "rightHandSide"
+            },
+            "hebrew": {
+                "abbreviation": "שמאלי",
+                "name": "משמאל_לאופרטור"
+            }
         }
     },
     {

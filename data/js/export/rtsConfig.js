@@ -6,7 +6,9 @@ var nameMap = {
     val: 'value',
     srcPath: 'sourcePath',
     dstPath: 'destinationPath',
-    subtrees: 'subTrees'
+    subtrees: 'subTrees',
+    infixl: 'leftHandSide',
+    infixr: 'rightHandSide'
 };
 
 module.exports = {
