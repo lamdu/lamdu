@@ -276,7 +276,10 @@
         "tag": "2ebb1bbe1825335807392196b93da1f6",
         "names": {
             "hebrew": "משתנה",
-            "english": "mutRef",
+            "english": {
+                "abbreviation": "mutRef",
+                "name": "mutableReference"
+            },
             "italiano": "rifMut"
         }
     },
@@ -867,7 +870,10 @@
         "tag": "4d671f6e9dfcde84d747a0b8cc5f2896",
         "names": {
             "hebrew": "שרשר",
-            "english": "concat",
+            "english": {
+                "abbreviation": "concat",
+                "name": "concatenate"
+            },
             "italiano": "concatena"
         }
     },
@@ -1390,7 +1396,10 @@
         "tag": "a56145270ce6b3bebd1dd012b7394867",
         "names": {
             "hebrew": "זהות",
-            "english": "id",
+            "english": {
+                "abbreviation": "id",
+                "name": "identity"
+            },
             "italiano": "id"
         }
     },
@@ -1543,7 +1552,10 @@
         "tag": "b760f44fa5965c2474a3b471467a22c4",
         "names": {
             "hebrew": "בוליאן",
-            "english": "bool",
+            "english": {
+                "abbreviation": "bool",
+                "name": "boolean"
+            },
             "italiano": "booleano"
         }
     },
@@ -1811,7 +1823,10 @@
         "tag": "ee3dd1c9a98b2601b8b99733fd32e57f",
         "names": {
             "hebrew": "קלט_פלט",
-            "english": "io",
+            "english": {
+                "abbreviation": "io",
+                "name": "inputOutput"
+            },
             "italiano": "io"
         }
     },
