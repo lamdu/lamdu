@@ -94,4 +94,10 @@ checkDups path =
                 _String
         group (sort allTexts) ^.. traverse . Lens.ix 1 & traverse_ onDup
     where
-        onDup text = assertString ("duplicated text: " <> unpack text)
+        onDup text =
+            assertString ("duplicated text: " <> unpack text)
+            & unless (text `elem` whitelist)
+        whitelist =
+            [ "Modifica" -- Both "edit" and "modify" in Italian
+            , "Ripeti" -- "repeat" in Italian but also best option for "undo"
+            ]

@@ -37,6 +37,7 @@ Data-files:          config.json
                    , languages/base.mixin.json
                    , languages/english.json
                    , languages/hebrew.json
+                   , languages/italiano.json
                    , languages/left-to-right.mixin.json
                    , languages/right-to-left.mixin.json
                    , sprites/Credits.html
