@@ -885,7 +885,10 @@
         "tag": "520401f6286eba0f9d724ad242d48440",
         "names": {
             "hebrew": "התחלתי",
-            "english": "initial",
+            "english": {
+                "abbreviation": "init",
+                "name": "initial"
+            },
             "italiano": "iniziale"
         }
     },
