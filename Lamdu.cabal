@@ -117,11 +117,11 @@ Test-Suite Tests
                , Tests.Sugar
                , Tests.Suggest
   build-depends:
-      base, HUnit, QuickCheck, aeson-diff, deepseq, lens-aeson, split, yaml
+      base, HUnit, aeson-diff, deepseq, lens-aeson, split, yaml
     , Lamdu, lamdu-calculus, momentu, hypertypes, nodejs-exec
     , aeson, aeson-pretty, bytestring, containers, directory, filepath, GLFW-b
     , lens, List, mtl, pretty, process, random, text, uuid-types, Cabal
-    , test-framework, test-framework-hunit, test-framework-quickcheck2
+    , test-framework, test-framework-hunit
   ghc-options: -O0 -Wall -Wno-partial-type-signatures -Widentities -Wimplicit-prelude -Wmissing-home-modules -Wincomplete-patterns -Wnoncanonical-monad-instances -Wsemigroup -Wincomplete-record-updates -Wredundant-constraints -threaded
   ghc-prof-options: -fprof-auto -fprof-cafs -rtsopts
 

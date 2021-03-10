@@ -5,10 +5,10 @@
 , executable-path, filepath, generic-data, GLFW-b
 , graphics-drawingcombinators, hashable, HUnit, lamdu-calculus, momentu
 , language-ecmascript, lattices, lens, lens-aeson, leveldb-haskell, List, mtl
-, nodejs-exec, OpenGL, optparse-applicative, pretty, process, QuickCheck
+, nodejs-exec, OpenGL, optparse-applicative, pretty, process
 , random, safe-exceptions, split, StateVar, stdenv, hypertypes
 , template-haskell, temporary, test-framework, test-framework-hunit
-, test-framework-quickcheck2, text, time, timeit, transformers
+, text, time, timeit, transformers
 , unicode-properties, unordered-containers, uuid, uuid-types, vector, yaml
 , zip-archive, lib, gitMinimal
 }:
@@ -59,8 +59,8 @@ mkDerivation {
     aeson aeson-diff aeson-pretty base bytestring Cabal
     containers deepseq directory filepath
     GLFW-b HUnit lamdu-calculus momentu lens lens-aeson List mtl
-    nodejs-exec pretty process QuickCheck random split hypertypes test-framework
-    test-framework-hunit test-framework-quickcheck2 text uuid-types
+    nodejs-exec pretty process random split hypertypes test-framework
+    test-framework-hunit text uuid-types
     yaml
   ];
   homepage = "http://www.lamdu.org";

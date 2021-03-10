@@ -44,7 +44,6 @@ import           Lamdu.Sugar.Internal (InternalName(..))
 import           Lamdu.Sugar.Internal.EntityId (EntityId(..))
 import qualified Lamdu.Sugar.Types as Sugar
 import           Revision.Deltum.Transaction (Transaction)
-import           Test.QuickCheck (Arbitrary(..))
 import           Text.PrettyPrint ((<+>))
 import           Text.PrettyPrint.HughesPJClass (Pretty(..))
 
@@ -96,9 +95,6 @@ instance Pretty Color where
         | otherwise = base <+> pPrint a
         where
             base = "Color" <+> pPrint r <+> pPrint g <+> pPrint b
-
-instance Arbitrary Widget.Id where
-    arbitrary = arbitrary <&> BS8.pack <&> (:[]) <&> Widget.Id
 
 instance HasPrecedence InternalName where
     precedence (InternalName _ (T.Tag (Identifier ident)) _) =

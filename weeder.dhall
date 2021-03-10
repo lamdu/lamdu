@@ -33,7 +33,6 @@
     -- as those are created as general-purpose library modules.
     , "^Control\\."
     , "^Data\\."
-    , "^GUI\\.Momentu\\."
     ]
 , type-class-roots = True
 }
