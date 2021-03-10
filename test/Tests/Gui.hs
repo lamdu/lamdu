@@ -15,6 +15,7 @@ import           GUI.Momentu.EventMap (Event(..))
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Main.Events (KeyEvent(..))
 import           GUI.Momentu.MetaKey (MetaKey(..), noMods)
+import qualified GUI.Momentu.MetaKey as MetaKey
 import           GUI.Momentu.Rect (Rect(..))
 import qualified GUI.Momentu.Rect as Rect
 import           GUI.Momentu.Responsive (Responsive)
@@ -48,7 +49,6 @@ import           Test.Lamdu.Exec (runJS)
 import           Test.Lamdu.Gui (verifyLayers)
 import           Test.Lamdu.Instances ()
 import           Test.Lamdu.Sugar (convertWorkArea, testProgram, testFresh)
-import           Tests.Momentu (simpleKeyEvent)
 import           Text.PrettyPrint (($+$))
 import qualified Text.PrettyPrint as Pretty
 import           Text.PrettyPrint.HughesPJClass (Pretty(..))
@@ -178,6 +178,15 @@ testTagPanes =
         fromWorkArea baseEnv (replExpr . Sugar._BodyRecord . Sugar.cItems)
             >>= lift . sequence_ . (^.. traverse . Sugar.ciTag . Sugar.tagRefJumpTo . Lens._Just)
         () <$ (makeWorkArea baseEnv >>= makeFocusedWidget "opened tag panes" baseEnv)
+
+simpleKeyEvent :: MetaKey -> E.Event
+simpleKeyEvent (MetaKey mods key) =
+    E.EventKey KeyEvent
+    { keKey = key
+    , keScanCode = 0 -- dummy
+    , keModKeys = MetaKey.toModKeyModifiers mods
+    , keState = GLFW.KeyState'Pressed
+    }
 
 -- | Test for issue #411
 -- https://trello.com/c/IF6kY9AZ/411-deleting-lambda-parameter-red-cursor

@@ -100,7 +100,6 @@ Test-Suite Tests
                , Test.Lamdu.Prelude
                , Test.Lamdu.Sugar
                , Test.Lamdu.SugarStubs
-               , Test.Momentu.Env
                , Tests.AnimIdClash
                , Tests.Codec
                , Tests.ColorSchemes
@@ -108,10 +107,8 @@ Test-Suite Tests
                , Tests.DataFiles
                , Tests.EventMap
                , Tests.Gui
-               , Tests.Hover
                , Tests.JsExport
                , Tests.JsRtsTags
-               , Tests.Momentu
                , Tests.Names
                , Tests.Nix
                , Tests.Precedence
@@ -119,13 +116,12 @@ Test-Suite Tests
                , Tests.Stdlib
                , Tests.Sugar
                , Tests.Suggest
-               , Tests.WidgetGlue
   build-depends:
-      base, HUnit, test-framework, test-framework-hunit, test-framework-quickcheck2
-    , aeson-diff, deepseq, generic-random, lens-aeson, QuickCheck, split, yaml
+      base, HUnit, QuickCheck, aeson-diff, deepseq, lens-aeson, split, yaml
     , Lamdu, lamdu-calculus, momentu, hypertypes, nodejs-exec
     , aeson, aeson-pretty, bytestring, containers, directory, filepath, GLFW-b
     , lens, List, mtl, pretty, process, random, text, uuid-types, Cabal
+    , test-framework, test-framework-hunit, test-framework-quickcheck2
   ghc-options: -O0 -Wall -Wno-partial-type-signatures -Widentities -Wimplicit-prelude -Wmissing-home-modules -Wincomplete-patterns -Wnoncanonical-monad-instances -Wsemigroup -Wincomplete-record-updates -Wredundant-constraints -threaded
   ghc-prof-options: -fprof-auto -fprof-cafs -rtsopts
 

@@ -9,8 +9,8 @@ mkDerivation {
   src = fetchFromGitHub {
     owner = "lamdu";
     repo = "momentu";
-    sha256 = "0p452i3c6cbjbsgzir4mfv5vdaa93vkv6vsn1yy8p4h4km4qdx3w";
-    rev = "490a12d49107668ebf1e6f0cdcf90cb7dec41ab8";
+    sha256 = "1sl93fmn8hr65vxhdi6mj9jsk20znfmhglkc5ajpldm1bp3kzg17";
+    rev = "505a6237f945139b27af52e5c1288dbdb7d59c65";
   };
   libraryHaskellDepends = [
     aeson base base-compat binary bytestring containers deepseq generic-data GLFW-b

@@ -7,10 +7,8 @@ import qualified Tests.Config
 import qualified Tests.DataFiles
 import qualified Tests.EventMap
 import qualified Tests.Gui
-import qualified Tests.Hover
 import qualified Tests.JsExport
 import qualified Tests.JsRtsTags
-import qualified Tests.Momentu
 import qualified Tests.Names
 import qualified Tests.Nix
 import qualified Tests.Precedence
@@ -18,7 +16,6 @@ import qualified Tests.Readme
 import qualified Tests.Stdlib
 import qualified Tests.Sugar
 import qualified Tests.Suggest
-import qualified Tests.WidgetGlue
 
 import           Test.Lamdu.Prelude
 
@@ -34,10 +31,8 @@ main =
             , Tests.DataFiles.test
             , Tests.EventMap.test
             , Tests.Gui.test
-            , Tests.Hover.test
             , Tests.JsExport.test
             , Tests.JsRtsTags.test
-            , Tests.Momentu.test
             , Tests.Names.test
             , Tests.Nix.test
             , Tests.Precedence.test
@@ -45,5 +40,4 @@ main =
             , Tests.Stdlib.test
             , Tests.Sugar.test
             , Tests.Suggest.test
-            , Tests.WidgetGlue.test
             ]

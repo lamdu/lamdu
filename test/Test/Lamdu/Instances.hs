@@ -9,14 +9,11 @@ import           Control.Monad.Unit (Unit(..))
 import qualified Data.ByteString.Char8 as BS8
 import           Data.CurAndPrev (CurAndPrev)
 import           Data.Data (Data)
-import           Data.List.NonEmpty (NonEmpty(..))
 import           Data.Property (Property(..))
 import           Data.String (IsString(..))
 import           Data.UUID.Types (UUID)
 import qualified Data.UUID.Types as UUID
 import           Data.Vector.Vector2 (Vector2(..))
-import           GUI.Momentu.Align (Aligned(..))
-import           GUI.Momentu.Animation (R)
 import           GUI.Momentu.Draw (Color(..))
 import qualified GUI.Momentu.Hover as Hover
 import qualified GUI.Momentu.Responsive.Expression as ResponsiveExpr
@@ -24,7 +21,6 @@ import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Menu as Menu
 import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
-import           Generic.Random
 import           Lamdu.Calc.Identifier (Identifier(..))
 import qualified Lamdu.Calc.Type as T
 import           Lamdu.Config.Theme (Theme(..))
@@ -48,7 +44,7 @@ import           Lamdu.Sugar.Internal (InternalName(..))
 import           Lamdu.Sugar.Internal.EntityId (EntityId(..))
 import qualified Lamdu.Sugar.Types as Sugar
 import           Revision.Deltum.Transaction (Transaction)
-import           Test.QuickCheck (Arbitrary(..), choose, getPositive, frequency)
+import           Test.QuickCheck (Arbitrary(..))
 import           Text.PrettyPrint ((<+>))
 import           Text.PrettyPrint.HughesPJClass (Pretty(..))
 
@@ -100,37 +96,6 @@ instance Pretty Color where
         | otherwise = base <+> pPrint a
         where
             base = "Color" <+> pPrint r <+> pPrint g <+> pPrint b
-
-instance Arbitrary (Vector2 R) where
-    arbitrary =
-        Vector2 <$> comp <*> comp
-        where
-            comp =
-                frequency
-                [ (1, pure 0)
-                , (10, getPositive <$> arbitrary)
-                ]
-
-instance Arbitrary a => Arbitrary (Aligned a) where
-    arbitrary =
-        Aligned
-        <$> (Vector2 <$> comp <*> comp)
-        <*> arbitrary
-        where
-            comp =
-                frequency
-                [ (1, pure 0)
-                , (1, pure 1)
-                , (10, choose (0, 1))
-                ]
-
-instance Arbitrary a => Arbitrary (NonEmpty a) where
-    arbitrary = (:|) <$> arbitrary <*> arbitrary
-    shrink (_ :| []) = []
-    shrink (x0 :| (x1 : xs)) = (x1 :| xs) : (shrink (x1 : xs) <&> (x0 :|))
-
-instance Arbitrary Hover.Orientation where
-    arbitrary = genericArbitrary uniform
 
 instance Arbitrary Widget.Id where
     arbitrary = arbitrary <&> BS8.pack <&> (:[]) <&> Widget.Id
