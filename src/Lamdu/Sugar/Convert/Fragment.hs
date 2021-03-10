@@ -92,7 +92,7 @@ mkOptions posInfo sugarContext argI argS exprPl =
             [ App hole hole & V.BApp & Ann (Const ()) | Lens.nullOf (hVal . _BodyLam) argS ]
             & traverse
                 ( \x ->
-                    Hole.mkOption sugarContext (fragmentResultProcessor topEntityId argI) exprPl x
+                    Hole.mkOption HoleResultSyntax sugarContext (fragmentResultProcessor topEntityId argI) exprPl x
                     <&> (,) x
                 )
             <&> const
@@ -400,7 +400,7 @@ mkSuggestedOptions sugarContext exprPl x =
                 Hole.mkResult (replaceFragment topEntityId 0)
                     updateDeps exprPl result
                     & ConvertM.run newSugarContext
-                    <&> (,) (resultScore resolved)
+                    <&> (,) (resultScore HoleResultSuggested resolved)
                 <&> pure & ListClass.joinL
         depsProp = sugarContext ^. ConvertM.scFrozenDeps
         (result, inferCtx) =

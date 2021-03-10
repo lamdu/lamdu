@@ -12,6 +12,7 @@ import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Menu as Menu
 import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import qualified Lamdu.GUI.Expr.EventMap as ExprEventMap
+import qualified Lamdu.GUI.Expr.HoleEdit.ResultGroups as ResultGroups
 import qualified Lamdu.GUI.Expr.HoleEdit.SearchArea as SearchArea
 import           Lamdu.GUI.Expr.HoleEdit.ValTerms (allowedSearchTerm)
 import           Lamdu.GUI.Expr.HoleEdit.WidgetIds (WidgetIds(..))
@@ -46,7 +47,7 @@ make (Ann (Const pl) (Const hole)) =
                 | otherwise = mempty
         litEventMap <- mkLitEventMap
         (ExprEventMap.add options pl <&> (Align.tValue %~))
-            <*> ( SearchArea.make SearchArea.WithAnnotation (hole ^. Sugar.holeOptions)
+            <*> ( SearchArea.make ResultGroups.PreferLocals SearchArea.WithAnnotation (hole ^. Sugar.holeOptions)
                     pl allowedHoleSearchTerm widgetIds ?? Menu.AnyPlace
                 )
             <&> Align.tValue . Widget.eventMapMaker . Lens.mapped %~ (litEventMap <>)

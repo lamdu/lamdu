@@ -16,7 +16,7 @@ import           Hyper.Type.AST.Scheme (QVarInstances(..))
 import qualified Lamdu.Calc.Lens as ExprLens
 import qualified Lamdu.Calc.Term as V
 import           Lamdu.Calc.Type (Type(..), Row(..), Types(..))
-import           Lamdu.Sugar.Types.Parts (HoleResultScore(..))
+import           Lamdu.Sugar.Types.Parts (HoleResultScore(..), HoleResultTier)
 
 import           Lamdu.Prelude
 
@@ -54,10 +54,11 @@ scoreH x =
         ) (x ^. hVal)
     )
 
-resultScore :: Ann (InferResult Pure) # V.Term -> HoleResultScore
-resultScore x =
+resultScore :: HoleResultTier -> Ann (InferResult Pure) # V.Term -> HoleResultScore
+resultScore tier x =
     HoleResultScore
-    { _hrsNumFragments = numFragments x
+    { _hrsTier = tier
+    , _hrsNumFragments = numFragments x
     , _hrsScore = score x
     }
 

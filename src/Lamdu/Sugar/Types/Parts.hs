@@ -5,7 +5,8 @@ module Lamdu.Sugar.Types.Parts
     ( VarInfo(..), _VarNominal, _VarGeneric, _VarFunction, _VarRecord, _VarVariant
     , FuncApplyLimit(..), _UnlimitedFuncApply, _AtMostOneFuncApply
     , Literal(..), _LiteralNum, _LiteralBytes, _LiteralText
-    , HoleResultScore(..), hrsNumFragments, hrsScore
+    , HoleResultScore(..), hrsTier, hrsNumFragments, hrsScore
+    , HoleResultTier(..)
     , HoleTerm(..), _HoleName
     , OptionFilter(..), _OptsDot, _OptsInject, _OptsNormal
     , -- Annotations
@@ -146,8 +147,16 @@ data PunnedVar name o k = PunnedVar
     , _pvTagEntityId :: EntityId
     } deriving Generic
 
+data HoleResultTier
+    = HoleResultSuggested
+    | HoleResultSyntax
+    | HoleResultLocal !Int
+    | HoleResultGlobal
+    deriving (Eq, Ord, Generic)
+
 data HoleResultScore = HoleResultScore
-    { _hrsNumFragments :: !Int
+    { _hrsTier :: !HoleResultTier
+    , _hrsNumFragments :: !Int
     , _hrsScore :: ![Int]
     } deriving (Eq, Ord, Generic)
 

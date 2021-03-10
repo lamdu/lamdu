@@ -3,6 +3,7 @@ module Lamdu.GUI.Expr.HoleEdit.ResultGroups
     ( makeAll
     , Result(..)
     , ResultGroup(..), rgPrefixId, rgMain, rgExtra, rgTerms
+    , Mode(..)
     ) where
 
 import qualified Control.Lens as Lens
@@ -110,11 +111,13 @@ data GoodAndBad a = GoodAndBad { _good :: a, _bad :: a }
     deriving (Functor, Foldable, Traversable)
 Lens.makeLenses ''GoodAndBad
 
+data Mode = PreferLocals | AllTheSame
+
 collectResults ::
     Monad i =>
-    Config.Completion -> ListT i (ResultGroup i o) ->
+    Mode -> Config.Completion -> ListT i (ResultGroup i o) ->
     i (Menu.OptionList (ResultGroup i o))
-collectResults config resultsM =
+collectResults mode config resultsM =
     do
         (tooFewGoodResults, moreResultsM) <-
             ListClass.scanl prependResult (GoodAndBad [] []) resultsM
@@ -141,23 +144,28 @@ collectResults config resultsM =
     where
         resCount = config ^. Config.completionResultCount
         concatBothGoodAndBad goodAndBad = goodAndBad ^. Lens.folded
-        resultsListScore x = (x ^. rgExactMatch, x ^. rgMain . rScore & isGoodResult & not)
+        resultsListScore x = (x ^. rgExactMatch, x ^. rgMain . rScore & isGoodResult mode & not)
         prependResult results x =
             results
-            & case (x ^. rgExactMatch, x ^. rgMain . rScore & isGoodResult) of
+            & case (x ^. rgExactMatch, x ^. rgMain . rScore & isGoodResult mode) of
                 (NotExactMatch, False) -> bad
                 _ -> good
                 %~ (x :)
 
-isGoodResult :: Sugar.HoleResultScore -> Bool
-isGoodResult hrs = hrs ^. Sugar.hrsNumFragments == 0
+isGoodResult :: Mode -> Sugar.HoleResultScore -> Bool
+isGoodResult PreferLocals hrs =
+    case hrs ^. Sugar.hrsTier of
+    Sugar.HoleResultGlobal -> hrs ^. Sugar.hrsNumFragments == 0
+    _ -> True
+isGoodResult AllTheSame hrs = hrs ^. Sugar.hrsNumFragments == 0
 
 makeAll ::
     _ =>
+    Mode ->
     [Sugar.HoleOption Name i o1] ->
     SearchMenu.ResultsContext ->
     GuiM env i o (Menu.OptionList (ResultGroup i o1))
-makeAll options ctx =
+makeAll mode options ctx =
     do
         config <- Lens.view (has . Config.completion)
         env <- Lens.view id
@@ -166,7 +174,7 @@ makeAll options ctx =
             <&> ListClass.fromList
             <&> ListClass.mapL (makeResultGroup ctx)
             <&> ListClass.catMaybes
-            >>= collectResults config
+            >>= collectResults mode config
             & GuiM.im
     where
         searchTerm = ctx ^. SearchMenu.rSearchTerm

@@ -143,11 +143,12 @@ searchTermFilter t =
 
 make ::
     _ =>
+    ResultGroups.Mode ->
     AnnotationMode ->
     i (Sugar.OptionFilter -> [Sugar.HoleOption Name i o]) ->
     ExprGui.Payload i o -> (Text -> Bool) -> WidgetIds ->
     GuiM env i o (Menu.Placement -> M.TextWidget o)
-make annMode mkOptions pl allowedTerms widgetIds =
+make mode annMode mkOptions pl allowedTerms widgetIds =
     do
         env <- Lens.view id
         let fdWrap =
@@ -222,7 +223,7 @@ make annMode mkOptions pl allowedTerms widgetIds =
                 && allowedTerms txt
             }
         filteredOptions opts ctx =
-            ResultGroups.makeAll opts ctx
+            ResultGroups.makeAll mode opts ctx
             <&> Lens.mapped %~ makeResultOption (pl ^. _2)
             <&> Lens.mapped . Menu.optionWidgets . M.tValue . Widget.eventMapMaker . Lens.mapped %~
                 filterSearchTermEvents allowedTerms (ctx ^. SearchMenu.rSearchTerm)

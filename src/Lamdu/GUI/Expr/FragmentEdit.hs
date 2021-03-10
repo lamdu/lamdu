@@ -21,6 +21,7 @@ import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.Config.Theme.ValAnnotation as ValAnnotation
+import qualified Lamdu.GUI.Expr.HoleEdit.ResultGroups as ResultGroups
 import qualified Lamdu.GUI.Expr.HoleEdit.SearchArea as SearchArea
 import           Lamdu.GUI.Expr.HoleEdit.ValTerms (allowedSearchTerm)
 import qualified Lamdu.GUI.Expr.HoleEdit.WidgetIds as HoleWidgetIds
@@ -50,7 +51,7 @@ make (Ann (Const pl) fragment) =
         fragmentExprGui <- fragment ^. Sugar.fExpr & GuiM.makeSubexpression
 
         rawSearchArea <-
-            SearchArea.make SearchArea.WithoutAnnotation
+            SearchArea.make ResultGroups.AllTheSame SearchArea.WithoutAnnotation
             (fragment ^. Sugar.fOptions . Sugar.holeOptions) pl allowedSearchTerm holeIds
             ?? Menu.AnyPlace
 

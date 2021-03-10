@@ -145,14 +145,14 @@ mkHoleSearchTerms ctx pl x =
 
 mkOption ::
     (Monad m, Typeable m) =>
-    ConvertM.Context m -> ResultProcessor m ->
+    HoleResultTier -> ConvertM.Context m -> ResultProcessor m ->
     Input.Payload m a # V.Term -> Val () ->
     OnceT (T m) (HoleOption InternalName (OnceT (T m)) (T m))
-mkOption sugarContext resultProcessor holePl x =
+mkOption tier sugarContext resultProcessor holePl x =
     HoleOption
     <$> (lift Transaction.newKey <&> EntityId.EntityId)
     <*> once (lift (mkHoleSearchTerms sugarContext holePl x))
-    <*> onceList (mkResults resultProcessor sugarContext holePl x)
+    <*> onceList (mkResults tier resultProcessor sugarContext holePl x)
 
 mkHoleSuggesteds ::
     (Monad m, Typeable m) =>
@@ -171,7 +171,7 @@ mkHoleSuggesteds sugarContext resultProcessor holePl =
     & sequenceA & lift
     <&> Lens.mapped . hflipped %~ hmap (const (const (Const ()))) -- TODO: "Avoid re-inferring known type here"
     >>= traverse
-        (\x -> mkOption sugarContext resultProcessor holePl x <&> (,) x)
+        (\x -> mkOption HoleResultSuggested sugarContext resultProcessor holePl x <&> (,) x)
     where
         inferCtx = sugarContext ^. ConvertM.scInferContext
 
@@ -257,23 +257,30 @@ mkOptions posInfo resultProcessor holePl =
     <&>
     \sugarContext ->
     do
-        nominalOptions <- getNominals sugarContext & lift <&> mkNominalOptions
+        nominalOptions <-
+            getNominals sugarContext & lift <&> mkNominalOptions
+            <&> Lens.mapped %~ (,) HoleResultGlobal
         globals <- getGlobals sugarContext & lift
         tags <- getTags sugarContext & lift
         suggesteds <- mkHoleSuggesteds sugarContext resultProcessor holePl
-        baseForms <- mkBaseForms posInfo & lift
+        baseForms <-
+            mkBaseForms posInfo & lift
+            <&> Lens.mapped %~ (,) HoleResultSyntax
         let mk l =
                 l
-                <&> wrap (const (Ann (Const ()))) . (^. hPlain)
-                & traverse (\x -> mkOption sugarContext resultProcessor holePl x <&> (,) x)
+                <&> _2 %~ wrap (const (Ann (Const ()))) . (^. hPlain)
+                & traverse (\(tier, x) -> mkOption tier sugarContext resultProcessor holePl x <&> (,) x)
                 <&> addWithoutDups suggesteds
-        let globs = globals <&> V.BLeafP . V.LVar . ExprIRef.globalId
+        let globs = globals <&> (,) HoleResultGlobal . V.BLeafP . V.LVar . ExprIRef.globalId
         let common = globs <> nominalOptions <> baseForms
-        base <-
-            (holePl ^. Input.localsInScope <&> fst >>= getLocalScopeGetVars sugarContext) <> common
-            & mk
-        injs <- tags <&> V.BLeafP . V.LInject & mk
-        dots <- (tags <&> V.BLeafP . V.LGetField) <> common & mk
+        let locals =
+                holePl ^. Input.localsInScope
+                <&> fst
+                >>= getLocalScopeGetVars sugarContext
+                <&> (,) (HoleResultLocal 0) -- TODO: inner scopes more preferred
+        base <- locals <> common & mk
+        injs <- tags <&> (,) HoleResultSyntax . V.BLeafP . V.LInject & mk
+        dots <- (tags <&> (,) HoleResultSyntax . V.BLeafP . V.LGetField) <> common & mk
         pure (
             \case
             OptsNormal -> base
@@ -522,11 +529,11 @@ toStateT = mapStateT $ \(Lens.Identity act) -> pure act
 
 toScoredResults ::
     (Monad m, Typeable m) =>
-    a -> Preconversion m a -> ConvertM.Context m ->
+    HoleResultTier -> a -> Preconversion m a -> ConvertM.Context m ->
     Input.Payload m dummy # V.Term ->
     StateT InferState (ListT (OnceT (T m))) (Deps, Ann ((Const a :*: Write m) :*: InferResult UVar) # V.Term) ->
     ListT (OnceT (T m)) (HoleResultScore, OnceT (T m) (HoleResult InternalName (OnceT (T m)) (T m)))
-toScoredResults emptyPl preConversion sugarContext holePl act =
+toScoredResults tier emptyPl preConversion sugarContext holePl act =
     act
     >>= _2 %%~
         toStateT .
@@ -558,7 +565,7 @@ toScoredResults emptyPl preConversion sugarContext holePl act =
                 & runPureInfer () inferCtx
                 & assertSuccessfulInfer
                 & fst
-                & resultScore
+                & resultScore tier
             , r
             )
     where
@@ -577,14 +584,14 @@ mapListT f (ListT l) = l <&> mapListItemTail (mapListT f) & f & ListT
 
 mkResults ::
     (Monad m, Typeable m) =>
-    ResultProcessor m -> ConvertM.Context m ->
+    HoleResultTier -> ResultProcessor m -> ConvertM.Context m ->
     Input.Payload m dummy # V.Term -> Val () ->
     ListT (OnceT (T m))
     ( HoleResultScore
     , OnceT (T m) (HoleResult InternalName (OnceT (T m)) (T m))
     )
-mkResults (ResultProcessor emptyPl postProcess preConversion) sugarContext holePl base =
+mkResults tier (ResultProcessor emptyPl postProcess preConversion) sugarContext holePl base =
     mkResultVals sugarContext (holePl ^. Input.inferScope) base
     >>= _2 %%~ postProcess
-    & toScoredResults emptyPl preConversion sugarContext holePl
+    & toScoredResults tier emptyPl preConversion sugarContext holePl
     & mapListT (join . once)
