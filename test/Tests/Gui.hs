@@ -530,4 +530,5 @@ testWYTIWYS =
     , wytiwys "if 1=2 3 4" "4" -- Type if-expressions without typing the colon and "else:"
 
     , wytiwys "sum 1..10.filter nu>5" "30"
+    , wytiwys "sum 1..10.filter n>5" "30"
     ]
