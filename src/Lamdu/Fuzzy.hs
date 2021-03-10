@@ -63,7 +63,7 @@ trieMatch n (c:cs) t@(Fuzzy _ m) =
 data Distance = Distance
     { _isFuzzy :: Bool
     , _distanceInts :: [Int]
-    } deriving (Eq, Ord)
+    } deriving (Eq, Ord, Show)
 
 Lens.makeLenses ''Distance
 

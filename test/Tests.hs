@@ -6,6 +6,7 @@ import qualified Tests.ColorSchemes
 import qualified Tests.Config
 import qualified Tests.DataFiles
 import qualified Tests.EventMap
+import qualified Tests.FuzzySearch
 import qualified Tests.Gui
 import qualified Tests.JsExport
 import qualified Tests.JsRtsTags
@@ -30,6 +31,7 @@ main =
             , Tests.Config.test
             , Tests.DataFiles.test
             , Tests.EventMap.test
+            , Tests.FuzzySearch.test
             , Tests.Gui.test
             , Tests.JsExport.test
             , Tests.JsRtsTags.test

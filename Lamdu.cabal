@@ -106,6 +106,7 @@ Test-Suite Tests
                , Tests.Config
                , Tests.DataFiles
                , Tests.EventMap
+               , Tests.FuzzySearch
                , Tests.Gui
                , Tests.JsExport
                , Tests.JsRtsTags
