@@ -528,4 +528,6 @@ testWYTIWYS =
     , wytiwys "sum 1..10.map 2*(num+1" "108"
 
     , wytiwys "if 1=2 3 4" "4" -- Type if-expressions without typing the colon and "else:"
+
+    , wytiwys "sum 1..10.filter nu>5" "30"
     ]
