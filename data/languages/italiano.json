@@ -22,7 +22,7 @@
             "case_": "caso",
             "if_": "se",
             "else_": "altrimenti",
-            "elseShort": "alt",
+            "elseIf": "altse",
             "paramsRecordOpener": "Parametri {",
             "variantTypeSep": "oppure: "
         },

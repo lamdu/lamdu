@@ -22,7 +22,7 @@
             "case_": "case",
             "if_": "if",
             "else_": "else",
-            "elseShort": "el",
+            "elseIf": "elif",
             "paramsRecordOpener": "Params {",
             "variantTypeSep": "or: "
         },

@@ -21,7 +21,7 @@ data Code a = Code
     , -- If:
       _if_ :: a
     , _else_ :: a
-    , _elseShort :: a -- "el" in "elif"
+    , _elseIf :: a -- shorthand for else-if, "elif" a la Python
     , -- Inject
       _injectSymbol :: a
     , -- Getvar

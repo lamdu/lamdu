@@ -40,17 +40,20 @@ data Row a = Row
     } deriving (Functor, Foldable, Traversable)
 Lens.makeLenses ''Row
 
+data IfKind = If | ElseIf
+
 makeIfThen ::
-    _ => M.WithTextPos M.View -> M.AnimId -> ExprGui.Body Sugar.IfElse i o -> GuiM env i o (Row (Responsive o))
-makeIfThen prefixLabel animId ifElse =
+    _ =>
+    IfKind -> M.AnimId -> ExprGui.Body Sugar.IfElse i o ->
+    GuiM env i o (Row (Responsive o))
+makeIfThen ifKind animId ifElse =
     do
         ifGui <-
             GuiM.makeSubexpression (ifElse ^. Sugar.iIf)
             M./|/ (grammar (Label.make ":") M./|/ Spacer.stdHSpace)
         thenGui <- GuiM.makeSubexpression (ifElse ^. Sugar.iThen)
         keyword <-
-            pure prefixLabel
-            M./|/ grammar (label Texts.if_)
+            grammar ifKeyword
             M./|/ Spacer.stdHSpace
             <&> Responsive.fromTextView
         env <- Lens.view id
@@ -66,6 +69,11 @@ makeIfThen prefixLabel animId ifElse =
             (M.weakerEvents eventMap ifGui)
             (M.weakerEvents eventMap thenGui)
             & pure
+    where
+        ifKeyword =
+            case ifKind of
+            If -> label Texts.if_
+            ElseIf -> label Texts.elseIf
 
 makeElse :: _ => M.AnimId -> ExprGui.Expr Sugar.Else i o -> GuiM env i o [Row (Responsive o)]
 makeElse parentAnimId (Ann (Const pl) (Sugar.SimpleElse expr)) =
@@ -81,11 +89,10 @@ makeElse parentAnimId (Ann (Const pl) (Sugar.SimpleElse expr)) =
 makeElse _ (Ann pl (Sugar.ElseIf content)) =
     do
         -- TODO: green evaluation backgrounds, "◗"?
-        elseLabel <- grammar (label Texts.elseShort)
         letEventMap <-
             foldMap ExprEventMap.addLetEventMap (pl ^. Lens._Wrapped . _1 . Sugar.plActions . Sugar.mNewLet)
         (:)
-            <$> ( makeIfThen elseLabel animId content
+            <$> ( makeIfThen ElseIf animId content
                   <&> Lens.mapped %~ M.weakerEvents letEventMap
                 )
             <*> makeElse animId (content ^. Sugar.iElse)
@@ -139,7 +146,7 @@ make (Ann (Const pl) ifElse) =
     renderRows (ExprGui.mParensId pl)
     <*>
     ( (:)
-        <$> makeIfThen M.empty animId ifElse
+        <$> makeIfThen If animId ifElse
         <*> makeElse animId (ifElse ^. Sugar.iElse)
     ) & stdWrapParentExpr pl
     where

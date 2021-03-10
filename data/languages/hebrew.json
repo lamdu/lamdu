@@ -23,7 +23,7 @@
             "case_": "התאם",
             "if_": "אם",
             "else_": "אחרת",
-            "elseShort": "או ",
+            "elseIf": "או אם",
             "paramsRecordOpener": "פרמטרים }",
             "variantTypeSep": "או: "
         },
