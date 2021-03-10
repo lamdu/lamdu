@@ -80,7 +80,7 @@ mkOptions posInfo sugarContext argI argS exprPl =
     ( \mkOpts ->
         do
             suggesteds <-
-                runStateT (mkAppliedHoleSuggesteds sugarContext argI exprPl) (sugarContext ^. ConvertM.scInferContext)
+                runStateT (mkSuggesteds sugarContext argI exprPl) (sugarContext ^. ConvertM.scInferContext)
                 & ListClass.toList
                 <&> Lens.mapped %~ fst
             mkOpts <&> Lens.mapped %~ Hole.addWithoutDups suggesteds
@@ -99,14 +99,14 @@ mkOptions posInfo sugarContext argI argS exprPl =
         topEntityId = exprPl ^. Input.stored . iref & EntityId.ofValI
         hole = V.BLeaf V.LHole & Ann (Const ())
 
-mkAppliedHoleSuggesteds ::
+mkSuggesteds ::
     (Monad m, Typeable m) =>
     ConvertM.Context m ->
     Ann (Input.Payload m a) # V.Term ->
     Input.Payload m a # V.Term ->
     StateT InferState (ListT (OnceT (T m)))
         (V.Val (), HoleOption InternalName (OnceT (T m)) (T m))
-mkAppliedHoleSuggesteds sugarContext argI exprPl =
+mkSuggesteds sugarContext argI exprPl =
     do
         deps <-
             argI ^.. hAnn . Input.inferredType . _Pure . T._TInst . N.nId
@@ -130,7 +130,7 @@ mkAppliedHoleSuggesteds sugarContext argI exprPl =
                     )
                 )
             ) ctx0
-        mkOptionFromFragment
+        mkSuggestedOptions
             (sugarContext & ConvertM.scInferContext .~ ctx1)
             exprPl sugg
             & lift & lift
@@ -377,13 +377,13 @@ mkResultValFragment inferred x =
         onPl (WriteNew :*: i) = (Const NotFragment :*: WriteNew) :*: i
         onPl i = i & _1 %~ (Const IsFragment :*:)
 
-mkOptionFromFragment ::
+mkSuggestedOptions ::
     (Monad m, Typeable m) =>
     ConvertM.Context m ->
     Input.Payload m a # V.Term ->
     Ann (Write m :*: InferResult UVar) # V.Term ->
     OnceT (T m) (HoleOption InternalName (OnceT (T m)) (T m))
-mkOptionFromFragment sugarContext exprPl x =
+mkSuggestedOptions sugarContext exprPl x =
     HoleOption
     <$> (lift Transaction.newKey <&> EntityId.EntityId)
     <*> once (lift (Hole.mkHoleSearchTerms sugarContext exprPl baseExpr))
