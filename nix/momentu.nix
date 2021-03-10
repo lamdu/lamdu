@@ -1,7 +1,9 @@
-{ mkDerivation, base, base-compat, base16-bytestring, binary
-, bytestring, constraints, containers, deepseq, fetchFromGitHub
-, generic-data, hashable, lattices, lens, monad-st, mtl, pretty
-, QuickCheck, hypertypes, transformers, stdenv
+{ mkDerivation, fetchFromGitHub, stdenv
+, GLFW-b, HUnit, OpenGL, QuickCheck, aeson, base, base-compat, binary, bytestring
+, containers, deepseq, generic-data, generic-random, graphics-drawingcombinators
+, lens, mtl, safe-exceptions, stm, template-haskell
+, test-framework, test-framework-hunit, test-framework-quickcheck2
+, text, time, timeit, unicode-properties
 }:
 mkDerivation {
   pname = "momentu";
@@ -13,9 +15,10 @@ mkDerivation {
     rev = "505a6237f945139b27af52e5c1288dbdb7d59c65";
   };
   libraryHaskellDepends = [
-    aeson base base-compat binary bytestring containers deepseq generic-data GLFW-b
-    graphics-drawingcombinators lens mtl OpenGL pretty safe-exceptions stm text time timeit
-    unicode-properties base base-compat template-haskell
+    GLFW-b HUnit OpenGL QuickCheck aeson base base-compat binary bytestring
+    containers deepseq generic-data generic-random graphics-drawingcombinators lens
+    mtl safe-exceptions stm template-haskell test-framework test-framework-hunit
+    test-framework-quickcheck2 text time timeit unicode-properties
   ];
   homepage = "https://github.com/lamdu/momentu.git#readme";
   description = "The Momentu purely functional animated GUI framework";
