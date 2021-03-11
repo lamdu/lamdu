@@ -18,7 +18,7 @@ before_cache:
 - nix copy --to file://$HOME/nix.store -f default.nix buildInputs
 
 script:
-  - nix-build -A lamdu default.nix
+  - nix-build --quiet --attr lamdu default.nix
 
 cache:
   directories:
