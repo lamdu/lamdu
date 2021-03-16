@@ -206,11 +206,11 @@ unicodeAlts haystack =
 groupOrdering :: Text -> Group i o -> [Bool]
 groupOrdering searchTerm group =
     map not
-    [ null (group ^. groupSearchTerms)
-    , match (==)
+    [ match (==)
     , match Text.isPrefixOf
     , match insensitivePrefixOf
     , match Text.isInfixOf
+    , null (group ^. groupSearchTerms)
     ]
     where
         match f = any (f searchTerm) searchTerms
