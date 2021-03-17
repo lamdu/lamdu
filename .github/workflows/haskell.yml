@@ -9,10 +9,7 @@ jobs:
 
     steps:
     - uses: actions/checkout@v1
-    - name: Install Stack
-      run: curl -sSL https://get.haskellstack.org/ | sh
     - name: Build
-      run: |
-        stack build
+      run: stack build
     - name: Run tests
       run: stack test
