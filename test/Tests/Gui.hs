@@ -8,6 +8,7 @@ import           Control.Monad.State (mapStateT)
 import           Control.Monad.Unit (Unit(..))
 import qualified Data.Map as Map
 import qualified Data.Property as Property
+import qualified Data.Text as Text
 import           Data.Vector.Vector2 (Vector2(..))
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Element as Element
@@ -51,7 +52,6 @@ import           Test.Lamdu.Instances ()
 import           Test.Lamdu.Sugar (convertWorkArea, testProgram, testFresh)
 import           Text.PrettyPrint (($+$))
 import qualified Text.PrettyPrint as Pretty
-import           Text.PrettyPrint.HughesPJClass (Pretty(..))
 import           Unsafe.Coerce (unsafeCoerce)
 
 import           Test.Lamdu.Prelude
@@ -333,9 +333,10 @@ testKeyboardDirAndBack posEnv posVirt way back =
                         & error
                 Just{} -> pure ()
     where
+        pPrintMetaKey = Pretty.text . Text.unpack . MetaKey.format
         baseInfo =
             Pretty.text (show (posEnv ^. GuiState.cursor)) $+$
-            pPrint way $+$ pPrint back <> ": "
+            pPrintMetaKey way $+$ pPrintMetaKey back <> ": "
 
 data RectOrdering = Before | Undetermined | After
     deriving Eq
