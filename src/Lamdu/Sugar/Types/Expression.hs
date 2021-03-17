@@ -12,7 +12,7 @@ module Lamdu.Sugar.Types.Expression
         , _BodyToNom, _BodyIfElse, _BodyPostfixApply, _BodyPostfixFunc
     , Leaf(..), _LeafLiteral, _LeafHole, _LeafGetVar, _LeafInject, _LeafPlaceHolder
     , AnnotatedArg(..), aaTag, aaExpr
-    , OperatorArgs(..), oaLhs, oaRhs
+    , OperatorArgs(..), oaLhs, oaRhs, oaSwapArguments
     , LabeledApply(..), aFunc, aMOpArgs, aAnnotatedArgs, aPunnedArgs
     , PostfixApply(..), pArg, pFunc
     , PostfixFunc(..), _PfCase, _PfFromNom, _PfGetField
@@ -73,6 +73,7 @@ data AnnotatedArg v name i o k = AnnotatedArg
 data OperatorArgs v name i o k = OperatorArgs
     { _oaLhs :: k :# Term v name i o
     , _oaRhs :: k :# Term v name i o
+    , _oaSwapArguments :: o ()
     } deriving Generic
 
 -- TODO: func + specialArgs into a single sum type so that field order

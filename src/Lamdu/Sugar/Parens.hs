@@ -115,13 +115,14 @@ instance HasPrecedence name => AddParens (Term v name i o) where
                 | otherwise = parentPrec
             labeledApply x =
                 maybe (False, BodyLabeledApply (unambiguousBody x)) simpleInfix (x ^? bareInfix)
-            simpleInfix (func, OperatorArgs l r) =
+            simpleInfix (func, OperatorArgs l r s) =
                 ( needParens
                 , bareInfix #
                     ( unambiguousChild func
                     , OperatorArgs
                         (Const (0, p & after .~ prec) :*: l)
                         (Const (prec+1, p & before .~ prec) :*: r)
+                        s
                     ) & BodyLabeledApply
                 )
                 where

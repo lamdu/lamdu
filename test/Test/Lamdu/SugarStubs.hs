@@ -64,7 +64,7 @@ infix2Apply ::
     Sugar.BinderVarRef InternalName Unit ->
     Infix2
 infix2Apply varRef l r =
-    Sugar.LabeledApply (labeledApplyFunc varRef) (Just (Sugar.OperatorArgs l r)) [] []
+    Sugar.LabeledApply (labeledApplyFunc varRef) (Just (Sugar.OperatorArgs l r Unit)) [] []
     & Sugar.BodyLabeledApply
     & expr
 

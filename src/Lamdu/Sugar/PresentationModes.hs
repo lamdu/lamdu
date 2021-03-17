@@ -5,10 +5,13 @@ module Lamdu.Sugar.PresentationModes
 
 import qualified Control.Lens as Lens
 import           Control.Monad.Once (OnceT)
+import Control.Monad.Trans.Except.Extended (justToLeft, runMatcherT)
+import           Control.Monad.Trans.Maybe (MaybeT(..))
 import           Control.Monad.Transaction (getP)
 import qualified Data.Map as Map
 import           Lamdu.Calc.Term (Term)
 import qualified Lamdu.Data.Anchors as Anchors
+import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Sugar.Convert.Input as Input
 import           Lamdu.Sugar.Convert.Monad (ConvertM)
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
@@ -44,10 +47,33 @@ makeLabeledApply func args punnedArgs exprPl =
                         (other ^. annotation . pInput . Input.stored . iref)
                         <&> EntityId.ofValI
                     )
+        checkOk <- Lens.view ConvertM.scPostProcessRoot
+        let swapAction l r =
+                do
+                    do
+                        _ <- DataOps.replace ls (unwrap r)
+                        () <$ DataOps.replace rs (unwrap l)
+                        & ConvertM.typeProtect checkOk & MaybeT & justToLeft
+                    do
+                        _ <- DataOps.replace ls (rs ^. iref)
+                        () <$ DataOps.replace rs (ls ^. iref)
+                        & ConvertM.typeProtect checkOk & MaybeT & justToLeft
+                    do
+                        _ <- DataOps.setToAppliedHole (rs ^. iref) ls
+                        () <$ DataOps.setToAppliedHole (ls ^. iref) rs
+                        & lift
+                & runMatcherT
+                where
+                    unwrap x =
+                        fromMaybe x (x ^? hVal . Sugar._BodyFragment . Sugar.fExpr)
+                        ^. annotation . pInput . Input.stored . iref
+                    ls = l ^. annotation . pInput . Input.stored
+                    rs = r ^. annotation . pInput . Input.stored
         let (specialArgs, removedKeys) =
                 case traverse argExpr presentationMode of
                 Just (Sugar.Operator (l, la) (r, ra)) ->
-                    ( Sugar.OperatorArgs (mkOperatorArg la ra) (mkOperatorArg ra la) & Just
+                    ( Sugar.OperatorArgs (mkOperatorArg la ra) (mkOperatorArg ra la)
+                        (swapAction la ra) & Just
                     , [l, r]
                     )
                 _ -> (Nothing, [])

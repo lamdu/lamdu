@@ -114,6 +114,7 @@
             "replace": "Sostituisci",
             "replaceParent": "Rimpiazza principale",
             "applyOperator": "Applica operatore",
+            "swapOperatorArgs": "Scambia gli argomenti dell'operatore",
             "modify": "Modifica",
             "detach": "Stacca",
             "literal": "Letterale",

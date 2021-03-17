@@ -18,7 +18,7 @@ module Lamdu.Sugar.Convert.Monad
     , local
     , PositionInfo(..)
     , convertSubexpression
-    , typeProtectedSetToVal, postProcessAssert, postProcessWith
+    , typeProtectedSetToVal, typeProtect, postProcessAssert, postProcessWith
     ) where
 
 import qualified Control.Lens as Lens

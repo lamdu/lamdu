@@ -95,6 +95,8 @@
     "recordCloseKeys"          : [ "Alt+O" ],
     "caseOpenKeys"             : [ "Alt+O" ],
     "extractKeys"              : [ "Cmd+X", "Cmd+Up" ],
+    "swapWithLeftKeys"         : [ "Cmd+Left" ],
+    "swapWithRightKeys"        : [ "Cmd+Right" ],
     "moveLetInwardKeys"        : [ "Cmd+Down" ],
     "inlineKeys"               : [ "Cmd+V" ],
     "nextAnnotationModeKeys"   : [ "F7" ],

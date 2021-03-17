@@ -4,6 +4,8 @@ module Lamdu.GUI.Expr.ApplyEdit
 
 import qualified Control.Lens as Lens
 import           GUI.Momentu ((/|/))
+import qualified GUI.Momentu.EventMap as E
+import qualified GUI.Momentu.I18N as MomentuTexts
 import           GUI.Momentu.Responsive (Responsive)
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.Responsive.Expression as ResponsiveExpr
@@ -11,6 +13,7 @@ import qualified GUI.Momentu.Responsive.Options as Options
 import           GUI.Momentu.Responsive.TaggedList (TaggedItem(..), taggedList)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
+import qualified Lamdu.Config as Config
 import qualified Lamdu.GUI.Expr.CaseEdit as CaseEdit
 import qualified Lamdu.GUI.Expr.EventMap as ExprEventMap
 import qualified Lamdu.GUI.Expr.GetFieldEdit as GetFieldEdit
@@ -25,6 +28,7 @@ import qualified Lamdu.GUI.Types as ExprGui
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.GUI.Wrap (stdWrap, stdWrapParentExpr)
 import qualified Lamdu.GUI.Wrap as Wrap
+import qualified Lamdu.I18N.CodeUI as Texts
 import           Lamdu.Name (Name(..))
 import qualified Lamdu.Sugar.Types as Sugar
 
@@ -49,17 +53,25 @@ makeLabeled (Ann (Const pl) apply) =
     ( Wrap.parentDelegator (WidgetIds.fromExprPayload (pl ^. _1)) <*>
         case apply ^. Sugar.aMOpArgs of
         Nothing -> makeFunc GetVarEdit.Normal func >>= wrap
-        Just (Sugar.OperatorArgs l r) ->
-            (ResponsiveExpr.boxSpacedMDisamb ?? ExprGui.mParensId pl)
-            <*> sequenceA
-            [ GuiM.makeSubexpression l
-            , (Options.boxSpaced ?? Options.disambiguationNone)
-                <*> sequenceA
-                [ makeFunc GetVarEdit.Operator func
-                , GuiM.makeSubexpression r
-                ]
-                >>= wrap
-            ]
+        Just (Sugar.OperatorArgs l r s) ->
+            do
+                env <- Lens.view id
+                let swapAction keys =
+                        Widget.weakerEvents
+                        (E.keysEventMap (env ^. has . keys)
+                        (E.toDoc env [has . MomentuTexts.edit, has . Texts.swapOperatorArgs]) s)
+                (ResponsiveExpr.boxSpacedMDisamb ?? ExprGui.mParensId pl)
+                    <*> sequenceA
+                    [ GuiM.makeSubexpression l
+                        <&> swapAction Config.swapWithRightKeys
+                    , (Options.boxSpaced ?? Options.disambiguationNone)
+                        <*> sequenceA
+                        [ makeFunc GetVarEdit.Operator func
+                        , GuiM.makeSubexpression r
+                            <&> swapAction Config.swapWithLeftKeys
+                        ]
+                        >>= wrap
+                    ]
     )
     where
         wrap x =

@@ -127,6 +127,8 @@ data Config = Config
     , _extractKeys :: [MetaKey]
     , _inlineKeys :: [MetaKey]
     , _moveLetInwardKeys:: [MetaKey]
+    , _swapWithLeftKeys :: [MetaKey]
+    , _swapWithRightKeys :: [MetaKey]
 
     , _enterSubexpressionKeys :: [MetaKey]
     , _leaveSubexpressionKeys :: [MetaKey]

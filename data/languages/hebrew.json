@@ -115,6 +115,7 @@
             "replace": "החלף",
             "replaceParent": "החלף הורה",
             "applyOperator": "הפעל אופרטור",
+            "swapOperatorArgs": "החלף בין פרמטרי האופרטור",
             "modify": "שנה",
             "detach": "נתק",
             "literal": "ליטרלי",
