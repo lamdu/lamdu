@@ -13,14 +13,6 @@ import qualified Test.Lamdu.SugarStubs as Stub
 
 import           Test.Lamdu.Prelude
 
-infixArgs ::
-    Lens.Traversal'
-    (Annotated a # Sugar.Term v name i o)
-    ( Annotated a # Sugar.Term v name i o
-    , Annotated a # Sugar.Term v name i o
-    )
-infixArgs = hVal . Sugar._BodyLabeledApply . Sugar.aSpecialArgs . Sugar._Operator
-
 test :: Test
 test =
     testGroup "precedence"
@@ -90,7 +82,8 @@ testMinOpPrecOperator =
         assertEqual "minOpPrec is not 10?!" 10 minOpPrec
         & testCase "min-op-prec-infix"
     where
-        (Sugar.ParenInfo minOpPrec needsParens, _) = expr ^?! infixArgs . _2 . annotation
+        (Sugar.ParenInfo minOpPrec needsParens, _) =
+            expr ^?! hVal . Sugar._BodyLabeledApply . Sugar.aSpecialArgs . Sugar._Operator . _2 . annotation
         expr = i 1 `Stub.mul` (i 2 `Stub.plus` i 3) & Parens.addToTopLevel 0
         i = Stub.litNum
 
