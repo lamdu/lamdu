@@ -9,6 +9,10 @@ jobs:
 
     steps:
     - uses: actions/checkout@v1
+    - name: Install dependencies
+      run: |
+        sudo apt-get install nodejs zlib1g-dev libglew-dev libleveldb-dev
+        sudo apt-get install libxxf86vm-dev libxrandr-dev libxi-dev libxcursor-dev libxinerama-dev
     - name: Build
       run: stack build
     - name: Run tests
