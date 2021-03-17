@@ -49,8 +49,8 @@
     "pane": {
         "newDefinitionKeys" : [ "Alt+N", "Alt+L" ],
         "closeKeys"         : [ "Alt+W" ],
-        "moveUpKeys"        : [ "Alt+Up" ],
-        "moveDownKeys"      : [ "Alt+Down" ]
+        "moveUpKeys"        : [ "Cmd+Up" ],
+        "moveDownKeys"      : [ "Cmd+Down" ]
     },
     "versionControl": {
         "undoKeys"           : [ "Cmd+Z" ],
@@ -71,8 +71,8 @@
         "stopEditingKeys"  : [ "Escape", "Shift+Left" ]
     },
     "eval": {
-        "prevScopeKeys": [ "Cmd+Up" ],
-        "nextScopeKeys": [ "Cmd+Down" ]
+        "prevScopeKeys": [ "Alt+Up" ],
+        "nextScopeKeys": [ "Alt+Down" ]
     },
     "menu" : {
         "keysPickOption": [ "Enter" ],
@@ -87,15 +87,15 @@
     "changeThemeKeys"          : [ "Alt+T" ],
     "changeLanguageKeys"       : [],
     "addNextParamKeys"         : [ "Space" ],
-    "paramOrderBeforeKeys"     : [ "Alt+Up" ],
-    "paramOrderAfterKeys"      : [ "Alt+Down" ],
+    "paramOrderBeforeKeys"     : [ "Cmd+Left" ],
+    "paramOrderAfterKeys"      : [ "Cmd+Right" ],
     "healKeys"                 : [ "Space", "Enter" ],
     "detachKeys"               : [ "Space" ],
     "recordOpenKeys"           : [ "Alt+O" ],
     "recordCloseKeys"          : [ "Alt+O" ],
     "caseOpenKeys"             : [ "Alt+O" ],
-    "extractKeys"              : [ "Cmd+X", "Alt+Up" ],
-    "moveLetInwardKeys"        : [ "Alt+Down" ],
+    "extractKeys"              : [ "Cmd+X", "Cmd+Up" ],
+    "moveLetInwardKeys"        : [ "Cmd+Down" ],
     "inlineKeys"               : [ "Cmd+V" ],
     "nextAnnotationModeKeys"   : [ "F7" ],
     "leaveSubexpressionKeys"   : [ "Shift+Left" ],
