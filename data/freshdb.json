@@ -13902,7 +13902,12 @@
     },
     {
         "tag": "27ce1d1bf4270020e1799f12e647f5cb",
-        "defPresentationMode": "Verbose",
+        "defPresentationMode": {
+            "Operator": [
+                "42493a736f636b657400000000000000",
+                "42493a64617461000000000000000000"
+            ]
+        },
         "builtin": [
             "IO",
             "network",
