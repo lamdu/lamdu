@@ -115,12 +115,13 @@ instance HasPrecedence name => AddParens (Term v name i o) where
                 | otherwise = parentPrec
             labeledApply x =
                 maybe (False, BodyLabeledApply (unambiguousBody x)) simpleInfix (x ^? bareInfix)
-            simpleInfix (l, func, r) =
+            simpleInfix (func, OperatorArgs l r) =
                 ( needParens
                 , bareInfix #
-                    ( Const (0, p & after .~ prec) :*: l
-                    , unambiguousChild func
-                    , Const (prec+1, p & before .~ prec) :*: r
+                    ( unambiguousChild func
+                    , OperatorArgs
+                        (Const (0, p & after .~ prec) :*: l)
+                        (Const (prec+1, p & before .~ prec) :*: r)
                     ) & BodyLabeledApply
                 )
                 where
@@ -140,13 +141,12 @@ instance HasPrecedence name => AddParens (Term v name i o) where
 
 bareInfix ::
     Lens.Prism' (LabeledApply v name i o # h)
-    ( h # Term v name i o
-    , h # Const (BinderVarRef name o)
-    , h # Term v name i o
+    ( h # Const (BinderVarRef name o)
+    , OperatorArgs v name i o # h
     )
 bareInfix =
     Lens.prism' toLabeledApply fromLabeledApply
     where
-        toLabeledApply (l, f, r) = LabeledApply f (Just (OperatorArgs l r)) [] []
-        fromLabeledApply (LabeledApply f (Just (OperatorArgs l r)) [] []) = Just (l, f, r)
+        toLabeledApply (f, a) = LabeledApply f (Just a) [] []
+        fromLabeledApply (LabeledApply f (Just a) [] []) = Just (f, a)
         fromLabeledApply _ = Nothing
