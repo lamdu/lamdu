@@ -117,31 +117,26 @@ termTransformsWithoutSplit mkVar srcScope mkPl getInferred src =
                             (hflipped %~ hmap (const mkPl)) . Ann (inferResult # caseType)
                 & liftInfer (V.emptyScope @UVar)
                 >>= lift
-            _ | Lens.nullOf (hVal . V._BLam) src ->
-                -- Apply if compatible with a function
-                do
-                    argType <- liftInfer (V.emptyScope @UVar) newUnbound
-                    resType <- liftInfer (V.emptyScope @UVar) newUnbound
-                    _ <-
-                        FuncType argType resType & T.TFun & newTerm
-                        >>= unify s1
-                        & liftInfer (V.emptyScope @UVar)
-                    let argHole = V.BLeaf V.LHole & Ann (mkPl (inferResult # argType)) & pure & pure
-                    arg <-
-                        case src ^? hVal . V._BLeaf of
-                        Just V.LInject{} -> argHole
-                        Just V.LGetField{} -> argHole
-                        _ ->
-                            forTypeWithoutSplit mkVar argType & liftInfer (V.emptyScope @UVar)
-                            <&> Lens.mapped . hflipped %~ hmap (const mkPl)
-                    let applied = arg <&> V.App src <&> V.BApp <&> mkResult resType
-                    lift applied
-                        <|>
-                        do
-                            -- If the suggested argument has holes in it
-                            -- then stop suggesting there to avoid "overwhelming"..
-                            arg >>= guard . Lens.nullOf (ExprLens.valLeafs . V._LHole) & lift
-                            lift applied >>= termTransformsWithoutSplit mkVar srcScope mkPl getInferred
+            Just (T.TFun (FuncType argType resType))
+                | Lens.nullOf (hVal . V._BLam) src ->
+                    do
+                        arg <-
+                            case src ^? hVal . V._BLeaf of
+                            Just V.LInject{} -> argHole
+                            Just V.LGetField{} -> argHole
+                            _ ->
+                                forTypeWithoutSplit mkVar argType & liftInfer (V.emptyScope @UVar)
+                                <&> Lens.mapped . hflipped %~ hmap (const mkPl)
+                        let applied = arg <&> V.App src <&> V.BApp <&> mkResult resType
+                        lift applied
+                            <|>
+                            do
+                                -- If the suggested argument has holes in it
+                                -- then stop suggesting there to avoid "overwhelming"..
+                                arg >>= guard . Lens.nullOf (ExprLens.valLeafs . V._LHole) & lift
+                                lift applied >>= termTransformsWithoutSplit mkVar srcScope mkPl getInferred
+                where
+                    argHole = V.BLeaf V.LHole & Ann (mkPl (inferResult # argType)) & pure & pure
             _ -> empty
     where
         mkResult t = Ann (mkPl (inferResult # t))
