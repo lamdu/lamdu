@@ -59,11 +59,18 @@ makeLabeledApply func args punnedArgs exprPl =
                         () <$ DataOps.replace rs (ls ^. iref)
                         & ConvertM.typeProtect checkOk & MaybeT & justToLeft
                     do
-                        _ <- DataOps.setToAppliedHole (rs ^. iref) ls
-                        () <$ DataOps.setToAppliedHole (ls ^. iref) rs
+                        maybeWrap ls r
+                        maybeWrap rs l
                         & lift
                 & runMatcherT
                 where
+                    maybeWrap d s =
+                        case s ^. hVal of
+                        Sugar.BodyLeaf Sugar.LeafHole{} -> DataOps.replace d i
+                        _ -> DataOps.setToAppliedHole i d
+                        & void
+                        where
+                            i = s ^. annotation . pInput . Input.stored . iref
                     unwrap x =
                         fromMaybe x (x ^? hVal . Sugar._BodyFragment . Sugar.fExpr)
                         ^. annotation . pInput . Input.stored . iref
