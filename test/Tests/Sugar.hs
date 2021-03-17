@@ -235,7 +235,7 @@ delInfixArg =
         holeDel workArea =
             workArea ^?! arg . annotation . _1 . plActions . delete . _Delete
             & void & lift
-        arg = replBody . _BodyLabeledApply . aSpecialArgs . _Operator . _2
+        arg = replBody . _BodyLabeledApply . aMOpArgs . Lens._Just . oaRhs
         verify workArea
             | Lens.has afterDel workArea = pure ()
             | otherwise = error "Expected 1"
@@ -294,13 +294,13 @@ testInsistEq =
     & testCase "insist-eq"
     where
         insist =
-            replBody . _BodyLabeledApply . aSpecialArgs . _Operator . _2 .
+            replBody . _BodyLabeledApply . aMOpArgs . Lens._Just . oaRhs .
             hVal . _BodyFragment . fHeal
         verify workArea
             | Lens.has expected workArea = pure ()
             | otherwise = error "fragment not created at expected position"
         expected =
-            replBody . _BodyLabeledApply . aSpecialArgs . _Operator . _1 .
+            replBody . _BodyLabeledApply . aMOpArgs . Lens._Just . oaLhs .
             hVal . _BodyFragment
 
 testInsistIf :: Test
@@ -338,19 +338,19 @@ testInsistSubsets =
             hVal . _BinderTerm . _BodyPostfixApply . pFunc .
             hVal . _PfCase . cItems . Lens.ix 1 . ciExpr .
             hVal . _BodyLam . lamFunc . fBody .
-            hVal . _BinderTerm . _BodyLabeledApply . aSpecialArgs . _Operator
+            hVal . _BinderTerm . _BodyLabeledApply . aMOpArgs . Lens._Just
         insist =
-            Lens.cloneTraversal consArgs . _2 .
+            Lens.cloneTraversal consArgs . oaRhs .
             hVal . _BodyLam . lamFunc . fBody .
             hVal . _BinderLet . lBody .
-            hVal . _BinderTerm . _BodyLabeledApply . aSpecialArgs . _Operator . _2 .
+            hVal . _BinderTerm . _BodyLabeledApply . aMOpArgs . Lens._Just . oaRhs .
             hVal . _BodyLam . lamFunc . fBody .
-            hVal . _BinderTerm . _BodyLabeledApply . aSpecialArgs . _Operator . _1 .
+            hVal . _BinderTerm . _BodyLabeledApply . aMOpArgs . Lens._Just . oaLhs .
             hVal . _BodyFragment . fHeal
         verify workArea
             | Lens.has expected workArea = pure ()
             | otherwise = error "fragment not created at expected position"
-        expected = Lens.cloneTraversal consArgs . _1 . hVal . _BodyFragment
+        expected = Lens.cloneTraversal consArgs . oaLhs . hVal . _BodyFragment
 
 testLightLambda :: Test
 testLightLambda =
@@ -420,7 +420,7 @@ testReplaceParentFragment =
             Lens.cloneTraversal fragExpr .
             hVal . _BodySimpleApply . appArg .
             annotation . _1 . plActions . mReplaceParent . Lens._Just
-        fragExpr = replBody . _BodyLabeledApply . aSpecialArgs . traverse . hVal . _BodyFragment . fExpr
+        fragExpr = replBody . _BodyLabeledApply . aMOpArgs . Lens._Just . oaLhs . hVal . _BodyFragment . fExpr
         verify workArea
             | Lens.has (Lens.cloneTraversal fragExpr) workArea =
                 error "replace-parent did not remove fragment"

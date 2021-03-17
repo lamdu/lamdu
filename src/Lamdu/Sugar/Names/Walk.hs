@@ -39,7 +39,7 @@ type CPSNameConvertor m = OldName m -> CPS m (NewName m)
 type NameConvertor m = OldName m -> m (NewName m)
 
 data FunctionSignature = FunctionSignature
-    { sSpecialArgs :: SpecialArgs ()
+    { sIsOperator :: Bool
     , sNormalArgs :: Set T.Tag
     } deriving (Eq, Ord, Show)
 
@@ -294,10 +294,10 @@ toAnnotatedArg v (AnnotatedArg tag e) =
     <*> toExpression v e
 
 toLabeledApply :: MonadNaming m => WalkBody LabeledApply v0 v1 m o a
-toLabeledApply v app@LabeledApply{_aFunc, _aSpecialArgs, _aAnnotatedArgs, _aPunnedArgs} =
+toLabeledApply v app@LabeledApply{_aFunc, _aMOpArgs, _aAnnotatedArgs, _aPunnedArgs} =
     LabeledApply
     <$> toNode v (Lens._Wrapped (toBinderVarRef (Just (funcSignature app)))) _aFunc
-    <*> traverse (toExpression v) _aSpecialArgs
+    <*> (traverse . morphTraverse1) (toExpression v) _aMOpArgs
     <*> traverse (toAnnotatedArg v) _aAnnotatedArgs
     <*> (traverse . pvVar) (toNode v (Lens._Wrapped toGetVar)) _aPunnedArgs
 
@@ -410,7 +410,7 @@ toBody v =
 funcSignature :: LabeledApply v name i o a -> FunctionSignature
 funcSignature apply =
     FunctionSignature
-    { sSpecialArgs = apply ^. aSpecialArgs & void
+    { sIsOperator = Lens.has (aMOpArgs . Lens._Just) apply
     , sNormalArgs = apply ^.. aAnnotatedArgs . traverse . aaTag . tagVal & Set.fromList
     }
 

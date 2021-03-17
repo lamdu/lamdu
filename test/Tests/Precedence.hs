@@ -38,7 +38,7 @@ testPunnedArgOp =
         expr =
             Sugar.BodyLabeledApply Sugar.LabeledApply
             { Sugar._aFunc = Stub.defRef "a" "a" & Const & Stub.node
-            , Sugar._aSpecialArgs = Sugar.Verbose
+            , Sugar._aMOpArgs = Nothing
             , Sugar._aAnnotatedArgs = []
             , Sugar._aPunnedArgs =
                 [ Sugar.PunnedVar (Stub.defRef "b" "b" & Sugar.GetBinder & Const & Stub.node) "b"
@@ -83,7 +83,7 @@ testMinOpPrecOperator =
         & testCase "min-op-prec-infix"
     where
         (Sugar.ParenInfo minOpPrec needsParens, _) =
-            expr ^?! hVal . Sugar._BodyLabeledApply . Sugar.aSpecialArgs . Sugar._Operator . _2 . annotation
+            expr ^?! hVal . Sugar._BodyLabeledApply . Sugar.aMOpArgs . Lens._Just . Sugar.oaRhs . annotation
         expr = i 1 `Stub.mul` (i 2 `Stub.plus` i 3) & Parens.addToTopLevel 0
         i = Stub.litNum
 
@@ -99,7 +99,7 @@ test445 =
         problemPos =
             expr ^?!
             hVal . Sugar._BodySimpleApply . Sugar.appArg .
-            hVal . Sugar._BodyLabeledApply . Sugar.aSpecialArgs . Sugar._Operator . _1
+            hVal . Sugar._BodyLabeledApply . Sugar.aMOpArgs . Lens._Just . Sugar.oaLhs
         i = Stub.litNum
 
 -- Test for https://trello.com/c/xLzHmxpZ/513-disambiguate-applied-get-field-from-operator-function

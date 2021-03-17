@@ -147,6 +147,6 @@ bareInfix ::
 bareInfix =
     Lens.prism' toLabeledApply fromLabeledApply
     where
-        toLabeledApply (l, f, r) = LabeledApply f (Operator l r) [] []
-        fromLabeledApply (LabeledApply f (Operator l r) [] []) = Just (l, f, r)
+        toLabeledApply (l, f, r) = LabeledApply f (Just (OperatorArgs l r)) [] []
+        fromLabeledApply (LabeledApply f (Just (OperatorArgs l r)) [] []) = Just (l, f, r)
         fromLabeledApply _ = Nothing

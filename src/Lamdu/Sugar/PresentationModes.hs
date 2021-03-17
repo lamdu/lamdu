@@ -47,13 +47,13 @@ makeLabeledApply func args punnedArgs exprPl =
         let (specialArgs, removedKeys) =
                 case traverse argExpr presentationMode of
                 Just (Sugar.Operator (l, la) (r, ra)) ->
-                    ( Sugar.Operator (mkOperatorArg la ra) (mkOperatorArg ra la)
+                    ( Sugar.OperatorArgs (mkOperatorArg la ra) (mkOperatorArg ra la) & Just
                     , [l, r]
                     )
-                _ -> (Sugar.Verbose, [])
+                _ -> (Nothing, [])
         pure Sugar.LabeledApply
             { Sugar._aFunc = func
-            , Sugar._aSpecialArgs = specialArgs
+            , Sugar._aMOpArgs = specialArgs
             , Sugar._aAnnotatedArgs =
                 filter ((`notElem` removedKeys) . (^. Sugar.aaTag . Sugar.tagVal)) args
             , Sugar._aPunnedArgs =

@@ -12,7 +12,8 @@ module Lamdu.Sugar.Types.Expression
         , _BodyToNom, _BodyIfElse, _BodyPostfixApply, _BodyPostfixFunc
     , Leaf(..), _LeafLiteral, _LeafHole, _LeafGetVar, _LeafInject, _LeafPlaceHolder
     , AnnotatedArg(..), aaTag, aaExpr
-    , LabeledApply(..), aFunc, aSpecialArgs, aAnnotatedArgs, aPunnedArgs
+    , OperatorArgs(..), oaLhs, oaRhs
+    , LabeledApply(..), aFunc, aMOpArgs, aAnnotatedArgs, aPunnedArgs
     , PostfixApply(..), pArg, pFunc
     , PostfixFunc(..), _PfCase, _PfFromNom, _PfGetField
     , App(..), appFunc, appArg
@@ -21,7 +22,6 @@ module Lamdu.Sugar.Types.Expression
     , Nominal(..), nTId, nVal
     -- Binders
     , Let(..), lValue, lName, lUsages, lDelete, lBody
-    , Meta.SpecialArgs(..), Meta._Verbose, Meta._Operator
     , Meta.DefinitionState(..)
     , BinderParamScopeId(..), bParamScopeId
     , Binder(..), _BinderLet, _BinderTerm
@@ -70,11 +70,16 @@ data AnnotatedArg v name i o k = AnnotatedArg
     , _aaExpr :: k :# Term v name i o
     } deriving Generic
 
+data OperatorArgs v name i o k = OperatorArgs
+    { _oaLhs :: k :# Term v name i o
+    , _oaRhs :: k :# Term v name i o
+    } deriving Generic
+
 -- TODO: func + specialArgs into a single sum type so that field order
 -- matches gui order, no need for special traversal code
 data LabeledApply v name i o k = LabeledApply
     { _aFunc :: k :# Const (BinderVarRef name o)
-    , _aSpecialArgs :: Meta.SpecialArgs (k :# Term v name i o)
+    , _aMOpArgs :: Maybe (OperatorArgs v name i o k)
     , _aAnnotatedArgs :: [AnnotatedArg v name i o k]
     , _aPunnedArgs :: [PunnedVar name o k]
     } deriving Generic
@@ -243,7 +248,7 @@ traverse Lens.makeLenses
     , ''Composite, ''CompositeItem, ''Fragment
     , ''Function, ''Hole, ''HoleOption, ''HoleResult
     , ''IfElse, ''LabeledApply, ''Lambda, ''Let
-    , ''NodeActions, ''Nominal, ''Payload, ''PostfixApply
+    , ''NodeActions, ''Nominal, ''OperatorArgs, ''Payload, ''PostfixApply
     ] <&> concat
 traverse Lens.makePrisms
     [''Assignment, ''Binder, ''CompositeTail, ''Else, ''Leaf, ''PostfixFunc, ''Term] <&> concat
@@ -253,11 +258,11 @@ traverse makeHTraversableAndBases
     , ''Composite, ''CompositeItem, ''CompositeTail, ''Else
     , ''Fragment, ''Function, ''IfElse
     , ''LabeledApply, ''Lambda, ''Let, ''Nominal
-    , ''PostfixApply, ''PostfixFunc, ''Term
+    , ''OperatorArgs, ''PostfixApply, ''PostfixFunc, ''Term
     ] <&> concat
 
 traverse makeHMorph
-    [ ''Composite, ''IfElse, ''LabeledApply, ''Let, ''PostfixApply, ''PostfixFunc
+    [ ''Composite, ''IfElse, ''LabeledApply, ''Let, ''OperatorArgs, ''PostfixApply, ''PostfixFunc
     ] <&> concat
 
 -- TODO: Replace boilerplate below with TH
