@@ -76,7 +76,7 @@
     },
     "menu" : {
         "keysPickOption": [ "Enter" ],
-        "keysPickOptionAndGotoNext": [ "Space" ]
+        "keysPickOptionAndGotoNext": [ "Space", "Tab" ]
     },
     "helpKeys": [ "F1", "Alt+H" ],
     "previousCursorKeys"       : [ "Alt+Left" ],

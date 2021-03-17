@@ -343,7 +343,7 @@ data RectOrdering = Before | Undetermined | After
 
 comparePositions :: Rect -> Rect -> RectOrdering
 comparePositions r0 r1
-    | r0 `Rect.rectWithin` r1 = error "TODO: After?"
+    | r0 `Rect.rectWithin` r1 = After
     | r1 `Rect.rectWithin` r0 = error "TODO: Before?"
     | r0 ^. Rect.bottom < r1 ^. Rect.top  = Before
     | r1 ^. Rect.bottom < r0 ^. Rect.top  = After
@@ -384,8 +384,9 @@ testTabNavigation env virtCursor =
     where
         pos = Widget.fFocalAreas . traverse
         dirs =
-            [ ("tab", simpleKeyEvent (head Widget.strollAheadKeys), After)
-            , ("shift-tab", simpleKeyEvent (head Widget.strollBackKeys), Before)
+            -- TODO: Support tab changing the state,
+            -- which means we need to maintain the cursor
+            [ ("shift-tab", simpleKeyEvent (head Widget.strollBackKeys), Before)
             ]
 
 testConsistentKeyboardNavigation :: Env.Env -> VirtualCursor -> OnceT (T ViewM) ()
