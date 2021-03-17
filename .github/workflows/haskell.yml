@@ -15,6 +15,22 @@ jobs:
         sudo apt-get install libxxf86vm-dev libxrandr-dev libxi-dev libxcursor-dev libxinerama-dev
     - name: Setup
       run: stack setup
+    - name: Build Haskell Deps
+      run: stack build Cabal Diff GLFW-b GLURaw List ObjectName OpenGL OpenGLRaw QuickCheck StateVar adjunctions aeson aeson-diff aeson-pretty ansi-terminal ansi-wl-pprint ap-normalize array assoc attoparsec base base-compat base-compat-batteries base-orphans base16-bytestring bifunctors binary bindings-DSL bindings-GLFW bitmap bitmap-opengl bytestring cabal-doctest call-stack charset cmdargs colour comonad constraints containers contravariant cryptohash-md5 cryptohash-sha1 cryptohash-sha256 data-default data-default-class data-default-instances-containers data-default-instances-dlist data-default-instances-old-locale data-fix deepseq digest directory distributive dlist edit-distance edit-distance-vector ekg-core entropy exceptions executable-path file-embed filepath fixed free generic-constraints generic-data ghc-boot-th ghc-prim half hashable indexed-traversable integer-gmp integer-logarithms invariant kan-extensions language-ecmascript lattices lens lens-aeson monad-st mtl network-info old-locale optparse-applicative parallel parsec pretty primitive process profunctors random reflection resourcet rts safe-exceptions scientific semigroupoids semigroups show-combinators split splitmix stb-image stm strict syb tagged template-haskell temporary text th-abstraction these time time-compat timeit transformers transformers-base transformers-compat type-equality unicode-properties uniplate universe-base universe-reverse-instances unix unliftio-core unordered-containers uuid uuid-types vector void zip-archive zlib
+    - name: Build LevelDB
+      run: stack build leveldb-haskell
+    - name: Build Font Rendering
+      run: stack build freetype2 bindings-freetype-gl freetype-gl
+    - name: Build Drawing Combinators
+      run: stack build graphics-drawingcombinators
+    - name: Build Nodejs-exec
+      run: stack build nodejs-exec
+    - name: Build Hypertypes
+      run: stack build hypertypes
+    - name: Build Lamdu Calculus
+      run: stack build lamdu-calculus
+    - name: Build Momentu
+      run: stack build momentu
     - name: Build
       run: stack build
     - name: Run tests
