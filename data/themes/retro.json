@@ -52,10 +52,6 @@
             "unfocused": [0.5, 0.5, 0.5, 1]
         }
     },
-    "hole": {
-        "resultPadding": [0.0, 1.0],
-        "frameWidth": [0.0, 0.0]
-    },
     "name": {
         "collisionSuffixScaleFactor": [1.0, 1.0],
         "tagCollisionSuffixBGColor": [1.0, 0.0, 0.0, 1.0],

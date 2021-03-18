@@ -5,14 +5,14 @@ module Lamdu.Sugar.Types.Expression
         , _BodyLam, _BodyLabeledApply, _BodySimpleApply
         , _BodyRecord, _BodyFragment, _BodyLeaf, _BodyNullaryInject
         , _BodyToNom, _BodyIfElse, _BodyPostfixApply, _BodyPostfixFunc
-    , Leaf(..), _LeafLiteral, _LeafHole, _LeafGetVar, _LeafInject, _LeafPlaceHolder
+    , Leaf(..), _LeafLiteral, _LeafHole, _LeafGetVar, _LeafInject
     , AnnotatedArg(..), aaTag, aaExpr
     , OperatorArgs(..), oaLhs, oaRhs, oaSwapArguments
     , LabeledApply(..), aFunc, aMOpArgs, aAnnotatedArgs, aPunnedArgs
     , PostfixApply(..), pArg, pFunc
     , PostfixFunc(..), _PfCase, _PfFromNom, _PfGetField
     , App(..), appFunc, appArg
-    , Fragment(..), fExpr, fHeal, fTypeMismatch, fOptions
+    , Fragment(..), fExpr, fHeal, fTypeMismatch
     , Lambda(..), lamFunc, lamMode, lamApplyLimit
     , Nominal(..), nTId, nVal
     -- Binders
@@ -25,10 +25,6 @@ module Lamdu.Sugar.Types.Expression
         , fAddFirstParam, fBodyScopes
     , AssignPlain(..), apAddFirstParam, apBody
     , Assignment(..), _BodyFunction, _BodyPlain
-    -- Holes
-    , HoleOption(..), hoEntityId, hoSearchTerms, hoResults
-    , Hole(..), holeOptions
-    , HoleResult(..), holeResultConverted, holeResultPick
     -- If/else
     , IfElse(..), iIf, iThen, iElse
     , Else(..), _SimpleElse, _ElseIf
@@ -42,7 +38,6 @@ module Lamdu.Sugar.Types.Expression
     ) where
 
 import qualified Control.Lens as Lens
-import           Control.Monad.ListT (ListT)
 import           Data.Property (Property)
 import           Data.Kind (Type)
 import           Hyper
@@ -99,28 +94,7 @@ data Fragment v name i o k = Fragment
     { _fExpr :: k :# Term v name i o
     , _fHeal :: o EntityId
     , _fTypeMismatch :: Maybe (Annotated EntityId # T.Type name)
-    , _fOptions :: Hole name i o
     } deriving Generic
-
-data HoleResult name i o = HoleResult
-    { _holeResultConverted :: Expr Binder (Annotation () name) name i o
-    , _holeResultPick :: o ()
-    } deriving Generic
-
-data HoleOption name i o = HoleOption
-    { _hoEntityId :: EntityId
-    , _hoSearchTerms :: i [HoleTerm name]
-    , -- A group in the hole results based on this option
-        -- TODO: HoleResult need not have actual eval results
-      _hoResults :: ListT i (HoleResultScore, i (HoleResult name i o))
-    } deriving Generic
-
-newtype Hole name i o = Hole
-    { _holeOptions :: i (OptionFilter -> [HoleOption name i o])
-        -- outer "i" here is used to read index of globals
-        -- inner "i" is used to type-check/sugar every val in the option
-      -- TODO: Lifter from i to o?
-    } deriving stock Generic
 
 data Else v name i o f
     = SimpleElse (Term v name i o f)
@@ -165,10 +139,9 @@ data PostfixFunc v name i o k
 
 data Leaf name i o
     = LeafLiteral (Literal (Property o))
-    | LeafHole (Hole name i o)
+    | LeafHole
     | LeafGetVar (GetVar name o)
     | LeafInject (TagRef name i o)
-    | LeafPlaceHolder -- Used for hole results, shown as "★"
     deriving Generic
 
 data Term v name i o k
@@ -226,7 +199,7 @@ data Assignment v name i o f
 traverse Lens.makeLenses
     [ ''AnnotatedArg, ''AssignPlain
     , ''Composite, ''CompositeItem, ''Fragment
-    , ''Function, ''Hole, ''HoleOption, ''HoleResult
+    , ''Function
     , ''IfElse, ''LabeledApply, ''Lambda, ''Let
     , ''Nominal, ''OperatorArgs, ''PostfixApply
     ] <&> concat

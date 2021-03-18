@@ -4,10 +4,8 @@ module Lamdu.GUI.Expr
 
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.Responsive (Responsive)
-import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.State as GuiState
 import qualified GUI.Momentu.Widget as Widget
-import qualified GUI.Momentu.Widgets.Label as Label
 import qualified Lamdu.GUI.Expr.ApplyEdit as ApplyEdit
 import qualified Lamdu.GUI.Expr.FragmentEdit as FragmentEdit
 import qualified Lamdu.GUI.Expr.GetVarEdit as GetVarEdit
@@ -35,15 +33,6 @@ make e =
             exprHiddenEntityIds <&> WidgetIds.fromEntityId
             & foldr (`GuiState.assignCursorPrefix` const myId) x
 
-placeHolder ::
-    (Monad i, Applicative o) =>
-    Sugar.Payload v o ->
-    GuiM env i o (Responsive o)
-placeHolder pl =
-    (Widget.makeFocusableView ?? WidgetIds.fromExprPayload pl <&> fmap)
-    <*> Label.make "★"
-    <&> Responsive.fromWithTextPos
-
 makeEditor :: _ => ExprGui.Expr Sugar.Term i o -> GuiM env i o (Responsive o)
 makeEditor (Ann (Const pl) body) =
     case body of
@@ -59,8 +48,7 @@ makeEditor (Ann (Const pl) body) =
     Sugar.BodyNullaryInject x -> editor pl x InjectEdit.makeNullary
     Sugar.BodyLeaf         l ->
         case l of
-        Sugar.LeafPlaceHolder   -> placeHolder pl
-        Sugar.LeafHole        x -> editor pl (Const x) HoleEdit.make
+        Sugar.LeafHole          -> HoleEdit.make pl
         Sugar.LeafLiteral     x -> editor pl (Const x) LiteralEdit.make
         Sugar.LeafInject      x -> editor pl (Const x) InjectEdit.make
         Sugar.LeafGetVar      x -> editor pl (Const x) GetVarEdit.make

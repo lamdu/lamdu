@@ -11,8 +11,6 @@ module Lamdu.GUI.Monad
     --
     , readMScopeId, withLocalMScopeId
     --
-    , isHoleResult, withLocalIsHoleResult
-    --
     , im
 
     , makeSubexpression, makeBinder
@@ -81,7 +79,6 @@ data Askable env i o = Askable
     , _aDepthLeft :: Int
     , _aMScopeId :: CurAndPrev (Maybe ScopeId)
     , _aStyle :: Style
-    , _aIsHoleResult :: Bool
     , _aDirLayout :: Dir.Layout
     , _aEnv :: env
         -- TODO: This ^^ defeats the purpose and means ALL gui depends
@@ -179,12 +176,6 @@ makeBinder ::
     ExprGui.Expr Sugar.Binder i o -> GuiM env i o (Responsive.Responsive o)
 makeBinder = make aMakeBinder
 
-isHoleResult :: MonadReader (Askable env i o) m => m Bool
-isHoleResult = Lens.view aIsHoleResult
-
-withLocalIsHoleResult :: MonadReader (Askable env i o) m => m a -> m a
-withLocalIsHoleResult = local (aIsHoleResult .~ True)
-
 run ::
     _ =>
     (T.Tag -> MkProperty' o Text) ->
@@ -209,7 +200,6 @@ run assocTagName_ makeSubexpr mkBinder theGuiAnchors env (GuiM action) =
     , _aDepthLeft = env ^. has . Config.maxExprDepth
     , _aMScopeId = Just topLevelScopeId & pure
     , _aStyle = env ^. has
-    , _aIsHoleResult = False
     , _aDirLayout = env ^. has
     , _aEnv = env
     }

@@ -5,10 +5,6 @@ module Lamdu.Sugar.Types.Parts
     ( VarInfo(..), _VarNominal, _VarGeneric, _VarFunction, _VarRecord, _VarVariant
     , FuncApplyLimit(..), _UnlimitedFuncApply, _AtMostOneFuncApply
     , Literal(..), _LiteralNum, _LiteralBytes, _LiteralText
-    , HoleResultScore(..), hrsTier, hrsNumFragments, hrsScore
-    , HoleResultTier(..)
-    , HoleTerm(..), _HoleName
-    , OptionFilter(..), _OptsDot, _OptsInject, _OptsNormal
     , -- Annotations
       Annotation(..), _AnnotationVal, _AnnotationType, _AnnotationNone
     -- Node actions
@@ -167,48 +163,18 @@ data PunnedVar name o k = PunnedVar
     , _pvTagEntityId :: EntityId
     } deriving Generic
 
-data HoleResultTier
-    = HoleResultSuggested
-    | HoleResultSyntax
-    | HoleResultLocal !Int
-    | HoleResultGlobal
-    deriving (Eq, Ord, Generic)
-
-data HoleResultScore = HoleResultScore
-    { _hrsTier :: !HoleResultTier
-    , _hrsNumFragments :: !Int
-    , _hrsScore :: ![Int]
-    } deriving (Eq, Ord, Generic)
-
-data HoleTerm name
-    = HoleGetDef name
-    | HoleName name
-    | HoleInject name
-    | HoleGetField name
-    | HoleFromNom name
-    | HoleParamsRecord
-    | HoleRecord
-    | HoleCase
-    | HoleEmptyCase
-    | HoleIf
-    | HoleLambda
-    | HoleLet
-    deriving (Functor, Foldable, Traversable, Show)
-
-data OptionFilter = OptsDot | OptsInject | OptsNormal deriving Generic
-
 data ParenInfo = ParenInfo
     { _piMinOpPrec :: !Int
     , _piNeedParens :: !Bool
     } deriving (Eq, Show, Generic)
 
 traverse Lens.makeLenses
-    [ ''ClosedCompositeActions, ''FuncParam, ''FuncParamActions, ''HoleResultScore, ''NodeActions
+    [ ''ClosedCompositeActions, ''FuncParam, ''FuncParamActions, ''NodeActions
     , ''NullParamActions, ''NullaryInject, ''ParamInfo, ''ParenInfo, ''Payload, ''PunnedVar
     ] <&> concat
 traverse Lens.makePrisms
     [ ''AddFirstParam, ''AddNextParam, ''Annotation, ''BinderParams, ''Delete
-    , ''DetachAction, ''FuncApplyLimit, ''HoleTerm, ''Literal, ''OptionFilter, ''VarInfo
+    , ''DetachAction, ''FuncApplyLimit, ''Literal, ''VarInfo
     ] <&> concat
 makeHTraversableAndBases ''NullaryInject
 makeHTraversableAndBases ''PunnedVar

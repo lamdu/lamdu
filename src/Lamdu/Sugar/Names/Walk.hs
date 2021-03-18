@@ -265,38 +265,14 @@ instance ToBody LabeledApply where
         <*> traverse toBody _aAnnotatedArgs
         <*> (traverse . pvVar) (toNode (Lens._Wrapped walk)) _aPunnedArgs
 
-toHoleOption ::
-    MonadNaming m =>
-    ( m (ExprW Binder (Annotation () (NewName m)) (NewName m) m o (Payload (Annotation () (NewName m)) o)) ->
-        IM m (ExprW Binder (Annotation () (NewName m)) (NewName m) m o (Payload (Annotation () (NewName m)) o))
-    ) ->
-    (m (NewName m) -> IM m (NewName m)) ->
-    HoleOption (OldName m) (IM m) o -> HoleOption (NewName m) (IM m) o
-toHoleOption run0 run1 option =
-    option
-    { _hoSearchTerms =
-        -- Hack: Just using TaggedVar as NameType because disambiguations aren't important in hole results
-        option ^. hoSearchTerms >>= traverse . traverse %%~ run1 . opGetName Nothing MayBeAmbiguous TaggedVar
-    , _hoResults = option ^. hoResults <&> _2 %~ (>>= holeResultConverted (run0 . toExpression))
-    }
-
-instance (a ~ OldName m, b ~ NewName m, i ~ IM m) => Walk m (Hole a i o) (Hole b i o) where
-    walk hole =
-        (,) <$> opRun <*> opRun
-        <&>
-        \(r0, r1) ->
-        hole & Sugar.holeOptions . Lens.mapped . Lens.mapped . Lens.mapped %~ toHoleOption r0 r1
-
 instance ToBody Fragment where
-    toBody Fragment{_fExpr, _fHeal, _fTypeMismatch, _fOptions} =
+    toBody Fragment{_fExpr, _fHeal, _fTypeMismatch} =
         do
             newTypeMismatch <- Lens._Just walk _fTypeMismatch
             newExpr <- toExpression _fExpr
-            h <- walk _fOptions
             pure Fragment
                 { _fExpr = newExpr
                 , _fTypeMismatch = newTypeMismatch
-                , _fOptions = h
                 , _fHeal
                 }
 
@@ -349,10 +325,9 @@ instance (a ~ OldName m, b ~ NewName m, i ~ IM m) => Walk m (Leaf a i o) (Leaf b
     walk =
         \case
         LeafInject       x -> x & toTagRefOf Tag <&> LeafInject
-        LeafHole         x -> x & walk <&> LeafHole
+        LeafHole           -> pure LeafHole
         LeafGetVar       x -> x & walk <&> LeafGetVar
         LeafLiteral      x -> x & LeafLiteral & pure
-        LeafPlaceHolder    -> pure LeafPlaceHolder
 
 instance ToBody Term where
     toBody =

@@ -9,7 +9,6 @@ module Lamdu.Sugar.Lens
     , assignmentBodyAddFirstParam
     , binderFuncParamActions
     , binderResultExpr
-    , holeTransformExprs
     , getVarName
     , paneBinder
     ) where
@@ -121,21 +120,6 @@ binderResultExpr f (Ann (Const pl) x) =
         lBody (binderResultExpr f) l
         <&> BinderLet
         <&> Ann (Const pl)
-
-holeOptionTransformExprs ::
-    Monad i =>
-    (Expr Binder (Annotation () n) n i o -> i (Expr Binder (Annotation () n) n i o)) ->
-    HoleOption n i o ->
-    HoleOption n i o
-holeOptionTransformExprs onExpr =
-    hoResults . Lens.mapped . _2 %~ (>>= holeResultConverted onExpr)
-
-holeTransformExprs ::
-    Monad i =>
-    (Expr Binder (Annotation () n) n i o -> i (Expr Binder (Annotation () n) n i o)) ->
-    Hole n i o -> Hole n i o
-holeTransformExprs onExpr =
-    holeOptions . Lens.mapped . Lens.mapped . Lens.mapped %~ holeOptionTransformExprs onExpr
 
 assignmentBodyAddFirstParam :: Lens' (Assignment v name i o a) (AddFirstParam name i o)
 assignmentBodyAddFirstParam f (BodyFunction x) = fAddFirstParam f x <&> BodyFunction

@@ -95,7 +95,7 @@ workArea396 =
     } & testWorkArea assertNoCollisions
     where
         lamType = Stub.numType ~> Stub.numType
-        leafExpr = Sugar.BodyLeaf Sugar.LeafPlaceHolder & Stub.expr
+        leafExpr = Sugar.BodyLeaf Sugar.LeafHole & Stub.expr
         lamExpr =
             Sugar.BodyLam Sugar.Lambda
             { Sugar._lamMode = Sugar.NormalBinder
@@ -126,4 +126,4 @@ workAreaGlobals =
                 , show textCollision, show tagCollision
                 ] & assertString
         trivialBinder = Stub.binderExpr [] trivialExpr
-        trivialExpr = Sugar.BodyLeaf Sugar.LeafPlaceHolder & Stub.expr
+        trivialExpr = Sugar.BodyLeaf Sugar.LeafHole & Stub.expr

@@ -80,10 +80,6 @@
             "unfocused": [0.0, 0.0, 0.0, 1.0]
         }
     },
-    "hole": {
-        "frameWidth": [0.06, 0.06],
-        "frameColor": [0.0, 0.0, 0.0, 1.0]
-    },
     "name": {
         "tagCollisionSuffixBGColor"  : [1.0, 0.7, 0.7, 1.0],
         "textCollisionSuffixBGColor" : [0.7, 0.7, 1.0, 1.0]

@@ -26,7 +26,6 @@ import           Lamdu.Expr.IRef (DefI, HRef)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import           Lamdu.Sugar.Convert.Binder.Params (mkVarInfo)
 import           Lamdu.Sugar.Convert.Expression.Actions (addActions)
-import qualified Lamdu.Sugar.Convert.Fragment as ConvertFragment
 import qualified Lamdu.Sugar.Convert.Input as Input
 import           Lamdu.Sugar.Convert.Monad (ConvertM, siTagParamInfos, tpiFromParameters)
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
@@ -202,15 +201,12 @@ convertParam param exprPl =
 convert ::
     (Monad m, Monoid a) =>
     V.Var -> Input.Payload m a # V.Term -> ConvertM m (ExpressionU v m a)
-convert param exprPl
-    | param == ConvertFragment.fragmentVar =
-        addActions (Const ()) exprPl (BodyLeaf LeafPlaceHolder)
-    | otherwise =
-        do
-            convertGlobal param exprPl & justToLeft
-            convertGetLet param exprPl & justToLeft
-            convertParamsRecord param exprPl & justToLeft
-            convertParam param exprPl & lift
-        & runMatcherT
-        <&> BodyLeaf . LeafGetVar
-        >>= addActions (Const ()) exprPl
+convert param exprPl =
+    do
+        convertGlobal param exprPl & justToLeft
+        convertGetLet param exprPl & justToLeft
+        convertParamsRecord param exprPl & justToLeft
+        convertParam param exprPl & lift
+    & runMatcherT
+    <&> BodyLeaf . LeafGetVar
+    >>= addActions (Const ()) exprPl

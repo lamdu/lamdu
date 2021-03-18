@@ -11,7 +11,6 @@ import qualified Data.Map as Map
 import           Data.Maybe.Extended (maybeToMPlus)
 import qualified Data.Property as Property
 import qualified Data.Set as Set
-import           Data.Typeable (Typeable)
 import           Hyper
 import           Hyper.Type.AST.FuncType (funcIn)
 import           Hyper.Type.AST.Row (freExtends, freRest)
@@ -38,19 +37,18 @@ import           Revision.Deltum.Transaction (Transaction)
 import           Lamdu.Prelude
 
 convert ::
-    (Monad m, Typeable m, Monoid a) =>
-    ConvertM.PositionInfo ->
+    (Monad m, Monoid a) =>
     V.App V.Term # Ann (Input.Payload m a) ->
     Input.Payload m a # V.Term ->
     ConvertM m (ExpressionU EvalPrep m a)
-convert posInfo app@(V.App funcI argI) exprPl =
+convert app@(V.App funcI argI) exprPl =
     runMatcherT $
     do
         convertGetFieldParam app exprPl & MaybeT & justToLeft
         (funcS, argS) <-
             do
                 argS <- ConvertM.convertSubexpression argI & lift
-                convertAppliedHole posInfo app exprPl argS & justToLeft
+                convertAppliedHole app exprPl argS & justToLeft
                 funcS <- ConvertM.convertSubexpression funcI & lift
                 protectedSetToVal <- lift ConvertM.typeProtectedSetToVal
                 pure

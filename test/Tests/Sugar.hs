@@ -4,7 +4,6 @@ module Tests.Sugar where
 
 import qualified Control.Lens as Lens
 import           Control.Monad.Once (OnceT)
-import qualified Data.List.Class as List
 import qualified Data.Property as Property
 import qualified Lamdu.Annotations as Annotations
 import qualified Lamdu.Calc.Term as V
@@ -34,7 +33,6 @@ test =
     , testExtractForRecursion
     , testLightLambda
     , testNotALightLambda
-    , testInline
     , testReorderLets
     , testReplaceParent
     , testReplaceParentFragment
@@ -44,7 +42,6 @@ test =
     , floatLetWithGlobalRef
     , testHoleTypeShown
     , testUnnamed
-    , testValidHoleResult
     , testPunnedIso
     , testNullParamUnused
     , testGroup "insist-tests"
@@ -149,55 +146,6 @@ testExtract =
         action =
             replBody . _BodyLam . lamFunc . fBody . annotation . plActions .
             extract
-
--- Test for issue #402
--- https://trello.com/c/ClDnsGQi/402-wrong-result-when-inlining-from-hole-results
-testInline :: Test
-testInline =
-    testSugarActions "let-item-inline.json" [inline, verify]
-    & testCase "inline"
-    where
-        inline workArea =
-            do
-                yOption <-
-                    workArea ^?!
-                    replBody . _BodyLam . lamFunc . fBody .
-                    hVal . _BinderLet . lBody . hVal . _BinderTerm . _BodyLeaf . _LeafHole
-                    . holeOptions
-                    >>= findM isY . (OptsNormal &)
-                    <&> fromMaybe (error "expected option")
-                mkResult <-
-                    yOption ^. hoResults & List.runList
-                    <&>
-                    \case
-                    List.Cons (_, x) _ -> x
-                    List.Nil -> error "expected Cons"
-                result <- mkResult
-                result ^. holeResultPick & lift
-                _ <-
-                    result ^?! holeResultConverted . hVal . _BinderTerm
-                    . _BodyLeaf . _LeafGetVar . _GetBinder . bvInline . _InlineVar
-                    & lift
-                pure ()
-            where
-                isY option =
-                    option ^. hoSearchTerms
-                    <&> Lens.has (traverse . _HoleName) -- TODO: Checked if was get of a let variable
-        verify workArea
-            | Lens.has afterInline workArea = pure ()
-            | otherwise = error "Expected inline result"
-        afterInline =
-            replBody . _BodyLam . lamFunc . fBody .
-            hVal . _BinderTerm . _BodyLeaf . _LeafLiteral . _LiteralNum
-
-findM :: Monad m => (a -> m Bool) -> [a] -> m (Maybe a)
-findM _ [] = pure Nothing
-findM f (x:xs) =
-    do
-        found <- f x
-        if found
-            then Just x & pure
-            else findM f xs
 
 paramAnnotations :: Test
 paramAnnotations =
@@ -522,24 +470,6 @@ testHoleTypeShown =
             AnnotationNone {} -> "None"
         Lens.has (annotation . plAnnotation . _AnnotationType) x
             & assertBool "Expected to have type"
-
--- Test for issue #497
--- https://trello.com/c/OAeXOCMi/497-invalid-nullary-inject-suggested
-testValidHoleResult :: Test
-testValidHoleResult =
-    testCase "valid-hole-result" $
-    do
-        env <- Env.make
-        testProgram "nom-list.json" $
-            do
-                workArea <- convertWorkArea env
-                opts <-
-                    workArea ^?!
-                    replBody . _BodyToNom . nVal . hVal . _BinderTerm . _BodyLeaf . _LeafHole . holeOptions
-                -- The bug occured in the first suggested result
-                (_, mkHoleResult) <- opts OptsNormal ^?! Lens.ix 0 . hoResults & List.runList <&> List.headL
-                holeResult <- mkHoleResult
-                holeResult ^. holeResultPick & lift
 
 -- Test for https://trello.com/c/Dzp5vgos/510-not-punning-auto-named-variables
 testPunnedIso :: Test

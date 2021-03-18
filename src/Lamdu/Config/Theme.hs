@@ -4,7 +4,6 @@
 -- | The themes/ config format
 module Lamdu.Config.Theme
     ( Help(..), helpTextSize, helpTextColor, helpInputDocColor, helpBGColor, helpTint, helpSrcLocColor
-    , Hole(..), holeResultPadding, holeFrameColor, holeFrameWidth
     , Eval(..), neighborsScaleFactor, neighborsPadding, staleResultTint
     , ToolTip(..), tooltipFgColor, tooltipBgColor
     , StatusBar(..), statusBarBGColor, statusBarHSpaces
@@ -13,7 +12,7 @@ module Lamdu.Config.Theme
         , fontSel
     , Theme(..)
         , title, fonts, sprites, baseTextSize, animationTimePeriodSec
-        , animationRemainInPeriod, help, hole, menu, searchTerm, name, eval, hover, tooltip
+        , animationRemainInPeriod, help, menu, searchTerm, name, eval, hover, tooltip
         , textColors, textEditCursorColor, textEditCursorWidth
         , topPadding, statusBar, deleted, maxEvalViewSize, versionControl
         , valAnnotation, indent, backgroundColor, invalidCursorOverlayColor
@@ -59,15 +58,6 @@ data Help = Help
 JsonTH.derivePrefixed "_help" ''Help
 
 Lens.makeLenses ''Help
-
-data Hole = Hole
-    { _holeResultPadding :: Vector2 Double
-    , _holeFrameWidth :: Vector2 Double
-    , _holeFrameColor :: Draw.Color
-    } deriving Eq
-JsonTH.derivePrefixed "_hole" ''Hole
-
-Lens.makeLenses ''Hole
 
 data Eval = Eval
     { _neighborsScaleFactor :: Vector2 Double
@@ -139,7 +129,6 @@ data Theme = Theme
     , _animationTimePeriodSec :: Double
     , _animationRemainInPeriod :: Double
     , _help :: Help
-    , _hole :: Hole
     , _menu :: Menu.Style
     , _searchTerm :: SearchMenu.TermStyle
     , _name :: Name

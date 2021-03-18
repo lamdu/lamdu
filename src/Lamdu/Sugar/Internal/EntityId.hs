@@ -6,7 +6,7 @@ module Lamdu.Sugar.Internal.EntityId
     , ofBinder
     , ofTag, ofTagPane
     , ofTaggedEntity
-    , ofFragmentArg, ofFragmentUnder
+    , ofFragmentArg
     , ofEvalOf, ofEvalField, ofEvalArrayIdx
     , ofTypeOf, ofRestOfComposite, ofFunParam, ofFunResult, ofTInstParam
     , usedTypeOf, currentTypeOf
@@ -84,9 +84,6 @@ ofFunResult = augment "TFunResult"
 
 ofFragmentArg :: EntityId -> EntityId
 ofFragmentArg = augment "FragmentArg"
-
-ofFragmentUnder :: Int -> EntityId -> EntityId
-ofFragmentUnder idx = augment (BS.pack [fromIntegral idx]) . augment "Fragment"
 
 ofTInstParam :: T.TypeVar -> EntityId -> EntityId
 ofTInstParam p (EntityId uuid) = EntityId $ UUIDUtils.combine (UniqueId.toUUID p) uuid

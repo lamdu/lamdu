@@ -132,7 +132,6 @@ test514 =
                 } & Stub.node
             , Sugar._fHeal = Unit
             , Sugar._fTypeMismatch = Nothing
-            , Sugar._fOptions = Sugar.Hole mempty
             } & Stub.node
             & Parens.addToTopLevel 0
         problemPos = expr ^?! hVal . Sugar._BodyFragment . Sugar.fExpr

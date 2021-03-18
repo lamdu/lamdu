@@ -63,7 +63,6 @@ deriving instance Data I18N.Fonts.ProportionalOrMonospace
 deriving instance Data Theme.FontSel
 deriving instance Data Theme.Eval
 deriving instance Data Theme.Help
-deriving instance Data Theme.Hole
 deriving instance Data Theme.Name
 deriving instance Data Theme.StatusBar
 deriving instance Data Theme.Deleted
@@ -154,8 +153,6 @@ deriving instance Eq (Sugar.Delete Unit)
 deriving instance Eq (Sugar.DetachAction Unit)
 deriving instance Eq (Sugar.EvalCompletionResult Unit)
 deriving instance Eq (Sugar.EvalException Unit)
-deriving instance Eq (Sugar.Hole n Unit Unit)
-deriving instance Eq (Sugar.HoleOption n Unit Unit)
 deriving instance Eq (Sugar.Literal (Property Unit))
 deriving instance Eq (Sugar.NodeActions Unit)
 deriving instance Eq (Sugar.NullParamActions Unit)
@@ -169,7 +166,6 @@ deriving instance Eq n => Eq (Sugar.DefinitionBuiltin n Unit)
 deriving instance Eq n => Eq (Sugar.DefinitionForm n Unit)
 deriving instance Eq n => Eq (Sugar.FuncParamActions n Unit Unit)
 deriving instance Eq n => Eq (Sugar.GetVar n Unit)
-deriving instance Eq n => Eq (Sugar.HoleResult n Unit Unit)
 deriving instance Eq n => Eq (Sugar.Leaf n Unit Unit)
 deriving instance Eq n => Eq (Sugar.NameRef n Unit)
 deriving instance Eq n => Eq (Sugar.ParamInfo n Unit Unit)
@@ -228,7 +224,6 @@ instance NFData (Sugar.DetachAction (T o))
 instance NFData (Sugar.EvalCompletionResult (T o))
 instance NFData (Sugar.EvalException (T o))
 instance NFData (Sugar.FuncParamActions n (OnceT (T i)) (T o))
-instance NFData (Sugar.Hole n (OnceT (T i)) (T o))
 instance NFData (Sugar.Literal (Property (T o)))
 instance NFData (Sugar.NodeActions (T o))
 instance NFData (Sugar.NullParamActions (T o))

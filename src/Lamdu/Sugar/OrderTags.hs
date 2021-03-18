@@ -110,7 +110,6 @@ instance MonadTransaction m i => Order i (Sugar.Term v name i o) where
     order (Sugar.BodyPostfixFunc f) = order f <&> Sugar.BodyPostfixFunc
     order (Sugar.BodyFragment a) =
         a
-        & Sugar.fOptions %~ SugarLens.holeTransformExprs orderNode
         & Sugar.fExpr orderNode
         <&> Sugar.BodyFragment
     order (Sugar.BodyIfElse x) = order x <&> Sugar.BodyIfElse
@@ -118,9 +117,7 @@ instance MonadTransaction m i => Order i (Sugar.Term v name i o) where
     order (Sugar.BodySimpleApply x) = htraverse1 orderNode x <&> Sugar.BodySimpleApply
     order (Sugar.BodyPostfixApply x) = order x <&> Sugar.BodyPostfixApply
     order (Sugar.BodyNullaryInject x) = Sugar.BodyNullaryInject x & pure
-    order (Sugar.BodyLeaf x) =
-        x & Sugar._LeafHole %~ SugarLens.holeTransformExprs orderNode
-        & Sugar.BodyLeaf & pure
+    order (Sugar.BodyLeaf x) = Sugar.BodyLeaf x & pure
 
 orderNode ::
     (MonadTransaction m i, Order i f) =>

@@ -22,8 +22,6 @@ import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import qualified Lamdu.CharClassification as Chars
 import qualified Lamdu.Config as Config
-import           Lamdu.GUI.Expr.HoleEdit.ValTerms (allowedSearchTerm)
-import qualified Lamdu.GUI.Expr.HoleEdit.WidgetIds as HoleWidgetIds
 import           Lamdu.GUI.Monad (GuiM)
 import qualified Lamdu.GUI.Monad as GuiM
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
@@ -116,15 +114,8 @@ actionsEventMap ::
 actionsEventMap options exprInfo =
     ( mconcat
         [ detachEventMap ?? exprInfo
-        , GuiM.isHoleResult
-            >>=
-            \case
-            True -> pure mempty
-            False ->
-                mconcat
-                [ extractEventMap ?? actions
-                , mkReplaceParent
-                ]
+        , extractEventMap ?? actions
+        , mkReplaceParent
         , actions ^. Sugar.delete & replaceEventMap
         , actions ^. Sugar.mNewLet & foldMap addLetEventMap
         , actions ^. Sugar.mApply & foldMap applyEventMap
@@ -174,15 +165,12 @@ transformSearchTerm =
         transform c =
             do
                 guard (c `notElem` Chars.operator)
-                guard (allowedSearchTerm (Text.singleton c))
                 pure (Text.singleton c)
         searchStrRemainder = eventCtx ^. Widget.ePrevTextRemainder
         acceptOp = (>= exprInfoMinOpPrec exprInfo) . precedence
         opDoc = E.toDoc env [has . MomentuTexts.edit, has . Texts.applyOperator]
         mkOpsGroup ops = E.charGroup Nothing opDoc ops Text.singleton
-        afterDot c =
-            Text.singleton c <$
-            guard (allowedSearchTerm ("." <> Text.singleton c))
+        afterDot = Just . Text.singleton
     in
     case Text.uncons searchStrRemainder of
     Nothing -> mkOpsGroup (filter acceptOp Chars.operator) <> maybeTransformEventMap
@@ -209,7 +197,7 @@ transformEventMap =
     in
     transform exprInfo eventCtx
     <&> SearchMenu.enterWithSearchTerm
-    <&> (x <&> HoleWidgetIds.makeFrom <&> HoleWidgetIds.hidOpen <&>)
+    <&> (x <&>)
     where
         widgetId = pure . WidgetIds.fromEntityId
 

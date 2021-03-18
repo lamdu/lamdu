@@ -125,7 +125,6 @@ instance Functor m => MarkBodyAnnotations v m PostfixFunc where
         )
 
 instance Functor m => MarkBodyAnnotations v m Term where
-    markBodyAnnotations (BodyLeaf LeafPlaceHolder) = (neverShowAnnotations, BodyLeaf LeafPlaceHolder)
     markBodyAnnotations (BodyLeaf (LeafLiteral x@LiteralBytes{})) = (dontShowEval, BodyLeaf (LeafLiteral x))
     markBodyAnnotations (BodyLeaf (LeafLiteral x)) = (neverShowAnnotations, BodyLeaf (LeafLiteral x))
     markBodyAnnotations (BodyRecord x) = markBodyAnnotations x & _2 %~ BodyRecord
@@ -175,18 +174,18 @@ instance Functor m => MarkBodyAnnotations v m Term where
         , morphMap (Proxy @(MarkAnnotations m) #?> markNodeAnnotations) x & BodyLabeledApply
         )
     markBodyAnnotations (BodyIfElse x) = markBodyAnnotations x & _2 %~ BodyIfElse
-    markBodyAnnotations (BodyLeaf (LeafHole x)) =
+    markBodyAnnotations (BodyLeaf LeafHole) =
         ( alwaysShowAnnotations
-        , LeafHole x & BodyLeaf
+        , BodyLeaf LeafHole
         )
-    markBodyAnnotations (BodyFragment (Fragment e h t o)) =
+    markBodyAnnotations (BodyFragment (Fragment e h t)) =
         ( alwaysShowAnnotations
         , Fragment
             ( markNodeAnnotations e
                 & if Lens.has Lens._Just t
                     then nonHoleAnn .~ dontShowType
                     else id
-            ) h t o
+            ) h t
             & BodyFragment
         )
 

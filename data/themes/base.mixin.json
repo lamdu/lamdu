@@ -44,10 +44,6 @@
             "unfocused": "  "
         }
     },
-    "hole": {
-        "resultPadding": [1.0, 0.5],
-        "frameWidth": [0.04, 0.04]
-    },
     "name": {
         "collisionSuffixScaleFactor": [0.5, 0.5]
     },

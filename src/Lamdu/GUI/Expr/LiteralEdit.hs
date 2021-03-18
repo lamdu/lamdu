@@ -28,7 +28,6 @@ import qualified GUI.Momentu.Widgets.TextView as TextView
 import qualified Lamdu.Config as Config
 import           Lamdu.Formatting (Format(..))
 import qualified Lamdu.GUI.Expr.EventMap as ExprEventMap
-import qualified Lamdu.GUI.Expr.HoleEdit.WidgetIds as HoleWidgetIds
 import           Lamdu.GUI.Monad (GuiM)
 import           Lamdu.GUI.Styled (label)
 import qualified Lamdu.GUI.Types as ExprGui
@@ -47,7 +46,7 @@ mkEditEventMap :: _ => m (Text -> o Sugar.EntityId -> EventMap (o M.Update))
 mkEditEventMap =
     Lens.view id
     <&> \env valText setToHole ->
-    setToHole <&> HoleWidgetIds.make <&> HoleWidgetIds.hidOpen
+    setToHole <&> WidgetIds.fromEntityId
     <&> SearchMenu.enterWithSearchTerm valText
     & E.keyPresses [ModKey mempty MetaKey.Key'Enter]
     (E.toDoc env [has . MomentuTexts.edit, has . Texts.value])
@@ -191,7 +190,7 @@ numEdit prop pl =
                     holeWithChar
                     where
                         holeWithChar c =
-                            (action <&> HoleWidgetIds.make <&> HoleWidgetIds.hidOpen
+                            (action <&> WidgetIds.fromEntityId
                                 <&> SearchMenu.enterWithSearchTerm (Text.singleton c))
                             <$ guard (Char.isAlpha c)
                 _ -> mempty

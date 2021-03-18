@@ -16,7 +16,6 @@ import qualified Tests.Precedence
 import qualified Tests.Readme
 import qualified Tests.Stdlib
 import qualified Tests.Sugar
-import qualified Tests.Suggest
 
 import           Test.Lamdu.Prelude
 
@@ -41,5 +40,4 @@ main =
             , Tests.Readme.test
             , Tests.Stdlib.test
             , Tests.Sugar.test
-            , Tests.Suggest.test
             ]

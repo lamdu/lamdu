@@ -15,7 +15,6 @@ module Lamdu.Sugar.Convert.Monad
     , cachedFunc
 
     , ConvertM(..), run, convertOnce
-    , PositionInfo(..)
     , convertSubexpression
     , typeProtectedSetToVal, typeProtect, postProcessAssert, postProcessWith
     ) where
@@ -95,8 +94,6 @@ instance Monad m => MonadTransaction m (ConvertM m) where
 convertOnce :: (Monad m, Typeable a) => OnceT (T m) a -> ConvertM m (OnceT (T m) a)
 convertOnce = ConvertM . lift . once
 
-data PositionInfo = BinderPos | ExpressionPos deriving Eq
-
 data Context m = Context
     { _scInferContext :: InferState
     , _scCodeAnchors :: Anchors.CodeAnchors m
@@ -113,7 +110,7 @@ data Context m = Context
     , _scConfig :: Config
     , scConvertSubexpression ::
         forall a. Monoid a =>
-        PositionInfo -> Ann (Input.Payload m a) # V.Term ->
+        Ann (Input.Payload m a) # V.Term ->
         ConvertM m (ExpressionU EvalPrep m a)
     }
 Lens.makeLenses ''Context
@@ -181,4 +178,4 @@ convertSubexpression ::
 convertSubexpression exprI =
     do
         convertSub <- Lens.view (Lens.to scConvertSubexpression)
-        convertSub ExpressionPos exprI
+        convertSub exprI
