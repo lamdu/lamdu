@@ -64,4 +64,7 @@ makeNullary (Ann (Const pl) (Sugar.NullaryInject tag r)) =
             injectTag tag <&> Responsive.fromWithTextPos
             <&> either M.weakerEvents (const id) nullary
         ResponsiveExpr.boxSpacedMDisamb ?? ExprGui.mParensId pl ?? (t : nullary ^.. Lens._Right)
+    & GuiState.assignCursor
+        (pl ^. _1 & WidgetIds.fromExprPayload)
+        (tag ^. Sugar.tagRefTag . Sugar.tagInstance & WidgetIds.fromEntityId)
     & stdWrap pl
