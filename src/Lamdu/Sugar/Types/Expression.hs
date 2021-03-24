@@ -1,11 +1,6 @@
 {-# LANGUAGE TemplateHaskell, TypeFamilies, MultiParamTypeClasses, UndecidableInstances, DataKinds, GADTs, ConstraintKinds, FlexibleInstances #-}
 module Lamdu.Sugar.Types.Expression
     ( Expr, Body
-    , NodeActions(..)
-        , detach, delete, setToLiteral, setToEmptyRecord
-        , extract, mReplaceParent, wrapInRecord, mNewLet
-    , Payload(..), plEntityId, plAnnotation, plNeverShrinkTypeAnnotations, plActions
-
     , Term(..)
         , _BodyLam, _BodyLabeledApply, _BodySimpleApply
         , _BodyRecord, _BodyFragment, _BodyLeaf, _BodyNullaryInject
@@ -226,30 +221,12 @@ data Assignment v name i o f
     | BodyPlain (AssignPlain v name i o f)
     deriving Generic
 
-data NodeActions name i o = NodeActions
-    { _detach :: DetachAction o
-    , _delete :: Delete o
-    , _setToLiteral :: Literal Identity -> o EntityId
-    , _setToEmptyRecord :: o EntityId
-    , _extract :: o ExtractDestination
-    , _mReplaceParent :: Maybe (o EntityId)
-    , _wrapInRecord :: TagChoice name i o ()
-    , _mNewLet :: Maybe (o EntityId)
-    } deriving Generic
-
-data Payload v name i o = Payload
-    { _plAnnotation :: v
-    , _plNeverShrinkTypeAnnotations :: Bool
-    , _plActions :: NodeActions name i o
-    , _plEntityId :: EntityId
-    } deriving Generic
-
 traverse Lens.makeLenses
     [ ''AnnotatedArg, ''AssignPlain
     , ''Composite, ''CompositeItem, ''Fragment
     , ''Function, ''Hole, ''HoleOption, ''HoleResult
     , ''IfElse, ''LabeledApply, ''Lambda, ''Let
-    , ''NodeActions, ''Nominal, ''OperatorArgs, ''Payload, ''PostfixApply
+    , ''Nominal, ''OperatorArgs, ''PostfixApply
     ] <&> concat
 traverse Lens.makePrisms
     [''Assignment, ''Binder, ''CompositeTail, ''Else, ''Leaf, ''PostfixFunc, ''Term] <&> concat
