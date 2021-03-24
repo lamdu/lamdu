@@ -90,6 +90,7 @@
             "deleteToNominal": "Cancella ToNominal",
             "tag": "Tag",
             "record": "Record",
+            "injectValue": "Inserisci Valore",
             "caseLabel": "Caso",
             "addField": "Aggiungi Campo",
             "deleteField": "Cancella Campo",

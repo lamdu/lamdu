@@ -139,6 +139,8 @@ data Config = Config
 
     , _caseOpenKeys :: [MetaKey]
     , _caseAddAltKeys :: [MetaKey]
+
+    , _injectValueKeys :: [MetaKey]
     } deriving (Eq, Show)
 JsonTH.derivePrefixed "_" ''Config
 

@@ -31,6 +31,7 @@ data CodeUI a = CodeUI
     , _deleteToNominal :: a
     , _tag :: a
     , _record :: a
+    , _injectValue :: a
     , _caseLabel :: a
     , _addField :: a
     , _deleteField :: a

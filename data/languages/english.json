@@ -90,6 +90,7 @@
             "deleteToNominal": "Delete ToNominal",
             "tag": "Tag",
             "record": "Record",
+            "injectValue": "Inject Value",
             "caseLabel": "Case",
             "addField": "Add Field",
             "deleteField": "Delete Field",

@@ -19,6 +19,7 @@ import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.GUI.Wrap (stdWrap)
 import qualified Lamdu.GUI.Types as ExprGui
 import qualified Lamdu.I18N.Code as Texts
+import qualified Lamdu.I18N.CodeUI as Texts
 import qualified Lamdu.I18N.Navigation as Texts
 import           Lamdu.Name (Name)
 import qualified Lamdu.Sugar.Types as Sugar
@@ -63,7 +64,17 @@ makeNullary (Ann (Const pl) (Sugar.NullaryInject tag r)) =
         t <-
             injectTag tag <&> Responsive.fromWithTextPos
             <&> either M.weakerEvents (const id) nullary
+        valEventMap <-
+            case r ^. annotation . _1 . Sugar.plActions . Sugar.delete of
+            Sugar.SetToHole a ->
+                Lens.view id <&>
+                \env ->
+                E.keysEventMapMovesCursor (env ^. has . Config.injectValueKeys)
+                (E.toDoc env [has . MomentuTexts.edit, has . Texts.injectValue])
+                (a <&> WidgetIds.fromEntityId)
+            _ -> error "cannot set injected empty record to hole??"
         ResponsiveExpr.boxSpacedMDisamb ?? ExprGui.mParensId pl ?? (t : nullary ^.. Lens._Right)
+            <&> M.weakerEvents valEventMap
     & GuiState.assignCursor
         (pl ^. _1 & WidgetIds.fromExprPayload)
         (tag ^. Sugar.tagRefTag . Sugar.tagInstance & WidgetIds.fromEntityId)

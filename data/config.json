@@ -106,5 +106,6 @@
     "delForwardKeys"           : [ "Delete", "Alt+Delete" ],
     "replaceParentKeys"        : [ "Cmd+Delete", "Cmd+Backspace" ],
     "letAddItemKeys"           : [ "Alt+L" ],
+    "injectValueKeys"          : [ "Space" ],
     "jumpToDefinitionKeys"     : [ "Enter" ]
 }

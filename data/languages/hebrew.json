@@ -91,6 +91,7 @@
             "deleteToNominal": "מחק עיטוף",
             "tag": "תג",
             "record": "רשומה",
+            "injectValue": "הזרק ביטוי",
             "caseLabel": "התאמה",
             "addField": "הוסף שדה",
             "deleteField": "מחק שדה",
