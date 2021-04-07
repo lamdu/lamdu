@@ -1,5 +1,8 @@
 cradle:
   stack:
+    - path: "././tools/migrate.hs"
+      component: "Lamdu:exe:migrate"
+
     - path: "./src/main/Lamdu/Main.hs"
       component: "Lamdu:exe:lamdu"
 
