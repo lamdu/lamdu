@@ -5,6 +5,7 @@ module Lamdu.Sugar.Convert.Apply
     ) where
 
 import qualified Control.Lens as Lens
+import           Control.Monad.Once (Typeable)
 import           Control.Monad.Trans.Except.Extended (runMatcherT, justToLeft)
 import           Control.Monad.Trans.Maybe (MaybeT(..))
 import qualified Data.Map as Map
@@ -37,7 +38,7 @@ import           Revision.Deltum.Transaction (Transaction)
 import           Lamdu.Prelude
 
 convert ::
-    (Monad m, Monoid a) =>
+    (Monad m, Typeable m, Monoid a) =>
     V.App V.Term # Ann (Input.Payload m a) ->
     Input.Payload m a # V.Term ->
     ConvertM m (ExpressionU EvalPrep m a)

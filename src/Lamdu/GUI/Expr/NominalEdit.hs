@@ -1,7 +1,7 @@
 {-# LANGUAGE RankNTypes #-}
 
 module Lamdu.GUI.Expr.NominalEdit
-    ( makeFromNom, makeToNom
+    ( makeFromNom, makeToNom, label
     ) where
 
 import qualified Control.Lens as Lens
@@ -50,7 +50,7 @@ makeToNom (Ann (Const pl) (Sugar.Nominal tid binder)) =
             <*>
             sequence
             [ (Widget.makeFocusableView ?? nameId <&> (M.tValue %~))
-                <*> mkNomLabel tid
+                <*> label tid
                 <&> Responsive.fromWithTextPos
                 <&> M.weakerEvents eventMap
             , GuiM.makeBinder binder
@@ -59,16 +59,11 @@ makeToNom (Ann (Const pl) (Sugar.Nominal tid binder)) =
         myId = WidgetIds.fromExprPayload pl
         nameId = Widget.joinId myId ["name"]
 
-makeFromNom ::
-    _ => Annotated (ExprGui.Payload i o) # Const (Sugar.TId Name) -> GuiM env i o (Responsive o)
-makeFromNom (Ann (Const pl) (Const nom)) =
-    Styled.grammar (Label.make ".")
-    M./|/ mkNomLabel nom
-    <&> Responsive.fromTextView
-    & stdWrapParentExpr pl
+makeFromNom :: _ => Sugar.TId Name -> GuiM env i o (Responsive o)
+makeFromNom nom = Styled.grammar (Label.make ".") M./|/ label nom <&> Responsive.fromTextView
 
-mkNomLabel :: _ => Sugar.TId Name -> GuiM env i o (M.WithTextPos M.View)
-mkNomLabel tid =
+label :: _ => Sugar.TId Name -> GuiM env i o (M.WithTextPos M.View)
+label tid =
     do
         nomColor <- Lens.view (has . Theme.textColors . TextColors.nomColor)
         NameView.make (tid ^. Sugar.tidName) & local (TextView.color .~ nomColor)

@@ -174,18 +174,18 @@ instance Functor m => MarkBodyAnnotations v m Term where
         , morphMap (Proxy @(MarkAnnotations m) #?> markNodeAnnotations) x & BodyLabeledApply
         )
     markBodyAnnotations (BodyIfElse x) = markBodyAnnotations x & _2 %~ BodyIfElse
-    markBodyAnnotations (BodyLeaf LeafHole) =
+    markBodyAnnotations (BodyLeaf (LeafHole x)) =
         ( alwaysShowAnnotations
-        , BodyLeaf LeafHole
+        , BodyLeaf (LeafHole x)
         )
-    markBodyAnnotations (BodyFragment (Fragment e h t)) =
+    markBodyAnnotations (BodyFragment (Fragment e h t o)) =
         ( alwaysShowAnnotations
         , Fragment
             ( markNodeAnnotations e
                 & if Lens.has Lens._Just t
                     then nonHoleAnn .~ dontShowType
                     else id
-            ) h t
+            ) h t o
             & BodyFragment
         )
 

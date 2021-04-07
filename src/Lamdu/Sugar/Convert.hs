@@ -4,7 +4,7 @@ module Lamdu.Sugar.Convert
 
 import           Control.Applicative ((<|>))
 import qualified Control.Lens as Lens
-import           Control.Monad.Once (OnceT)
+import           Control.Monad.Once (OnceT, Typeable)
 import           Control.Monad.Transaction (MonadTransaction)
 import           Data.CurAndPrev (CurAndPrev(..))
 import           Data.List.Extended (insertAt, removeAt)
@@ -85,7 +85,7 @@ assertInferSuccess =
     either (error . ("Type inference failed: " ++) . show . pPrint) id
 
 convertInferDefExpr ::
-    ( HasCallStack, Monad m
+    ( HasCallStack, Monad m, Typeable m
     , Has Debug.Monitors env
     , Has Config env, Has Cache.Functions env
     ) =>
@@ -140,7 +140,7 @@ convertInferDefExpr env cp defType defExpr defI =
             >>= Transaction.writeIRef defI
 
 convertDefBody ::
-    ( HasCallStack, Monad m
+    ( HasCallStack, Monad m, Typeable m
     , Has Debug.Monitors env
     , Has Config env, Has Cache.Functions env
     ) =>
@@ -155,7 +155,7 @@ convertDefBody env cp (Definition.Definition bod defType defI) =
         convertInferDefExpr env cp defType defExpr defI
 
 convertRepl ::
-    ( HasCallStack, Monad m
+    ( HasCallStack, Monad m, Typeable m
     , Has Debug.Monitors env
     , Has Config env, Has Cache.Functions env
     ) =>
@@ -206,7 +206,7 @@ convertRepl env cp =
             >>= (`Property.pureModify` (Definition.exprFrozenDeps .~ deps))
 
 convertPaneBody ::
-    ( Monad m
+    ( Monad m, Typeable m
     , Has Debug.Monitors env
     , Has Config env, Has Cache.Functions env
     ) =>
@@ -252,7 +252,7 @@ paneEntityId (Anchors.PaneDefinition defI) = EntityId.ofIRef defI
 paneEntityId (Anchors.PaneTag tag) = EntityId.ofTagPane tag
 
 convertPane ::
-    ( Monad m
+    ( Monad m, Typeable m
     , Has Debug.Monitors env
     , Has Config env, Has Cache.Functions env
     ) =>
@@ -292,7 +292,7 @@ convertPane env cp replEntityId (Property panes setPanes) i pane =
             | otherwise = Nothing
 
 loadPanes ::
-    ( Monad m
+    ( Monad m, Typeable m
     , Has Debug.Monitors env
     , Has Config env, Has Cache.Functions env
     ) =>
@@ -305,7 +305,7 @@ loadPanes env cp replEntityId =
             & Lens.itraversed %%@~ convertPane env cp replEntityId prop
 
 loadWorkArea ::
-    ( HasCallStack, Monad m
+    ( HasCallStack, Monad m, Typeable m
     , Has Debug.Monitors env
     , Has Config env, Has Cache.Functions env
     ) =>

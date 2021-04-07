@@ -72,7 +72,7 @@ arithmeticInfix2 :: String -> Infix2
 arithmeticInfix2 op = infix2Apply (defRef (fromString op) (fromString op))
 
 hole :: Expr
-hole = Sugar.BodyLeaf Sugar.LeafHole & expr
+hole = pure [] & const & pure & Sugar.Hole & Sugar.LeafHole & Sugar.BodyLeaf & expr
 
 ($$) :: Expr -> Expr -> Expr
 func $$ arg =

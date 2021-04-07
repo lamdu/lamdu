@@ -87,7 +87,7 @@ workArea396 =
     Sugar.WorkArea
     { Sugar._waRepl = Stub.repl lamExpr
     , Sugar._waPanes =
-        [ Stub.binderExpr [("paneVar", "num")] leafExpr
+        [ Stub.binderExpr [("paneVar", "num")] Stub.hole
             & Stub.def lamType "def" "def"
             & Stub.pane
         ]
@@ -95,18 +95,17 @@ workArea396 =
     } & testWorkArea assertNoCollisions
     where
         lamType = Stub.numType ~> Stub.numType
-        leafExpr = Sugar.BodyLeaf Sugar.LeafHole & Stub.expr
         lamExpr =
             Sugar.BodyLam Sugar.Lambda
             { Sugar._lamMode = Sugar.NormalBinder
             , Sugar._lamApplyLimit = Sugar.UnlimitedFuncApply
-            , Sugar._lamFunc = Stub.funcExpr [("lamVar", "num")] leafExpr
+            , Sugar._lamFunc = Stub.funcExpr [("lamVar", "num")] Stub.hole
             } & Stub.expr
 
 workAreaGlobals :: IO ()
 workAreaGlobals =
     Sugar.WorkArea
-    { Sugar._waRepl = Stub.repl trivialExpr
+    { Sugar._waRepl = Stub.repl Stub.hole
     , Sugar._waPanes =
         -- 2 defs sharing the same tag with different Vars/UUIDs,
         -- should collide with ordinary suffixes
@@ -125,5 +124,4 @@ workAreaGlobals =
                 [ "Unexpected/bad collision for name", show text
                 , show textCollision, show tagCollision
                 ] & assertString
-        trivialBinder = Stub.binderExpr [] trivialExpr
-        trivialExpr = Sugar.BodyLeaf Sugar.LeafHole & Stub.expr
+        trivialBinder = Stub.binderExpr [] Stub.hole

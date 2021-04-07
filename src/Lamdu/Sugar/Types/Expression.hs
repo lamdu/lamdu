@@ -12,7 +12,6 @@ module Lamdu.Sugar.Types.Expression
     , PostfixApply(..), pArg, pFunc
     , PostfixFunc(..), _PfCase, _PfFromNom, _PfGetField
     , App(..), appFunc, appArg
-    , Fragment(..), fExpr, fHeal, fTypeMismatch
     , Lambda(..), lamFunc, lamMode, lamApplyLimit
     , Nominal(..), nTId, nVal
     -- Binders
@@ -25,6 +24,15 @@ module Lamdu.Sugar.Types.Expression
         , fAddFirstParam, fBodyScopes
     , AssignPlain(..), apAddFirstParam, apBody
     , Assignment(..), _BodyFunction, _BodyPlain
+    -- Holes
+    , Hole(..), holeOptions
+    , Query(..), qLangInfo, qSearchTerm
+    , QueryLangInfo(..), qLangId, qLangDir, qCodeTexts, qUITexts
+    , Option(..), optionExpr, optionPick, optionTypeMatch
+    -- Fragments
+    , Fragment(..), fExpr, fHeal, fTypeMismatch, fOptions
+    , FragOpt(..), _FragPostfix, _FragInject, _FragGetVar, _FragOp
+    , FragOperator(..), oFunc, oRightArg
     -- If/else
     , IfElse(..), iIf, iThen, iElse
     , Else(..), _SimpleElse, _ElseIf
@@ -40,10 +48,14 @@ module Lamdu.Sugar.Types.Expression
 import qualified Control.Lens as Lens
 import           Data.Property (Property)
 import           Data.Kind (Type)
+import           GUI.Momentu.Direction (Layout)
 import           Hyper
 import           Hyper.Type.AST.App (App(..), appFunc, appArg)
 import           Lamdu.Data.Anchors (BinderParamScopeId(..), bParamScopeId)
 import qualified Lamdu.Data.Meta as Meta
+import qualified Lamdu.I18N.Code as Texts
+import qualified Lamdu.I18N.CodeUI as Texts
+import           Lamdu.I18N.LangId (LangId)
 import           Lamdu.Sugar.Internal.EntityId (EntityId)
 import           Lamdu.Sugar.Types.Eval (ParamScopes)
 import           Lamdu.Sugar.Types.GetVar (GetVar, BinderVarRef, BinderMode)
@@ -94,7 +106,55 @@ data Fragment v name i o k = Fragment
     { _fExpr :: k :# Term v name i o
     , _fHeal :: o EntityId
     , _fTypeMismatch :: Maybe (Annotated EntityId # T.Type name)
+    , _fOptions :: i (Query Text -> i [Option FragOpt name i o])
     } deriving Generic
+
+data FragOpt v name i o k
+    = FragPostfix [k :# PostfixFunc v name i o]
+    | FragInject (TagRef name i o)
+    | FragGetVar (GetVar name o)
+    | FragOp (FragOperator v name i o k)
+    | FragToNom (TId name)
+    | FragLam
+    | FragIf (k :# Term v name i o)
+    deriving Generic
+
+data FragOperator v name i o k = FragOperator
+    { _oFunc :: k :# Const (BinderVarRef name o)
+    , -- Argument on right-hand-side (LTR) of operator.
+      -- (usually a hole, but may be completed to other values)
+      _oRightArg :: k :# Term v name i o
+    } deriving Generic
+
+data Option t name i o = Option
+    { _optionExpr :: Expr t (Annotation () name) name i o
+    , _optionPick :: o ()
+    , -- Whether option expr fits the destination or will it be fragmented?
+      -- Note that for fragments, this doesn't indicate whether the emplaced fragmented expr
+      -- within stays fragmented.
+      _optionTypeMatch :: Bool
+    } deriving Generic
+
+data QueryLangInfo a = QueryLangInfo
+    { _qLangId :: LangId
+    , _qLangDir :: Layout
+    , _qCodeTexts :: Texts.Code a
+    , _qUITexts :: Texts.CodeUI a
+    } deriving (Functor, Foldable, Traversable)
+
+data Query a = Query
+    { _qLangInfo :: QueryLangInfo a
+    , _qSearchTerm :: a
+    } deriving (Functor, Foldable, Traversable)
+
+newtype Hole name i o = Hole
+    { _holeOptions ::
+        i (Query Text -> i [Option Binder name i o])
+        -- Inner `i` serves two purposes:
+        -- Name walk requires monadic place to process names.
+        -- Hole can prepare results depending on the query and avoid doing work
+        -- if the query filters it out.
+    } deriving stock Generic
 
 data Else v name i o f
     = SimpleElse (Term v name i o f)
@@ -139,7 +199,7 @@ data PostfixFunc v name i o k
 
 data Leaf name i o
     = LeafLiteral (Literal (Property o))
-    | LeafHole
+    | LeafHole (Hole name i o)
     | LeafGetVar (GetVar name o)
     | LeafInject (TagRef name i o)
     deriving Generic
@@ -198,24 +258,24 @@ data Assignment v name i o f
 
 traverse Lens.makeLenses
     [ ''AnnotatedArg, ''AssignPlain
-    , ''Composite, ''CompositeItem, ''Fragment
-    , ''Function
+    , ''Composite, ''CompositeItem, ''Fragment, ''FragOperator
+    , ''Function, ''Hole, ''Option, ''Query, ''QueryLangInfo
     , ''IfElse, ''LabeledApply, ''Lambda, ''Let
     , ''Nominal, ''OperatorArgs, ''PostfixApply
     ] <&> concat
 traverse Lens.makePrisms
-    [''Assignment, ''Binder, ''CompositeTail, ''Else, ''Leaf, ''PostfixFunc, ''Term] <&> concat
+    [''Assignment, ''Binder, ''CompositeTail, ''Else, ''FragOpt, ''Leaf, ''PostfixFunc, ''Term] <&> concat
 
 traverse makeHTraversableAndBases
     [ ''AnnotatedArg, ''Assignment, ''AssignPlain, ''Binder
     , ''Composite, ''CompositeItem, ''CompositeTail, ''Else
-    , ''Fragment, ''Function, ''IfElse
+    , ''Fragment, ''FragOperator, ''FragOpt, ''Function, ''IfElse
     , ''LabeledApply, ''Lambda, ''Let, ''Nominal
     , ''OperatorArgs, ''PostfixApply, ''PostfixFunc, ''Term
     ] <&> concat
 
 traverse makeHMorph
-    [ ''Composite, ''IfElse, ''LabeledApply, ''Let, ''OperatorArgs, ''PostfixApply, ''PostfixFunc
+    [ ''Composite, ''FragOpt, ''IfElse, ''LabeledApply, ''Let, ''OperatorArgs, ''PostfixApply, ''PostfixFunc
     ] <&> concat
 
 -- TODO: Replace boilerplate below with TH
@@ -224,6 +284,7 @@ instance RNodes (Assignment v name i o)
 instance RNodes (Binder v name i o)
 instance RNodes (Else v name i o)
 instance RNodes (Function v name i o)
+instance RNodes (FragOpt v name i o)
 instance RNodes (PostfixFunc v name i o)
 instance RNodes (Term v name i o)
 
@@ -244,6 +305,7 @@ instance Dep v c name i o => Recursively c (Else v name i o)
 instance Dep v c name i o => Recursively c (PostfixFunc v name i o)
 instance Dep v c name i o => Recursively c (Term v name i o)
 
+instance (Dep v c name i o, c (FragOpt v name i o)) => Recursively c (FragOpt v name i o)
 instance (Dep v c name i o, c (Function v name i o)) => Recursively c (Function v name i o)
 
 instance RTraversable (Assignment v name i o)

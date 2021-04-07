@@ -6,7 +6,7 @@ module Lamdu.Sugar
     ) where
 
 import qualified Control.Lens as Lens
-import           Control.Monad.Once (OnceT)
+import           Control.Monad.Once (OnceT, Typeable)
 import           Control.Monad.Transaction (MonadTransaction)
 import           Data.CurAndPrev (CurAndPrev(..))
 import qualified Data.Map as Map
@@ -87,7 +87,7 @@ sugarWorkArea ::
     , Has (Texts.Name Text) env1
     , Has (Texts.Code Text) env1
     , Has (CurAndPrev EvalResults) env1
-    , Monad m
+    , Monad m, Typeable m
     ) =>
     env0 -> Anchors.CodeAnchors m ->
     OnceT (T m)

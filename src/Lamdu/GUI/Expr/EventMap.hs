@@ -5,10 +5,11 @@ module Lamdu.GUI.Expr.EventMap
     , addLetEventMap
     , makeLiteralNumberEventMap
     , makeLiteralTextEventMap
-    , makeLiteralEventMap
+    , allowedSearchTerm
     ) where
 
 import qualified Control.Lens as Lens
+import qualified Data.Char as Char
 import qualified Data.Text as Text
 import qualified GUI.Momentu.Direction as Dir
 import           GUI.Momentu.EventMap (EventMap)
@@ -165,6 +166,7 @@ transformSearchTerm =
         transform c =
             do
                 guard (c `notElem` Chars.operator)
+                guard (allowedSearchTerm (Text.singleton c))
                 pure (Text.singleton c)
         searchStrRemainder = eventCtx ^. Widget.ePrevTextRemainder
         acceptOp = (>= exprInfoMinOpPrec exprInfo) . precedence
@@ -260,3 +262,27 @@ makeLiteralTextEventMap =
 
 makeLiteralEventMap :: _ => m ((Sugar.Literal Identity -> o Sugar.EntityId) -> EventMap (o GuiState.Update))
 makeLiteralEventMap = (<>) <$> makeLiteralTextEventMap <*> makeLiteralNumberEventMap ""
+
+allowedSearchTerm :: Text -> Bool
+allowedSearchTerm searchTerm =
+    any (searchTerm &)
+    [ Text.all (`elem` Chars.operator)
+    , isNameOrPrefixed
+    , (`elem` ["\\", "{", "}"])
+    ]
+
+isNameOrPrefixed :: Text -> Bool
+isNameOrPrefixed t =
+    case Text.uncons t of
+    Nothing -> True
+    Just (x, xs) | x `elem` prefixes -> isAlphaNumericName xs
+    Just _ -> isAlphaNumericName t
+    where
+        prefixes :: String
+        prefixes = ".'"
+
+isAlphaNumericName :: Text -> Bool
+isAlphaNumericName suffix =
+    case Text.uncons suffix of
+    Nothing -> True
+    Just (x, xs) -> Char.isAlpha x && Text.all Char.isAlphaNum xs

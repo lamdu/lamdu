@@ -230,6 +230,14 @@ instance (a ~ OldName m, b ~ NewName m, i ~ IM m) => Walk m (TagChoice a i o p) 
         , _tcAnon = anon
         }
 
+instance (a ~ OldName m, b ~ NewName m, i ~ IM m) => Walk m (Hole a i o) (Hole b i o) where
+    walk (Hole opts) =
+        opRun <&>
+        \run ->
+        opts
+        <&> Lens.mapped %~ (>>= run . (traverse . optionExpr) toExpression)
+        & Hole
+
 toTagRefOf ::
     MonadNaming m =>
     NameType -> Sugar.TagRef (OldName m) (IM m) o ->
@@ -266,15 +274,34 @@ instance ToBody LabeledApply where
         <*> (traverse . pvVar) (toNode (Lens._Wrapped walk)) _aPunnedArgs
 
 instance ToBody Fragment where
-    toBody Fragment{_fExpr, _fHeal, _fTypeMismatch} =
+    toBody Fragment{_fExpr, _fHeal, _fTypeMismatch, _fOptions} =
         do
             newTypeMismatch <- Lens._Just walk _fTypeMismatch
             newExpr <- toExpression _fExpr
+            run <- opRun
             pure Fragment
                 { _fExpr = newExpr
                 , _fTypeMismatch = newTypeMismatch
                 , _fHeal
+                , _fOptions =
+                    _fOptions
+                    <&> Lens.mapped %~ (>>= run . (traverse . optionExpr) toExpression)
                 }
+
+instance ToBody FragOpt where
+    toBody (FragPostfix x) = traverse toExpression x <&> FragPostfix
+    toBody (FragInject x) = walk x <&> FragInject
+    toBody (FragGetVar x) = walk x <&> FragGetVar
+    toBody (FragOp x) = toBody x <&> FragOp
+    toBody (FragToNom x) = walk x <&> FragToNom
+    toBody (FragIf x) = toExpression x <&> FragIf
+    toBody FragLam = pure FragLam
+
+instance ToBody FragOperator where
+    toBody (FragOperator f a) =
+        FragOperator
+        <$> toNode (Lens._Wrapped (toBinderVarRef Nothing)) f
+        <*> toExpression a
 
 instance ToBody CompositeItem where
     toBody (CompositeItem del tag e) =
@@ -321,11 +348,14 @@ instance
         <$> toTagRefOf Tag t
         <*> toNode (Lens._Wrapped walk) n
 
+instance (a ~ OldName m, b ~ NewName m, i ~ IM m) => Walk m (TagRef a i o) (TagRef b i o) where
+    walk = toTagRefOf Tag
+
 instance (a ~ OldName m, b ~ NewName m, i ~ IM m) => Walk m (Leaf a i o) (Leaf b i o) where
     walk =
         \case
-        LeafInject       x -> x & toTagRefOf Tag <&> LeafInject
-        LeafHole           -> pure LeafHole
+        LeafInject       x -> x & walk <&> LeafInject
+        LeafHole         x -> x & walk <&> LeafHole
         LeafGetVar       x -> x & walk <&> LeafGetVar
         LeafLiteral      x -> x & LeafLiteral & pure
 

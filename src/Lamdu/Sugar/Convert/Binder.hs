@@ -146,7 +146,7 @@ convertBinder expr@(Ann pl body) =
         convertExpr =
             do
                 convertSub <- Lens.view (Lens.to ConvertM.scConvertSubexpression)
-                convertSub expr
+                convertSub ConvertM.BinderPos expr
             & localNewExtractDestPos pl
             <&> annValue %~ BinderTerm
 

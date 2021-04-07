@@ -4,6 +4,7 @@ module Lamdu.Sugar.OrderTags
     ( orderDef, orderType, orderNode
     ) where
 
+import qualified Control.Lens as Lens
 import           Control.Monad ((>=>))
 import           Control.Monad.Transaction (MonadTransaction(..))
 import           Data.List (sortOn)
@@ -117,7 +118,12 @@ instance MonadTransaction m i => Order i (Sugar.Term v name i o) where
     order (Sugar.BodySimpleApply x) = htraverse1 orderNode x <&> Sugar.BodySimpleApply
     order (Sugar.BodyPostfixApply x) = order x <&> Sugar.BodyPostfixApply
     order (Sugar.BodyNullaryInject x) = Sugar.BodyNullaryInject x & pure
-    order (Sugar.BodyLeaf x) = Sugar.BodyLeaf x & pure
+    order (Sugar.BodyLeaf x) =
+        x
+        & Sugar._LeafHole . Sugar.holeOptions . Lens.mapped . Lens.mapped
+            %~ (>>= (traverse . Sugar.optionExpr) orderNode)
+        & Sugar.BodyLeaf
+        & pure
 
 orderNode ::
     (MonadTransaction m i, Order i f) =>

@@ -11,6 +11,7 @@ module Lamdu.Sugar.Lens
     , binderResultExpr
     , getVarName
     , paneBinder
+    , unfinishedPayloads
     ) where
 
 import           Control.Lens (Traversal)
@@ -27,6 +28,16 @@ childPayloads ::
     Lens.Traversal' (expr # Annotated a) a
 childPayloads f =
     htraverse (const (annotation f))
+
+unfinishedPayloads ::
+    forall t a.
+    SugarExpr t =>
+    Lens.Traversal' (Annotated a # t) a
+unfinishedPayloads f (Ann (Const a) x) =
+    withDict (sugarExprRecursive (Proxy @t)) $
+    flip Ann
+    <$> htraverse (Proxy @SugarExpr #> unfinishedPayloads f) x
+    <*> ((if isUnfinished x then f a else pure a) <&> Const)
 
 class HTraversable t => SugarExpr t where
     isUnfinished :: t f -> Bool
@@ -48,6 +59,8 @@ instance Recursive SugarExpr where
 instance SugarExpr (Const (GetVar name o))
 instance SugarExpr (Const (TId name))
 instance SugarExpr (Const (TagChoice name i o EntityId))
+instance SugarExpr (PostfixFunc v name i o)
+instance SugarExpr (FragOpt v name i o)
 
 instance SugarExpr (Const (BinderVarRef name o)) where
     isUnfinished (Const x) = Lens.has binderVarRefUnfinished x
@@ -62,8 +75,6 @@ instance SugarExpr (Else v name i o) where
 
 instance SugarExpr (Function v name i o) where
     isForbiddenInLightLam = Lens.has (fParams . _Params)
-
-instance SugarExpr (PostfixFunc v name i o)
 
 instance SugarExpr (Binder v name i o) where
     isUnfinished (BinderTerm x) = isUnfinished x
@@ -193,6 +204,7 @@ instance HAnnotations a b (LabeledApply a n i o) (LabeledApply b n i o)
 instance HAnnotations a b (Let a n i o) (Let b n i o)
 instance HAnnotations a b (PostfixApply a n i o) (PostfixApply b n i o)
 instance HAnnotations a b (PostfixFunc a n i o) (PostfixFunc b n i o)
+instance HAnnotations a b (FragOpt a n i o) (FragOpt b n i o)
 
 instance HAnnotations a b (Assignment a n i o) (Assignment b n i o) where
     hAnnotations f (BodyFunction x) = hAnnotations f x <&> BodyFunction

@@ -33,6 +33,7 @@ test =
     , testExtractForRecursion
     , testLightLambda
     , testNotALightLambda
+    , testInline
     , testReorderLets
     , testReplaceParent
     , testReplaceParentFragment
@@ -146,6 +147,46 @@ testExtract =
         action =
             replBody . _BodyLam . lamFunc . fBody . annotation . plActions .
             extract
+
+-- Test for issue #402
+-- https://trello.com/c/ClDnsGQi/402-wrong-result-when-inlining-from-hole-results
+testInline :: Test
+testInline =
+    do
+        queryLangInfo <-
+            Env.make <&>
+            \env -> QueryLangInfo (env ^. has) (env ^. has) (env ^. has) (env ^. has)
+        let inline workArea =
+                do
+                    result <-
+                        workArea ^?!
+                        replBody . _BodyLam . lamFunc . fBody .
+                        hVal . _BinderLet . lBody . hVal . _BinderTerm . _BodyLeaf . _LeafHole
+                        . holeOptions
+                        >>= (Query queryLangInfo "num" &)
+                        <&> fromMaybe (error "expected option") . (^? traverse)
+                    result ^. optionPick & lift
+                    result ^?! optionExpr . hVal . _BinderTerm
+                        . _BodyLeaf . _LeafGetVar . _GetBinder . bvInline . _InlineVar
+                        & lift & void
+        testSugarActions "let-item-inline.json" [inline, verify]
+    & testCase "inline"
+    where
+        verify workArea
+            | Lens.has afterInline workArea = pure ()
+            | otherwise = error "Expected inline result"
+        afterInline =
+            replBody . _BodyLam . lamFunc . fBody .
+            hVal . _BinderTerm . _BodyLeaf . _LeafLiteral . _LiteralNum
+
+findM :: Monad m => (a -> m Bool) -> [a] -> m (Maybe a)
+findM _ [] = pure Nothing
+findM f (x:xs) =
+    do
+        found <- f x
+        if found
+            then Just x & pure
+            else findM f xs
 
 paramAnnotations :: Test
 paramAnnotations =

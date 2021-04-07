@@ -9,23 +9,35 @@ import qualified GUI.Momentu.Direction as Dir
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.I18N as MomentuTexts
+import qualified GUI.Momentu.MetaKey as MetaKey
 import           GUI.Momentu.Responsive (Responsive(..))
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.Responsive.Expression as ResponsiveExpr
 import qualified GUI.Momentu.State as GuiState
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Label as Label
+import qualified GUI.Momentu.Widgets.Menu as Menu
+import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.Config.Theme.ValAnnotation as ValAnnotation
+import qualified Lamdu.I18N.Code as Texts
 import           Lamdu.GUI.Annotation (addInferredType, shrinkValAnnotationsIfNeeded)
+import qualified Lamdu.GUI.Expr.ApplyEdit as ApplyEdit
+import qualified Lamdu.GUI.Expr.EventMap as ExprEventMap
+import qualified Lamdu.GUI.Expr.GetVarEdit as GetVarEdit
+import qualified Lamdu.GUI.Expr.InjectEdit as InjectEdit
+import qualified Lamdu.GUI.Expr.NominalEdit as NominalEdit
+import           Lamdu.GUI.Expr.OptionEdit
 import           Lamdu.GUI.Monad (GuiM)
 import qualified Lamdu.GUI.Monad as GuiM
+import           Lamdu.GUI.Styled (label, grammar)
 import qualified Lamdu.GUI.Types as ExprGui
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
-import           Lamdu.GUI.Wrap (stdWrapParentExpr)
+import           Lamdu.GUI.Wrap (stdWrapParentExpr, stdWrap)
 import qualified Lamdu.I18N.CodeUI as Texts
+import           Lamdu.Name (Name)
 import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
@@ -42,7 +54,14 @@ make (Ann (Const pl) fragment) =
 
         fragmentExprGui <- fragment ^. Sugar.fExpr & GuiM.makeSubexpression
 
-        qmarkView <- Label.make "?"
+        searchMenu <-
+            SearchMenu.make
+            (SearchMenu.searchTermEdit menuId (pure . ExprEventMap.allowedSearchTerm))
+            (makeResults (fragment ^. Sugar.fOptions)) M.empty menuId
+            ?? Menu.AnyPlace
+            & local (has . SearchMenu.emptyStrings . Lens.mapped .~ "?")
+            -- Space goes to next hole in target (not necessarily visible)
+            & local (has . Config.menu . Menu.keysPickOptionAndGotoNext <>~ [MetaKey.MetaKey MetaKey.noMods MetaKey.Key'Space])
 
         let healKeys = env ^. has . Config.healKeys
         let healChars =
@@ -66,12 +85,13 @@ make (Ann (Const pl) fragment) =
             & Element.locallyAugmented ("inner type"::Text)
         hbox
             [ fragmentExprGui
-            , qmarkView & M.tValue %~ Widget.fromView & Responsive.fromWithTextPos
+            , Responsive.fromWithTextPos searchMenu
             ]
             & Widget.widget %~ addInnerType
             & pure & stdWrapParentExpr pl
             <&> Widget.weakerEvents (healEventMap healKeys healChars env)
     where
+        menuId = WidgetIds.fromExprPayload pl & WidgetIds.fragmentHoleId
         lineBelow color animId spacing ann =
             ann
             & Element.setLayeredImage . Element.layers . Lens.ix 0 %~ (<> line)
@@ -87,3 +107,43 @@ make (Ann (Const pl) fragment) =
             where
                 action = fragment ^. Sugar.fHeal <&> WidgetIds.fromEntityId
                 doc = fragmentDoc env (has . Texts.heal)
+
+makeResults ::
+    _ =>
+    i (Sugar.Query Text -> i [Sugar.Option Sugar.FragOpt Name i o]) ->
+    SearchMenu.ResultsContext ->
+    GuiM env i o (Menu.OptionList (Menu.Option (GuiM env i o) o))
+makeResults opts ctx
+    | ctx ^. SearchMenu.rSearchTerm == "" = pure Menu.TooMany
+    | otherwise =
+        do
+            c <- Lens.view (has . Config.completion . Config.completionResultCount)
+            GuiM.im opts <*>
+                makeQuery ctx
+                >>= GuiM.im
+                <&> take c
+                <&> Lens.mapped %~ makeResult makeFragOpt ctx
+                <&> Menu.FullList
+
+makeFragOpt :: _ => ExprGui.Expr Sugar.FragOpt i o -> GuiM env i o (Responsive o)
+makeFragOpt (Ann (Const a) b) =
+    case b of
+    Sugar.FragPostfix x ->
+        (ResponsiveExpr.boxSpacedMDisamb ?? Nothing)
+        <*> traverse ApplyEdit.makePostfixFunc x
+    Sugar.FragInject x -> InjectEdit.make (Ann (Const a) (Const x))
+    Sugar.FragGetVar x -> GetVarEdit.make (Ann (Const a) (Const x))
+    Sugar.FragOp x -> makeFragOperator x
+    Sugar.FragToNom x -> NominalEdit.label x <&> Responsive.fromTextView & stdWrap a
+    Sugar.FragIf t ->
+        (grammar (label Texts.if_) M./|/ grammar (Label.make ":")) M./|/
+        Spacer.stdHSpace M./|/ GuiM.makeSubexpression t
+    Sugar.FragLam -> grammar (label Texts.lam) <&> Responsive.fromTextView & stdWrap a
+    -- Reproduction of behaviour from Lamdu.GUI.Expr.make,
+    -- otherwise fragment editors would have clashing anim ids
+    & local (M.animIdPrefix .~ Widget.toAnimId myId)
+    where
+        myId = WidgetIds.fromExprPayload a
+
+makeFragOperator :: _ => ExprGui.Body Sugar.FragOperator i o -> GuiM env i o (Responsive o)
+makeFragOperator (Sugar.FragOperator f arg) = ApplyEdit.makeOperatorRow id f arg

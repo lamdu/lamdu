@@ -2,6 +2,7 @@ module Lamdu.Sugar.Convert.Expression
     ( convert
     ) where
 
+import           Control.Monad.Once (Typeable)
 import           Data.Property (Property(..))
 import qualified Lamdu.Builtins.PrimVal as PrimVal
 import qualified Lamdu.Calc.Term as V
@@ -15,7 +16,7 @@ import qualified Lamdu.Sugar.Convert.GetVar as ConvertGetVar
 import qualified Lamdu.Sugar.Convert.Hole as ConvertHole
 import qualified Lamdu.Sugar.Convert.Inject as ConvertInject
 import qualified Lamdu.Sugar.Convert.Input as Input
-import           Lamdu.Sugar.Convert.Monad (ConvertM)
+import           Lamdu.Sugar.Convert.Monad (ConvertM, PositionInfo)
 import qualified Lamdu.Sugar.Convert.Nominal as ConvertNominal
 import qualified Lamdu.Sugar.Convert.Record as ConvertRecord
 import           Lamdu.Sugar.Internal
@@ -53,15 +54,16 @@ convertLiteralBytes ::
 convertLiteralBytes = convertLiteralCommon LiteralBytes PrimVal.Bytes
 
 convert ::
-    (Monad m, Monoid a) =>
+    (Monad m, Monoid a, Typeable m) =>
+    PositionInfo ->
     Ann (Input.Payload m a) # V.Term ->
     ConvertM m (ExpressionU EvalPrep m a)
-convert (Ann pl (V.BLam x)) = ConvertBinder.convertLam x pl
-convert (Ann pl (V.BRecExtend x)) = ConvertRecord.convertExtend x pl
-convert (Ann pl (V.BToNom x)) = ConvertNominal.convertToNom x pl
-convert (Ann pl (V.BCase x)) = ConvertCase.convert x pl
-convert (Ann pl (V.BApp x)) = ConvertApply.convert x pl
-convert (Ann pl (V.BLeaf l)) =
+convert _ (Ann pl (V.BLam x)) = ConvertBinder.convertLam x pl
+convert _ (Ann pl (V.BRecExtend x)) = ConvertRecord.convertExtend x pl
+convert _ (Ann pl (V.BToNom x)) = ConvertNominal.convertToNom x pl
+convert _ (Ann pl (V.BCase x)) = ConvertCase.convert x pl
+convert _ (Ann pl (V.BApp x)) = ConvertApply.convert x pl
+convert posInfo (Ann pl (V.BLeaf l)) =
     pl &
     case l of
     V.LVar x -> ConvertGetVar.convert x
@@ -69,7 +71,7 @@ convert (Ann pl (V.BLeaf l)) =
         case PrimVal.toKnown literal of
         PrimVal.Float x -> convertLiteralFloat x
         PrimVal.Bytes x -> convertLiteralBytes x
-    V.LHole -> ConvertHole.convert
+    V.LHole -> ConvertHole.convert posInfo
     V.LRecEmpty -> ConvertRecord.convertEmpty
     V.LAbsurd -> ConvertCase.convertAbsurd
     V.LFromNom x -> ConvertNominal.convertFromNom x

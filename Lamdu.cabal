@@ -281,6 +281,7 @@ Library
                   , Lamdu.GUI.Expr.LambdaEdit
                   , Lamdu.GUI.Expr.LiteralEdit
                   , Lamdu.GUI.Expr.NominalEdit
+                  , Lamdu.GUI.Expr.OptionEdit
                   , Lamdu.GUI.Expr.RecordEdit
                   , Lamdu.GUI.Expr.TagEdit
                   , Lamdu.GUI.Annotation
@@ -355,6 +356,7 @@ Library
                   , Lamdu.Sugar.Convert.Load
                   , Lamdu.Sugar.Convert.Monad
                   , Lamdu.Sugar.Convert.Nominal
+                  , Lamdu.Sugar.Convert.Option
                   , Lamdu.Sugar.Convert.PostProcess
                   , Lamdu.Sugar.Convert.Record
                   , Lamdu.Sugar.Convert.TId

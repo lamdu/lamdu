@@ -1,8 +1,9 @@
 module Lamdu.GUI.Expr.ApplyEdit
-    ( makeSimple, makePostfix, makeLabeled, makePostfixFunc
+    ( makeSimple, makePostfix, makeLabeled, makePostfixFunc, makeOperatorRow
     ) where
 
 import qualified Control.Lens as Lens
+import qualified GUI.Momentu as M
 import           GUI.Momentu ((/|/))
 import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.I18N as MomentuTexts
@@ -62,15 +63,8 @@ makeLabeled (Ann (Const pl) apply) =
                         (E.toDoc env [has . MomentuTexts.edit, has . Texts.swapOperatorArgs]) s)
                 (ResponsiveExpr.boxSpacedMDisamb ?? ExprGui.mParensId pl)
                     <*> sequenceA
-                    [ GuiM.makeSubexpression l
-                        <&> swapAction Config.swapWithRightKeys
-                    , (Options.boxSpaced ?? Options.disambiguationNone)
-                        <*> sequenceA
-                        [ makeFunc GetVarEdit.Operator func
-                        , GuiM.makeSubexpression r
-                            <&> swapAction Config.swapWithLeftKeys
-                        ]
-                        >>= wrap
+                    [ GuiM.makeSubexpression l <&> swapAction Config.swapWithRightKeys
+                    , makeOperatorRow (swapAction Config.swapWithLeftKeys) func r >>= wrap
                     ]
     )
     where
@@ -78,6 +72,19 @@ makeLabeled (Ann (Const pl) apply) =
             (maybeAddAnnotationPl pl <&> (Widget.widget %~)) <*>
             addArgs apply x
         func = apply ^. Sugar.aFunc
+
+makeOperatorRow ::
+    _ =>
+    (Responsive o -> Responsive o) ->
+    (Annotated (ExprGui.Payload i o) # Const (Sugar.BinderVarRef Name o)) ->
+    ExprGui.Expr Sugar.Term i o ->
+    GuiM env i o (Responsive o)
+makeOperatorRow onR func r =
+    (Options.boxSpaced ?? Options.disambiguationNone)
+    <*> sequenceA
+    [ makeFunc GetVarEdit.Operator func
+    , GuiM.makeSubexpression r <&> onR
+    ]
 
 makeArgRow :: _ => ExprGui.Body Sugar.AnnotatedArg i o -> GuiM env i o (TaggedItem o)
 makeArgRow arg =
@@ -131,12 +138,17 @@ makePostfix (Ann (Const pl) (Sugar.PostfixApply arg func)) =
     , makePostfixFunc func
     ] & stdWrapParentExpr pl
 
+makePostfixFuncBody ::
+    _ => Widget.Id -> ExprGui.Body Sugar.PostfixFunc i o -> GuiM env i o (Responsive o)
+makePostfixFuncBody i (Sugar.PfCase x) = CaseEdit.make i x
+makePostfixFuncBody _ (Sugar.PfFromNom x) = NominalEdit.makeFromNom x
+makePostfixFuncBody _ (Sugar.PfGetField x) = GetFieldEdit.make x
+
 makePostfixFunc :: _ => ExprGui.Expr Sugar.PostfixFunc i o -> GuiM env i o (Responsive o)
 makePostfixFunc (Ann (Const pl) x) =
     (ResponsiveExpr.boxSpacedMDisamb ?? ExprGui.mParensId pl) <*>
-    ( case x of
-        Sugar.PfCase c -> Ann (Const pl) c & CaseEdit.make
-        Sugar.PfFromNom n -> Ann (Const pl) (Const n) & NominalEdit.makeFromNom
-        Sugar.PfGetField f -> GetFieldEdit.make pl f
-        <&> (:[])
-    ) & stdWrap pl
+    (makePostfixFuncBody (WidgetIds.fromExprPayload pl) x <&> (:[]))
+    & stdWrapParentExpr pl
+    -- Without adjusting anim-ids there is clash in fragment results such as
+    -- ".Maybe .case"
+    & local (M.animIdPrefix .~ Widget.toAnimId (WidgetIds.fromExprPayload pl))

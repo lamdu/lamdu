@@ -48,7 +48,7 @@ makeEditor (Ann (Const pl) body) =
     Sugar.BodyNullaryInject x -> editor pl x InjectEdit.makeNullary
     Sugar.BodyLeaf         l ->
         case l of
-        Sugar.LeafHole          -> HoleEdit.make pl
+        Sugar.LeafHole        x -> editor pl (Const x) HoleEdit.make
         Sugar.LeafLiteral     x -> editor pl (Const x) LiteralEdit.make
         Sugar.LeafInject      x -> editor pl (Const x) InjectEdit.make
         Sugar.LeafGetVar      x -> editor pl (Const x) GetVarEdit.make

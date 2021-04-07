@@ -2,7 +2,7 @@
 
 module Lamdu.Sugar.Convert.Expression.Actions
     ( subexprPayloads, addActionsWith, addActions, makeActions
-    , makeTypeAnnotation, convertPayloads, convertPayload
+    , makeTypeAnnotation, convertPayload
     ) where
 
 import           Control.Applicative ((<|>))
@@ -331,12 +331,6 @@ mkEvalPrep pl =
     { _eType = pl ^. pInput . Input.inferredType
     , _eEvalId = pl ^. pInput . Input.entityId
     }
-
-convertPayloads ::
-    Recursively HFunctor h =>
-    Annotated (ConvertPayload m (ParenInfo, [EntityId])) # h ->
-    Annotated (Payload EvalPrep (T m)) # h
-convertPayloads = hflipped %~ hmap (const (Lens._Wrapped %~ convertPayload))
 
 convertPayload ::
     ConvertPayload m (ParenInfo, [EntityId]) ->

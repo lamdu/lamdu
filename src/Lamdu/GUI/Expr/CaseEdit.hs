@@ -25,14 +25,12 @@ import           Lamdu.Config.Theme.TextColors (TextColors)
 import qualified Lamdu.Config.Theme.TextColors as TextColors
 import qualified Lamdu.GUI.Expr.GetVarEdit as GetVarEdit
 import qualified Lamdu.GUI.Expr.TagEdit as TagEdit
-import qualified Lamdu.GUI.Annotation as Annotation
 import           Lamdu.GUI.Monad (GuiM)
 import qualified Lamdu.GUI.Monad as GuiM
 import           Lamdu.GUI.Styled (label, grammar)
 import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.GUI.Types as ExprGui
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
-import qualified Lamdu.GUI.Wrap as Wrap
 import qualified Lamdu.I18N.Code as Texts
 import qualified Lamdu.I18N.CodeUI as Texts
 import           Lamdu.Name (Name(..))
@@ -51,8 +49,8 @@ doc env lens =
 addAltId :: Widget.Id -> Widget.Id
 addAltId = (`Widget.joinId` ["add alt"])
 
-make :: _ => ExprGui.Expr Sugar.Composite i o -> GuiM env i o (Responsive o)
-make (Ann (Const pl) (Sugar.Composite alts punned caseTail addAlt)) =
+make :: _ => Widget.Id -> ExprGui.Body Sugar.Composite i o -> GuiM env i o (Responsive o)
+make myId (Sugar.Composite alts punned caseTail addAlt) =
     do
         env <- Lens.view id
         altsGui <-
@@ -66,13 +64,10 @@ make (Ann (Const pl) (Sugar.Composite alts punned caseTail addAlt)) =
                 & E.keysEventMapMovesCursor (env ^. has . Config.caseAddAltKeys)
                     (doc env Texts.addAlt)
         header <- grammar (Label.make ".") M./|/ makeCaseLabel
-        (Annotation.maybeAddAnnotationPl pl <&> (Widget.widget %~)) <*>
-            ( Styled.addValFrame <*>
-                (Options.boxSpaced ?? Options.disambiguationNone ?? [header, altsGui]))
+        Styled.addValFrame <*>
+            (Options.boxSpaced ?? Options.disambiguationNone ?? [header, altsGui])
             <&> Widget.weakerEvents addAltEventMap
-    & Wrap.stdWrapParentExpr pl
     where
-        myId = WidgetIds.fromExprPayload pl
         headerId = Widget.joinId myId ["header"]
         altsId = Widget.joinId myId ["alts"]
         makeCaseLabel =
