@@ -497,6 +497,8 @@ testPrograms =
 
 charEvent :: Char -> Event
 charEvent ' ' = EventKey (KeyEvent GLFW.Key'Space 0 GLFW.KeyState'Pressed mempty)
+charEvent '\n' = EventKey (KeyEvent GLFW.Key'Enter 0 GLFW.KeyState'Pressed mempty)
+charEvent '\t' = EventKey (KeyEvent GLFW.Key'Tab 0 GLFW.KeyState'Pressed mempty)
 charEvent x = EventChar x
 
 applyActions :: String -> Env.Env -> OnceT (T ViewM) Env.Env
@@ -525,11 +527,11 @@ testWYTIWYS =
     , wytiwys "sum(1..10)" "45"
     , wytiwys "sum 1..10" "45" -- An Ergonomic WYTIWIS violation: types cause fragment
     , wytiwys "sum 1..10.map n*2" "90"
-    , wytiwys "sum 1..10.map 2*num " "90" -- TODO: Would be better without requiring the space at the end
+    , wytiwys "sum 1..10.map 2*num\n" "90" -- TODO: Would be better without requiring the enter at the end
     , wytiwys "sum 1..10.map 2*(num+1)" "108"
     , wytiwys "sum 1..10.map 2*(num+1" "108"
 
-    , wytiwys "if 1=2 3 4" "4" -- Type if-expressions without typing the colon and "else:"
+    , wytiwys "if 1=2\t3\t4" "4" -- Type if-expressions without typing the colon and "else:"
 
     , wytiwys "sum 1..10.filter nu>5" "30"
     , wytiwys "sum 1..10.filter n>5" "30"
