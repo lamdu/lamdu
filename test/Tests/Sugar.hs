@@ -46,6 +46,7 @@ test =
     , testUnnamed
     , testValidHoleResult
     , testPunnedIso
+    , testNullParamUnused
     , testGroup "insist-tests"
         [ testInsistFactorial
         , testInsistEq
@@ -553,3 +554,10 @@ testPunnedIso =
     <&> Lens.mapped . Lens.mapped %~
         (\x -> (x ^. ciTag . tagRefTag . tagName, x ^? ciExpr . hVal . _BodyLeaf . _LeafGetVar . _GetBinder . bvNameRef . nrName))
     >>= assertEqual "Record items expected to be punned" (Just [])
+
+testNullParamUnused :: Test
+testNullParamUnused =
+    testCase "null-param-unused" $
+    Env.make >>= testProgram "null-param-cond.json" . convertWorkArea
+    <&> Lens.has (replBinder . _BinderLet . lValue . hVal . _BodyFunction . fParams . _Params)
+    >>= assertBool "Null param only if unused"
