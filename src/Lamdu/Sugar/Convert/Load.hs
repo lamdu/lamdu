@@ -61,23 +61,17 @@ preparePayloads ::
 preparePayloads topLevelScope inferredVal =
     inferredVal
     & hflipped %~ hmap (const f)
-    & Input.preparePayloads
-    & Input.initScopes topLevelScope []
+    & Input.initialize topLevelScope [] & snd
     where
         f (valIProp :*: inferRes) =
-            Input.PreparePayloadInput
-            { Input.ppEntityId = eId
-            , Input.ppMakePl =
-                \varRefs ->
-                Input.Payload
-                { Input._varRefsOfLambda = varRefs
-                , Input._entityId = eId
-                , Input._localsInScope = []
-                , Input._stored = valIProp
-                , Input._inferRes = inferRes
-                , Input._inferScope = V.emptyScope -- UGLY: This is initialized by initScopes
-                , Input._userData = ()
-                }
+            Input.Payload
+            { Input._varRefsOfLambda = [] -- TODO
+            , Input._entityId = eId
+            , Input._localsInScope = []
+            , Input._stored = valIProp
+            , Input._inferRes = inferRes
+            , Input._inferScope = V.emptyScope -- UGLY: This is initialized by initScopes
+            , Input._userData = ()
             }
             where
                 eId = valIProp ^. ExprIRef.iref . _F & IRef.uuid & EntityId.EntityId

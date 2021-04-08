@@ -6,12 +6,11 @@ module Lamdu.Sugar.Convert.Input
         , varRefsOfLambda, entityId, inferRes, stored
         , userData, localsInScope, inferScope
         , inferredType, inferredTypeUVar
-    , PreparePayloadInput(..), preparePayloads
     , SugarInput(..)
     ) where
 
+import           Control.Lens.Extended ((~~>))
 import qualified Control.Lens as Lens
-import qualified Data.Map as Map
 import           Hyper
 import           Hyper.Infer (InferResult, inferResult)
 import           Hyper.Type.AST.FuncType (funcIn)
@@ -46,82 +45,36 @@ inferredType = inferRes . inferResult . _1
 inferredTypeUVar :: Lens' (Payload m a # V.Term) (UVar # Type)
 inferredTypeUVar = inferRes . inferResult . _2
 
-data PreparePayloadInput (pl :: HyperType) t = PreparePayloadInput
-    { ppEntityId :: EntityId -- used to build a map from Var => EntityId of all getVars
-    , ppMakePl :: [EntityId] -> pl t
-    }
-
-data PreparePayloadsRes (pl :: HyperType) t = PreparePayloadsRes
-    { ppVarMap :: Map V.Var [EntityId]
-    , ppRes :: Ann pl t
-    }
-
 class SugarInput t where
-    preparePayloadsH ::
-        Ann (PreparePayloadInput pl) # t ->
-        PreparePayloadsRes pl # t
-    initScopes ::
+    initialize ::
         V.Scope # UVar -> [(V.Var, Pure # Type)] ->
         Ann (Payload m a) # t ->
-        Ann (Payload m a) # t
-    initScopes _ _ = id
+        (Map V.Var [EntityId], Ann (Payload m a) # t)
+    initialize _ _ = (,) mempty
 
 instance SugarInput V.Term where
-    preparePayloadsH (Ann (PreparePayloadInput eId mkPayload) body) =
-        PreparePayloadsRes
-        { ppVarMap =
-            childrenVars
-            & case body of
-            V.BLeaf (V.LVar var) -> Lens.at var <>~ Just [eId]
-            V.BLam (V.TypedLam var _ _) -> Lens.at var .~ Nothing
-            _ -> id
-        , ppRes =
-            hmap (const ppRes) b
-            & Ann
-            ( case body of
-                V.BLam (V.TypedLam var _ _) -> childrenVars ^. Lens.ix var
-                _ -> []
-                & mkPayload
-            )
-        }
-        where
-            childrenVars = Map.unionsWith (++) (hfoldMap (const ((:[]) . ppVarMap)) b)
-            b = hmap (Proxy @SugarInput #> preparePayloadsH) body
-    initScopes iScope locals (Ann pl body) =
+    initialize iScope locals (Ann pl body) =
         case body of
         V.BLam (V.TypedLam var t b) ->
-            initScopes innerScope ((var, varType) : locals) b
-            & V.TypedLam var t
-            & V.BLam
+            ( usesOfVar
+            , V.TypedLam var t r & V.BLam & Ann (resPl & varRefsOfLambda .~ usesOfVar ^. Lens.ix var)
+            )
             where
+                (usesOfVar, r) = initialize innerScope ((var, varType) : locals) b
                 varType = pl ^?! inferredType . _Pure . T._TFun . funcIn
                 innerScope =
                     iScope
                     & V.scopeVarTypes . Lens.at var ?~
                         _HFlip # GMono (t ^. hAnn . inferRes . inferResult . _2)
-        x -> hmap (Proxy @SugarInput #> initScopes iScope locals) x
-        & Ann (pl & localsInScope <>~ locals & inferScope .~ iScope)
+        V.BLeaf (V.LVar v) ->
+            ( v ~~> [pl ^. entityId]
+            , V.LVar v & V.BLeaf & Ann resPl
+            )
+        x ->
+            htraverse (Proxy @SugarInput #> initialize iScope locals) x
+            <&> Ann resPl
+        where
+            resPl = pl & localsInScope <>~ locals & inferScope .~ iScope
 
-instance SugarInput (HCompose Prune Type) where
-    preparePayloadsH (Ann (PreparePayloadInput _ mkPayload) body) =
-        PreparePayloadsRes
-        { ppVarMap = mempty
-        , ppRes =
-            hmap (Proxy @SugarInput #> ppRes . preparePayloadsH) body
-            & Ann (mkPayload [])
-        }
-
-instance SugarInput (HCompose Prune Row) where
-    preparePayloadsH (Ann (PreparePayloadInput _ mkPayload) body) =
-        PreparePayloadsRes
-        { ppVarMap = mempty
-        , ppRes =
-            hmap (Proxy @SugarInput #> ppRes . preparePayloadsH) body
-            & Ann (mkPayload [])
-        }
-
-preparePayloads ::
-    SugarInput t =>
-    Ann (PreparePayloadInput pl) # t ->
-    Ann pl # t
-preparePayloads = ppRes . preparePayloadsH
+instance SugarInput (HCompose Prune Type)
+instance SugarInput (HCompose Prune Row)

@@ -404,24 +404,18 @@ writeResult inferCtx holeStored inferredVal =
             & assertSuccessfulInfer
             & fst
             & hflipped %~ hmap (const toPayload)
-            & Input.preparePayloads
             & pure
     where
         toPayload ((stored :*: Const a) :*: inferRes) =
             -- TODO: Evaluate hole results instead of Map.empty's?
-            Input.PreparePayloadInput
-            { Input.ppEntityId = eId
-            , Input.ppMakePl =
-                \varRefs ->
-                Input.Payload
-                { Input._varRefsOfLambda = varRefs
-                , Input._userData = a
-                , Input._inferRes = inferRes
-                , Input._inferScope = V.emptyScope -- TODO: HACK
-                , Input._stored = stored
-                , Input._entityId = eId
-                , Input._localsInScope = []
-                }
+            Input.Payload
+            { Input._varRefsOfLambda = [] -- TODO
+            , Input._userData = a
+            , Input._inferRes = inferRes
+            , Input._inferScope = V.emptyScope -- TODO: HACK
+            , Input._stored = stored
+            , Input._entityId = eId
+            , Input._localsInScope = []
             }
             where
                 eId = stored ^. ExprIRef.iref . _F & IRef.uuid & EntityId.EntityId
@@ -500,13 +494,14 @@ mkResult preConversion updateDeps holePl x =
                 (holePl ^. Input.stored) x
             <&> preConversion
             & lift
-            <&> Input.initScopes
+            <&> Input.initialize
                     (holePl ^. Input.inferScope)
                         -- TODO: this is kind of wrong
                         -- The scope for a proper term should be from after loading its infer deps
                         -- But that's only necessary for suggesting hole results?
                         -- And we are in a hole result here
                     (holePl ^. Input.localsInScope)
+            <&> (^. _2)
             <&> convertBinder
             <&> fmap convertPayloads
             >>= ConvertM.run sugarContext
