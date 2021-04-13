@@ -15,7 +15,6 @@ module Lamdu.Sugar.Convert.Monad
     , cachedFunc
 
     , ConvertM(..), run, convertOnce
-    , local
     , PositionInfo(..)
     , convertSubexpression
     , typeProtectedSetToVal, typeProtect, postProcessAssert, postProcessWith
@@ -174,9 +173,6 @@ run ctx (ConvertM action) =
     runReaderT action ctx & report
     where
         Debug.EvaluatorM report = ctx ^. scDebugMonitors . Debug.sugaring . Debug.mAction
-
-local :: (Context m -> Context m) -> ConvertM m a -> ConvertM m a
-local f (ConvertM act) = ConvertM $ Reader.local f act
 
 convertSubexpression ::
     (Monad m, Monoid a) =>

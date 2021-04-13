@@ -6,6 +6,7 @@ module Lamdu.Sugar.Convert.Binder
 
 import qualified Control.Lens as Lens
 import           Control.Monad.Once (OnceT)
+import           Control.Monad.Reader (local)
 import qualified Data.Map as Map
 import           Data.Monoid (Any(..))
 import           Data.Property (MkProperty')
@@ -76,7 +77,7 @@ convertLet pl redex =
             (,,)
             <$> (convertAssignment binderKind param (redex ^. Redex.arg) <&> (^. _2))
             <*> ( convertBinder bod
-                    & ConvertM.local (scScopeInfo . siLetItems <>~
+                    & local (scScopeInfo . siLetItems <>~
                         Map.singleton param (makeInline stored redex))
                 )
             <*> makeActions pl
@@ -151,14 +152,14 @@ convertBinder expr@(Ann pl body) =
             <&> annValue %~ BinderTerm
 
 localNewExtractDestPos ::
-    Input.Payload m a # V.Term -> ConvertM m b -> ConvertM m b
+    Monad m => Input.Payload m a # V.Term -> ConvertM m b -> ConvertM m b
 localNewExtractDestPos x =
     ConvertM.scScopeInfo . ConvertM.siMOuter ?~
     ConvertM.OuterScopeInfo
     { _osiPos = x ^. Input.stored
     , _osiScope = x ^. Input.inferScope
     }
-    & ConvertM.local
+    & local
 
 makeFunction ::
     (Monad m, Monoid a) =>
@@ -168,7 +169,7 @@ makeFunction ::
 makeFunction chosenScopeProp params funcBody =
     convertBinder funcBody
     <&> mkRes
-    & ConvertM.local (ConvertM.scScopeInfo %~ addParams)
+    & local (ConvertM.scScopeInfo %~ addParams)
     where
         mkRes assignmentBody =
             Function
