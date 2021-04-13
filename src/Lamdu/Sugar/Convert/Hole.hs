@@ -494,14 +494,13 @@ mkResult preConversion updateDeps holePl x =
                 (holePl ^. Input.stored) x
             <&> preConversion
             & lift
-            <&> Input.initialize
+            <&> Input.preprocess
                     (holePl ^. Input.inferScope)
                         -- TODO: this is kind of wrong
                         -- The scope for a proper term should be from after loading its infer deps
                         -- But that's only necessary for suggesting hole results?
                         -- And we are in a hole result here
                     (holePl ^. Input.localsInScope)
-            <&> (^. _2)
             <&> convertBinder
             <&> fmap convertPayloads
             >>= ConvertM.run sugarContext

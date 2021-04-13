@@ -61,7 +61,7 @@ preparePayloads ::
 preparePayloads topLevelScope inferredVal =
     inferredVal
     & hflipped %~ hmap (const f)
-    & Input.initialize topLevelScope [] & snd
+    & Input.preprocess topLevelScope []
     where
         f (valIProp :*: inferRes) =
             Input.Payload

@@ -6,7 +6,7 @@ module Lamdu.Sugar.Convert.Input
         , varRefsOfLambda, entityId, inferRes, stored
         , userData, localsInScope, inferScope
         , inferredType, inferredTypeUVar
-    , SugarInput(..)
+    , SugarInput, preprocess
     ) where
 
 import           Control.Lens.Extended ((~~>))
@@ -46,21 +46,27 @@ inferredTypeUVar :: Lens' (Payload m a # V.Term) (UVar # Type)
 inferredTypeUVar = inferRes . inferResult . _2
 
 class SugarInput t where
-    initialize ::
+    prep ::
         V.Scope # UVar -> [(V.Var, Pure # Type)] ->
         Ann (Payload m a) # t ->
         (Map V.Var [EntityId], Ann (Payload m a) # t)
-    initialize _ _ = (,) mempty
+    prep _ _ = (,) mempty
+
+preprocess ::
+    SugarInput t =>
+    V.Scope # UVar -> [(V.Var, Pure # Type)] ->
+    Ann (Payload m a) # t -> Ann (Payload m a) # t
+preprocess s l = snd . prep s l
 
 instance SugarInput V.Term where
-    initialize iScope locals (Ann pl body) =
+    prep iScope locals (Ann pl body) =
         case body of
         V.BLam (V.TypedLam var t b) ->
             ( usesOfVar
             , V.TypedLam var t r & V.BLam & Ann (resPl & varRefsOfLambda .~ usesOfVar ^. Lens.ix var)
             )
             where
-                (usesOfVar, r) = initialize innerScope ((var, varType) : locals) b
+                (usesOfVar, r) = prep innerScope ((var, varType) : locals) b
                 varType = pl ^?! inferredType . _Pure . T._TFun . funcIn
                 innerScope =
                     iScope
@@ -71,7 +77,7 @@ instance SugarInput V.Term where
             , V.LVar v & V.BLeaf & Ann resPl
             )
         x ->
-            htraverse (Proxy @SugarInput #> initialize iScope locals) x
+            htraverse (Proxy @SugarInput #> prep iScope locals) x
             <&> Ann resPl
         where
             resPl = pl & localsInScope <>~ locals & inferScope .~ iScope
