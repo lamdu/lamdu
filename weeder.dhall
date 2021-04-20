@@ -28,7 +28,6 @@
     , "^Lamdu\\.Sugar\\.Types\\.Eval\\.r"
     , "^Lamdu\\.Sugar\\.Types\\.GetVar\\.prv"
     , "^Lamdu\\.Sugar\\.Types\\.Parts\\.closedCompositeOpen$"
-    , "^Lamdu\\.Sugar\\.Types\\.Parts\\.openCompositeClose$"
     -- Some modules deliberately have extra features
     -- as those are created as general-purpose library modules.
     , "^Control\\."
