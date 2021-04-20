@@ -3,7 +3,7 @@
 module Tests.Gui where
 
 import qualified Control.Lens as Lens
-import           Control.Monad.Once (OnceT, _OnceT, evalOnceT)
+import           Control.Monad.Once (OnceT, _OnceT)
 import           Control.Monad.State (mapStateT)
 import           Control.Monad.Unit (Unit(..))
 import qualified Data.Map as Map
@@ -109,7 +109,7 @@ makeGui afterDoc env workArea =
                 Responsive.vbox ?? (replGui : paneGuis)
             & GuiM.run assocTagName ExpressionEdit.make BinderEdit.make
                 (Anchors.onGui (Property.mkProperty %~ lift) DbLayout.guiAnchors)
-                env evalOnceT
+                env
         if Lens.has wideFocused gui
             then pure gui
             else error ("Red cursor after " ++ afterDoc ++ ": " ++ show (env ^. cursor))

@@ -14,7 +14,6 @@ module Lamdu.GUI.Monad
     , isHoleResult, withLocalIsHoleResult
     --
     , im
-    , IOM(..), iom
 
     , makeSubexpression, makeBinder
     , assocTagName
@@ -85,7 +84,6 @@ data Askable env i o = Askable
     , _aStyle :: Style
     , _aIsHoleResult :: Bool
     , _aDirLayout :: Dir.Layout
-    , aIom :: forall x. i x -> o x
     , _aEnv :: env
         -- TODO: This ^^ defeats the purpose and means ALL gui depends
         -- on ALL texts Need to parameterize GUI monad on the env, and
@@ -122,10 +120,6 @@ instance Has (f Text) env => Has (f Text) (Askable env i o) where has = aEnv . h
 
 im :: Monad i => i a -> GuiM env i o a
 im = GuiM . lift
-
-newtype IOM i o = IOM (forall x. i x -> o x)
-iom :: Monad i => GuiM env i o (IOM i o)
-iom = Lens.view id <&> \askable -> IOM (aIom askable)
 
 readGuiAnchors :: MonadReader (Askable env i o) m => m (Anchors.GuiAnchors i o)
 readGuiAnchors = Lens.view aGuiAnchors
@@ -198,8 +192,8 @@ run ::
     (ExprGui.Expr Sugar.Term i o -> GuiM env i o (Responsive o)) ->
     (ExprGui.Expr Sugar.Binder i o -> GuiM env i o (Responsive o)) ->
     Anchors.GuiAnchors i o ->
-    env -> (forall x. i x -> o x) -> GuiM env i o a -> i a
-run assocTagName_ makeSubexpr mkBinder theGuiAnchors env liftIom (GuiM action) =
+    env -> GuiM env i o a -> i a
+run assocTagName_ makeSubexpr mkBinder theGuiAnchors env (GuiM action) =
     runReaderT action
     Askable
     { _aAssocTagName = assocTagName_
@@ -219,5 +213,4 @@ run assocTagName_ makeSubexpr mkBinder theGuiAnchors env liftIom (GuiM action) =
     , _aIsHoleResult = False
     , _aDirLayout = env ^. has
     , _aEnv = env
-    , aIom = liftIom
     }
