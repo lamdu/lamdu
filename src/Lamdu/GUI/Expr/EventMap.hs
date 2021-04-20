@@ -1,7 +1,6 @@
 module Lamdu.GUI.Expr.EventMap
     ( add
     , Options(..), defaultOptions
-    , ExprInfo(..), addWith
     , extractCursor
     , addLetEventMap
     , makeLiteralEventMap, makeLiteralNumberEventMap
@@ -34,8 +33,7 @@ import qualified Lamdu.Sugar.Types as Sugar
 import           Lamdu.Prelude
 
 data ExprInfo name i o = ExprInfo
-    { exprInfoIsHoleResult :: Bool
-    , exprInfoActions :: Sugar.NodeActions name i o
+    { exprInfoActions :: Sugar.NodeActions name i o
     , exprInfoMinOpPrec :: MinOpPrec
     , exprInfoIsSelected :: Bool
     }
@@ -55,14 +53,11 @@ exprInfoFromPl ::
     GuiM env i o
     ((Sugar.Payload v name i0 o0, ExprGui.GuiPayload) -> ExprInfo name i0 o0)
 exprInfoFromPl =
-    (,)
-    <$> GuiState.isSubCursor
-    <*> GuiM.isHoleResult
-    <&> \(isSubCursor, isHoleResult) pl ->
+    GuiState.isSubCursor <&>
+    \isSubCursor pl ->
     let isSelected = WidgetIds.fromExprPayload (pl ^. _1) & isSubCursor in
     ExprInfo
-    { exprInfoIsHoleResult = isHoleResult
-    , exprInfoActions = pl ^. _1 . Sugar.plActions
+    { exprInfoActions = pl ^. _1 . Sugar.plActions
     , exprInfoMinOpPrec =
         -- Expression with parentheses intercepts all operations from inside it,
         -- But if it is itself selected then we're out of the parentheses,
@@ -77,11 +72,8 @@ add ::
     _ =>
     Options -> (Sugar.Payload v name i o, ExprGui.GuiPayload) ->
     GuiM env i o (w o -> w o)
-add options pl = exprInfoFromPl ?? pl >>= addWith options
-
-addWith :: _ => Options -> ExprInfo name i o -> GuiM env i o (w o -> w o)
-addWith options exprInfo =
-    actionsEventMap options exprInfo <&> Widget.weakerEventsWithContext
+add options pl =
+    exprInfoFromPl ?? pl >>= actionsEventMap options <&> Widget.weakerEventsWithContext
 
 extractCursor :: Sugar.ExtractDestination -> Widget.Id
 extractCursor (Sugar.ExtractToLet letId) = WidgetIds.fromEntityId letId
@@ -125,9 +117,11 @@ actionsEventMap ::
 actionsEventMap options exprInfo =
     ( mconcat
         [ detachEventMap ?? exprInfo
-        , if exprInfoIsHoleResult exprInfo
-            then pure mempty
-            else
+        , GuiM.isHoleResult
+            >>=
+            \case
+            True -> pure mempty
+            False ->
                 mconcat
                 [ extractEventMap ?? actions
                 , mkReplaceParent
