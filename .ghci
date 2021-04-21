@@ -3,7 +3,7 @@
 :set -itest
 :set -idist/build/autogen
 :set -idist/build/lamdu/autogen
-:set -Wall -Widentities -Wmissing-home-modules -Wincomplete-patterns -Wnoncanonical-monad-instances -Wsemigroup -Wincomplete-record-updates -Wimplicit-prelude -Wredundant-constraints
+:set -Wall -Widentities -Wmissing-home-modules -Wincomplete-patterns -Wnoncanonical-monad-instances -Wsemigroup -Wincomplete-record-updates -Wimplicit-prelude -Wredundant-constraints -Wno-partial-type-signatures
 :set -XNoImplicitPrelude -XOverloadedStrings -XPartialTypeSignatures -XLambdaCase -XDeriveTraversable -XDeriveGeneric -XDeriveAnyClass -XDerivingStrategies -XFlexibleContexts -XTypeOperators
 :set -odir=ghci-out
 :set -outputdir=ghci-out
