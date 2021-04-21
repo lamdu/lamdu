@@ -32,6 +32,7 @@ convertToNom t@(ToNom tid x) pl =
             >>= addActions (_ANode # x) pl
             & lift
     & runMatcherT
+    <&> annotation . pActions . mApply .~ Nothing
 
 convertFromNom ::
     (Monad m, Monoid a) =>

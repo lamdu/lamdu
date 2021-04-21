@@ -96,6 +96,7 @@ convert posInfo holePl =
     <&> BodyLeaf . LeafHole . Hole
     >>= addActions (Const ()) holePl
     <&> annotation . pActions . delete .~ CannotDelete
+    <&> annotation . pActions . mApply .~ Nothing
 
 data ResultProcessor m = forall a. ResultProcessor
     { rpEmptyPl :: a

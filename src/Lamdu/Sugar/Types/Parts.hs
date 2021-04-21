@@ -16,7 +16,7 @@ module Lamdu.Sugar.Types.Parts
     , Delete(..), _SetToHole, _Delete, _CannotDelete
     , NodeActions(..)
         , detach, delete, setToLiteral, setToEmptyRecord
-        , extract, mReplaceParent, wrapInRecord, mNewLet
+        , extract, mReplaceParent, wrapInRecord, mNewLet, mApply
     , -- Let
       ExtractDestination(..)
     , -- Binders
@@ -113,6 +113,7 @@ data NodeActions name i o = NodeActions
     , _mReplaceParent :: Maybe (o EntityId)
     , _wrapInRecord :: TagChoice name i o ()
     , _mNewLet :: Maybe (o EntityId)
+    , _mApply :: Maybe (o EntityId)
     } deriving Generic
 
 data AddFirstParam name i o

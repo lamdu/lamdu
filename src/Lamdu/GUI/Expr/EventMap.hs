@@ -12,6 +12,8 @@ import qualified GUI.Momentu.Direction as Dir
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.I18N as MomentuTexts
+import           GUI.Momentu.MetaKey (MetaKey(..))
+import qualified GUI.Momentu.MetaKey as MetaKey
 import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.Widget (EventContext)
 import qualified GUI.Momentu.Widget as Widget
@@ -90,11 +92,7 @@ extractEventMap =
         [has . MomentuTexts.edit, has . Texts.extract])
 
 addLetEventMap ::
-    ( Monad i, Monad o
-    , Has (Texts.CodeUI Text) env
-    , Has (MomentuTexts.Texts Text) env
-    ) =>
-    o Sugar.EntityId -> GuiM env i o (EventMap (o GuiState.Update))
+    _ => o Sugar.EntityId -> GuiM env i o (EventMap (o GuiState.Update))
 addLetEventMap addLet =
     do
         env <- Lens.view id
@@ -128,6 +126,7 @@ actionsEventMap options exprInfo =
                 ]
         , actions ^. Sugar.delete & replaceEventMap
         , actions ^. Sugar.mNewLet & foldMap addLetEventMap
+        , actions ^. Sugar.mApply & foldMap applyEventMap
         , makeLiteralEventMap ?? actions
         ] <&> const -- throw away EventContext here
     ) <> (transformEventMap ?? options ?? exprInfo)
@@ -146,6 +145,19 @@ actionsEventMap options exprInfo =
 
 -- | Create the hole search term for new apply operators,
 -- given the extra search term chars from another hole.
+
+applyEventMap :: _ => o Sugar.EntityId -> GuiM env i o (EventMap (o GuiState.Update))
+applyEventMap action =
+    Lens.view id <&>
+    \env ->
+    action <&> WidgetIds.fromEntityId
+    & E.keysEventMapMovesCursor
+        [MetaKey MetaKey.noMods MetaKey.Key'Space]
+        (E.toDoc env
+            [ has . MomentuTexts.edit
+            , has . Texts.apply
+            ])
+
 transformSearchTerm ::
     _ =>
     m (ExprInfo name i o -> EventContext -> EventMap Text)

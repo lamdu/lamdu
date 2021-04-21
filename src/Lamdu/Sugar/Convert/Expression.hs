@@ -40,6 +40,7 @@ convertLiteralCommon mkLit mkBody x exprPl =
       ExprIRef.writeValI iref . V.BLeaf . V.LLiteral .
       PrimVal.fromKnown . mkBody
     } & mkLit & LeafLiteral & BodyLeaf & addActions (Const ()) exprPl
+    <&> annotation . pActions . mApply .~ Nothing
     where
         iref = exprPl ^. Input.stored . ExprIRef.iref
 

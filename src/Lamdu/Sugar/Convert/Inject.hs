@@ -36,8 +36,9 @@ convert c tag exprPl =
                     void typeProtect
         ConvertTag.ref tag nameWithoutContext mempty (EntityId.ofTag entityId) setTag
             >>= ConvertM . lift
-            <&> c
-            >>= addActions (Const ()) exprPl
+    <&> c
+    >>= addActions (Const ()) exprPl
+    <&> annotation . pActions . mApply .~ Nothing
     where
         entityId = exprPl ^. Input.entityId
         valI = exprPl ^. Input.stored . ExprIRef.iref

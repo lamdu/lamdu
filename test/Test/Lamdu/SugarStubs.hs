@@ -232,6 +232,7 @@ nodeActions =
     , Sugar._mReplaceParent = Nothing
     , Sugar._wrapInRecord = tagRefReplace
     , Sugar._mNewLet = Nothing
+    , Sugar._mApply = Nothing
     }
 
 taggedEntityName :: UUID -> T.Tag -> InternalName

@@ -189,6 +189,7 @@ makeActions exprPl =
             <&> (^? Lens._Just . ConvertM.osiPos)
         setToLit <- makeSetToLiteral exprPl
         setToRec <- makeSetToEmptyRecord exprPl
+        apply <- makeApply exprPl
         pure NodeActions
             { _detach = DataOps.applyHoleTo stored <* postProcess <&> EntityId.ofValI & DetachAction
             , _delete = DataOps.setToHole stored <* postProcess <&> EntityId.ofValI & SetToHole
@@ -198,9 +199,27 @@ makeActions exprPl =
             , _mReplaceParent = Nothing
             , _wrapInRecord = wrapInRec
             , _mNewLet = outerPos <&> DataOps.redexWrap <&> fmap EntityId.ofValI
+            , _mApply = apply
             }
     where
         stored = exprPl ^. Input.stored
+
+makeApply :: Monad m => Input.Payload m a # V.Term -> ConvertM m (Maybe (T m EntityId))
+makeApply pl =
+    (,)
+    <$> Lens.view ConvertM.scPostProcessRoot
+    <*> ConvertM.postProcessAssert
+    <&>
+    \(checkOk, postProcess) ->
+    do
+        arg <- V.BLeaf V.LHole & ExprIRef.newValI
+        V.App (pl ^. Input.stored . ExprIRef.iref) arg & V.BApp & ExprIRef.newValI
+            >>= pl ^. Input.stored . ExprIRef.setIref
+        pure arg
+    & ConvertM.typeProtect checkOk
+    >>= maybe (DataOps.applyHoleTo (pl ^. Input.stored) <* postProcess) pure
+    <&> EntityId.ofValI
+    & Just
 
 fragmentAnnIndex ::
     (Applicative f, Lens.Indexable j p) =>
