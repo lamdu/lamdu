@@ -61,7 +61,7 @@ genericEdit ::
     _ =>
     LensLike' (Const TextEdit.Style) Style TextEdit.Style ->
     Property o a ->
-    Sugar.Payload v name i o -> f (Responsive o)
+    Sugar.Payload v o -> f (Responsive o)
 genericEdit whichStyle prop pl =
     do
         editEventMap <-
@@ -112,7 +112,7 @@ withFd =
     FocusDelegator.make <*> fdConfig ?? FocusDelegator.FocusEntryParent
     <&> Lens.mapped %~ (M.tValue %~)
 
-textEdit :: _ => Property o Text -> Sugar.Payload v name i o -> m (M.TextWidget o)
+textEdit :: _ => Property o Text -> Sugar.Payload v o -> m (M.TextWidget o)
 textEdit prop pl =
     do
         text <- TextEdits.make ?? empty ?? prop ?? WidgetIds.literalEditOf myId
@@ -134,7 +134,7 @@ parseNum newText
     | newText `elem` ["", "-", ".", "-."] = Just 0
     | otherwise = tryParse newText
 
-numEdit :: _ => Property o Double -> Sugar.Payload v name i o -> m (M.TextWidget o)
+numEdit :: _ => Property o Double -> Sugar.Payload v o -> m (M.TextWidget o)
 numEdit prop pl =
     (withFd ?? myId) <*>
     do

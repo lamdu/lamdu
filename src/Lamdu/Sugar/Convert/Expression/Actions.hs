@@ -14,7 +14,6 @@ import qualified Data.Set as Set
 import           Data.Text.Encoding (encodeUtf8)
 import           Hyper
 import           Hyper.Type.AST.Nominal (ToNom(..), NominalDecl(..), NominalInst(..))
-import           Hyper.Type.AST.Row (RowExtend(..))
 import qualified Hyper.Type.AST.Scheme as S
 import           Hyper.Type.Prune (Prune(..))
 import           Hyper.Unify.Binding (UVar)
@@ -36,7 +35,6 @@ import qualified Lamdu.Sugar.Convert.Input as Input
 import           Lamdu.Sugar.Convert.Monad (ConvertM(..))
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
 import qualified Lamdu.Sugar.Convert.PostProcess as PostProcess
-import qualified Lamdu.Sugar.Convert.Tag as ConvertTag
 import           Lamdu.Sugar.Convert.Type (convertType)
 import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
@@ -125,25 +123,6 @@ mkExtractToLet outerScope stored =
         extractPosI = outerScope ^. ExprIRef.iref
         oldStored = stored ^. ExprIRef.iref
 
-mkWrapInRecord ::
-    Monad m =>
-    Input.Payload m a # V.Term -> ConvertM m (TagChoice InternalName (OnceT (T m)) (T m) ())
-mkWrapInRecord exprPl =
-    do
-        typeProtectedSetToVal <- ConvertM.typeProtectedSetToVal
-        let recWrap tag =
-                V.BLeaf V.LRecEmpty & ExprIRef.newValI
-                >>= ExprIRef.newValI . V.BRecExtend . RowExtend tag (stored ^. ExprIRef.iref)
-                >>= typeProtectedSetToVal stored
-                & void
-        ConvertTag.replace nameWithoutContext mempty ConvertTag.RequireTag
-            tempMkEntityId recWrap
-            >>= ConvertM . lift
-    where
-        stored = exprPl ^. Input.stored
-        -- TODO: The entity-ids created here don't match the resulting entity ids of the record.
-        tempMkEntityId = EntityId.ofTaggedEntity (stored ^. ExprIRef.iref)
-
 makeSetToLiteral ::
     Monad m =>
     Input.Payload m a # V.Term -> ConvertM m (Literal Identity -> T m EntityId)
@@ -178,11 +157,10 @@ makeSetToEmptyRecord exprPl =
 
 makeActions ::
     Monad m =>
-    Input.Payload m a # V.Term -> ConvertM m (NodeActions InternalName (OnceT (T m)) (T m))
+    Input.Payload m a # V.Term -> ConvertM m (NodeActions (T m))
 makeActions exprPl =
     do
         ext <- mkExtract exprPl
-        wrapInRec <- mkWrapInRecord exprPl
         postProcess <- ConvertM.postProcessAssert
         outerPos <-
             Lens.view (ConvertM.scScopeInfo . ConvertM.siMOuter)
@@ -197,7 +175,6 @@ makeActions exprPl =
             , _setToEmptyRecord = setToRec
             , _extract = ext
             , _mReplaceParent = Nothing
-            , _wrapInRecord = wrapInRec
             , _mNewLet = outerPos <&> DataOps.redexWrap <&> fmap EntityId.ofValI
             , _mApply = apply
             }
@@ -360,12 +337,12 @@ mkEvalPrep pl =
 convertPayloads ::
     Recursively HFunctor h =>
     Annotated (ConvertPayload m a) # h ->
-    Annotated (Payload EvalPrep InternalName (OnceT (T m)) (T m), a) # h
+    Annotated (Payload EvalPrep (T m), a) # h
 convertPayloads = hflipped %~ hmap (const (Lens._Wrapped %~ convertPayload))
 
 convertPayload ::
     ConvertPayload m a ->
-    (Payload EvalPrep InternalName (OnceT (T m)) (T m), a)
+    (Payload EvalPrep (T m), a)
 convertPayload pl =
     ( Payload
         { _plAnnotation = mkEvalPrep pl

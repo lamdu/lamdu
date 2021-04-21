@@ -62,7 +62,7 @@ data ExportRepl m = ExportRepl
     }
 
 extractEventMap ::
-    _ => env -> Sugar.Payload v name i (T m) -> [M.MetaKey] -> EventMap (T m M.Update)
+    _ => env -> Sugar.Payload v (T m) -> [M.MetaKey] -> EventMap (T m M.Update)
 extractEventMap env pl keys =
     pl ^. Sugar.plActions . Sugar.extract
     <&> ExprEventMap.extractCursor & E.keysEventMapMovesCursor keys doc
@@ -72,7 +72,7 @@ extractEventMap env pl keys =
             [has . MomentuTexts.edit, has . Texts.extractReplToDef]
 
 replEventMap ::
-    _ => env -> ExportRepl m -> Sugar.Payload v name i (T m) -> EventMap (IOTrans m M.Update)
+    _ => env -> ExportRepl m -> Sugar.Payload v (T m) -> EventMap (IOTrans m M.Update)
 replEventMap env (ExportRepl expRepl expFancy _execRepl) replExprPl =
     mconcat
     [ extractEventMap env replExprPl (env ^. has . Config.extractKeys)

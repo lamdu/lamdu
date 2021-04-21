@@ -16,7 +16,7 @@ module Lamdu.Sugar.Types.Parts
     , Delete(..), _SetToHole, _Delete, _CannotDelete
     , NodeActions(..)
         , detach, delete, setToLiteral, setToEmptyRecord
-        , extract, mReplaceParent, wrapInRecord, mNewLet, mApply
+        , extract, mReplaceParent, mNewLet, mApply
     , -- Let
       ExtractDestination(..)
     , -- Binders
@@ -104,14 +104,13 @@ data Delete m
     | CannotDelete
     deriving Generic
 
-data NodeActions name i o = NodeActions
+data NodeActions o = NodeActions
     { _detach :: DetachAction o
     , _delete :: Delete o
     , _setToLiteral :: Literal Identity -> o EntityId
     , _setToEmptyRecord :: o EntityId
     , _extract :: o ExtractDestination
     , _mReplaceParent :: Maybe (o EntityId)
-    , _wrapInRecord :: TagChoice name i o ()
     , _mNewLet :: Maybe (o EntityId)
     , _mApply :: Maybe (o EntityId)
     } deriving Generic
@@ -142,9 +141,9 @@ data VarInfo
     | VarGeneric | VarFunction | VarRecord | VarVariant
     deriving (Generic, Eq)
 
-data Payload v name i o = Payload
+data Payload v o = Payload
     { _plAnnotation :: v
-    , _plActions :: NodeActions name i o
+    , _plActions :: NodeActions o
     , _plEntityId :: EntityId
     } deriving Generic
 

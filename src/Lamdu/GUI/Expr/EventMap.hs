@@ -34,8 +34,8 @@ import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
 
-data ExprInfo name i o = ExprInfo
-    { exprInfoActions :: Sugar.NodeActions name i o
+data ExprInfo o = ExprInfo
+    { exprInfoActions :: Sugar.NodeActions o
     , exprInfoMinOpPrec :: MinOpPrec
     , exprInfoIsSelected :: Bool
     }
@@ -53,7 +53,7 @@ defaultOptions =
 exprInfoFromPl ::
     Monad i =>
     GuiM env i o
-    ((Sugar.Payload v name i0 o0, ExprGui.GuiPayload) -> ExprInfo name i0 o0)
+    ((Sugar.Payload v o0, ExprGui.GuiPayload) -> ExprInfo o0)
 exprInfoFromPl =
     GuiState.isSubCursor <&>
     \isSubCursor pl ->
@@ -72,7 +72,7 @@ exprInfoFromPl =
 
 add ::
     _ =>
-    Options -> (Sugar.Payload v name i o, ExprGui.GuiPayload) ->
+    Options -> (Sugar.Payload v o, ExprGui.GuiPayload) ->
     GuiM env i o (w o -> w o)
 add options pl =
     exprInfoFromPl ?? pl >>= actionsEventMap options <&> Widget.weakerEventsWithContext
@@ -81,7 +81,7 @@ extractCursor :: Sugar.ExtractDestination -> Widget.Id
 extractCursor (Sugar.ExtractToLet letId) = WidgetIds.fromEntityId letId
 extractCursor (Sugar.ExtractToDef defId) = WidgetIds.fromEntityId defId
 
-extractEventMap :: _ => m (Sugar.NodeActions name i o -> EventMap (o GuiState.Update))
+extractEventMap :: _ => m (Sugar.NodeActions o -> EventMap (o GuiState.Update))
 extractEventMap =
     Lens.view id
     <&>
@@ -110,7 +110,7 @@ addLetEventMap addLet =
 
 actionsEventMap ::
     _ =>
-    Options -> ExprInfo name i o ->
+    Options -> ExprInfo o ->
     GuiM env i o (EventContext -> EventMap (o GuiState.Update))
 actionsEventMap options exprInfo =
     ( mconcat
@@ -160,7 +160,7 @@ applyEventMap action =
 
 transformSearchTerm ::
     _ =>
-    m (ExprInfo name i o -> EventContext -> EventMap Text)
+    m (ExprInfo o -> EventContext -> EventMap Text)
 transformSearchTerm =
     Lens.view id <&>
     \env exprInfo eventCtx ->
@@ -194,7 +194,7 @@ transformSearchTerm =
     <&> (searchStrRemainder <>)
 
 transformEventMap ::
-    _ => m (Options -> ExprInfo name i o -> EventContext -> EventMap (o GuiState.Update))
+    _ => m (Options -> ExprInfo o -> EventContext -> EventMap (o GuiState.Update))
 transformEventMap =
     transformSearchTerm <&>
     \transform options exprInfo eventCtx ->
@@ -213,7 +213,7 @@ transformEventMap =
     where
         widgetId = pure . WidgetIds.fromEntityId
 
-detachEventMap :: _ => m (ExprInfo name i o -> EventMap (o GuiState.Update))
+detachEventMap :: _ => m (ExprInfo o -> EventMap (o GuiState.Update))
 detachEventMap =
     Lens.view id
     <&>
@@ -281,7 +281,7 @@ makeRecordEventMap =
         Dir.RightToLeft -> "}"
     ) (const (makeRec <&> WidgetIds.fromEntityId <&> GuiState.updateCursor))
 
-makeLiteralEventMap :: _ => m (Sugar.NodeActions name i o -> EventMap (o GuiState.Update))
+makeLiteralEventMap :: _ => m (Sugar.NodeActions o -> EventMap (o GuiState.Update))
 makeLiteralEventMap =
     (<>)
     <$> ( (<>) <$> makeLiteralTextEventMap <*> makeLiteralNumberEventMap ""

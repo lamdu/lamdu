@@ -58,7 +58,7 @@ test =
 testSugarActionsWith ::
     FilePath ->
     [WorkArea (Annotation (EvaluationScopes Name (OnceT (T ViewM))) Name) Name (OnceT (T ViewM)) (T ViewM)
-        ( Sugar.Payload (Annotation (EvaluationScopes Name (OnceT (T ViewM))) Name) Name (OnceT (T ViewM)) (T ViewM)
+        ( Sugar.Payload (Annotation (EvaluationScopes Name (OnceT (T ViewM))) Name) (T ViewM)
         , (ParenInfo, [EntityId])
         ) ->
         OnceT (T ViewM) a] ->
@@ -72,7 +72,7 @@ testSugarActionsWith program actions env =
 testSugarActions ::
     FilePath ->
     [WorkArea (Annotation (EvaluationScopes Name (OnceT (T ViewM))) Name) Name (OnceT (T ViewM)) (T ViewM)
-        ( Sugar.Payload (Annotation (EvaluationScopes Name (OnceT (T ViewM))) Name) Name (OnceT (T ViewM)) (T ViewM)
+        ( Sugar.Payload (Annotation (EvaluationScopes Name (OnceT (T ViewM))) Name)  (T ViewM)
         , (ParenInfo, [EntityId])
         ) ->
         OnceT (T ViewM) a] ->
@@ -444,7 +444,7 @@ setHoleToHole =
             | Lens.has setToHole workArea =
                 error "hole has set to hole?"
             | otherwise = pure ()
-        setToHole :: Lens.Traversal' (WorkArea v name i o (Payload v name i o, a)) (o EntityId)
+        setToHole :: Lens.Traversal' (WorkArea v name i o (Payload v o, a)) (o EntityId)
         setToHole =
             replBody . _BodyLam . lamFunc . fBody .
             hVal . _BinderLet . lValue .

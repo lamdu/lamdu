@@ -25,12 +25,12 @@ Lens.makeLenses ''GuiPayload
 type Expr t i o = Sugar.Expr t (Sugar.Annotation (Sugar.EvaluationScopes Name i) Name) Name i o GuiPayload
 type Body t i o = Sugar.Body t (Sugar.Annotation (Sugar.EvaluationScopes Name i) Name) Name i o GuiPayload
 
-type Payload i o = (Sugar.Payload (Sugar.Annotation (Sugar.EvaluationScopes Name i) Name) Name i o, GuiPayload)
+type Payload i o = (Sugar.Payload (Sugar.Annotation (Sugar.EvaluationScopes Name i) Name) o, GuiPayload)
 
 type Top t i o = t (Sugar.Annotation (Sugar.EvaluationScopes Name i) Name) Name i o (Payload i o)
 
 -- | Just myId or Nothing depending on whether parens are needed
-mParensId :: (Sugar.Payload v name i o, GuiPayload) -> Maybe AnimId
+mParensId :: (Sugar.Payload v o, GuiPayload) -> Maybe AnimId
 mParensId pl
     | pl ^. _2 . plParenInfo . Sugar.piNeedParens =
           pl ^. _1 & WidgetIds.fromExprPayload & WidgetId.toAnimId & Just

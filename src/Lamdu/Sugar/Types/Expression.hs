@@ -44,6 +44,7 @@ module Lamdu.Sugar.Types.Expression
 import qualified Control.Lens as Lens
 import           Control.Monad.ListT (ListT)
 import           Data.Property (Property)
+import           Data.Kind (Type)
 import           Hyper
 import           Hyper.Type.AST.App (App(..), appFunc, appArg)
 import           Lamdu.Data.Anchors (BinderParamScopeId(..), bParamScopeId)
@@ -53,12 +54,13 @@ import           Lamdu.Sugar.Types.Eval (ParamScopes)
 import           Lamdu.Sugar.Types.GetVar (GetVar, BinderVarRef, BinderMode)
 import           Lamdu.Sugar.Types.Parts
 import           Lamdu.Sugar.Types.Tag
-import           Lamdu.Sugar.Types.Type (TId, Type)
+import           Lamdu.Sugar.Types.Type (TId)
+import qualified Lamdu.Sugar.Types.Type as T
 
 import           Lamdu.Prelude
 
-type Expr e v name i o a = Annotated (Payload v name i o, a) # e v name i o
-type Body e v name i o a = e v name i o # Annotated (Payload v name i o, a)
+type Expr e v name (i :: Type -> Type) (o :: Type -> Type) a = Annotated (Payload v o, a) # e v name i o
+type Body e v name (i :: Type -> Type) (o :: Type -> Type) a = e v name i o # Annotated (Payload v o, a)
 
 data AnnotatedArg v name i o k = AnnotatedArg
     { _aaTag :: Tag name
@@ -96,7 +98,7 @@ data Lambda v name i o f = Lambda
 data Fragment v name i o k = Fragment
     { _fExpr :: k :# Term v name i o
     , _fHeal :: o EntityId
-    , _fTypeMismatch :: Maybe (Annotated EntityId # Type name)
+    , _fTypeMismatch :: Maybe (Annotated EntityId # T.Type name)
     , _fOptions :: Hole name i o
     } deriving Generic
 

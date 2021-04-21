@@ -39,8 +39,8 @@ class AddEvalToNode n i o t0 t1 where
     addToNode ::
         Applicative i =>
         AddEvalCtx ->
-        Annotated (Payload (Annotation EvalPrep n) n i o, a) # t0 ->
-        Annotated (Payload (Annotation (EvaluationScopes InternalName i) n) n i o, a) # t1
+        Annotated (Payload (Annotation EvalPrep n) o, a) # t0 ->
+        Annotated (Payload (Annotation (EvaluationScopes InternalName i) n) o, a) # t1
 
 instance AddEvalToNode n i o (Const x) (Const x) where
     addToNode r (Ann (Const pl) (Const x)) = Ann (Const (pl & _1 %~ addToPayload r)) (Const x)
@@ -156,8 +156,8 @@ instance AddEval Term where
 addToPayload ::
     Applicative i =>
     AddEvalCtx ->
-    Payload (Annotation EvalPrep n0) name i o ->
-    Payload (Annotation (EvaluationScopes InternalName i) n0) name i o
+    Payload (Annotation EvalPrep n0) o ->
+    Payload (Annotation (EvaluationScopes InternalName i) n0) o
 addToPayload ctx a =
     a
     & plAnnotation . _AnnotationVal %~
@@ -176,10 +176,10 @@ addEvaluationResults ::
     (Applicative i, Monad m) =>
     Anchors.CodeAnchors m ->
     CurAndPrev EvalResults ->
-    WorkArea (Annotation EvalPrep n) n i (T m) (Payload (Annotation EvalPrep n) n i (T m), a) ->
+    WorkArea (Annotation EvalPrep n) n i (T m) (Payload (Annotation EvalPrep n) (T m), a) ->
     T m (
         WorkArea (Annotation (EvaluationScopes InternalName i) n) n i (T m)
-        (Payload (Annotation (EvaluationScopes InternalName i) n) n i (T m), a))
+        (Payload (Annotation (EvaluationScopes InternalName i) n) (T m), a))
 addEvaluationResults cp r wa@(WorkArea panes repl listGlobals) =
     makeNominalsMap
     (wa ^.. SugarLens.annotations @(Annotation EvalPrep n) . _AnnotationVal . eType . tIds

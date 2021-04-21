@@ -88,8 +88,8 @@ postProcessSugar minOpPrec binder =
     & SugarLens.hAnnotations
         @(Sugar.Annotation () Name)
         @(Sugar.Annotation (Sugar.EvaluationScopes Name i) Name)
-        @(Annotated (Sugar.Payload (Sugar.Annotation () Name) Name i o, ()))
-        @(Annotated (Sugar.Payload (Sugar.Annotation (Sugar.EvaluationScopes Name i) Name) Name i o, ()))
+        @(Annotated (Sugar.Payload (Sugar.Annotation () Name) o, ()))
+        @(Annotated (Sugar.Payload (Sugar.Annotation (Sugar.EvaluationScopes Name i) Name) o, ()))
         . Sugar._AnnotationVal .~ mempty
     & AddParens.addToTopLevel minOpPrec
     & hflipped %~ hmap (\_ -> Lens._Wrapped %~ pl)

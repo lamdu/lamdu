@@ -84,7 +84,7 @@ type SugarAnn = Sugar.Annotation (Sugar.EvaluationScopes Name (OnceT (T ViewM)))
 type WorkArea =
     Sugar.WorkArea SugarAnn
     Name (OnceT (T ViewM)) (T ViewM)
-    (Sugar.Payload SugarAnn Name (OnceT (T ViewM)) (T ViewM), ExprGui.GuiPayload)
+    (Sugar.Payload SugarAnn (T ViewM), ExprGui.GuiPayload)
 
 makeWorkArea :: Env -> OnceT (T ViewM) WorkArea
 makeWorkArea env = convertWorkArea env <&> (fmap . fmap) (uncurry ExprGui.GuiPayload)
@@ -298,14 +298,14 @@ testPunCursor =
 workAreaEq ::
     forall a m v.
     Eq a =>
-    Sugar.WorkArea v Name (OnceT (T m)) (T m) (Sugar.Payload v Name (OnceT (T m)) (T m), a) ->
-    Sugar.WorkArea v Name (OnceT (T m)) (T m) (Sugar.Payload v Name (OnceT (T m)) (T m), a) ->
+    Sugar.WorkArea v Name (OnceT (T m)) (T m) (Sugar.Payload v (T m), a) ->
+    Sugar.WorkArea v Name (OnceT (T m)) (T m) (Sugar.Payload v (T m), a) ->
     Bool
 workAreaEq x y =
     x' == unsafeCoerce y
     where
         x' =
-            unsafeCoerce x :: Sugar.WorkArea () Name Unit Unit (Sugar.Payload () Name Unit Unit, a)
+            unsafeCoerce x :: Sugar.WorkArea () Name Unit Unit (Sugar.Payload () Unit, a)
 
 testKeyboardDirAndBack ::
     HasCallStack =>

@@ -168,7 +168,7 @@ addPostTags items =
 makeAddFieldRow ::
     _ =>
     Sugar.TagChoice Name i o Sugar.EntityId ->
-    Sugar.Payload v name i o ->
+    Sugar.Payload v o ->
     GuiM env i o (TaggedItem o)
 makeAddFieldRow addField pl =
     TagEdit.makeTagHoleEdit addField mkPickResult tagHoleId

@@ -60,7 +60,7 @@ stdWrapParentExpr pl act =
 
 takeFocusIfNeeded ::
     Monad i =>
-    (Sugar.Payload v name i o, ExprGui.GuiPayload) ->
+    (Sugar.Payload v o, ExprGui.GuiPayload) ->
     GuiM env i o (Widget o -> Widget o)
 takeFocusIfNeeded pl =
     Lens.view GuiState.cursor

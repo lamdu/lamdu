@@ -34,7 +34,7 @@ type T = Transaction
 data IsHidden = NotHidden | Hidden deriving (Show)
 
 allEntityIds ::
-    WorkArea v name i o (Sugar.Payload v name i o, (t, [EntityId])) ->
+    WorkArea v name i o (Sugar.Payload v o, (t, [EntityId])) ->
     [(EntityId, IsHidden)]
 allEntityIds workArea =
     (pls ^.. Lens.folded . _2 . _2 . Lens.folded
@@ -44,7 +44,7 @@ allEntityIds workArea =
         pls = workArea ^.. traverse
 
 validateHiddenEntityIds ::
-    WorkArea v name i o (Sugar.Payload v name i o, (t, [EntityId])) -> Either String ()
+    WorkArea v name i o (Sugar.Payload v o, (t, [EntityId])) -> Either String ()
 validateHiddenEntityIds workArea
     | Set.null hiddenAndExplicit = Right ()
     | otherwise =
@@ -90,10 +90,10 @@ workAreaLowLevelLoad =
 validate ::
     (NFData v, NFData t, NFData name) =>
     WorkArea v name (OnceT (T fa)) (T fb)
-    (Sugar.Payload v name (OnceT (T fa)) (T fb), (t, [EntityId])) ->
+    (Sugar.Payload v (T fb), (t, [EntityId])) ->
     T ViewM
     ( WorkArea v name (OnceT (T fa)) (T fb)
-        (Sugar.Payload v name (OnceT (T fa)) (T fb), (t, [EntityId]))
+        (Sugar.Payload v (T fb), (t, [EntityId]))
     )
 validate workArea
     | Map.null duplicateEntityIds =
@@ -119,7 +119,7 @@ convertWorkArea ::
     env ->
     OnceT (T ViewM)
     ( WorkArea (Annotation (EvaluationScopes Name (OnceT (T ViewM))) Name) Name (OnceT (T ViewM)) (T ViewM)
-        ( Sugar.Payload (Annotation (EvaluationScopes Name (OnceT (T ViewM))) Name) Name (OnceT (T ViewM)) (T ViewM)
+        ( Sugar.Payload (Annotation (EvaluationScopes Name (OnceT (T ViewM))) Name) (T ViewM)
         , (ParenInfo, [EntityId])
         )
     )

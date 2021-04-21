@@ -58,15 +58,15 @@ class MarkBodyAnnotations v n i o e where
     markBodyAnnotations ::
         Body e v n i o a -> (ShowAnnotation, Body e (ShowAnnotation, v) n i o a)
 
-class MarkAnnotations v n i o t0 t1 where
+class MarkAnnotations v o t0 t1 where
     markNodeAnnotations ::
-        Annotated (Payload v n i o, a) # t0 ->
-        Annotated (Payload (ShowAnnotation, v) n i o, a) # t1
+        Annotated (Payload v o, a) # t0 ->
+        Annotated (Payload (ShowAnnotation, v) o, a) # t1
 
-instance MarkAnnotations v n i o (Const a) (Const a) where
+instance MarkAnnotations v o (Const a) (Const a) where
     markNodeAnnotations (Ann a (Const b)) = Ann (a & Lens._Wrapped . _1 . plAnnotation %~ (,) neverShowAnnotations) (Const b)
 
-instance MarkBodyAnnotations v n i o e => MarkAnnotations v n i o (e v n i o) (e (ShowAnnotation, v) n i o) where
+instance MarkBodyAnnotations v n i o e => MarkAnnotations v o (e v n i o) (e (ShowAnnotation, v) n i o) where
     markNodeAnnotations (Ann (Const pl) x) =
         Ann (Const (pl & _1 . plAnnotation %~ (,) showAnn)) newBody
         where
@@ -77,7 +77,7 @@ instance Functor i => MarkBodyAnnotations v n i o Binder where
         markBodyAnnotations body & _2 %~ BinderTerm
     markBodyAnnotations (BinderLet let_) =
         ( neverShowAnnotations
-        , morphMap (Proxy @(MarkAnnotations v n i o) #?> markNodeAnnotations) let_
+        , morphMap (Proxy @(MarkAnnotations v o) #?> markNodeAnnotations) let_
             & BinderLet
         )
 
@@ -91,7 +91,7 @@ instance Functor i => MarkBodyAnnotations v n i o Else where
     markBodyAnnotations (SimpleElse body) = markBodyAnnotations body & _2 %~ SimpleElse . markCaseHandler
     markBodyAnnotations (ElseIf x) =
         ( neverShowAnnotations
-        , morphMap (Proxy @(MarkAnnotations v n i o) #?> markNodeAnnotations) x & ElseIf
+        , morphMap (Proxy @(MarkAnnotations v o) #?> markNodeAnnotations) x & ElseIf
         )
 
 instance Functor i => MarkBodyAnnotations v n i o Function where
@@ -112,13 +112,13 @@ instance Functor i => MarkBodyAnnotations v n i o IfElse where
 instance Functor i => MarkBodyAnnotations v n i o Composite where
     markBodyAnnotations x =
         ( neverShowAnnotations
-        , morphMap (Proxy @(MarkAnnotations v n i o) #?> markNodeAnnotations) x
+        , morphMap (Proxy @(MarkAnnotations v o) #?> markNodeAnnotations) x
         )
 
 instance Functor i => MarkBodyAnnotations v n i o PostfixFunc where
     markBodyAnnotations x =
         ( neverShowAnnotations
-        , morphMap (Proxy @(MarkAnnotations v n i o) #?> markNodeAnnotations) x
+        , morphMap (Proxy @(MarkAnnotations v o) #?> markNodeAnnotations) x
         )
 
 instance Functor i => MarkBodyAnnotations v n i o Term where
@@ -159,17 +159,17 @@ instance Functor i => MarkBodyAnnotations v n i o Term where
         )
     markBodyAnnotations (BodySimpleApply x) =
         ( showAnnotationWhenVerbose
-        , morphMap (Proxy @(MarkAnnotations v n i o) #?> markNodeAnnotations) x
+        , morphMap (Proxy @(MarkAnnotations v o) #?> markNodeAnnotations) x
             & appFunc . nonHoleAnn .~ neverShowAnnotations
             & BodySimpleApply
         )
     markBodyAnnotations (BodyPostfixApply x) =
         ( neverShowAnnotations -- No need to see result of from-nom/get-field
-        , morphMap (Proxy @(MarkAnnotations v n i o) #?> markNodeAnnotations) x & BodyPostfixApply
+        , morphMap (Proxy @(MarkAnnotations v o) #?> markNodeAnnotations) x & BodyPostfixApply
         )
     markBodyAnnotations (BodyLabeledApply x) =
         ( showAnnotationWhenVerbose
-        , morphMap (Proxy @(MarkAnnotations v n i o) #?> markNodeAnnotations) x & BodyLabeledApply
+        , morphMap (Proxy @(MarkAnnotations v o) #?> markNodeAnnotations) x & BodyLabeledApply
         )
     markBodyAnnotations (BodyIfElse x) = markBodyAnnotations x & _2 %~ BodyIfElse
     markBodyAnnotations (BodyLeaf (LeafHole x)) =
@@ -188,14 +188,14 @@ instance Functor i => MarkBodyAnnotations v n i o Term where
         )
 
 nonHoleAnn ::
-    Lens.Traversal' (Annotated (Payload (ShowAnnotation, v0) n i o, a) # Term v1 n i o) ShowAnnotation
+    Lens.Traversal' (Annotated (Payload (ShowAnnotation, v0) o, a) # Term v1 n i o) ShowAnnotation
 nonHoleAnn =
     Lens.filtered (Lens.nullOf (hVal . SugarLens.bodyUnfinished)) .
     annotation . _1 . plAnnotation . _1
 
 markCaseHandler ::
-    Term v n i o # Annotated (Payload (ShowAnnotation, v0) n i o, a) ->
-    Term v n i o # Annotated (Payload (ShowAnnotation, v0) n i o, a)
+    Term v n i o # Annotated (Payload (ShowAnnotation, v0) o, a) ->
+    Term v n i o # Annotated (Payload (ShowAnnotation, v0) o, a)
 markCaseHandler =
     _BodyLam . lamFunc . fBody .
     SugarLens.binderResultExpr . Lens.ifiltered (const . Lens.nullOf SugarLens.bodyUnfinished) .

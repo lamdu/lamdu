@@ -134,12 +134,6 @@ toGetVar (GetBinder x) = toBinderVarRef Nothing x <&> GetBinder
 toGetVar (GetParamsRecord x) =
     traverse (opGetName Nothing MayBeAmbiguous Tag) x <&> GetParamsRecord
 
-toNodeActions ::
-    MonadNaming m =>
-    NodeActions (OldName m) (IM m) o ->
-    m (NodeActions (NewName m) (IM m) o)
-toNodeActions = wrapInRecord toTagChoice
-
 toResRecord ::
     MonadNaming m =>
     ResRecord (OldName m) a -> m (ResRecord (NewName m) a)
@@ -183,22 +177,18 @@ toAnnotation _ AnnotationNone = pure AnnotationNone
 toAnnotation _ (AnnotationType typ) = toType typ <&> AnnotationType
 toAnnotation v (AnnotationVal x) = v x <&> AnnotationVal
 
-type Pl v n m = Payload (Annotation v n) n (IM m)
+type Pl v n = Payload (Annotation v n)
 
-toPayload :: MonadNaming m => (v0 -> m v1) -> Pl v0 (OldName m) m o -> m (Pl v1 (NewName m) m o)
-toPayload v payload@Payload{_plAnnotation, _plActions} =
-    do
-        _plAnnotation <- toAnnotation v _plAnnotation
-        _plActions <- toNodeActions _plActions
-        pure payload{_plAnnotation, _plActions}
+toPayload :: MonadNaming m => (v0 -> m v1) -> Pl v0 (OldName m) o -> m (Pl v1 (NewName m) o)
+toPayload  = plAnnotation . toAnnotation
 
 toNode ::
     MonadNaming m =>
     (v0 -> m v1) ->
-    (ka # Annotated (Pl v0 (OldName m) m o, p) ->
-     m (kb # Annotated (Pl v1 (NewName m) m o, p))) ->
-    Annotated (Pl v0 (OldName m) m o, p) # ka ->
-    m (Annotated (Pl v1 (NewName m) m o, p) # kb)
+    (ka # Annotated (Pl v0 (OldName m) o, p) ->
+     m (kb # Annotated (Pl v1 (NewName m) o, p))) ->
+    Annotated (Pl v0 (OldName m) o, p) # ka ->
+    m (Annotated (Pl v1 (NewName m) o, p) # kb)
 toNode toVal toV (Ann (Const pl) v) =
     Ann
     <$> (_1 (toPayload toVal) pl <&> Const)
@@ -376,8 +366,8 @@ binderAmiguity _ = MayBeAmbiguous
 toNullaryInject ::
     MonadNaming m =>
     (v0 -> m v1) ->
-    NullaryInject (OldName m) (IM m) o # Annotated (Payload (Annotation v0 (OldName m)) (OldName m) (IM m) o, a) ->
-    m (NullaryInject (NewName m) (IM m) o # Annotated (Payload (Annotation v1 (NewName m)) (NewName m) (IM m) o, a))
+    NullaryInject (OldName m) (IM m) o # Annotated (Payload (Annotation v0 (OldName m)) o, a) ->
+    m (NullaryInject (NewName m) (IM m) o # Annotated (Payload (Annotation v1 (NewName m)) o, a))
 toNullaryInject v (NullaryInject t n) =
     NullaryInject
     <$> toTagRefOf Tag t
@@ -450,7 +440,7 @@ withBinderParams ::
 withBinderParams _ v (NullParam x) = withFuncParam v pure x <&> NullParam
 withBinderParams u v (Params xs) = traverse (withFuncParam v (withParamInfo u)) xs <&> Params
 
-type Top t n m o a = t (Annotation (EvaluationScopes n (IM m)) n) n (IM m) o (Pl (EvaluationScopes n (IM m)) n m o, a)
+type Top t n m o a = t (Annotation (EvaluationScopes n (IM m)) n) n (IM m) o (Pl (EvaluationScopes n (IM m)) n o, a)
 type WalkTop t m o a = Top t (OldName m) m o a -> m (Top t (NewName m) m o a)
 
 toDefExpr :: MonadNaming m => WalkTop DefinitionExpression m o a

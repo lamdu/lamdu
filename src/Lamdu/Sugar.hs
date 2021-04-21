@@ -40,8 +40,8 @@ type T = Transaction
 
 markAnnotations ::
     Functor i =>
-    Sugar.WorkArea v n i o (Sugar.Payload v n i o, a) ->
-    Sugar.WorkArea (ShowAnnotation, v) n i o (Sugar.Payload (ShowAnnotation, v) n i o, a)
+    Sugar.WorkArea v n i o (Sugar.Payload v o, a) ->
+    Sugar.WorkArea (ShowAnnotation, v) n i o (Sugar.Payload (ShowAnnotation, v) o, a)
 markAnnotations workArea =
     workArea
     { Sugar._waPanes = workArea ^. Sugar.waPanes <&> SugarLens.paneBinder %~ markNodeAnnotations
@@ -92,7 +92,7 @@ sugarWorkArea ::
     OnceT (T m)
     ( (Tag -> (IsOperator, TextsInLang)) -> env1 ->
         OnceT (T m) (Sugar.WorkArea (Sugar.Annotation (Sugar.EvaluationScopes Name (OnceT (T m))) Name) Name (OnceT (T m)) (T m)
-            (Sugar.Payload (Sugar.Annotation (Sugar.EvaluationScopes Name (OnceT (T m))) Name) Name (OnceT (T m)) (T m),
+            (Sugar.Payload (Sugar.Annotation (Sugar.EvaluationScopes Name (OnceT (T m))) Name) (T m),
                 (Sugar.ParenInfo, [Sugar.EntityId])))
     )
 sugarWorkArea env0 cp =

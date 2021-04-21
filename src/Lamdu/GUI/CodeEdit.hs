@@ -79,7 +79,7 @@ type Model env m =
     ( (Tag -> (IsOperator, TextsInLang)) -> env ->
         OnceT (T m)
         ( Sugar.WorkArea (Sugar.Annotation (Sugar.EvaluationScopes Name (OnceT (T m))) Name) Name (OnceT (T m)) (T m)
-            (Sugar.Payload (Sugar.Annotation (Sugar.EvaluationScopes Name (OnceT (T m))) Name) Name (OnceT (T m)) (T m)
+            (Sugar.Payload (Sugar.Annotation (Sugar.EvaluationScopes Name (OnceT (T m))) Name) (T m)
             , (Sugar.ParenInfo, [Sugar.EntityId])
             )
         )

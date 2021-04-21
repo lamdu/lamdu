@@ -34,7 +34,7 @@ type T = Transaction
 data ConvertPayload m a = ConvertPayload
     { -- Stored of top-level subtree for sugar expression subtree
       _pInput :: Input.Payload m a # V.Term
-    , _pActions :: NodeActions InternalName (OnceT (T m)) (T m)
+    , _pActions :: NodeActions (T m)
     , _pLambdas :: [UUID] -- See docs for eLambdas
     }
 

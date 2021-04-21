@@ -48,13 +48,13 @@ defRef var tag =
     }
 
 node ::
-    h # Annotated (Sugar.Payload (Sugar.Annotation v InternalName) InternalName Identity Unit, ()) ->
-    Annotated (Sugar.Payload (Sugar.Annotation v InternalName) InternalName Identity Unit, ()) # h
+    h # Annotated (Sugar.Payload (Sugar.Annotation v InternalName) Unit, ()) ->
+    Annotated (Sugar.Payload (Sugar.Annotation v InternalName) Unit, ()) # h
 node = Const payload & Ann
 
 labeledApplyFunc ::
     Sugar.BinderVarRef InternalName Unit ->
-    Annotated (Sugar.Payload (Sugar.Annotation v InternalName) InternalName Identity Unit, ()) #
+    Annotated (Sugar.Payload (Sugar.Annotation v InternalName) Unit, ()) #
     Const (Sugar.BinderVarRef InternalName Unit)
 labeledApplyFunc = node . Const
 
@@ -210,7 +210,7 @@ numType =
     Sugar.TInst (Sugar.TId (taggedEntityName "numTid" "num") "num") mempty
     & Ann (Const "dummy")
 
-payload :: (Sugar.Payload (Sugar.Annotation v InternalName) InternalName Identity Unit, ())
+payload :: (Sugar.Payload (Sugar.Annotation v InternalName) Unit, ())
 payload =
     ( Sugar.Payload
         { Sugar._plAnnotation = Sugar.AnnotationNone
@@ -220,7 +220,7 @@ payload =
     , ()
     )
 
-nodeActions :: Sugar.NodeActions InternalName Identity Unit
+nodeActions :: Sugar.NodeActions Unit
 nodeActions =
     Sugar.NodeActions
     { Sugar._detach = Sugar.DetachAction Unit
@@ -229,7 +229,6 @@ nodeActions =
     , Sugar._setToEmptyRecord = Unit
     , Sugar._extract = Unit
     , Sugar._mReplaceParent = Nothing
-    , Sugar._wrapInRecord = tagRefReplace
     , Sugar._mNewLet = Nothing
     , Sugar._mApply = Nothing
     }

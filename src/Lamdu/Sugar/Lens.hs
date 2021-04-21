@@ -187,7 +187,7 @@ instance Annotations a b s0 t0 => Annotations a b (s0, x) (t0, x) where
 instance Annotations a b (BinderParams a n i o) (BinderParams b n i o) where
     annotations = binderParamsFuncParams . fpAnnotation
 
-instance Annotations a b (Payload a n i o) (Payload b n i o) where
+instance Annotations a b (Payload a o) (Payload b o) where
     annotations = plAnnotation
 
 instance Annotations a b s t => Annotations a b (WorkArea a n i o s) (WorkArea b n i o t) where

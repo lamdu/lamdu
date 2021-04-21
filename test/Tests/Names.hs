@@ -58,7 +58,7 @@ assertNoCollisions name =
 testWorkArea ::
     (Name -> IO b) ->
     Sugar.WorkArea (Sugar.Annotation (Sugar.EvaluationScopes InternalName Identity) InternalName) InternalName Identity
-        Unit (Sugar.Payload (Sugar.Annotation (Sugar.EvaluationScopes InternalName Identity) InternalName) InternalName Identity Unit, a) ->
+        Unit (Sugar.Payload (Sugar.Annotation (Sugar.EvaluationScopes InternalName Identity) InternalName) Unit, a) ->
     IO ()
 testWorkArea verifyName inputWorkArea =
     do
@@ -70,7 +70,7 @@ testWorkArea verifyName inputWorkArea =
 
 getNames ::
     Sugar.WorkArea (Sugar.Annotation (Sugar.EvaluationScopes name Identity) name) name Identity o
-        (Sugar.Payload (Sugar.Annotation (Sugar.EvaluationScopes name Identity) name) name Identity o, a) ->
+        (Sugar.Payload (Sugar.Annotation (Sugar.EvaluationScopes name Identity) name) o, a) ->
     [name]
 getNames workArea =
     Walk.toWorkArea workArea

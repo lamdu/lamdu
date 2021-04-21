@@ -215,7 +215,7 @@ addEvaluationResult mNeigh resDisp postProcess =
 
 maybeAddAnnotationPl ::
     _ =>
-    Sugar.Payload (Sugar.Annotation (Sugar.EvaluationScopes Name i) Name) Name i o1 ->
+    Sugar.Payload (Sugar.Annotation (Sugar.EvaluationScopes Name i) Name) o1 ->
     GuiM env i o (M.Widget o -> M.Widget o)
 maybeAddAnnotationPl pl =
     do
