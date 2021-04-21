@@ -120,7 +120,6 @@ data Config = Config
     , _actionKeys :: [MetaKey]
     , _replaceParentKeys :: [MetaKey]
     , _healKeys :: [MetaKey]
-    , _detachKeys :: [MetaKey]
 
     , _letAddItemKeys :: [MetaKey]
 

@@ -58,7 +58,6 @@ data CodeUI a = CodeUI
     , _swapOperatorArgs :: a
     , _add :: a
     , _letClause :: a
-    , _modify :: a
     , _detach :: a
     , _literal :: a
     , _literalText :: a

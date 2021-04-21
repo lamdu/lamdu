@@ -115,7 +115,6 @@
             "replaceParent": "Replace Parent",
             "applyOperator": "Apply Operator",
             "swapOperatorArgs": "Swap Operator Arguments",
-            "modify": "Modify",
             "detach": "Detach",
             "literal": "Literal",
             "literalText": "Literal Text",

@@ -90,7 +90,6 @@
     "paramOrderBeforeKeys"     : [ "Cmd+Left" ],
     "paramOrderAfterKeys"      : [ "Cmd+Right" ],
     "healKeys"                 : [ "Space", "Enter" ],
-    "detachKeys"               : [ "Space" ],
     "recordOpenKeys"           : [ "Alt+O" ],
     "recordCloseKeys"          : [ "Alt+O" ],
     "caseOpenKeys"             : [ "Alt+O" ],

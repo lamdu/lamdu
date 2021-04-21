@@ -209,10 +209,6 @@ detachEventMap =
     case exprInfoActions exprInfo ^. Sugar.detach of
     Sugar.DetachAction act
         | exprInfoIsSelected exprInfo ->
-            E.keysEventMapMovesCursor (env ^. has . Config.detachKeys)
-            (E.toDoc env [has . MomentuTexts.edit, has . Texts.modify])
-            (act <&> WidgetIds.fromEntityId)
-            <>
             E.charGroup (Just "Open Paren")
             (E.toDoc env [has . MomentuTexts.edit, has . Texts.detach])
             parenKeys (const (mempty <$ act))
