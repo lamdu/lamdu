@@ -25,7 +25,7 @@ import           Lamdu.Name (Name)
 import           Lamdu.Sugar.Annotations
 import qualified Lamdu.Sugar.Config as SugarConfig
 import qualified Lamdu.Sugar.Convert as SugarConvert
-import           Lamdu.Sugar.Convert.Expression.Actions (makeTypeAnnotation)
+import           Lamdu.Sugar.Convert.Expression.Actions (convertPayload, makeTypeAnnotation)
 import           Lamdu.Sugar.Eval (addEvaluationResults)
 import           Lamdu.Sugar.Internal (EvalPrep, eEvalId, eType, eLambdas)
 import qualified Lamdu.Sugar.Lens as SugarLens
@@ -101,6 +101,7 @@ sugarWorkArea ::
     )
 sugarWorkArea env0 cp =
     SugarConvert.loadWorkArea env0 cp
+    <&> Lens.mapped %~ convertPayload
     <&>
     \workArea getTagName env1 ->
     let strippedLams = workArea ^.. SugarLens.workAreaAnnotations . eLambdas . traverse

@@ -28,7 +28,6 @@ import           Lamdu.Sugar.Convert.Binder.Params (mkVarInfo)
 import qualified Lamdu.Sugar.Convert.DefExpr as ConvertDefExpr
 import qualified Lamdu.Sugar.Convert.DefExpr.OutdatedDefs as OutdatedDefs
 import qualified Lamdu.Sugar.Convert.Expression as ConvertExpr
-import           Lamdu.Sugar.Convert.Expression.Actions (convertPayloads)
 import qualified Lamdu.Sugar.Convert.GetVar as ConvertGetVar
 import qualified Lamdu.Sugar.Convert.Input as Input
 import qualified Lamdu.Sugar.Convert.Load as Load
@@ -94,8 +93,7 @@ convertInferDefExpr ::
     env -> Anchors.CodeAnchors m ->
     Pure # T.Scheme -> Definition.Expr (Ann (HRef m) # V.Term) -> DefI m ->
     OnceT (T m)
-    (DefinitionBody EvalPrep InternalName (OnceT (T m)) (T m)
-        (Payload EvalPrep InternalName (OnceT (T m)) (T m), [EntityId]))
+    (DefinitionBody EvalPrep InternalName (OnceT (T m)) (T m) (ConvertPayload m [EntityId]))
 convertInferDefExpr env cp defType defExpr defI =
     do
         outdatedDefinitions <-
@@ -125,7 +123,6 @@ convertInferDefExpr env cp defType defExpr defI =
                 }
         ConvertDefExpr.convert
             defType (defExpr & Definition.expr .~ valInferred) defI
-            <&> _DefinitionBodyExpression . deContent %~ convertPayloads
             & ConvertM.run context
     where
         Load.InferOut valInferred newInferContext =
@@ -151,8 +148,7 @@ convertDefBody ::
     env -> Anchors.CodeAnchors m ->
     Definition.Definition (Ann (HRef m) # V.Term) (DefI m) ->
     OnceT (T m)
-    (DefinitionBody EvalPrep InternalName (OnceT (T m)) (T m)
-        (Payload EvalPrep InternalName (OnceT (T m)) (T m), [EntityId]))
+    (DefinitionBody EvalPrep InternalName (OnceT (T m)) (T m) (ConvertPayload m [EntityId]))
 convertDefBody env cp (Definition.Definition bod defType defI) =
     case bod of
     Definition.BodyBuiltin builtin -> convertDefIBuiltin defType builtin defI & lift
@@ -166,8 +162,7 @@ convertRepl ::
     ) =>
     env -> Anchors.CodeAnchors m ->
     OnceT (T m)
-    (Repl EvalPrep InternalName (OnceT (T m)) (T m)
-        (Payload EvalPrep InternalName (OnceT (T m)) (T m), [EntityId]))
+    (Repl EvalPrep InternalName (OnceT (T m)) (T m) (ConvertPayload m [EntityId]))
 convertRepl env cp =
     do
         defExpr <- ExprLoad.defExpr prop & lift
@@ -195,7 +190,6 @@ convertRepl env cp =
         let typ = valInferred ^. hAnn . Input.inferredType
         expr <-
             convertBinder valInferred
-            <&> convertPayloads
             & ConvertM.run context
             >>= OrderTags.orderNode
         vinfo <- mkVarInfo typ
@@ -219,8 +213,7 @@ convertPaneBody ::
     ) =>
     env -> Anchors.CodeAnchors m -> Anchors.Pane m ->
     OnceT (T m)
-    (PaneBody EvalPrep InternalName (OnceT (T m)) (T m)
-        (Payload EvalPrep InternalName (OnceT (T m)) (T m), [EntityId]))
+    (PaneBody EvalPrep InternalName (OnceT (T m)) (T m) (ConvertPayload m [EntityId]))
 convertPaneBody _ _ (Anchors.PaneTag tagId) =
     ExprIRef.readTagData tagId & lift <&>
     \tagData ->
@@ -268,8 +261,7 @@ convertPane ::
     Property (T m) [Anchors.Pane dummy] ->
     Int -> Anchors.Pane m ->
     OnceT (T m)
-    (Pane EvalPrep InternalName (OnceT (T m)) (T m)
-        (Payload EvalPrep InternalName (OnceT (T m)) (T m), [EntityId]))
+    (Pane EvalPrep InternalName (OnceT (T m)) (T m) (ConvertPayload m [EntityId]))
 convertPane env cp replEntityId (Property panes setPanes) i pane =
     convertPaneBody env cp pane
     <&> \body -> Pane
@@ -306,9 +298,7 @@ loadPanes ::
     , Has Config env, Has Cache.Functions env
     ) =>
     env -> Anchors.CodeAnchors m -> EntityId ->
-    OnceT (T m)
-    [Pane EvalPrep InternalName (OnceT (T m)) (T m)
-        (Payload EvalPrep InternalName (OnceT (T m)) (T m), [EntityId])]
+    OnceT (T m) [Pane EvalPrep InternalName (OnceT (T m)) (T m) (ConvertPayload m [EntityId])]
 loadPanes env cp replEntityId =
     do
         prop <- Anchors.panes cp ^. Property.mkProperty & lift
@@ -321,14 +311,12 @@ loadWorkArea ::
     , Has Config env, Has Cache.Functions env
     ) =>
     env -> Anchors.CodeAnchors m ->
-    OnceT (T m)
-    (WorkArea EvalPrep InternalName (OnceT (T m)) (T m)
-        (Payload EvalPrep InternalName (OnceT (T m)) (T m), [EntityId]))
+    OnceT (T m) (WorkArea EvalPrep InternalName (OnceT (T m)) (T m) (ConvertPayload m [EntityId]))
 loadWorkArea env cp =
     do
         repl <- convertRepl env cp
         panes <-
-            repl ^. replExpr . SugarLens.binderResultExpr . _1 . plEntityId
+            repl ^. replExpr . SugarLens.binderResultExpr . pInput . Input.entityId
             & loadPanes env cp
         pure WorkArea
             { _waRepl = repl

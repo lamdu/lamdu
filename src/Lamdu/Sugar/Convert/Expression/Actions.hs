@@ -2,7 +2,7 @@
 
 module Lamdu.Sugar.Convert.Expression.Actions
     ( subexprPayloads, addActionsWith, addActions, makeActions
-    , makeTypeAnnotation, convertPayloads
+    , makeTypeAnnotation, convertPayloads, convertPayload
     ) where
 
 import qualified Control.Lens.Extended as Lens
