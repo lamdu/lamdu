@@ -28,7 +28,7 @@ module Lamdu.Sugar.Types.Parts
     , AddFirstParam(..), _AddInitialParam, _PrependParam, _NeedToPickTagToAddFirst
     , AddNextParam(..), _AddNext, _NeedToPickTagToAddNext
     , -- Expressions
-      Payload(..), plEntityId, plAnnotation, plNeverShrinkTypeAnnotations, plActions
+      Payload(..), plEntityId, plAnnotation, plActions
     , ClosedCompositeActions(..), closedCompositeOpen
     , PunnedVar(..), pvVar, pvTagEntityId
     , NullaryInject(..), iTag, iContent
@@ -144,7 +144,6 @@ data VarInfo
 
 data Payload v name i o = Payload
     { _plAnnotation :: v
-    , _plNeverShrinkTypeAnnotations :: Bool
     , _plActions :: NodeActions name i o
     , _plEntityId :: EntityId
     } deriving Generic

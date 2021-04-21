@@ -214,7 +214,6 @@ payload :: (Sugar.Payload (Sugar.Annotation v InternalName) InternalName Identit
 payload =
     ( Sugar.Payload
         { Sugar._plAnnotation = Sugar.AnnotationNone
-        , Sugar._plNeverShrinkTypeAnnotations = False
         , Sugar._plEntityId = "dummy"
         , Sugar._plActions = nodeActions
         }

@@ -370,7 +370,6 @@ convertPayload pl =
     ( Payload
         { _plAnnotation = mkEvalPrep pl
         , _plActions = pl ^. pActions
-        , _plNeverShrinkTypeAnnotations = False
         , _plEntityId = pl ^. pInput . Input.entityId
         }
     , pl ^. pInput . Input.userData

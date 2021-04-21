@@ -219,10 +219,7 @@ maybeAddAnnotationPl ::
     GuiM env i o (M.Widget o -> M.Widget o)
 maybeAddAnnotationPl pl =
     do
-        postProcessAnnotation <-
-            if pl ^. Sugar.plNeverShrinkTypeAnnotations
-            then pure shrinkValAnnotationsIfNeeded
-            else isExprSelected <&> postProcessAnnotationFromSelected
+        postProcessAnnotation <- isExprSelected <&> postProcessAnnotationFromSelected
         maybeAddAnnotation postProcessAnnotation
             (pl ^. Sugar.plAnnotation)
             & Reader.local (M.animIdPrefix .~ animId)
