@@ -1,6 +1,7 @@
 packages:
 - '.'
 extra-deps:
+- base16-bytestring-1.0.1.0
 - bitmap-0.0.2
 - bitmap-opengl-0.0.1.5
 - stb-image-0.2.1
@@ -9,7 +10,7 @@ extra-deps:
 - github: lamdu/bindings-freetype-gl
   commit: abcb891cf2ed01edb2d02197ef2b354d6ff43db5
 - github: lamdu/lamdu-calculus
-  commit: 76bcf5649bf04d17d30536e1ff775361d5540df8
+  commit: fb1af1584ba8446359cb1fa435eefb8a024bc767
 - github: lamdu/momentu
   commit: 227638e1d1ea297178dedfbb26867000592beaad
 - github: lamdu/hypertypes

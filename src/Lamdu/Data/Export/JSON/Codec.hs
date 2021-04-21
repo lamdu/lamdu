@@ -345,8 +345,7 @@ decodeLeaf =
         do
             primId <- obj .: "primId" >>= decodeIdent <&> T.NominalId
             bytesHex <- obj .: "primBytes"
-            let (primBytes, remain) = Hex.decode (BS.pack bytesHex)
-            BS.null remain & guard
+            primBytes <- Hex.decode (BS.pack bytesHex) & fromEither
             V.PrimVal primId primBytes & pure
         <&> V.LLiteral
       )

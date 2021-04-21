@@ -136,7 +136,7 @@ Library
                   , ansi-wl-pprint
                   , base >= 4.12
                   , base-compat >= 0.8.2 && < 0.12
-                  , base16-bytestring
+                  , base16-bytestring >=1
                   , binary >= 0.7
                   , bytestring
                   , containers >= 0.4

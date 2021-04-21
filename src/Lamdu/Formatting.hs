@@ -5,7 +5,6 @@ module Lamdu.Formatting
 
 import           Control.Monad (mplus)
 import qualified Data.ByteString.Base16 as Hex
-import qualified Data.ByteString.Char8 as BS
 import qualified Data.Char as Char
 import qualified Data.Text as Text
 import           Data.Text.Encoding (encodeUtf8, decodeUtf8)
@@ -31,12 +30,7 @@ class Format a where
 instance Format ByteString where
     tryParse str =
         case Text.uncons str of
-        Just ('#', xs) ->
-            do
-                BS.null remain & guard
-                Just result
-            where
-                (result, remain) = encodeUtf8 xs & Hex.decode
+        Just ('#', xs) -> encodeUtf8 xs & Hex.decode & either (const Nothing) Just
         _ -> Nothing
     format bs = Text.cons '#' $ decodeUtf8 (Hex.encode bs)
 
