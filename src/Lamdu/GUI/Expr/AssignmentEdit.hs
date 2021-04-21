@@ -99,7 +99,7 @@ lookupMKey k m = k >>= (`Map.lookup` m)
 
 mkChosenScopeCursor ::
     Monad i =>
-    Sugar.Body Sugar.Function v Name i o ExprGui.GuiPayload ->
+    Sugar.Body Sugar.Function v Name i o ->
     GuiM env i o (CurAndPrev (Maybe ScopeCursor))
 mkChosenScopeCursor func =
     do
@@ -355,7 +355,7 @@ makeFunctionParts funcApplyLimit (Ann (Const pl) func) delVarBackwardsId =
               Just _ -> id
             & GuiM.withLocalMScopeId binderScopeId
     where
-        myId = WidgetIds.fromExprPayload (pl ^. _1)
+        myId = WidgetIds.fromExprPayload pl
         destId =
             case func ^. Sugar.fParams of
             Sugar.NullParam{} -> bodyId
@@ -364,7 +364,7 @@ makeFunctionParts funcApplyLimit (Ann (Const pl) func) delVarBackwardsId =
                 traverse . _2 . Sugar.piTag . Sugar.tagRefTag . Sugar.tagInstance
                 & WidgetIds.fromEntityId
         scopesNavId = Widget.joinId myId ["scopesNav"]
-        bodyId = func ^. Sugar.fBody . annotation . _1 & WidgetIds.fromExprPayload
+        bodyId = func ^. Sugar.fBody . annotation & WidgetIds.fromExprPayload
 
 makePlainParts ::
     _ =>
@@ -379,7 +379,7 @@ makePlainParts (Ann (Const pl) assignPlain) delVarBackwardsId =
             & GuiM.makeBinder
         Parts mParamsEdit Nothing rhs mempty Nothing myId & pure
     where
-        myId = WidgetIds.fromExprPayload (pl ^. _1)
+        myId = WidgetIds.fromExprPayload pl
 
 makeParts ::
     _ =>
@@ -450,7 +450,7 @@ make pMode tag color assignment =
         & maybe id stdWrap mLamPl
         <&> Widget.weakerEvents eventMap
     where
-        myId = WidgetIds.fromExprPayload (pl ^. _1)
+        myId = WidgetIds.fromExprPayload pl
         delParamDest = tag ^. Sugar.tagRefTag . Sugar.tagInstance & WidgetIds.fromEntityId
         Ann (Const pl) assignmentBody = assignment
         presentationChoiceId = Widget.joinId myId ["presentation"]

@@ -124,7 +124,7 @@ binderResultExpr f (Ann (Const pl) x) =
 
 holeOptionTransformExprs ::
     Monad i =>
-    (Expr Binder (Annotation () n) n i o () -> i (Expr Binder (Annotation () n) n i o ())) ->
+    (Expr Binder (Annotation () n) n i o -> i (Expr Binder (Annotation () n) n i o)) ->
     HoleOption n i o ->
     HoleOption n i o
 holeOptionTransformExprs onExpr =
@@ -132,7 +132,7 @@ holeOptionTransformExprs onExpr =
 
 holeTransformExprs ::
     Monad i =>
-    (Expr Binder (Annotation () n) n i o () -> i (Expr Binder (Annotation () n) n i o ())) ->
+    (Expr Binder (Annotation () n) n i o -> i (Expr Binder (Annotation () n) n i o)) ->
     Hole n i o -> Hole n i o
 holeTransformExprs onExpr =
     holeOptions . Lens.mapped . Lens.mapped . Lens.mapped %~ holeOptionTransformExprs onExpr

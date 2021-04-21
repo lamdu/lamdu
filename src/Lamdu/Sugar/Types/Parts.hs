@@ -28,7 +28,7 @@ module Lamdu.Sugar.Types.Parts
     , AddFirstParam(..), _AddInitialParam, _PrependParam, _NeedToPickTagToAddFirst
     , AddNextParam(..), _AddNext, _NeedToPickTagToAddNext
     , -- Expressions
-      Payload(..), plEntityId, plAnnotation, plActions
+      Payload(..), plEntityId, plAnnotation, plActions, plHiddenEntityIds, plParenInfo
     , ClosedCompositeActions(..), closedCompositeOpen
     , PunnedVar(..), pvVar, pvTagEntityId
     , NullaryInject(..), iTag, iContent
@@ -145,6 +145,8 @@ data Payload v o = Payload
     { _plAnnotation :: v
     , _plActions :: NodeActions o
     , _plEntityId :: EntityId
+    , _plParenInfo :: !ParenInfo
+    , _plHiddenEntityIds :: [EntityId]
     } deriving Generic
 
 newtype ClosedCompositeActions o = ClosedCompositeActions

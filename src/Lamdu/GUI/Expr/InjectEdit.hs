@@ -54,7 +54,7 @@ nullaryRecord x =
                 (pure myId)
                 & Left
     where
-        myId = x ^. annotation . _1 & WidgetIds.fromExprPayload
+        myId = x ^. annotation & WidgetIds.fromExprPayload
 
 makeNullary ::
     _ => Annotated (ExprGui.Payload i o) # Sugar.NullaryInject Name i o -> GuiM env i o (Responsive o)
@@ -65,7 +65,7 @@ makeNullary (Ann (Const pl) (Sugar.NullaryInject tag r)) =
             injectTag tag <&> Responsive.fromWithTextPos
             <&> either M.weakerEvents (const id) nullary
         valEventMap <-
-            case r ^. annotation . _1 . Sugar.plActions . Sugar.delete of
+            case r ^. annotation . Sugar.plActions . Sugar.delete of
             Sugar.SetToHole a ->
                 Lens.view id <&>
                 \env ->
@@ -76,6 +76,6 @@ makeNullary (Ann (Const pl) (Sugar.NullaryInject tag r)) =
         ResponsiveExpr.boxSpacedMDisamb ?? ExprGui.mParensId pl ?? (t : nullary ^.. Lens._Right)
             <&> M.weakerEvents valEventMap
     & GuiState.assignCursor
-        (pl ^. _1 & WidgetIds.fromExprPayload)
+        (WidgetIds.fromExprPayload pl)
         (tag ^. Sugar.tagRefTag . Sugar.tagInstance & WidgetIds.fromEntityId)
     & stdWrap pl

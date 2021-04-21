@@ -68,7 +68,7 @@ make (Ann (Const pl) (Sugar.Composite alts punned caseTail addAlt)) =
                 & E.keysEventMapMovesCursor (env ^. has . Config.caseAddAltKeys)
                     (doc env Texts.addAlt)
         header <- grammar (Label.make ".") M./|/ makeCaseLabel
-        (Annotation.maybeAddAnnotationPl (pl ^. _1) <&> (Widget.widget %~)) <*>
+        (Annotation.maybeAddAnnotationPl pl <&> (Widget.widget %~)) <*>
             ( Styled.addValFrame <*>
                 (Options.boxSpaced ?? Options.disambiguationNone ?? [header, altsGui]))
             <&> Widget.weakerEvents addAltEventMap
@@ -77,7 +77,7 @@ make (Ann (Const pl) (Sugar.Composite alts punned caseTail addAlt)) =
         wrap x =
             ExprEventMap.add ExprEventMap.defaultOptions pl <*>
             (Wrap.parentDelegator myId <*> x)
-        myId = WidgetIds.fromExprPayload (pl ^. _1)
+        myId = WidgetIds.fromExprPayload pl
         headerId = Widget.joinId myId ["header"]
         altsId = Widget.joinId myId ["alts"]
         makeCaseLabel =
