@@ -80,7 +80,7 @@ type Model env m =
         OnceT (T m)
         ( Sugar.WorkArea (Sugar.Annotation (Sugar.EvaluationScopes Name (OnceT (T m))) Name) Name (OnceT (T m)) (T m)
             (Sugar.Payload (Sugar.Annotation (Sugar.EvaluationScopes Name (OnceT (T m))) Name) Name (OnceT (T m)) (T m)
-            , (Sugar.ParenInfo, [Sugar.EntityId])
+            , Sugar.GuiPayload
             )
         )
     )
@@ -93,10 +93,7 @@ make cp gp width mkWorkArea =
     do
         theExportActions <- Lens.view has
         env <- Lens.view id
-        workArea <-
-            mkWorkArea >>= (\x -> x (getTagName env) env)
-            <&> Lens.mapped . Lens.mapped %~ uncurry ExprGui.GuiPayload
-            & lift
+        workArea <- mkWorkArea >>= (\x -> x (getTagName env) env) & lift
         gotoDefinition <-
             GotoDefinition.make (workArea ^. Sugar.waGlobals & lift)
             <&> StatusBar.hoist IOTrans.liftTrans

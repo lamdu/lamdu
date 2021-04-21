@@ -66,14 +66,14 @@ fdConfig env = FocusDelegator.Config
     }
 
 makeRenderedResult ::
-    _ => [Text] -> ExprGui.GuiPayload -> Result i o -> GuiM env i o (Menu.RenderedOption o)
+    _ => [Text] -> Sugar.GuiPayload -> Result i o -> GuiM env i o (Menu.RenderedOption o)
 makeRenderedResult searchTerms pl result =
     do
         -- Warning: rHoleResult should be ran at most once!
         -- Running it more than once caused a horrible bug (bugfix: 848b6c4407)
         res <- rHoleResult result & GuiM.im
         res ^. Sugar.holeResultConverted
-            & postProcessSugar (pl ^. ExprGui.plParenInfo . Sugar.piMinOpPrec)
+            & postProcessSugar (pl ^. Sugar.plParenInfo . Sugar.piMinOpPrec)
             & ResultWidget.make searchTerms (rId result) (res ^. Sugar.holeResultPick)
 
 postProcessSugar ::
@@ -87,14 +87,14 @@ postProcessSugar minOpPrec binder =
     & hflipped %~ hmap (\_ -> Lens._Wrapped %~ pl)
     where
         pl (parenInfo, sugarPl) =
-            ExprGui.GuiPayload
-            { ExprGui._plHiddenEntityIds = []
-            , ExprGui._plParenInfo = parenInfo
+            Sugar.GuiPayload
+            { Sugar._plHiddenEntityIds = []
+            , Sugar._plParenInfo = parenInfo
             }
             <$ sugarPl
 
 makeResultOption ::
-    _ => ExprGui.GuiPayload -> ResultGroup i o -> Menu.Option (GuiM env i o) o
+    _ => Sugar.GuiPayload -> ResultGroup i o -> Menu.Option (GuiM env i o) o
 makeResultOption pl results =
     Menu.Option
     { Menu._oId = results ^. ResultGroups.rgPrefixId

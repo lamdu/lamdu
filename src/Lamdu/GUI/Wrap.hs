@@ -60,7 +60,7 @@ stdWrapParentExpr pl act =
 
 takeFocusIfNeeded ::
     Monad i =>
-    (Sugar.Payload v name i o, ExprGui.GuiPayload) ->
+    (Sugar.Payload v name i o, Sugar.GuiPayload) ->
     GuiM env i o (Widget o -> Widget o)
 takeFocusIfNeeded pl =
     Lens.view GuiState.cursor
@@ -72,5 +72,5 @@ takeFocusIfNeeded pl =
     else widget
     where
         entityWidgetIds =
-            pl ^. _1 . Sugar.plEntityId : pl ^. _2 . ExprGui.plHiddenEntityIds
+            pl ^. _1 . Sugar.plEntityId : pl ^. _2 . Sugar.plHiddenEntityIds
             <&> WidgetIds.fromEntityId

@@ -30,7 +30,7 @@ make :: _ => ExprGui.Expr Sugar.Term i o -> GuiM env i o (Responsive o)
 make e =
     makeEditor e & assignCursor
     where
-        exprHiddenEntityIds = e ^. annotation . _2 . ExprGui.plHiddenEntityIds
+        exprHiddenEntityIds = e ^. annotation . _2 . Sugar.plHiddenEntityIds
         myId = e ^. annotation . _1 & WidgetIds.fromExprPayload
         assignCursor x =
             exprHiddenEntityIds <&> WidgetIds.fromEntityId

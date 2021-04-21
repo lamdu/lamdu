@@ -95,9 +95,18 @@ sugarWorkArea ::
     env0 -> Anchors.CodeAnchors m ->
     OnceT (T m)
     ( (Tag -> (IsOperator, TextsInLang)) -> env1 ->
-        OnceT (T m) (Sugar.WorkArea (Sugar.Annotation (Sugar.EvaluationScopes Name (OnceT (T m))) Name) Name (OnceT (T m)) (T m)
-            (Sugar.Payload (Sugar.Annotation (Sugar.EvaluationScopes Name (OnceT (T m))) Name) Name (OnceT (T m)) (T m),
-                (Sugar.ParenInfo, [Sugar.EntityId])))
+        OnceT (T m) 
+        ( Sugar.WorkArea 
+            ( Sugar.Annotation (Sugar.EvaluationScopes Name (OnceT (T m))) Name
+            ) Name (OnceT (T m)) (T m)
+            ( Sugar.Payload
+                (Sugar.Annotation 
+                    ( Sugar.EvaluationScopes Name (OnceT (T m)) )
+                    Name
+                ) Name (OnceT (T m)) (T m),
+                Sugar.GuiPayload
+            )
+        )
     )
 sugarWorkArea env0 cp =
     SugarConvert.loadWorkArea env0 cp
@@ -110,6 +119,6 @@ sugarWorkArea env0 cp =
     >>= lift . addEvaluationResults cp (env1 ^. has <&> redirectLams strippedLams)
     >>= report . AddNames.addToWorkArea env1 (fmap getTagName . lift . ExprIRef.readTagData)
     <&> AddParens.addToWorkArea
-    <&> Lens.mapped %~ \(parenInfo, pl) -> pl <&> (,) parenInfo
+    <&> Lens.mapped %~ \(parenInfo, pl) -> pl <&> Sugar.GuiPayload parenInfo
     where
         Debug.EvaluatorM report = env0 ^. has . Debug.naming . Debug.mAction

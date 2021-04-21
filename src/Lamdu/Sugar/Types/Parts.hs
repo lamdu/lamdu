@@ -29,6 +29,7 @@ module Lamdu.Sugar.Types.Parts
     , AddNextParam(..), _AddNext, _NeedToPickTagToAddNext
     , -- Expressions
       Payload(..), plEntityId, plAnnotation, plNeverShrinkTypeAnnotations, plActions
+    , GuiPayload(..), plHiddenEntityIds, plParenInfo
     , ClosedCompositeActions(..), closedCompositeOpen
     , PunnedVar(..), pvVar, pvTagEntityId
     , NullaryInject(..), iTag, iContent
@@ -148,6 +149,13 @@ data Payload v name i o = Payload
     , _plEntityId :: EntityId
     } deriving Generic
 
+-- TODO: This is not specific to GUI at all, can move to Sugar.Types?
+-- GUI input payload on sugar exprs
+data GuiPayload = GuiPayload
+    { _plParenInfo :: !ParenInfo
+    , _plHiddenEntityIds :: [EntityId]
+    } deriving (Generic, Eq, Show)
+
 newtype ClosedCompositeActions o = ClosedCompositeActions
     { _closedCompositeOpen :: o EntityId
     } deriving stock Generic
@@ -215,3 +223,4 @@ traverse Lens.makePrisms
 makeHTraversableAndBases ''NullaryInject
 makeHTraversableAndBases ''PunnedVar
 makeHMorph ''NullaryInject
+Lens.makeLenses ''GuiPayload

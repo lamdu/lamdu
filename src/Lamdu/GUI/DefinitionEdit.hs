@@ -61,7 +61,7 @@ makeExprDefinition def bodyExpr =
 
 makeBuiltinDefinition ::
     _ =>
-    Sugar.Definition v Name i o (Sugar.Payload v Name i o, ExprGui.GuiPayload) ->
+    Sugar.Definition v Name i o (Sugar.Payload v Name i o, Sugar.GuiPayload) ->
     Sugar.DefinitionBuiltin Name o ->
     GuiM env i o (M.TextWidget o)
 makeBuiltinDefinition def builtin =

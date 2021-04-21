@@ -59,7 +59,7 @@ testSugarActionsWith ::
     FilePath ->
     [WorkArea (Annotation (EvaluationScopes Name (OnceT (T ViewM))) Name) Name (OnceT (T ViewM)) (T ViewM)
         ( Sugar.Payload (Annotation (EvaluationScopes Name (OnceT (T ViewM))) Name) Name (OnceT (T ViewM)) (T ViewM)
-        , (ParenInfo, [EntityId])
+        , Sugar.GuiPayload
         ) ->
         OnceT (T ViewM) a] ->
     Env ->
@@ -73,7 +73,7 @@ testSugarActions ::
     FilePath ->
     [WorkArea (Annotation (EvaluationScopes Name (OnceT (T ViewM))) Name) Name (OnceT (T ViewM)) (T ViewM)
         ( Sugar.Payload (Annotation (EvaluationScopes Name (OnceT (T ViewM))) Name) Name (OnceT (T ViewM)) (T ViewM)
-        , (ParenInfo, [EntityId])
+        , Sugar.GuiPayload
         ) ->
         OnceT (T ViewM) a] ->
     IO ()

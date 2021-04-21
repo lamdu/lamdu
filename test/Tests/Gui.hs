@@ -84,10 +84,7 @@ type SugarAnn = Sugar.Annotation (Sugar.EvaluationScopes Name (OnceT (T ViewM)))
 type WorkArea =
     Sugar.WorkArea SugarAnn
     Name (OnceT (T ViewM)) (T ViewM)
-    (Sugar.Payload SugarAnn Name (OnceT (T ViewM)) (T ViewM), ExprGui.GuiPayload)
-
-makeWorkArea :: Env -> OnceT (T ViewM) WorkArea
-makeWorkArea env = convertWorkArea env <&> (fmap . fmap) (uncurry ExprGui.GuiPayload)
+    (Sugar.Payload SugarAnn Name (OnceT (T ViewM)) (T ViewM), Sugar.GuiPayload)
 
 makeGui ::
     HasCallStack =>
@@ -146,7 +143,7 @@ mApplyEvent env virtCursor event workArea =
 
 applyEventWith :: String -> Env -> VirtualCursor -> Event -> OnceT (T ViewM) Env
 applyEventWith msg env virtCursor event =
-    makeWorkArea env
+    convertWorkArea env
     >>= mApplyEvent env virtCursor event
     <&> fromMaybe (error msg)
     <&> (`GuiState.update` env)
@@ -162,7 +159,7 @@ fromWorkArea ::
         ) a ->
     OnceT (T ViewM) a
 fromWorkArea env path =
-    convertWorkArea env <&> (fmap . fmap) (uncurry ExprGui.GuiPayload)
+    convertWorkArea env
     <&> (^?! Lens.cloneTraversal path)
 
 dummyVirt :: VirtualCursor
@@ -177,7 +174,7 @@ testTagPanes =
     do
         fromWorkArea baseEnv (replExpr . Sugar._BodyRecord . Sugar.cItems)
             >>= lift . sequence_ . (^.. traverse . Sugar.ciTag . Sugar.tagRefJumpTo . Lens._Just)
-        () <$ (makeWorkArea baseEnv >>= makeFocusedWidget "opened tag panes" baseEnv)
+        () <$ (convertWorkArea baseEnv >>= makeFocusedWidget "opened tag panes" baseEnv)
 
 simpleKeyEvent :: MetaKey -> E.Event
 simpleKeyEvent (MetaKey mods key) =
@@ -202,7 +199,7 @@ testLambdaDelete =
         env0 <- applyEvent (baseEnv & cursor .~ paramCursor) dummyVirt delEvent
         -- One delete replaces the param tag, next delete deletes param
         env1 <- applyEvent env0 dummyVirt delEvent
-        _ <- makeWorkArea env1 >>= makeGui "" env1
+        _ <- convertWorkArea env1 >>= makeGui "" env1
         pure ()
 
 topLevelLamParamCursor :: Env -> OnceT (T ViewM) WidgetId.Id
@@ -226,7 +223,7 @@ testNewTag =
         env0 <- applyEvent (baseEnv & cursor .~ paramCursor) dummyVirt (EventChar 'f')
         let upEvent = MetaKey noMods GLFW.Key'Up & simpleKeyEvent
         env1 <- applyEvent env0 dummyVirt upEvent
-        _ <- makeWorkArea env1 >>= makeGui "" env1
+        _ <- convertWorkArea env1 >>= makeGui "" env1
         pure ()
 
 -- | Test for issue #410
@@ -244,8 +241,8 @@ testFragmentSize =
         let env1 =
                 baseEnv
                 & cursor .~ WidgetIds.fromExprPayload frag
-        guiCursorOnFrag <- makeWorkArea env1 >>= makeGui "" env1
-        guiCursorElseWhere <- makeWorkArea baseEnv >>= makeGui "" baseEnv
+        guiCursorOnFrag <- convertWorkArea env1 >>= makeGui "" env1
+        guiCursorElseWhere <- convertWorkArea baseEnv >>= makeGui "" baseEnv
         unless (guiCursorOnFrag ^. sz == guiCursorElseWhere ^. sz) (error "fragment size inconsistent")
     where
         sz = Responsive.rWide . Align.tValue . Element.size
@@ -284,7 +281,7 @@ testPunCursor =
             applyEvent (baseEnv & cursor .~ WidgetIds.tagHoleId (WidgetIds.fromEntityId tagId))
             dummyVirt (EventChar 'x')
         env1 <- MetaKey noMods GLFW.Key'Enter & simpleKeyEvent & applyEvent env0 dummyVirt
-        workArea <- makeWorkArea env1
+        workArea <- convertWorkArea env1
         _ <- makeFocusedWidget "" env1 workArea
         workArea ^? Lens.cloneTraversal waRec . Sugar.cPunnedItems <&> length & pure
     & testProgram "rec-with-let.json"
@@ -312,7 +309,7 @@ testKeyboardDirAndBack ::
     Env.Env -> VirtualCursor -> MetaKey -> MetaKey -> OnceT (T ViewM) ()
 testKeyboardDirAndBack posEnv posVirt way back =
     do
-        wa <- makeWorkArea posEnv
+        wa <- convertWorkArea posEnv
         mApplyEvent posEnv posVirt (simpleKeyEvent way) wa
             >>=
             \case
@@ -356,7 +353,7 @@ testTabNavigation ::
     Env.Env -> VirtualCursor -> OnceT (T ViewM) ()
 testTabNavigation env virtCursor =
     do
-        w0 <- makeWorkArea env >>= makeFocusedWidget "mApplyEvent" env
+        w0 <- convertWorkArea env >>= makeFocusedWidget "mApplyEvent" env
         let eventMap =
                 (w0 ^. Widget.fEventMap)
                 Widget.EventContext
@@ -373,7 +370,7 @@ testTabNavigation env virtCursor =
                     do
                         let newEnv = GuiState.update upd env
                         w1 <-
-                            makeWorkArea newEnv >>= makeFocusedWidget "testTabNavigation" newEnv
+                            convertWorkArea newEnv >>= makeFocusedWidget "testTabNavigation" newEnv
                         let p0 = w0 ^?! pos
                         let p1 = w1 ^?! pos
                         when (comparePositions p1 p0 /= expected) $
@@ -407,7 +404,7 @@ testActions ::
     Env.Env -> VirtualCursor -> OnceT (T ViewM) ()
 testActions env virtCursor =
     do
-        w <- makeWorkArea env >>= makeFocusedWidget "" env
+        w <- convertWorkArea env >>= makeFocusedWidget "" env
         let eventMap =
                 Widget.EventContext
                 { Widget._eVirtualCursor = virtCursor
@@ -430,7 +427,7 @@ testActions env virtCursor =
         testEvent (doc, event) =
             do
                 newEnv <- event <&> (`GuiState.update` env) & lift
-                makeWorkArea newEnv >>= makeGui (show doc <> " from " <> show (env ^. cursor)) newEnv
+                convertWorkArea newEnv >>= makeGui (show doc <> " from " <> show (env ^. cursor)) newEnv
             & _OnceT %~ mapStateT (fmap fst . Transaction.fork) & void
 
 docHandler ::
@@ -460,7 +457,7 @@ programTest ::
 programTest baseEnv filename =
     testProgram filename $
     do
-        baseGui <- makeWorkArea baseEnv >>= makeGui "" baseEnv
+        baseGui <- convertWorkArea baseEnv >>= makeGui "" baseEnv
         let size = baseGui ^. Responsive.rWide . Align.tValue . Widget.wSize
         let narrowSize =
                 (baseGui ^. Responsive.rNarrow) (Responsive.NarrowLayoutParams 0 False)

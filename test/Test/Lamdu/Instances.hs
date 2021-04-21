@@ -32,7 +32,6 @@ import qualified Lamdu.Config.Theme.TextColors as Theme
 import qualified Lamdu.Config.Theme.ValAnnotation as Theme
 import qualified Lamdu.Data.Definition as Def
 import qualified Lamdu.Data.Tag as Tag
-import qualified Lamdu.GUI.Types as ExprGui
 import qualified Lamdu.GUI.VersionControl.Config as VcGuiConfig
 import qualified Lamdu.I18N.Fonts as I18N.Fonts
 import           Lamdu.I18N.LangId (LangId)
@@ -237,7 +236,7 @@ instance NFData (Sugar.NullParamActions (T o))
 instance NFData (Sugar.TagChoice n (OnceT (T i)) (T o) a)
 instance NFData Def.FFIName
 instance NFData EntityId
-instance NFData ExprGui.GuiPayload
+instance NFData Sugar.GuiPayload
 instance NFData LangId
 instance NFData Name
 instance NFData Name.Collision
