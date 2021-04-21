@@ -35,9 +35,8 @@ data Sugars a = Sugars
 JsonTH.derivePrefixed "_" ''Sugars
 Lens.makeLenses ''Sugars
 
-data Config = Config
-    { _showAllAnnotations :: Bool
-    , _sugarsEnabled :: Sugars Bool
+newtype Config = Config
+    { _sugarsEnabled :: Sugars Bool
     } deriving stock (Eq, Show)
 JsonTH.derivePrefixed "_" ''Config
 Lens.makeLenses ''Config

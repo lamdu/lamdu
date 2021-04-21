@@ -40,17 +40,13 @@ type T = Transaction
 
 markAnnotations ::
     Functor i =>
-    SugarConfig.Config ->
     Sugar.WorkArea v n i o (Sugar.Payload v n i o, a) ->
     Sugar.WorkArea (ShowAnnotation, v) n i o (Sugar.Payload (ShowAnnotation, v) n i o, a)
-markAnnotations config workArea
-    | config ^. SugarConfig.showAllAnnotations =
-        workArea & SugarLens.workAreaAnnotations %~ (,) alwaysShowAnnotations
-    | otherwise =
-        workArea
-        { Sugar._waPanes = workArea ^. Sugar.waPanes <&> SugarLens.paneBinder %~ markNodeAnnotations
-        , Sugar._waRepl = workArea ^. Sugar.waRepl & Sugar.replExpr %~ markNodeAnnotations
-        }
+markAnnotations workArea =
+    workArea
+    { Sugar._waPanes = workArea ^. Sugar.waPanes <&> SugarLens.paneBinder %~ markNodeAnnotations
+    , Sugar._waRepl = workArea ^. Sugar.waRepl & Sugar.replExpr %~ markNodeAnnotations
+    }
 
 typeAnnotationFromEvalRes :: MonadTransaction n f => EvalPrep -> f (Sugar.Annotation v AddNames.InternalName)
 typeAnnotationFromEvalRes x =
@@ -106,7 +102,7 @@ sugarWorkArea env0 cp =
     \workArea getTagName env1 ->
     let strippedLams = workArea ^.. SugarLens.workAreaAnnotations . eLambdas . traverse
     in
-    markAnnotations (env0 ^. has) workArea
+    markAnnotations workArea
     & SugarLens.workAreaAnnotations (makeAnnotation (env1 ^. has))
     >>= lift . addEvaluationResults cp (env1 ^. has <&> redirectLams strippedLams)
     >>= report . AddNames.addToWorkArea env1 (fmap getTagName . lift . ExprIRef.readTagData)

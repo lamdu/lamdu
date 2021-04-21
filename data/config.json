@@ -15,7 +15,6 @@
         }
     },
     "sugar": {
-        "showAllAnnotations": false,
         "sugarsEnabled": {
             "assignmentParameters": true,
             "caseWithArgument": true,
