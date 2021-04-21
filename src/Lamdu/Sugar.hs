@@ -25,9 +25,10 @@ import           Lamdu.Name (Name)
 import           Lamdu.Sugar.Annotations
 import qualified Lamdu.Sugar.Config as SugarConfig
 import qualified Lamdu.Sugar.Convert as SugarConvert
-import           Lamdu.Sugar.Convert.Expression.Actions (convertPayload, makeTypeAnnotation)
+import           Lamdu.Sugar.Convert.Expression.Actions (makeTypeAnnotation)
+import qualified Lamdu.Sugar.Convert.Input as Input
 import           Lamdu.Sugar.Eval (addEvaluationResults)
-import           Lamdu.Sugar.Internal (EvalPrep, eEvalId, eType, eLambdas)
+import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Lens as SugarLens
 import qualified Lamdu.Sugar.Names.Add as AddNames
 import qualified Lamdu.Sugar.Parens as AddParens
@@ -39,9 +40,9 @@ import           Lamdu.Prelude
 type T = Transaction
 
 markAnnotations ::
-    Functor i =>
-    Sugar.WorkArea v n i o (Sugar.Payload v o, a) ->
-    Sugar.WorkArea (ShowAnnotation, v) n i o (Sugar.Payload (ShowAnnotation, v) o, a)
+    Functor m =>
+    Sugar.WorkArea v n i o (ConvertPayload m a) ->
+    Sugar.WorkArea (ShowAnnotation, v) n i o (ConvertPayload m (ShowAnnotation, a))
 markAnnotations workArea =
     workArea
     { Sugar._waPanes = workArea ^. Sugar.waPanes <&> SugarLens.paneBinder %~ markNodeAnnotations
@@ -92,21 +93,37 @@ sugarWorkArea ::
     OnceT (T m)
     ( (Tag -> (IsOperator, TextsInLang)) -> env1 ->
         OnceT (T m) (Sugar.WorkArea (Sugar.Annotation (Sugar.EvaluationScopes Name (OnceT (T m))) Name) Name (OnceT (T m)) (T m)
-            (Sugar.Payload (Sugar.Annotation (Sugar.EvaluationScopes Name (OnceT (T m))) Name) (T m),
-                (Sugar.ParenInfo, [Sugar.EntityId])))
+            (Sugar.Payload (Sugar.Annotation (Sugar.EvaluationScopes Name (OnceT (T m))) Name) (T m)))
     )
 sugarWorkArea env0 cp =
     SugarConvert.loadWorkArea env0 cp
-    <&> Lens.mapped %~ convertPayload
     <&>
     \workArea getTagName env1 ->
-    let strippedLams = workArea ^.. SugarLens.annotations . eLambdas . traverse
+    let strippedLams = workArea ^.. traverse . pLambdas . traverse
     in
     markAnnotations workArea
+    <&> initAnnotationEvalPrep
     & SugarLens.annotations (makeAnnotation (env1 ^. has))
     >>= lift . addEvaluationResults cp (env1 ^. has <&> redirectLams strippedLams)
     >>= report . AddNames.addToWorkArea env1 (fmap getTagName . lift . ExprIRef.readTagData)
     <&> AddParens.addToWorkArea
-    <&> Lens.mapped %~ \(parenInfo, pl) -> pl <&> (,) parenInfo
+    <&> Lens.mapped %~
+    \(paren, pl) ->
+    Sugar.Payload
+    { Sugar._plAnnotation = pl ^. pInput . Input.userData . _1
+    , Sugar._plActions = pl ^. pActions
+    , Sugar._plEntityId = pl ^. pInput . Input.entityId
+    , Sugar._plParenInfo = paren
+    , Sugar._plHiddenEntityIds = pl ^. pInput . Input.userData . _2
+    }
     where
         Debug.EvaluatorM report = env0 ^. has . Debug.naming . Debug.mAction
+        initAnnotationEvalPrep pl =
+            pl & pInput . Input.userData %~ \(showAnn, x) -> ((showAnn, mkEvalPrep pl), x)
+
+mkEvalPrep :: ConvertPayload m a -> EvalPrep
+mkEvalPrep pl =
+    EvalPrep
+    { _eType = pl ^. pInput . Input.inferredType
+    , _eEvalId = pl ^. pInput . Input.entityId
+    }

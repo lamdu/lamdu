@@ -228,11 +228,9 @@ make ::
     _ =>
     Annotated (ExprGui.Payload i o) # Const (Sugar.Literal (Property o)) ->
     GuiM env i o (Responsive o)
-make (Ann (Const pl) (Const lit)) =
+make (Ann (Const p) (Const lit)) =
     case lit of
     Sugar.LiteralNum x -> numEdit x p <&> Responsive.fromWithTextPos
     Sugar.LiteralBytes x -> genericEdit Style.bytes x p
     Sugar.LiteralText x -> textEdit x p <&> Responsive.fromWithTextPos
-    & stdWrap pl
-    where
-        p = pl ^. _1
+    & stdWrap p

@@ -1,8 +1,8 @@
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TemplateHaskell, MultiParamTypeClasses, FlexibleInstances #-}
 
 module Lamdu.Sugar.Internal
     ( ConvertPayload(..), pInput, pActions, pLambdas
-    , EvalPrep(..), eType, eEvalId, eLambdas
+    , EvalPrep(..), eType, eEvalId
     , InternalName(..), inTag, inContext, inIsAutoName
     , internalNameMatch
     , nameWithoutContext, nameWithContext, taggedName
@@ -24,6 +24,7 @@ import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.UniqueId as UniqueId
 import qualified Lamdu.Sugar.Convert.Input as Input
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
+import qualified Lamdu.Sugar.Lens as SugarLens
 import           Lamdu.Sugar.Types
 import           Revision.Deltum.Transaction (Transaction)
 
@@ -35,17 +36,12 @@ data ConvertPayload m a = ConvertPayload
     { -- Stored of top-level subtree for sugar expression subtree
       _pInput :: Input.Payload m a # V.Term
     , _pActions :: NodeActions (T m)
-    , _pLambdas :: [UUID] -- See docs for eLambdas
+    , _pLambdas :: [UUID] -- Identifiers for lambdas that were swallowed by the sugar
     }
 
 data EvalPrep = EvalPrep
     { _eType :: Pure # T.Type
     , _eEvalId :: EntityId
-    , -- Identifiers of lambdas that were "swallowed by the sugar".
-      -- This happens in let-items (redexes) and in else-if clauses.
-      -- Their evaluation scopes are translated to the parent scope
-      -- which is exposed by the sugar.
-      _eLambdas :: [UUID]
     }
 
 -- | Tags have internal names.
@@ -128,3 +124,6 @@ replaceWith parentP replacerP =
 Lens.makeLenses ''ConvertPayload
 Lens.makeLenses ''EvalPrep
 Lens.makeLenses ''InternalName
+
+instance SugarLens.Annotations a b (ConvertPayload m (a, x)) (ConvertPayload m (b, x)) where
+    annotations = pInput . Input.userData . _1

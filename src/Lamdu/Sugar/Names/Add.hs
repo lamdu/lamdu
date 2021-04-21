@@ -5,7 +5,8 @@
 module Lamdu.Sugar.Names.Add
     ( addToWorkArea
     , -- re-export for tests
-      InternalName(..), inTag, inContext, runPasses
+      addToWorkAreaTest
+    , InternalName(..), inTag, inContext, runPasses
     ) where
 
 import           Control.Lens (ALens)
@@ -488,10 +489,27 @@ addToWorkArea ::
     env ->
     (T.Tag -> i (Tag.IsOperator, Tag.TextsInLang)) ->
     WorkArea (Annotation (EvaluationScopes InternalName i) InternalName) InternalName i o
-        (Payload (Annotation (EvaluationScopes InternalName i) InternalName) o, a) ->
+        (ConvertPayload m (Annotation (EvaluationScopes InternalName i) InternalName, a)) ->
     i (WorkArea (Annotation (EvaluationScopes Name i) Name) Name i o
-          (Payload (Annotation (EvaluationScopes Name i) Name) o, a))
+        (ConvertPayload m (Annotation (EvaluationScopes Name i) Name, a)))
 addToWorkArea env getName =
     runPasses env getName f f f
     where
         f = Walk.toWorkArea
+
+-- TODO: Switch to regular type in tests
+addToWorkAreaTest ::
+    ( Has (Texts.Name Text) env
+    , Has (Texts.Code Text) env
+    , Monad i
+    ) =>
+    env ->
+    (T.Tag -> i (Tag.IsOperator, Tag.TextsInLang)) ->
+    WorkArea (Annotation (EvaluationScopes InternalName i) InternalName) InternalName i o
+        (Payload (Annotation (EvaluationScopes InternalName i) InternalName) o) ->
+    i (WorkArea (Annotation (EvaluationScopes Name i) Name) Name i o
+        (Payload (Annotation (EvaluationScopes Name i) Name) o))
+addToWorkAreaTest env getName =
+    runPasses env getName f f f
+    where
+        f = Walk.toWorkAreaTest

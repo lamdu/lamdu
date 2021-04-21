@@ -212,5 +212,5 @@ make expRepl (Sugar.Repl replExpr varInfo replResult) =
             & GuiState.assignCursor WidgetIds.replId replExprId
     where
         replSymId = Widget.joinId WidgetIds.replId ["symbol"]
-        replExprPl = replExpr ^. SugarLens.binderResultExpr . _1
+        replExprPl = replExpr ^. SugarLens.binderResultExpr
         replExprId = WidgetIds.fromExprPayload replExprPl

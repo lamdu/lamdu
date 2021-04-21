@@ -84,7 +84,7 @@ makeUnit pl =
             <&> Responsive.fromWithTextPos
             & stdWrap pl
     where
-        myId = WidgetIds.fromExprPayload (pl ^. _1)
+        myId = WidgetIds.fromExprPayload pl
 
 makeEmpty ::
     _ =>
@@ -92,10 +92,10 @@ makeEmpty ::
     GuiM env i o (Responsive o)
 makeEmpty (Ann (Const pl) (Const addField)) =
     do
-        isAddField <- GuiState.isSubCursor ?? addFieldId (WidgetIds.fromExprPayload (pl ^. _1))
+        isAddField <- GuiState.isSubCursor ?? addFieldId (WidgetIds.fromExprPayload pl)
         if isAddField
             then
-                makeAddFieldRow addField (pl ^. _1) <&> (:[]) >>= makeRecord pure
+                makeAddFieldRow addField pl <&> (:[]) >>= makeRecord pure
                 & stdWrapParentExpr pl
             else makeUnit pl
 
@@ -106,7 +106,7 @@ make (Ann (Const pl) (Sugar.Composite [] [] Sugar.ClosedComposite{} addField)) =
     makeEmpty (Ann (Const pl) (Const addField))
 make (Ann (Const pl) (Sugar.Composite fields punned recordTail addField)) =
     do
-        addFieldEventMap <- mkAddFieldEventMap (WidgetIds.fromExprPayload (pl ^. _1))
+        addFieldEventMap <- mkAddFieldEventMap (WidgetIds.fromExprPayload pl)
         tailEventMap <-
             case recordTail of
             Sugar.ClosedComposite actions -> closedRecordEventMap actions
@@ -118,14 +118,14 @@ make (Ann (Const pl) (Sugar.Composite fields punned recordTail addField)) =
                 GetVarEdit.makePunnedVars punned
                 <&> (\x -> [TaggedItem Nothing x Nothing])
         fieldGuis <- traverse makeFieldRow fields <&> (++ punnedGuis)
-        isAddField <- GuiState.isSubCursor ?? addFieldId (WidgetIds.fromExprPayload (pl ^. _1))
+        isAddField <- GuiState.isSubCursor ?? addFieldId (WidgetIds.fromExprPayload pl)
         addFieldGuis <-
             if isAddField
-            then makeAddFieldRow addField (pl ^. _1) <&> (:[])
+            then makeAddFieldRow addField pl <&> (:[])
             else pure []
         env <- Lens.view id
         let goToRecordEventMap =
-                WidgetIds.fromExprPayload (pl ^. _1) & GuiState.updateCursor & pure & const
+                WidgetIds.fromExprPayload pl & GuiState.updateCursor & pure & const
                 & E.charGroup Nothing
                 (E.toDoc env
                     [ has . MomentuTexts.navigation

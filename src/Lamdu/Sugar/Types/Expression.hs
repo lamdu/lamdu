@@ -59,8 +59,8 @@ import qualified Lamdu.Sugar.Types.Type as T
 
 import           Lamdu.Prelude
 
-type Expr e v name (i :: Type -> Type) o a = Annotated (Payload v o, a) # e v name i o
-type Body e v name (i :: Type -> Type) o a = e v name i o # Annotated (Payload v o, a)
+type Expr e v name (i :: Type -> Type) o = Annotated (Payload v o) # e v name i o
+type Body e v name (i :: Type -> Type) o = e v name i o # Annotated (Payload v o)
 
 data AnnotatedArg v name i o k = AnnotatedArg
     { _aaTag :: Tag name
@@ -103,7 +103,7 @@ data Fragment v name i o k = Fragment
     } deriving Generic
 
 data HoleResult name i o = HoleResult
-    { _holeResultConverted :: Expr Binder (Annotation () name) name i o ()
+    { _holeResultConverted :: Expr Binder (Annotation () name) name i o
     , _holeResultPick :: o ()
     } deriving Generic
 

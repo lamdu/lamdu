@@ -10,7 +10,7 @@ import           Control.Monad.Writer (MonadWriter(..))
 import qualified Lamdu.I18N.Name as Texts
 import           Lamdu.Name (Name)
 import qualified Lamdu.Name as Name
-import           Lamdu.Sugar.Names.Add (InternalName(..), addToWorkArea)
+import           Lamdu.Sugar.Names.Add (InternalName(..), addToWorkAreaTest)
 import           Lamdu.Sugar.Names.CPS (liftCPS)
 import qualified Lamdu.Sugar.Names.Walk as Walk
 import qualified Lamdu.Sugar.Types as Sugar
@@ -57,23 +57,25 @@ assertNoCollisions name =
 
 testWorkArea ::
     (Name -> IO b) ->
-    Sugar.WorkArea (Sugar.Annotation (Sugar.EvaluationScopes InternalName Identity) InternalName) InternalName Identity
-        Unit (Sugar.Payload (Sugar.Annotation (Sugar.EvaluationScopes InternalName Identity) InternalName) Unit, a) ->
+    Sugar.WorkArea
+        (Sugar.Annotation (Sugar.EvaluationScopes InternalName Identity) InternalName)
+        InternalName Identity Unit
+        (Sugar.Payload (Sugar.Annotation (Sugar.EvaluationScopes InternalName Identity) InternalName) Unit) ->
     IO ()
 testWorkArea verifyName inputWorkArea =
     do
         lang <- Env.makeLang
-        addToWorkArea lang Stub.getName inputWorkArea
+        addToWorkAreaTest lang Stub.getName inputWorkArea
             & runIdentity
             & getNames
             & traverse_ verifyName
 
 getNames ::
     Sugar.WorkArea (Sugar.Annotation (Sugar.EvaluationScopes name Identity) name) name Identity o
-        (Sugar.Payload (Sugar.Annotation (Sugar.EvaluationScopes name Identity) name) o, a) ->
+        (Sugar.Payload (Sugar.Annotation (Sugar.EvaluationScopes name Identity) name) o) ->
     [name]
 getNames workArea =
-    Walk.toWorkArea workArea
+    Walk.toWorkAreaTest workArea
     & runCollectNames
     & runWriter
     & snd

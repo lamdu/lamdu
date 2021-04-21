@@ -503,7 +503,12 @@ mkResult preConversion updateDeps holePl x =
                         -- And we are in a hole result here
                     (holePl ^. Input.localsInScope)
             <&> convertBinder
-            <&> fmap convertPayloads
+            <&> Lens.mapped . hflipped %~
+                -- TODO: Wrong pareninfo here,
+                -- Need to parameterize payloads on pareninfo,
+                -- So that name add-parens can happen after the name-pass
+                hmap (const (Lens._Wrapped . pInput . Input.userData .~ (ParenInfo 0 False, [])))
+            <&> Lens.mapped %~ convertPayloads
             >>= ConvertM.run sugarContext
             <&> SugarLens.hAnnotations @EvalPrep @(Annotation () InternalName) .~ AnnotationNone
             & _OnceT %~ mapStateT (fmap (\((fConverted, s), forkedChanges) -> ((fConverted, forkedChanges), s)) . Transaction.fork)

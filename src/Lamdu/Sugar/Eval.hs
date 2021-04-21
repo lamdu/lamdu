@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell, TypeApplications, RecordWildCards, ScopedTypeVariables #-}
+{-# LANGUAGE TemplateHaskell, TypeApplications, RecordWildCards, ScopedTypeVariables, KindSignatures #-}
 {-# LANGUAGE MultiParamTypeClasses, FlexibleInstances, DefaultSignatures #-}
 
 module Lamdu.Sugar.Eval
@@ -7,6 +7,7 @@ module Lamdu.Sugar.Eval
 
 import qualified Control.Lens as Lens
 import           Data.CurAndPrev (CurAndPrev)
+import           Data.Kind (Type)
 import           Hyper
 import           Hyper.Class.Morph
 import           Hyper.Type.AST.Nominal (NominalDecl)
@@ -16,12 +17,13 @@ import qualified Lamdu.Data.Anchors as Anchors
 import           Lamdu.Eval.Results (EvalResults, erExprValues, erAppliesOfLam, erCompleted, extractField)
 import           Lamdu.Eval.Results.Process (addTypes)
 import qualified Lamdu.Sugar.Convert.Eval as ConvertEval
+import qualified Lamdu.Sugar.Convert.Input as Input
 import           Lamdu.Sugar.Convert.Load (makeNominalsMap)
-import           Lamdu.Sugar.Internal (InternalName, EvalPrep, eType)
+import           Lamdu.Sugar.Internal
 import           Lamdu.Sugar.Internal.EntityId (EntityId(..))
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import qualified Lamdu.Sugar.Lens as SugarLens
-import           Lamdu.Sugar.Types
+import           Lamdu.Sugar.Types hiding (Type)
 import           Revision.Deltum.Transaction (Transaction)
 
 import           Lamdu.Prelude
@@ -35,55 +37,61 @@ data AddEvalCtx = AddEvalCtx
 
 Lens.makeLenses ''AddEvalCtx
 
-class AddEvalToNode n i o t0 t1 where
+class AddEvalToNode i n t0 t1 where
     addToNode ::
-        Applicative i =>
+        (Monad m, Applicative i) =>
         AddEvalCtx ->
-        Annotated (Payload (Annotation EvalPrep n) o, a) # t0 ->
-        Annotated (Payload (Annotation (EvaluationScopes InternalName i) n) o, a) # t1
+        Annotated (ConvertPayload m (Annotation EvalPrep n, a)) # t0 ->
+        Annotated (ConvertPayload m (Annotation (EvaluationScopes InternalName i) n, a)) # t1
 
-instance AddEvalToNode n i o (Const x) (Const x) where
-    addToNode r (Ann (Const pl) (Const x)) = Ann (Const (pl & _1 %~ addToPayload r)) (Const x)
+instance AddEvalToNode i n (Const x) (Const x) where
+    addToNode r (Ann (Const pl) (Const x)) = Ann (Const (addToPayload r pl)) (Const x)
 
-instance AddEval e => AddEvalToNode n i o (e (Annotation EvalPrep n) n i o) (e (Annotation (EvaluationScopes InternalName i) n) n i o) where
+instance
+    (AddEval i n e, Applicative i) =>
+    AddEvalToNode i n
+        (e (Annotation EvalPrep n) n i o)
+        (e (Annotation (EvaluationScopes InternalName i) n) n i o) where
     addToNode results (Ann a b) =
         Ann
-        { _hAnn = a & Lens._Wrapped . _1 %~ addToPayload results
-        , _hVal = addToBody results i b
+        { _hAnn = a & Lens._Wrapped %~ addToPayload results
+        , _hVal = addToBody results (a ^. Lens._Wrapped . pInput . Input.entityId) b
         }
-        where
-            i = a ^. Lens._Wrapped . _1 . plEntityId
 
-type AddToBodyType e n i o a =
-    AddEvalCtx -> EntityId -> Body e (Annotation EvalPrep n) n i o a -> Body e (Annotation (EvaluationScopes InternalName i) n) n i o a
+type AddToBodyType e n (i :: Type -> Type) (o :: Type -> Type) m a =
+    AddEvalCtx -> EntityId ->
+    e (Annotation EvalPrep n) n i o #
+        Annotated (ConvertPayload m (Annotation EvalPrep n, a)) ->
+    e (Annotation (EvaluationScopes InternalName i) n) n i o #
+        Annotated (ConvertPayload m (Annotation (EvaluationScopes InternalName i) n, a))
 
-class AddEval e where
-    addToBody :: Applicative i => AddToBodyType e n i o a
+class AddEval i n e where
+    addToBody :: (Applicative i, Monad m) => AddToBodyType e n i o m a
     default addToBody ::
-        ( HMorphWithConstraint (e (Annotation EvalPrep n) n i o) (e (Annotation (EvaluationScopes InternalName i) n) n i o) (AddEvalToNode n i o)
-        , Applicative i
-        ) => AddToBodyType e n i o a
+        ( HMorphWithConstraint
+            (e (Annotation EvalPrep n) n i o)
+            (e (Annotation (EvaluationScopes InternalName i) n) n i o)
+            (AddEvalToNode i n)
+        , Applicative i, Monad m
+        ) => AddToBodyType e n i o m a
     addToBody r _ x =
-        morphMap (p x #?> addToNode r) x
-        where
-            p :: Body t v n i o a -> Proxy (AddEvalToNode n i o)
-            p _ = Proxy
+        morphMap (Proxy @(AddEvalToNode i n) #?> addToNode r) x
 
-instance AddEval Assignment where
+instance AddEval i n Assignment where
     addToBody r i (BodyFunction x) = addToBody r i x & BodyFunction
     addToBody r i (BodyPlain x) = x & apBody %~ addToBody r i & BodyPlain
 
-instance AddEval Binder where
+instance AddEval i n Binder where
     addToBody r i (BinderLet x) = addToBody r i x & BinderLet
     addToBody r i (BinderTerm x) = addToBody r i x & BinderTerm
 
-instance AddEval Composite
+instance AddEval i n Composite
 
-instance AddEval Else where
+instance AddEval i n Else where
     addToBody r i (SimpleElse x) = addToBody r i x & SimpleElse
     addToBody r i (ElseIf x) = addToBody r i x & ElseIf
 
-instance AddEval Function where
+instance AddEval i n Function where
     addToBody ctx i x@Function{..} =
         x
         { _fParams =
@@ -132,13 +140,13 @@ instance AddEval Function where
                 <&> Lens.mapped . Lens.mapped . _2 %~ addTypes (ctx ^. nominalsMap) (v ^. eType)
             EntityId u = i
 
-instance AddEval IfElse
-instance AddEval LabeledApply
-instance AddEval Let
-instance AddEval PostfixApply
-instance AddEval PostfixFunc
+instance AddEval i n IfElse
+instance AddEval i n LabeledApply
+instance AddEval i n Let
+instance AddEval i n PostfixApply
+instance AddEval i n PostfixFunc
 
-instance AddEval Term where
+instance AddEval i n Term where
     addToBody r i =
         \case
         BodyLeaf x -> BodyLeaf x
@@ -156,11 +164,11 @@ instance AddEval Term where
 addToPayload ::
     Applicative i =>
     AddEvalCtx ->
-    Payload (Annotation EvalPrep n0) o ->
-    Payload (Annotation (EvaluationScopes InternalName i) n0) o
+    ConvertPayload m (Annotation EvalPrep n, a) ->
+    ConvertPayload m (Annotation (EvaluationScopes InternalName i) n, a)
 addToPayload ctx a =
     a
-    & plAnnotation . _AnnotationVal %~
+    & pInput . Input.userData . _1 . _AnnotationVal %~
         \v ->
         ctx ^. evalResults
         <&> (^. erExprValues . Lens.at u)
@@ -169,20 +177,22 @@ addToPayload ctx a =
         & ConvertEval.results (EntityId.ofEvalOf i)
     where
         EntityId u = i
-        i = a ^. plEntityId
+        i = a ^. pInput . Input.entityId
 
 addEvaluationResults ::
-    forall i m n a.
-    (Applicative i, Monad m) =>
+    forall n m i a.
+    (Monad m, Applicative i) =>
     Anchors.CodeAnchors m ->
     CurAndPrev EvalResults ->
-    WorkArea (Annotation EvalPrep n) n i (T m) (Payload (Annotation EvalPrep n) (T m), a) ->
+    WorkArea (Annotation EvalPrep n) n i (T m) (ConvertPayload m (Annotation EvalPrep n, a)) ->
     T m (
         WorkArea (Annotation (EvaluationScopes InternalName i) n) n i (T m)
-        (Payload (Annotation (EvaluationScopes InternalName i) n) (T m), a))
+        (ConvertPayload m (Annotation (EvaluationScopes InternalName i) n, a)))
 addEvaluationResults cp r wa@(WorkArea panes repl listGlobals) =
     makeNominalsMap
-    (wa ^.. SugarLens.annotations @(Annotation EvalPrep n) . _AnnotationVal . eType . tIds
+    ( wa ^..
+        SugarLens.annotations @(Annotation EvalPrep n)
+        . _AnnotationVal . eType . tIds
     )
     <&> AddEvalCtx r
     <&>

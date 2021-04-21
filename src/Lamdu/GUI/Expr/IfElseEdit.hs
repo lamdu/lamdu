@@ -63,8 +63,7 @@ makeIfThen ifKind animId ifElse =
                  ( E.toDoc env
                      [has . MomentuTexts.edit, has . MomentuTexts.delete]
                  ) . fmap WidgetIds.fromEntityId)
-                (ifElse ^. Sugar.iElse . annotation .
-                 _1 . Sugar.plActions . Sugar.mReplaceParent)
+                (ifElse ^. Sugar.iElse . annotation . Sugar.plActions . Sugar.mReplaceParent)
         Row animId keyword
             (M.weakerEvents eventMap ifGui)
             (M.weakerEvents eventMap thenGui)
@@ -86,11 +85,11 @@ makeElse parentAnimId (Ann (Const pl) (Sugar.SimpleElse expr)) =
     <&> pure
     where
         elseAnimId = parentAnimId <> ["else"]
-makeElse _ (Ann pl (Sugar.ElseIf content)) =
+makeElse _ (Ann (Const pl) (Sugar.ElseIf content)) =
     do
         -- TODO: green evaluation backgrounds, "◗"?
         letEventMap <-
-            foldMap ExprEventMap.addLetEventMap (pl ^. Lens._Wrapped . _1 . Sugar.plActions . Sugar.mNewLet)
+            foldMap ExprEventMap.addLetEventMap (pl ^. Sugar.plActions . Sugar.mNewLet)
         (:)
             <$> ( makeIfThen ElseIf animId content
                   <&> Lens.mapped %~ M.weakerEvents letEventMap
@@ -99,7 +98,7 @@ makeElse _ (Ann pl (Sugar.ElseIf content)) =
             & Reader.local (M.animIdPrefix .~ animId)
     where
         animId = WidgetIds.fromEntityId entityId & Widget.toAnimId
-        entityId = pl ^. Lens._Wrapped . _1 . Sugar.plEntityId
+        entityId = pl ^. Sugar.plEntityId
 
 verticalRowRender :: _ => f (Row (Responsive o) -> Responsive o)
 verticalRowRender =
@@ -150,4 +149,4 @@ make (Ann (Const pl) ifElse) =
         <*> makeElse animId (ifElse ^. Sugar.iElse)
     ) & stdWrapParentExpr pl
     where
-        animId = pl ^. _1 & WidgetIds.fromExprPayload & Widget.toAnimId
+        animId = WidgetIds.fromExprPayload pl & Widget.toAnimId

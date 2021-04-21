@@ -45,7 +45,7 @@ makeToNom (Ann (Const pl) (Sugar.Nominal tid binder)) =
                     ])
         let eventMap =
                 binder ^.
-                annotation . _1 . Sugar.plActions . Sugar.mReplaceParent .
+                annotation . Sugar.plActions . Sugar.mReplaceParent .
                 Lens._Just . Lens.to mkEventMap
         (ResponsiveExpr.boxSpacedMDisamb ?? ExprGui.mParensId pl)
             <*>
@@ -57,7 +57,7 @@ makeToNom (Ann (Const pl) (Sugar.Nominal tid binder)) =
             , GuiM.makeBinder binder
             ] & stdWrapParentExpr pl
     where
-        myId = WidgetIds.fromExprPayload (pl ^. _1)
+        myId = WidgetIds.fromExprPayload pl
         nameId = Widget.joinId myId ["name"]
 
 makeFromNom ::

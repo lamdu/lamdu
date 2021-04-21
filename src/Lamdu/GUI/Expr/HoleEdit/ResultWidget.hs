@@ -105,11 +105,11 @@ make searchTerms resultId pick holeResultConverted =
     }
     where
         holeResultId =
-            holeResultConverted ^. SugarLens.binderResultExpr . _1 . Sugar.plEntityId
+            holeResultConverted ^. SugarLens.binderResultExpr . Sugar.plEntityId
             & WidgetIds.fromEntityId
         mFirstHoleInside =
             holeResultConverted ^?
-            unfinishedPayloads . _1 . Sugar.plEntityId
+            unfinishedPayloads . Sugar.plEntityId
             <&> WidgetIds.fromEntityId
         pickResult =
             case mFirstHoleInside of

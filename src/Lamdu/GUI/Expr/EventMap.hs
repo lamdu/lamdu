@@ -24,7 +24,6 @@ import           Lamdu.GUI.Expr.HoleEdit.ValTerms (allowedSearchTerm)
 import qualified Lamdu.GUI.Expr.HoleEdit.WidgetIds as HoleWidgetIds
 import           Lamdu.GUI.Monad (GuiM)
 import qualified Lamdu.GUI.Monad as GuiM
-import qualified Lamdu.GUI.Types as ExprGui
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.I18N.CodeUI as Texts
 import qualified Lamdu.I18N.Definitions as Texts
@@ -53,26 +52,26 @@ defaultOptions =
 exprInfoFromPl ::
     Monad i =>
     GuiM env i o
-    ((Sugar.Payload v o0, ExprGui.GuiPayload) -> ExprInfo o0)
+    (Sugar.Payload v o0 -> ExprInfo o0)
 exprInfoFromPl =
     GuiState.isSubCursor <&>
     \isSubCursor pl ->
-    let isSelected = WidgetIds.fromExprPayload (pl ^. _1) & isSubCursor in
+    let isSelected = WidgetIds.fromExprPayload pl & isSubCursor in
     ExprInfo
-    { exprInfoActions = pl ^. _1 . Sugar.plActions
+    { exprInfoActions = pl ^. Sugar.plActions
     , exprInfoMinOpPrec =
         -- Expression with parentheses intercepts all operations from inside it,
         -- But if it is itself selected then we're out of the parentheses,
         -- and its parents may take some operators.
-        if pl ^. _2 . ExprGui.plParenInfo . Sugar.piNeedParens && not isSelected
+        if pl ^. Sugar.plParenInfo . Sugar.piNeedParens && not isSelected
         then 0
-        else pl ^. _2 . ExprGui.plParenInfo . Sugar.piMinOpPrec
+        else pl ^. Sugar.plParenInfo . Sugar.piMinOpPrec
     , exprInfoIsSelected = isSelected
     }
 
 add ::
     _ =>
-    Options -> (Sugar.Payload v o, ExprGui.GuiPayload) ->
+    Options -> Sugar.Payload v o ->
     GuiM env i o (w o -> w o)
 add options pl =
     exprInfoFromPl ?? pl >>= actionsEventMap options <&> Widget.weakerEventsWithContext

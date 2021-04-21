@@ -30,8 +30,8 @@ make :: _ => ExprGui.Expr Sugar.Term i o -> GuiM env i o (Responsive o)
 make e =
     makeEditor e & assignCursor
     where
-        exprHiddenEntityIds = e ^. annotation . _2 . ExprGui.plHiddenEntityIds
-        myId = e ^. annotation . _1 & WidgetIds.fromExprPayload
+        exprHiddenEntityIds = e ^. annotation . Sugar.plHiddenEntityIds
+        myId = e ^. annotation & WidgetIds.fromExprPayload
         assignCursor x =
             exprHiddenEntityIds <&> WidgetIds.fromEntityId
             & foldr (`GuiState.assignCursorPrefix` const myId) x
@@ -60,13 +60,13 @@ makeEditor (Ann (Const pl) body) =
     Sugar.BodyNullaryInject x -> editor pl x InjectEdit.makeNullary
     Sugar.BodyLeaf         l ->
         case l of
-        Sugar.LeafPlaceHolder   -> placeHolder (pl ^. _1)
+        Sugar.LeafPlaceHolder   -> placeHolder pl
         Sugar.LeafHole        x -> editor pl (Const x) HoleEdit.make
         Sugar.LeafLiteral     x -> editor pl (Const x) LiteralEdit.make
         Sugar.LeafInject      x -> editor pl (Const x) InjectEdit.make
         Sugar.LeafGetVar      x -> editor pl (Const x) GetVarEdit.make
     & Reader.local
-        (Element.animIdPrefix .~ Widget.toAnimId (WidgetIds.fromExprPayload (pl ^. _1)))
+        (Element.animIdPrefix .~ Widget.toAnimId (WidgetIds.fromExprPayload pl))
 
 editor :: a -> h # Annotated a -> (Annotated a # h -> r) -> r
 editor pl x f = Ann (Const pl) x & f

@@ -45,12 +45,12 @@ makeFunc role func =
     & stdWrap pl
     where
         pl = func ^. annotation
-        myId = WidgetIds.fromExprPayload (pl ^. _1)
+        myId = WidgetIds.fromExprPayload pl
 
 makeLabeled :: _ => ExprGui.Expr Sugar.LabeledApply i o -> GuiM env i o (Responsive o)
 makeLabeled (Ann (Const pl) apply) =
     ExprEventMap.add ExprEventMap.defaultOptions pl <*>
-    ( Wrap.parentDelegator (WidgetIds.fromExprPayload (pl ^. _1)) <*>
+    ( Wrap.parentDelegator (WidgetIds.fromExprPayload pl) <*>
         case apply ^. Sugar.aMOpArgs of
         Nothing -> makeFunc GetVarEdit.Normal func >>= wrap
         Just (Sugar.OperatorArgs l r s) ->
@@ -75,7 +75,7 @@ makeLabeled (Ann (Const pl) apply) =
     )
     where
         wrap x =
-            (maybeAddAnnotationPl (pl ^. _1) <&> (Widget.widget %~)) <*>
+            (maybeAddAnnotationPl pl <&> (Widget.widget %~)) <*>
             addArgs apply x
         func = apply ^. Sugar.aFunc
 

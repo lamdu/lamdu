@@ -42,8 +42,8 @@ make (Ann (Const pl) (Const hole)) =
     do
         searchTerm <- SearchMenu.readSearchTerm searchMenuId
         let mkLitEventMap
-                | searchTerm == "" = ExprEventMap.makeLiteralEventMap ?? pl ^. _1 . Sugar.plActions
-                | searchTerm == "-" = ExprEventMap.makeLiteralNumberEventMap "-" ?? pl ^. _1 . Sugar.plActions . Sugar.setToLiteral
+                | searchTerm == "" = ExprEventMap.makeLiteralEventMap ?? pl ^. Sugar.plActions
+                | searchTerm == "-" = ExprEventMap.makeLiteralNumberEventMap "-" ?? pl ^. Sugar.plActions . Sugar.setToLiteral
                 | otherwise = mempty
         litEventMap <- mkLitEventMap
         (ExprEventMap.add options pl <&> (Align.tValue %~))
@@ -54,8 +54,8 @@ make (Ann (Const pl) (Const hole)) =
             <&> Responsive.fromWithTextPos
     where
         searchMenuId = hidOpen widgetIds
-        widgetIds = pl ^. _1 . Sugar.plEntityId & HoleWidgetIds.make
+        widgetIds = pl ^. Sugar.plEntityId & HoleWidgetIds.make
         options =
             ExprEventMap.defaultOptions
-            { ExprEventMap.addOperatorSetHoleState = Just (pl ^. _1 . Sugar.plEntityId)
+            { ExprEventMap.addOperatorSetHoleState = Just (pl ^. Sugar.plEntityId)
             }

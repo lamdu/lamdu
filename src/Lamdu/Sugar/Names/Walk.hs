@@ -7,7 +7,7 @@ module Lamdu.Sugar.Names.Walk
     , FunctionSignature(..), Disambiguator
     , IsUnambiguous(..)
     , NameConvertor, CPSNameConvertor
-    , Walk(..), toWorkArea
+    , Walk(..), toWorkArea, toWorkAreaTest
     ) where
 
 import qualified Control.Lens as Lens
@@ -16,6 +16,8 @@ import qualified Data.Set as Set
 import           Hyper.Class.Morph (morphTraverse1)
 import           Hyper.Type.AST.FuncType (FuncType(..))
 import qualified Lamdu.Calc.Type as T
+import           Lamdu.Sugar.Convert.Input (userData)
+import           Lamdu.Sugar.Internal
 import           Lamdu.Sugar.Names.CPS (CPS(..), liftCPS)
 import qualified Lamdu.Sugar.Types as Sugar
 import           Lamdu.Sugar.Types hiding (Tag(..), Type)
@@ -265,8 +267,8 @@ instance ToBody LabeledApply where
 
 toHoleOption ::
     MonadNaming m =>
-    ( m (ExprW Binder (Annotation () (NewName m)) (NewName m) m o (Payload (Annotation () (NewName m)) o, ())) ->
-        IM m (ExprW Binder (Annotation () (NewName m)) (NewName m) m o (Payload (Annotation () (NewName m)) o, ()))
+    ( m (ExprW Binder (Annotation () (NewName m)) (NewName m) m o (Payload (Annotation () (NewName m)) o)) ->
+        IM m (ExprW Binder (Annotation () (NewName m)) (NewName m) m o (Payload (Annotation () (NewName m)) o))
     ) ->
     (m (NewName m) -> IM m (NewName m)) ->
     HoleOption (OldName m) (IM m) o -> HoleOption (NewName m) (IM m) o
@@ -462,8 +464,21 @@ instance
         where
             toGlobals = (traverse . nrName) (opGetName Nothing MayBeAmbiguous GlobalDef)
 
+instance Walk m a b => Walk m (ConvertPayload n a) (ConvertPayload n b) where
+    walk = (pInput . userData) walk
+
 toWorkArea ::
     MonadNaming m =>
-    Top WorkArea (OldName m) (IM m) o (Payload (Annotation (EvaluationScopes (OldName m) (IM m)) (OldName m)) o, p) ->
-    m (Top WorkArea (NewName m) (IM m) o (Payload (Annotation (EvaluationScopes (NewName m) (IM m)) (NewName m)) o, p))
+    Top WorkArea (OldName m) (IM m) o
+        (ConvertPayload n (Annotation (EvaluationScopes (OldName m) (IM m)) (OldName m), a)) ->
+    m (Top WorkArea (NewName m) (IM m) o
+        (ConvertPayload n (Annotation (EvaluationScopes (NewName m) (IM m)) (NewName m), a)))
 toWorkArea = walk
+
+toWorkAreaTest ::
+    MonadNaming m =>
+    Top WorkArea (OldName m) (IM m) o
+        (Payload (Annotation (EvaluationScopes (OldName m) (IM m)) (OldName m)) o) ->
+    m (Top WorkArea (NewName m) (IM m) o
+        (Payload (Annotation (EvaluationScopes (NewName m) (IM m)) (NewName m)) o))
+toWorkAreaTest = walk

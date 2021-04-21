@@ -256,7 +256,7 @@ make (Ann (Const pl) (Const getVar)) =
         makeGetParam param myId <&> Responsive.fromWithTextPos
     & stdWrap pl
     where
-        myId = pl ^. _1 & WidgetIds.fromExprPayload
+        myId = WidgetIds.fromExprPayload pl
 
 makePunnedVar ::
     _ =>
@@ -266,7 +266,7 @@ makePunnedVar (Sugar.PunnedVar var tagId) =
     make var
     & GuiState.assignCursor
         (WidgetIds.fromEntityId tagId)
-        (WidgetIds.fromExprPayload (var ^. annotation . _1))
+        (WidgetIds.fromExprPayload (var ^. annotation))
 
 makePunnedVars ::
     _ =>

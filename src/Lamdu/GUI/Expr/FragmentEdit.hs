@@ -107,7 +107,7 @@ make (Ann (Const pl) fragment) =
                     & Anim.scale (M.Vector2 (ann ^. Element.width) spacing)
                     & Anim.translate (M.Vector2 0 (ann ^. Element.height))
 
-        myId = WidgetIds.fromExprPayload (pl ^. _1)
+        myId = WidgetIds.fromExprPayload pl
         holeIds = WidgetIds.fragmentHoleId myId & HoleWidgetIds.makeFrom
         healEventMap keys chars env =
             E.keysEventMapMovesCursor keys doc action <>

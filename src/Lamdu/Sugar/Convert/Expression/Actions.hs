@@ -331,26 +331,25 @@ mkEvalPrep pl =
     EvalPrep
     { _eType = pl ^. pInput . Input.inferredType
     , _eEvalId = pl ^. pInput . Input.entityId
-    , _eLambdas = pl ^. pLambdas
     }
 
 convertPayloads ::
     Recursively HFunctor h =>
-    Annotated (ConvertPayload m a) # h ->
-    Annotated (Payload EvalPrep (T m), a) # h
+    Annotated (ConvertPayload m (ParenInfo, [EntityId])) # h ->
+    Annotated (Payload EvalPrep (T m)) # h
 convertPayloads = hflipped %~ hmap (const (Lens._Wrapped %~ convertPayload))
 
 convertPayload ::
-    ConvertPayload m a ->
-    (Payload EvalPrep (T m), a)
+    ConvertPayload m (ParenInfo, [EntityId]) ->
+    Payload EvalPrep (T m)
 convertPayload pl =
-    ( Payload
-        { _plAnnotation = mkEvalPrep pl
-        , _plActions = pl ^. pActions
-        , _plEntityId = pl ^. pInput . Input.entityId
-        }
-    , pl ^. pInput . Input.userData
-    )
+    Payload
+    { _plAnnotation = mkEvalPrep pl
+    , _plActions = pl ^. pActions
+    , _plEntityId = pl ^. pInput . Input.entityId
+    , _plParenInfo = pl ^. pInput . Input.userData . _1
+    , _plHiddenEntityIds = pl ^. pInput . Input.userData . _2
+    }
 
 valFromLiteral ::
     Monad m =>

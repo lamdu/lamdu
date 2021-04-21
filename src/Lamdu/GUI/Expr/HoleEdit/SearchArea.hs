@@ -14,6 +14,7 @@ import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
 import qualified Data.Monoid as Monoid
 import qualified Data.Text as Text
+import           Hyper
 import qualified GUI.Momentu as M
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
@@ -25,7 +26,6 @@ import qualified GUI.Momentu.Widgets.FocusDelegator as FocusDelegator
 import qualified GUI.Momentu.Widgets.Menu as Menu
 import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
-import           Hyper (HFunctor(..), hflipped)
 import qualified Lamdu.CharClassification as Chars
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Theme as Theme
@@ -68,41 +68,30 @@ fdConfig env = FocusDelegator.Config
     }
 
 makeRenderedResult ::
-    _ => [Text] -> ExprGui.GuiPayload -> Result i o -> GuiM env i o (Menu.RenderedOption o)
+    _ => [Text] -> Sugar.Payload v o -> Result i o -> GuiM env i o (Menu.RenderedOption o)
 makeRenderedResult searchTerms pl result =
     do
         -- Warning: rHoleResult should be ran at most once!
         -- Running it more than once caused a horrible bug (bugfix: 848b6c4407)
         res <- rHoleResult result & GuiM.im
         res ^. Sugar.holeResultConverted
-            & postProcessSugar (pl ^. ExprGui.plParenInfo . Sugar.piMinOpPrec)
+            & postProcessSugar (pl ^. Sugar.plParenInfo . Sugar.piMinOpPrec)
             & ResultWidget.make searchTerms (rId result) (res ^. Sugar.holeResultPick)
 
 postProcessSugar ::
     forall i o.
     AddParens.MinOpPrec ->
-    Sugar.Expr Sugar.Binder (Sugar.Annotation () Name) Name i o () ->
+    Sugar.Expr Sugar.Binder (Sugar.Annotation () Name) Name i o ->
     ExprGui.Expr Sugar.Binder i o
 postProcessSugar minOpPrec binder =
     binder
     & SugarLens.hAnnotations
         @(Sugar.Annotation () Name)
         @(Sugar.Annotation (Sugar.EvaluationScopes Name i) Name)
-        @(Annotated (Sugar.Payload (Sugar.Annotation () Name) o, ()))
-        @(Annotated (Sugar.Payload (Sugar.Annotation (Sugar.EvaluationScopes Name i) Name) o, ()))
         . Sugar._AnnotationVal .~ mempty
-    & AddParens.addToTopLevel minOpPrec
-    & hflipped %~ hmap (\_ -> Lens._Wrapped %~ pl)
-    where
-        pl (parenInfo, sugarPl) =
-            ExprGui.GuiPayload
-            { ExprGui._plHiddenEntityIds = []
-            , ExprGui._plParenInfo = parenInfo
-            }
-            <$ sugarPl
+    & hflipped %~ hmap (const (Lens._Wrapped . Sugar.plParenInfo . Sugar.piMinOpPrec .~ minOpPrec))
 
-makeResultOption ::
-    _ => ExprGui.GuiPayload -> ResultGroup i o -> Menu.Option (GuiM env i o) o
+makeResultOption :: _ => Sugar.Payload v o -> ResultGroup i o -> Menu.Option (GuiM env i o) o
 makeResultOption pl results =
     Menu.Option
     { Menu._oId = results ^. ResultGroups.rgPrefixId
@@ -166,7 +155,7 @@ make mode annMode mkOptions pl allowedTerms widgetIds =
                         WithoutAnnotation -> pure M.empty
                         WithAnnotation ->
                             Annotation.annotationSpacer
-                            M./-/ makeInferredTypeAnnotation (pl ^. _1 . Sugar.plAnnotation) animId
+                            M./-/ makeInferredTypeAnnotation (pl ^. Sugar.plAnnotation) animId
                     searchTerm <- SearchMenu.readSearchTerm searchMenuId
                     options <- GuiM.im mkOptions <&> (searchTermFilter searchTerm &)
                     -- ideally the fdWrap would be "inside" the
@@ -195,7 +184,7 @@ make mode annMode mkOptions pl allowedTerms widgetIds =
         maybeAddAnn =
             case annMode of
             WithoutAnnotation -> pure id
-            WithAnnotation -> maybeAddAnnotationPl (pl ^. _1) <&> (M.tValue %~)
+            WithAnnotation -> maybeAddAnnotationPl pl <&> (M.tValue %~)
         makeTerm mPickFirst =
             do
                 theme <- Lens.view (has . Theme.hole)
@@ -220,6 +209,6 @@ make mode annMode mkOptions pl allowedTerms widgetIds =
             }
         filteredOptions opts ctx =
             ResultGroups.makeAll mode opts ctx
-            <&> Lens.mapped %~ makeResultOption (pl ^. _2)
+            <&> Lens.mapped %~ makeResultOption pl
             <&> Lens.mapped . Menu.optionWidgets . M.tValue . Widget.eventMapMaker . Lens.mapped %~
                 filterSearchTermEvents allowedTerms (ctx ^. SearchMenu.rSearchTerm)

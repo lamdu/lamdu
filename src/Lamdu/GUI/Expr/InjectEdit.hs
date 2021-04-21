@@ -43,7 +43,7 @@ make (Ann (Const pl) (Const tag)) =
     )
     & Wrap.stdWrap pl
     where
-        myId = pl ^. _1 & WidgetIds.fromExprPayload
+        myId = WidgetIds.fromExprPayload pl
 
 data NullaryRecord o
     = HiddenNullaryRecord (E.EventMap (o GuiState.Update)) -- enter it
@@ -78,7 +78,7 @@ nullaryRecord x =
             then RecordEdit.makeEmpty x <&> FocusedNullaryRecord
             else enterSubexpr myId <&> HiddenNullaryRecord
     where
-        myId = x ^. annotation . _1 & WidgetIds.fromExprPayload
+        myId = x ^. annotation & WidgetIds.fromExprPayload
 
 makeNullary ::
     _ => Annotated (ExprGui.Payload i o) # Sugar.NullaryInject Name i o -> GuiM env i o (Responsive o)
@@ -101,7 +101,7 @@ makeNullary (Ann (Const pl) (Sugar.NullaryInject tag r)) =
                     [rawInjectEdit, Widget.weakerEvents leaveEventMap w]
 
         valEventMap <-
-            case r ^. annotation . _1 . Sugar.plActions . Sugar.delete of
+            case r ^. annotation . Sugar.plActions . Sugar.delete of
             Sugar.SetToHole a ->
                 Lens.view id <&>
                 \env ->
@@ -115,4 +115,4 @@ makeNullary (Ann (Const pl) (Sugar.NullaryInject tag r)) =
             <&> M.weakerEvents valEventMap
     & Wrap.stdWrap pl
     where
-        myId = pl ^. _1 & WidgetIds.fromExprPayload
+        myId = WidgetIds.fromExprPayload pl

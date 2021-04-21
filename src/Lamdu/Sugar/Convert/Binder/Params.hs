@@ -471,7 +471,6 @@ convertRecordParams mPresMode binderKind fieldParams lam@(V.TypedLam param _ _) 
                             EvalPrep
                             { _eType = fpFieldType fp
                             , _eEvalId = paramEntityId
-                            , _eLambdas = []
                             }
                         , _fpVarInfo = vinfo
                         }
@@ -638,7 +637,6 @@ mkFuncParam entityId lamExprPl info =
             EvalPrep
             { _eType = typ
             , _eEvalId = entityId
-            , _eLambdas = []
             }
         , _fpVarInfo = vinfo
         }

@@ -58,9 +58,7 @@ test =
 testSugarActionsWith ::
     FilePath ->
     [WorkArea (Annotation (EvaluationScopes Name (OnceT (T ViewM))) Name) Name (OnceT (T ViewM)) (T ViewM)
-        ( Sugar.Payload (Annotation (EvaluationScopes Name (OnceT (T ViewM))) Name) (T ViewM)
-        , (ParenInfo, [EntityId])
-        ) ->
+        (Sugar.Payload (Annotation (EvaluationScopes Name (OnceT (T ViewM))) Name) (T ViewM)) ->
         OnceT (T ViewM) a] ->
     Env ->
     IO ()
@@ -72,9 +70,7 @@ testSugarActionsWith program actions env =
 testSugarActions ::
     FilePath ->
     [WorkArea (Annotation (EvaluationScopes Name (OnceT (T ViewM))) Name) Name (OnceT (T ViewM)) (T ViewM)
-        ( Sugar.Payload (Annotation (EvaluationScopes Name (OnceT (T ViewM))) Name)  (T ViewM)
-        , (ParenInfo, [EntityId])
-        ) ->
+        (Sugar.Payload (Annotation (EvaluationScopes Name (OnceT (T ViewM))) Name) (T ViewM)) ->
         OnceT (T ViewM) a] ->
     IO ()
 testSugarActions program actions =
@@ -141,7 +137,7 @@ testReorderLets =
             replBody . _BodyLam . lamFunc . fBody .
             hVal . _BinderLet . lBody .
             hVal . _BinderLet . lValue .
-            annotation . _1 . plActions . extract
+            annotation . plActions . extract
 
 -- Test for issue #395
 -- https://trello.com/c/UvBdhzzl/395-extract-of-binder-body-with-let-items-may-cause-inference-failure
@@ -151,7 +147,7 @@ testExtract =
     & testCase "extract"
     where
         action =
-            replBody . _BodyLam . lamFunc . fBody . annotation . _1 . plActions .
+            replBody . _BodyLam . lamFunc . fBody . annotation . plActions .
             extract
 
 -- Test for issue #402
@@ -231,10 +227,10 @@ delInfixArg =
     & testCase "del-infix-arg"
     where
         argDel workArea =
-            workArea ^?! arg . annotation . _1 . plActions . delete . _SetToHole
+            workArea ^?! arg . annotation . plActions . delete . _SetToHole
             & void & lift
         holeDel workArea =
-            workArea ^?! arg . annotation . _1 . plActions . delete . _Delete
+            workArea ^?! arg . annotation . plActions . delete . _Delete
             & void & lift
         arg = replBody . _BodyLabeledApply . aMOpArgs . Lens._Just . oaRhs
         verify workArea
@@ -255,7 +251,7 @@ testExtractForRecursion =
             hVal . Lens._Wrapped . bvNameRef . nrGotoDefinition
         extractDef =
             waPanes . traverse . SugarLens.paneBinder .
-            annotation . _1 . plActions . extract
+            annotation . plActions . extract
 
 testInsistFactorial :: Test
 testInsistFactorial =
@@ -410,7 +406,7 @@ testReplaceParent =
     where
         action =
             replBody . _BodyLam . lamFunc . fBody .
-            annotation . _1 . plActions . mReplaceParent . Lens._Just
+            annotation . plActions . mReplaceParent . Lens._Just
 
 testReplaceParentFragment :: Test
 testReplaceParentFragment =
@@ -420,7 +416,7 @@ testReplaceParentFragment =
         action =
             Lens.cloneTraversal fragExpr .
             hVal . _BodySimpleApply . appArg .
-            annotation . _1 . plActions . mReplaceParent . Lens._Just
+            annotation . plActions . mReplaceParent . Lens._Just
         fragExpr = replBody . _BodyLabeledApply . aMOpArgs . Lens._Just . oaLhs . hVal . _BodyFragment . fExpr
         verify workArea
             | Lens.has (Lens.cloneTraversal fragExpr) workArea =
@@ -430,7 +426,7 @@ testReplaceParentFragment =
 floatLetWithGlobalRef :: Test
 floatLetWithGlobalRef =
     testSugarActions "let-with-global-reference.json"
-    [ lift . (^?! replLet . lBody . hVal . _BinderLet . lValue . annotation . _1 . plActions . extract)
+    [ lift . (^?! replLet . lBody . hVal . _BinderLet . lValue . annotation . plActions . extract)
     ]
     & testCase "float-let-with-global-ref"
 
@@ -444,11 +440,11 @@ setHoleToHole =
             | Lens.has setToHole workArea =
                 error "hole has set to hole?"
             | otherwise = pure ()
-        setToHole :: Lens.Traversal' (WorkArea v name i o (Payload v o, a)) (o EntityId)
+        setToHole :: Lens.Traversal' (WorkArea v name i o (Payload v o)) (o EntityId)
         setToHole =
             replBody . _BodyLam . lamFunc . fBody .
             hVal . _BinderLet . lValue .
-            annotation . _1 . plActions . delete . _SetToHole
+            annotation . plActions . delete . _SetToHole
 
 assertEq :: (Monad m, Show a, Eq a) => String -> a -> a -> m ()
 assertEq msg expected got
@@ -468,7 +464,7 @@ testFloatToRepl =
             do
                 workArea <- convertWorkArea env
                 assertLetVals workArea 1 2
-                _ <- workArea ^?! innerLet . annotation . _1 . plActions . extract & lift
+                _ <- workArea ^?! innerLet . annotation . plActions . extract & lift
                 newWorkArea <- convertWorkArea env
                 assertLetVals newWorkArea 2 1
     where
@@ -495,7 +491,7 @@ testCreateLetInLetVal =
                     workArea <- convertWorkArea env
                     _ <-
                         workArea ^?!
-                        theLet . lValue . annotation . _1 . plActions . mNewLet . Lens._Just
+                        theLet . lValue . annotation . plActions . mNewLet . Lens._Just
                         & lift
                     newWorkArea <- convertWorkArea env
                     Lens.has
@@ -520,11 +516,11 @@ testHoleTypeShown =
         env <- Env.make <&> has .~ Annotations.None
         workArea <- testProgram "to-nom.json" (convertWorkArea env)
         let x = workArea ^?! replBody . _BodyToNom . nVal
-        putStrLn $ case x ^. annotation . _1 . plAnnotation of
+        putStrLn $ case x ^. annotation . plAnnotation of
             AnnotationType {} -> "Type"
             AnnotationVal {} -> "Val"
             AnnotationNone {} -> "None"
-        Lens.has (annotation . _1 . plAnnotation . _AnnotationType) x
+        Lens.has (annotation . plAnnotation . _AnnotationType) x
             & assertBool "Expected to have type"
 
 -- Test for issue #497

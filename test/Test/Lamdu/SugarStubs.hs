@@ -33,7 +33,7 @@ prop x = Property x (const Unit)
 
 type Expr =
     Sugar.Expr Sugar.Term (Sugar.Annotation (Sugar.EvaluationScopes InternalName Identity) InternalName)
-    InternalName Identity Unit ()
+    InternalName Identity Unit
 
 litNum :: Double -> Expr
 litNum x = prop x & Sugar.LiteralNum & Sugar.LeafLiteral & Sugar.BodyLeaf & expr
@@ -48,13 +48,13 @@ defRef var tag =
     }
 
 node ::
-    h # Annotated (Sugar.Payload (Sugar.Annotation v InternalName) Unit, ()) ->
-    Annotated (Sugar.Payload (Sugar.Annotation v InternalName) Unit, ()) # h
+    h # Annotated (Sugar.Payload (Sugar.Annotation v InternalName) Unit) ->
+    Annotated (Sugar.Payload (Sugar.Annotation v InternalName) Unit) # h
 node = Const payload & Ann
 
 labeledApplyFunc ::
     Sugar.BinderVarRef InternalName Unit ->
-    Annotated (Sugar.Payload (Sugar.Annotation v InternalName) Unit, ()) #
+    Annotated (Sugar.Payload (Sugar.Annotation v InternalName) Unit) #
     Const (Sugar.BinderVarRef InternalName Unit)
 labeledApplyFunc = node . Const
 
@@ -184,7 +184,7 @@ mkFuncParam (paramVar, paramTag) =
 
 funcExpr ::
     [(UUID, T.Tag)] -> Expr ->
-    Sugar.Body Sugar.Function (Sugar.Annotation (Sugar.EvaluationScopes InternalName Identity) InternalName) InternalName Identity Unit ()
+    Sugar.Body Sugar.Function (Sugar.Annotation (Sugar.EvaluationScopes InternalName Identity) InternalName) InternalName Identity Unit
 funcExpr params (Ann (Const ba) bx) =
     Sugar.Function
     { Sugar._fChosenScopeProp = prop Nothing & pure
@@ -197,12 +197,12 @@ funcExpr params (Ann (Const ba) bx) =
 binderExpr ::
     [(UUID, T.Tag)] -> Expr ->
     Sugar.Expr Sugar.Assignment (Sugar.Annotation (Sugar.EvaluationScopes InternalName Identity) InternalName)
-    InternalName Identity Unit ()
+    InternalName Identity Unit
 binderExpr params body = funcExpr params body & Sugar.BodyFunction & node
 
 expr ::
-    Sugar.Body Sugar.Term (Sugar.Annotation v InternalName) InternalName Identity Unit () ->
-    Sugar.Expr Sugar.Term (Sugar.Annotation v InternalName) InternalName Identity Unit ()
+    Sugar.Body Sugar.Term (Sugar.Annotation v InternalName) InternalName Identity Unit ->
+    Sugar.Expr Sugar.Term (Sugar.Annotation v InternalName) InternalName Identity Unit
 expr = node
 
 numType :: Annotated Sugar.EntityId # Sugar.Type InternalName
@@ -210,15 +210,15 @@ numType =
     Sugar.TInst (Sugar.TId (taggedEntityName "numTid" "num") "num") mempty
     & Ann (Const "dummy")
 
-payload :: (Sugar.Payload (Sugar.Annotation v InternalName) Unit, ())
+payload :: (Sugar.Payload (Sugar.Annotation v InternalName) Unit)
 payload =
-    ( Sugar.Payload
-        { Sugar._plAnnotation = Sugar.AnnotationNone
-        , Sugar._plEntityId = "dummy"
-        , Sugar._plActions = nodeActions
-        }
-    , ()
-    )
+    Sugar.Payload
+    { Sugar._plAnnotation = Sugar.AnnotationNone
+    , Sugar._plEntityId = "dummy"
+    , Sugar._plHiddenEntityIds = []
+    , Sugar._plActions = nodeActions
+    , Sugar._plParenInfo = Sugar.ParenInfo 0 False
+    }
 
 nodeActions :: Sugar.NodeActions Unit
 nodeActions =
