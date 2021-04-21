@@ -505,7 +505,7 @@ mkResult preConversion updateDeps holePl x =
             <&> convertBinder
             <&> fmap convertPayloads
             >>= ConvertM.run sugarContext
-            <&> SugarLens.annotations .~ AnnotationNone
+            <&> SugarLens.hAnnotations @EvalPrep @(Annotation () InternalName) .~ AnnotationNone
             & _OnceT %~ mapStateT (fmap (\((fConverted, s), forkedChanges) -> ((fConverted, forkedChanges), s)) . Transaction.fork)
             & once & join
             <&>

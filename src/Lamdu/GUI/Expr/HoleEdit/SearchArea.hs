@@ -3,6 +3,8 @@
 --
 -- For non-fragments this is the whole hole.
 
+{-# LANGUAGE ScopedTypeVariables, TypeApplications #-}
+
 module Lamdu.GUI.Expr.HoleEdit.SearchArea
     ( make
     , AnnotationMode(..)
@@ -77,12 +79,18 @@ makeRenderedResult searchTerms pl result =
             & ResultWidget.make searchTerms (rId result) (res ^. Sugar.holeResultPick)
 
 postProcessSugar ::
+    forall i o.
     AddParens.MinOpPrec ->
     Sugar.Expr Sugar.Binder (Sugar.Annotation () Name) Name i o () ->
     ExprGui.Expr Sugar.Binder i o
 postProcessSugar minOpPrec binder =
     binder
-    & SugarLens.annotations . Sugar._AnnotationVal .~ mempty
+    & SugarLens.hAnnotations
+        @(Sugar.Annotation () Name)
+        @(Sugar.Annotation (Sugar.EvaluationScopes Name i) Name)
+        @(Annotated (Sugar.Payload (Sugar.Annotation () Name) Name i o, ()))
+        @(Annotated (Sugar.Payload (Sugar.Annotation (Sugar.EvaluationScopes Name i) Name) Name i o, ()))
+        . Sugar._AnnotationVal .~ mempty
     & AddParens.addToTopLevel minOpPrec
     & hflipped %~ hmap (\_ -> Lens._Wrapped %~ pl)
     where

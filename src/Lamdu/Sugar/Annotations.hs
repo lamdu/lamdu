@@ -99,7 +99,7 @@ instance Functor i => MarkBodyAnnotations v n i o Function where
         ( neverShowAnnotations
         , func
             { _fBody = func ^. fBody & markNodeAnnotations
-            , _fParams = func ^. fParams & SugarLens.binderParamsAnnotations %~ (,) showAnnotationWhenVerbose
+            , _fParams = func ^. fParams & SugarLens.annotations @v %~ (,) showAnnotationWhenVerbose
             }
         )
 

@@ -1,7 +1,8 @@
 {-# LANGUAGE TypeApplications, FlexibleInstances, DefaultSignatures, MultiParamTypeClasses #-}
+{-# LANGUAGE ScopedTypeVariables, TypeFamilies, TupleSections #-}
 
 module Lamdu.Sugar.Lens
-    ( SugarExpr(..), Annotations(..)
+    ( SugarExpr(..), Annotations(..), HAnnotations(..)
     , childPayloads
     , bodyUnfinished
     , defSchemes
@@ -11,10 +12,9 @@ module Lamdu.Sugar.Lens
     , holeTransformExprs, holeOptionTransformExprs
     , getVarName
     , paneBinder
-    , workAreaAnnotations, binderParamsAnnotations
     ) where
 
-import           Control.Lens (Traversal, LensLike)
+import           Control.Lens (Traversal)
 import qualified Control.Lens as Lens
 import           Hyper
 import           Hyper.Class.Morph
@@ -158,92 +158,89 @@ binderParamsFuncParams f (Params x) = (traverse . _1) f x <&> Params
 paneBinder :: Traversal (Pane v0 n i o a0) (Pane v1 n i o a1) (Annotated a0 # Assignment v0 n i o) (Annotated a1 # Assignment v1 n i o)
 paneBinder = paneBody . _PaneDefinition . drBody . _DefinitionBodyExpression . deContent
 
-workAreaAnnotations ::
-    Applicative f =>
-    LensLike f (WorkArea v0 n i o (Payload v0 n i o, a)) (WorkArea v1 n i o (Payload v1 n i o, a)) v0 v1
-workAreaAnnotations f w =
-    WorkArea
-    <$> (traverse . paneBinder . annotations) f (w ^. waPanes)
-    <*> (replExpr . annotations) f (w ^. waRepl)
-    ?? w ^. waGlobals
+class Annotations a b s t where
+    annotations :: Traversal s t a b
+    default annotations ::
+        ( s ~ (e0 # h0), t ~ (e1 # h1)
+        , HAnnotations a b e0 e1, HAnnotations a b h0 h1
+        ) => Traversal s t a b
+    annotations = hAnnotations
 
-binderParamsAnnotations :: Traversal (BinderParams v0 n i o) (BinderParams v1 n i o) v0 v1
-binderParamsAnnotations = binderParamsFuncParams . fpAnnotation
+class HAnnotations a b s t where
+    hAnnotations ::
+        HAnnotations a b h0 h1 =>
+        Traversal (s # h0) (t # h1) a b
+    default hAnnotations ::
+        ( HMorphWithConstraint s t (HAnnotations a b)
+        , HTraversable t
+        , HAnnotations a b h0 h1
+        ) => Traversal (s # h0) (t # h1) a b
+    hAnnotations f = morphTraverse (Proxy @(HAnnotations a b) #?> hAnnotations f)
 
-class Annotations n i o v0 v1 t0 t1 where
-    annotations ::
-        Applicative f =>
-        LensLike f (Annotated (Payload v0 n i o, a) # t0) (Annotated (Payload v1 n i o, a) # t1) v0 v1
+instance Annotations a b (BinderVarRef n o) (BinderVarRef n o) where annotations _ x = pure x
+instance Annotations a b (GetVar n o) (GetVar n o) where annotations _ x = pure x
+instance Annotations a b (TagChoice n i o e) (TagChoice n i o e) where annotations _ x = pure x
 
-instance Annotations n i o v0 v1 (Const x) (Const x) where
-    annotations f (Ann a (Const b)) =
-        (Lens._Wrapped . Lens._1 . plAnnotation) f a
-        <&> (`Ann` Const b)
+instance Annotations a b s0 t0 => Annotations a b (s0, x) (t0, x) where
+    annotations = _1 . annotations
 
-instance BodyAnnotations e => Annotations n i o v0 v1 (e v0 n i o) (e v1 n i o) where
-    annotations f (Ann a b) =
-        Ann
-        <$> (Lens._Wrapped . Lens._1 . plAnnotation) f a
-        <*> bodyAnnotations f b
+instance Annotations a b (BinderParams a n i o) (BinderParams b n i o) where
+    annotations = binderParamsFuncParams . fpAnnotation
 
-class BodyAnnotations e where
-    bodyAnnotations ::
-        Applicative f =>
-        LensLike f (Body e v0 n i o a) (Body e v1 n i o a) v0 v1
-    default bodyAnnotations ::
-        ( HMorphWithConstraint (e v0 n i o) (e v1 n i o) (Annotations n i o v0 v1)
-        , HTraversable (e v1 n i o), Applicative f
-        ) =>
-        LensLike f (Body e v0 n i o a) (Body e v1 n i o a) v0 v1
-    bodyAnnotations =
-        withP (\p f -> morphTraverse (p #?> annotations f))
-        where
-            withP ::
-                (Proxy (Annotations n i o v0 v1) -> ((v0 -> f v1) -> Body e v0 n i o a -> r)) ->
-                (v0 -> f v1) -> Body e v0 n i o a -> r
-            withP x = x Proxy
+instance Annotations a b (Payload a n i o) (Payload b n i o) where
+    annotations = plAnnotation
 
-instance BodyAnnotations Assignment where
-    bodyAnnotations f (BodyFunction x) = bodyAnnotations f x <&> BodyFunction
-    bodyAnnotations f (BodyPlain x) = (apBody . bodyAnnotations) f x <&> BodyPlain
+instance Annotations a b s t => Annotations a b (WorkArea a n i o s) (WorkArea b n i o t) where
+    annotations f w =
+        WorkArea
+        <$> (traverse . paneBinder . hAnnotations) f (w ^. waPanes)
+        <*> (replExpr . hAnnotations) f (w ^. waRepl)
+        ?? w ^. waGlobals
 
-instance BodyAnnotations Binder where
-    bodyAnnotations f (BinderLet x) = bodyAnnotations f x <&> BinderLet
-    bodyAnnotations f (BinderTerm x) = bodyAnnotations f x <&> BinderTerm
+instance HAnnotations a b p0 p1 => HAnnotations a b (Ann p0) (Ann p1) where
+    hAnnotations f (Ann p x) = Ann <$> hAnnotations f p <*> hAnnotations f x
 
-instance BodyAnnotations Composite
+instance Annotations a b s t => HAnnotations a b (Const s) (Const t) where
+    hAnnotations = Lens._Wrapped . annotations
 
-instance BodyAnnotations Else where
-    bodyAnnotations f (SimpleElse x) = bodyAnnotations f x <&> SimpleElse
-    bodyAnnotations f (ElseIf x) = bodyAnnotations f x <&> ElseIf
+instance HAnnotations a b (Composite a n i o) (Composite b n i o)
+instance HAnnotations a b (IfElse a n i o) (IfElse b n i o)
+instance HAnnotations a b (LabeledApply a n i o) (LabeledApply b n i o)
+instance HAnnotations a b (Let a n i o) (Let b n i o)
+instance HAnnotations a b (PostfixApply a n i o) (PostfixApply b n i o)
+instance HAnnotations a b (PostfixFunc a n i o) (PostfixFunc b n i o)
 
-instance BodyAnnotations Function where
-    bodyAnnotations f x =
+instance HAnnotations a b (Assignment a n i o) (Assignment b n i o) where
+    hAnnotations f (BodyFunction x) = hAnnotations f x <&> BodyFunction
+    hAnnotations f (BodyPlain x) = (apBody . hAnnotations) f x <&> BodyPlain
+
+instance HAnnotations a b (Binder a n i o) (Binder b n i o) where
+    hAnnotations f (BinderLet x) = hAnnotations f x <&> BinderLet
+    hAnnotations f (BinderTerm x) = hAnnotations f x <&> BinderTerm
+
+instance HAnnotations a b (Else a n i o) (Else b n i o) where
+    hAnnotations f (SimpleElse x) = hAnnotations f x <&> SimpleElse
+    hAnnotations f (ElseIf x) = hAnnotations f x <&> ElseIf
+
+instance HAnnotations a b (Fragment a n i o) (Fragment b n i o) where
+    hAnnotations = fExpr . hAnnotations
+
+instance HAnnotations a b (Function a n i o) (Function b n i o) where
+    hAnnotations f x =
         (,)
-        <$> binderParamsAnnotations f (x ^. fParams)
-        <*> annotations f (x ^. fBody)
+        <$> annotations f (x ^. fParams)
+        <*> hAnnotations f (x ^. fBody)
         <&> \(p, b) -> x { _fParams = p, _fBody = b }
 
-instance BodyAnnotations Fragment where
-    bodyAnnotations = fExpr . annotations
-
-instance BodyAnnotations IfElse
-instance BodyAnnotations LabeledApply
-instance BodyAnnotations Let
-instance BodyAnnotations PostfixApply
-instance BodyAnnotations PostfixFunc
-
-instance BodyAnnotations Term where
-    bodyAnnotations _ (BodyLeaf x) = BodyLeaf x & pure
-    bodyAnnotations f (BodyLam x) = (lamFunc . bodyAnnotations) f x <&> BodyLam
-    bodyAnnotations f (BodyIfElse x) = bodyAnnotations f x <&> BodyIfElse
-    bodyAnnotations f (BodyRecord x) = bodyAnnotations f x <&> BodyRecord
-    bodyAnnotations f (BodyToNom x) = (nVal . annotations) f x <&> BodyToNom
-    bodyAnnotations f (BodySimpleApply x) = (morphTraverse1 . annotations) f x <&> BodySimpleApply
-    bodyAnnotations f (BodyLabeledApply x) = bodyAnnotations f x <&> BodyLabeledApply
-    bodyAnnotations f (BodyFragment x) = bodyAnnotations f x <&> BodyFragment
-    bodyAnnotations f (BodyPostfixApply x) = bodyAnnotations f x <&> BodyPostfixApply
-    bodyAnnotations f (BodyPostfixFunc x) = bodyAnnotations f x <&> BodyPostfixFunc
-    bodyAnnotations f (BodyNullaryInject x) =
-        iContent (\(Ann a (Const b)) -> (Lens._Wrapped . _1 . plAnnotation) f a <&> (`Ann` Const b)) x
-        <&> BodyNullaryInject
+instance HAnnotations a b (Term a n i o) (Term b n i o) where
+    hAnnotations _ (BodyLeaf x) = BodyLeaf x & pure
+    hAnnotations f (BodyLam x) = (lamFunc . hAnnotations) f x <&> BodyLam
+    hAnnotations f (BodyIfElse x) = hAnnotations f x <&> BodyIfElse
+    hAnnotations f (BodyRecord x) = hAnnotations f x <&> BodyRecord
+    hAnnotations f (BodyToNom x) = (nVal . hAnnotations) f x <&> BodyToNom
+    hAnnotations f (BodySimpleApply x) = (morphTraverse1 . hAnnotations) f x <&> BodySimpleApply
+    hAnnotations f (BodyLabeledApply x) = hAnnotations f x <&> BodyLabeledApply
+    hAnnotations f (BodyFragment x) = hAnnotations f x <&> BodyFragment
+    hAnnotations f (BodyPostfixApply x) = hAnnotations f x <&> BodyPostfixApply
+    hAnnotations f (BodyPostfixFunc x) = hAnnotations f x <&> BodyPostfixFunc
+    hAnnotations f (BodyNullaryInject x) = (iContent . hAnnotations) f x <&> BodyNullaryInject

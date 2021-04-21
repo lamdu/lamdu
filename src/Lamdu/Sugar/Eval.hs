@@ -1,5 +1,5 @@
-{-# LANGUAGE TemplateHaskell, TypeApplications, RecordWildCards #-}
-{-# LANGUAGE GADTs, MultiParamTypeClasses, FlexibleInstances, DefaultSignatures #-}
+{-# LANGUAGE TemplateHaskell, TypeApplications, RecordWildCards, ScopedTypeVariables #-}
+{-# LANGUAGE GADTs, MultiParamTypeClasses, FlexibleInstances, DefaultSignatures, TypeApplications #-}
 
 module Lamdu.Sugar.Eval
     ( addEvaluationResults
@@ -172,6 +172,7 @@ addToPayload ctx a =
         i = a ^. plEntityId
 
 addEvaluationResults ::
+    forall i m n a.
     (Applicative i, Monad m) =>
     Anchors.CodeAnchors m ->
     CurAndPrev EvalResults ->
@@ -181,7 +182,8 @@ addEvaluationResults ::
         (Payload (Annotation (EvaluationScopes InternalName i) n) n i (T m), a))
 addEvaluationResults cp r wa@(WorkArea panes repl listGlobals) =
     makeNominalsMap
-    (wa ^.. SugarLens.workAreaAnnotations . _AnnotationVal . eType . tIds)
+    (wa ^.. SugarLens.annotations @(Annotation EvalPrep n) . _AnnotationVal . eType . tIds
+    )
     <&> AddEvalCtx r
     <&>
     \ctx ->

@@ -100,10 +100,10 @@ sugarWorkArea env0 cp =
     <&> Lens.mapped %~ convertPayload
     <&>
     \workArea getTagName env1 ->
-    let strippedLams = workArea ^.. SugarLens.workAreaAnnotations . eLambdas . traverse
+    let strippedLams = workArea ^.. SugarLens.annotations . eLambdas . traverse
     in
     markAnnotations workArea
-    & SugarLens.workAreaAnnotations (makeAnnotation (env1 ^. has))
+    & SugarLens.annotations (makeAnnotation (env1 ^. has))
     >>= lift . addEvaluationResults cp (env1 ^. has <&> redirectLams strippedLams)
     >>= report . AddNames.addToWorkArea env1 (fmap getTagName . lift . ExprIRef.readTagData)
     <&> AddParens.addToWorkArea
