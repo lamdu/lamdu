@@ -1,4 +1,5 @@
-{-# LANGUAGE TypeFamilies, NamedFieldPuns, TemplateHaskell #-}
+{-# LANGUAGE TypeFamilies, NamedFieldPuns, TemplateHaskell, MultiParamTypeClasses, FlexibleInstances #-}
+
 module Lamdu.Sugar.Names.Walk
     ( MonadNaming(..)
     , NameType(..), _GlobalDef, _TaggedVar, _TaggedNominal, _Tag
@@ -6,7 +7,7 @@ module Lamdu.Sugar.Names.Walk
     , FunctionSignature(..), Disambiguator
     , IsUnambiguous(..)
     , NameConvertor, CPSNameConvertor
-    , toWorkArea, toDef, toExpression
+    , Walk(..), toExpression, toWorkArea
     ) where
 
 import qualified Control.Lens as Lens
@@ -57,59 +58,48 @@ class (Monad m, Monad (IM m)) => MonadNaming m where
     opWithName :: IsUnambiguous -> NameType -> CPSNameConvertor m
     opGetName :: Maybe Disambiguator -> IsUnambiguous -> NameType -> NameConvertor m
 
-toParamRef ::
-    MonadNaming m =>
-    ParamRef (OldName m) o ->
-    m (ParamRef (NewName m) o)
-toParamRef p =
-    (pNameRef . nrName) (opGetName Nothing (binderAmiguity (p ^. pBinderMode)) TaggedVar) p
+class Walk m s t where
+    walk :: MonadNaming m => s -> m t
+
+instance (a ~ OldName m, b ~ NewName m) => Walk m (ParamRef a o) (ParamRef b o) where
+    walk p = (pNameRef . nrName) (opGetName Nothing (binderAmiguity (p ^. pBinderMode)) TaggedVar) p
 
 binderVarType :: BinderVarForm name m -> NameType
 binderVarType GetLet = TaggedVar
 binderVarType (GetDefinition _) = GlobalDef
 
-toCompositeFields ::
-    MonadNaming m =>
-    CompositeFields (OldName m) (Annotated a # Type (OldName m)) ->
-    m (CompositeFields (NewName m) (Annotated a # Type (NewName m)))
-toCompositeFields (CompositeFields fields mExt) =
-    CompositeFields
-    <$> traverse toField fields
-    <*> Lens._Just (opGetName Nothing MayBeAmbiguous TypeVar) mExt
-    where
-        toField (tag, typ) = (,) <$> toTagOf Tag tag <*> toType typ
+instance
+    (a ~ OldName m, b ~ NewName m) =>
+    Walk m (CompositeFields a (Annotated p # Type a)) (CompositeFields b (Annotated p # Type b)) where
+    walk (CompositeFields fields mExt) =
+        CompositeFields
+        <$> traverse toField fields
+        <*> Lens._Just (opGetName Nothing MayBeAmbiguous TypeVar) mExt
+        where
+            toField (tag, typ) = (,) <$> toTagOf Tag tag <*> walk typ
 
-toTId :: MonadNaming m => TId (OldName m) -> m (TId (NewName m))
-toTId = tidName %%~ opGetName Nothing MayBeAmbiguous TaggedNominal
+instance (a ~ OldName m, b ~ NewName m) => Walk m (TId a) (TId b) where
+    walk = tidName %%~ opGetName Nothing MayBeAmbiguous TaggedNominal
 
-toTBody ::
-    MonadNaming m =>
-    Type (OldName m) # Annotated a ->
-    m (Type (NewName m) # Annotated a)
-toTBody (TVar tv) = opGetName Nothing MayBeAmbiguous TypeVar tv <&> TVar
-toTBody (TFun (FuncType a b)) = FuncType <$> toType a <*> toType b <&> TFun
-toTBody (TRecord composite) = TRecord <$> toCompositeFields composite
-toTBody (TVariant composite) = TVariant <$> toCompositeFields composite
-toTBody (TInst tid params) =
-    TInst <$> toTId tid <*> traverse f params
-    where
-        f (k, v) = (,) <$> opGetName Nothing MayBeAmbiguous TypeVar k <*> toType v
+instance (a ~ OldName m, b ~ NewName m) => Walk m (Type a # Annotated p) (Type b # Annotated p) where
+    walk (TVar tv) = opGetName Nothing MayBeAmbiguous TypeVar tv <&> TVar
+    walk (TFun (FuncType a b)) = FuncType <$> walk a <*> walk b <&> TFun
+    walk (TRecord composite) = TRecord <$> walk composite
+    walk (TVariant composite) = TVariant <$> walk composite
+    walk (TInst tid params) =
+        TInst <$> walk tid <*> traverse f params
+        where
+            f (k, v) = (,) <$> opGetName Nothing MayBeAmbiguous TypeVar k <*> walk v
 
-toType ::
-    MonadNaming m =>
-    Annotated a # Type (OldName m) ->
-    m (Annotated a # Type (NewName m))
-toType (Ann (Const pl) x) = toTBody x <&> Ann (Const pl)
+instance (a ~ OldName m, b ~ NewName m) => Walk m (Annotated p # Type a) (Annotated p # Type b) where
+    walk (Ann (Const pl) x) = walk x <&> Ann (Const pl)
 
-toScheme :: MonadNaming m => Scheme (OldName m) -> m (Scheme (NewName m))
-toScheme (Scheme tvs typ) = Scheme tvs <$> toType typ
+instance (a ~ OldName m, b ~ NewName m) => Walk m (Scheme a) (Scheme b) where
+    walk (Scheme tvs typ) = Scheme tvs <$> walk typ
 
-toDefinitionOutdatedType ::
-    MonadNaming m =>
-    DefinitionOutdatedType (OldName m) o a ->
-    m (DefinitionOutdatedType (NewName m) o a)
-toDefinitionOutdatedType (DefinitionOutdatedType whenUsed current useCur) =
-    DefinitionOutdatedType <$> toScheme whenUsed <*> toScheme current ?? useCur
+instance (a ~ OldName m, b ~ NewName m) => Walk m (DefinitionOutdatedType a o p) (DefinitionOutdatedType b o p) where
+    walk (DefinitionOutdatedType whenUsed current useCur) =
+        DefinitionOutdatedType <$> walk whenUsed <*> walk current ?? useCur
 
 toBinderVarRef ::
     MonadNaming m =>
@@ -121,23 +111,18 @@ toBinderVarRef mDisambig (BinderVarRef nameRef form var inline) =
     <$> ( nrName %%~
           opGetName mDisambig MayBeAmbiguous (binderVarType form)
         ) nameRef
-    <*> (_GetDefinition . _DefTypeChanged %%~ toDefinitionOutdatedType) form
+    <*> (_GetDefinition . _DefTypeChanged %%~ walk) form
     ?? var
     ?? inline
 
-toGetVar ::
-    MonadNaming m =>
-    GetVar (OldName m) o ->
-    m (GetVar (NewName m) o)
-toGetVar (GetParam x) = toParamRef x <&> GetParam
-toGetVar (GetBinder x) = toBinderVarRef Nothing x <&> GetBinder
-toGetVar (GetParamsRecord x) =
-    traverse (opGetName Nothing MayBeAmbiguous Tag) x <&> GetParamsRecord
+instance (a ~ OldName m, b ~ NewName m) => Walk m (GetVar a o) (GetVar b o) where
+    walk (GetParam x) = walk x <&> GetParam
+    walk (GetBinder x) = toBinderVarRef Nothing x <&> GetBinder
+    walk (GetParamsRecord x) =
+        traverse (opGetName Nothing MayBeAmbiguous Tag) x <&> GetParamsRecord
 
-toResRecord ::
-    MonadNaming m =>
-    ResRecord (OldName m) a -> m (ResRecord (NewName m) a)
-toResRecord = recordFields . traverse . _1 %%~ toTagOf Tag
+instance (a ~ OldName m, b ~ NewName m) => Walk m (ResRecord a p) (ResRecord b p) where
+    walk = recordFields . traverse . _1 %%~ toTagOf Tag
 
 toResBody ::
     MonadNaming m =>
@@ -153,20 +138,18 @@ toResBody f =
     RList    x -> RList x & pure
     RTree    x -> RTree x & pure
     RTable   x -> (rtHeaders . traverse) (toTagOf Tag) x <&> RTable
-    RRecord  x -> toResRecord x <&> RRecord
+    RRecord  x -> walk x <&> RRecord
     RInject  x -> riTag (toTagOf Tag) x <&> RInject
     <&> (>>= traverse f)
 
-toResVal :: MonadNaming m => ResVal (OldName m) -> m (ResVal (NewName m))
-toResVal = resBody (toResBody toResVal)
+instance (a ~ OldName m, b ~ NewName m) => Walk m (ResVal a) (ResVal b) where
+    walk = resBody (toResBody walk)
 
-toValAnnotation ::
-    MonadNaming m =>
-    EvaluationScopes (OldName m) (IM m) -> m (EvaluationScopes (NewName m) (IM m))
-toValAnnotation evalRes =
-    opRun <&>
-    \run ->
-    evalRes <&> traverse . traverse %~ (>>= run . toResVal)
+instance (a ~ OldName m, b ~ NewName m, i ~ IM m) => Walk m (EvaluationScopes a i) (EvaluationScopes b i) where
+    walk evalRes =
+        opRun <&>
+        \run ->
+        evalRes <&> traverse . traverse %~ (>>= run . walk)
 
 toAnnotation ::
     MonadNaming m =>
@@ -174,7 +157,7 @@ toAnnotation ::
     Annotation v0 (OldName m) ->
     m (Annotation v1 (NewName m))
 toAnnotation _ AnnotationNone = pure AnnotationNone
-toAnnotation _ (AnnotationType typ) = toType typ <&> AnnotationType
+toAnnotation _ (AnnotationType typ) = walk typ <&> AnnotationType
 toAnnotation v (AnnotationVal x) = v x <&> AnnotationVal
 
 type Pl v n = Payload (Annotation v n)
@@ -213,24 +196,21 @@ instance ToBody Binder where
     toBody v (BinderLet l) = toBody v l <&> BinderLet
     toBody v (BinderTerm e) = toBody v e <&> BinderTerm
 
-toAddFirstParam ::
-    MonadNaming m =>
-    AddFirstParam (OldName m) (IM m) o ->
-    m (AddFirstParam (NewName m) (IM m) o)
-toAddFirstParam = _PrependParam toTagChoice
+instance (a ~ OldName m, b ~ NewName m, i ~ IM m) => Walk m (AddFirstParam a i o) (AddFirstParam b i o) where
+    walk = _PrependParam walk
 
 toFunction :: MonadNaming m => IsUnambiguous -> WalkBody Function v0 v1 m o a
 toFunction u v func@Function{_fParams, _fBody, _fAddFirstParam} =
     (\(_fParams, _fBody) _fAddFirstParam ->
          func{_fParams, _fBody, _fAddFirstParam})
     <$> unCPS (withBinderParams u v _fParams) (toExpression v _fBody)
-    <*> toAddFirstParam _fAddFirstParam
+    <*> walk _fAddFirstParam
 
 instance ToBody AssignPlain where
     toBody v AssignPlain{_apBody, _apAddFirstParam} =
         (\_apBody _apAddFirstParam -> AssignPlain{_apBody, _apAddFirstParam})
         <$> toBody v _apBody
-        <*> toAddFirstParam _apAddFirstParam
+        <*> walk _apAddFirstParam
 
 type ExprW t v n m o a = Expr t (Annotation v n) n (IM m) o a
 type WalkExpr t v0 v1 m o a = (v0 -> m v1) -> ExprW t v0 (OldName m) m o a -> m (ExprW t v1 (NewName m) m o a)
@@ -244,19 +224,16 @@ instance ToBody Assignment where
 toTagOf :: MonadNaming m => NameType -> Sugar.Tag (OldName m) -> m (Sugar.Tag (NewName m))
 toTagOf nameType = tagName (opGetName Nothing MayBeAmbiguous nameType)
 
-toTagChoice ::
-    MonadNaming m =>
-    TagChoice (OldName m) (IM m) o a ->
-    m (TagChoice (NewName m) (IM m) o a)
-toTagChoice (TagChoice opts new anon) =
-    (,) <$> opRun <*> opRun
-    <&>
-    \(run0, run1) ->
-    TagChoice
-    { _tcOptions = opts >>= run0 . (traverse . toInfo) (toTagOf Tag)
-    , _tcNewTag = new >>= run1 . toInfo (toTagOf Tag)
-    , _tcAnon = anon
-    }
+instance (a ~ OldName m, b ~ NewName m, i ~ IM m) => Walk m (TagChoice a i o p) (TagChoice b i o p) where
+    walk (TagChoice opts new anon) =
+        (,) <$> opRun <*> opRun
+        <&>
+        \(run0, run1) ->
+        TagChoice
+        { _tcOptions = opts >>= run0 . (traverse . toInfo) (toTagOf Tag)
+        , _tcNewTag = new >>= run1 . toInfo (toTagOf Tag)
+        , _tcAnon = anon
+        }
 
 toTagRefOf ::
     MonadNaming m =>
@@ -265,7 +242,7 @@ toTagRefOf ::
 toTagRefOf nameType (Sugar.TagRef info actions jumpTo) =
     Sugar.TagRef
     <$> toTagOf nameType info
-    <*> toTagChoice actions
+    <*> walk actions
     ?? jumpTo
 
 withTagRef ::
@@ -276,7 +253,7 @@ withTagRef ::
 withTagRef unambig nameType (Sugar.TagRef info actions jumpTo) =
     Sugar.TagRef
     <$> tagName (opWithName unambig nameType) info
-    <*> liftCPS (toTagChoice actions)
+    <*> liftCPS (walk actions)
     ?? jumpTo
 
 instance ToBody AnnotatedArg where
@@ -291,7 +268,7 @@ instance ToBody LabeledApply where
         <$> toNode v (Lens._Wrapped (toBinderVarRef (Just (funcSignature app)))) _aFunc
         <*> (traverse . morphTraverse1 . toExpression) v _aMOpArgs
         <*> (traverse . toBody) v _aAnnotatedArgs
-        <*> (traverse . pvVar) (toNode v (Lens._Wrapped toGetVar)) _aPunnedArgs
+        <*> (traverse . pvVar) (toNode v (Lens._Wrapped walk)) _aPunnedArgs
 
 type SugarElem t v n m (o :: * -> *) = t (Annotation v n) n (IM m) o
 
@@ -308,19 +285,19 @@ toHoleOption run0 run1 option =
     , _hoResults = option ^. hoResults <&> _2 %~ (>>= holeResultConverted (run0 . toExpression pure))
     }
 
-toHole :: MonadNaming m => Hole (OldName m) (IM m) o -> m (Hole (NewName m) (IM m) o)
-toHole hole =
-    (,) <$> opRun <*> opRun
-    <&>
-    \(r0, r1) ->
-    hole & Sugar.holeOptions . Lens.mapped . Lens.mapped . Lens.mapped %~ toHoleOption r0 r1
+instance (a ~ OldName m, b ~ NewName m, i ~ IM m) => Walk m (Hole a i o) (Hole b i o) where
+    walk hole =
+        (,) <$> opRun <*> opRun
+        <&>
+        \(r0, r1) ->
+        hole & Sugar.holeOptions . Lens.mapped . Lens.mapped . Lens.mapped %~ toHoleOption r0 r1
 
 instance ToBody Fragment where
     toBody v Fragment{_fExpr, _fHeal, _fTypeMismatch, _fOptions} =
         do
-            newTypeMismatch <- Lens._Just toType _fTypeMismatch
+            newTypeMismatch <- Lens._Just walk _fTypeMismatch
             newExpr <- toExpression v _fExpr
-            h <- toHole _fOptions
+            h <- walk _fOptions
             pure Fragment
                 { _fExpr = newExpr
                 , _fTypeMismatch = newTypeMismatch
@@ -338,12 +315,12 @@ instance ToBody Composite where
     toBody v (Composite items punned tail_ addItem) =
         Composite
         <$> traverse (toBody v) items
-        <*> (traverse . pvVar) (toNode v (Lens._Wrapped toGetVar)) punned
+        <*> (traverse . pvVar) (toNode v (Lens._Wrapped walk)) punned
         <*> _OpenComposite (toExpression v) tail_
-        <*> toTagChoice addItem
+        <*> walk addItem
 
 instance ToBody Nominal where
-    toBody v (Nominal t e) = Nominal <$> toTId t <*> toExpression v e
+    toBody v (Nominal t e) = Nominal <$> walk t <*> toExpression v e
 
 instance ToBody Else where
     toBody v (SimpleElse x) = toBody v x <&> SimpleElse
@@ -354,7 +331,7 @@ instance ToBody IfElse where
 
 instance ToBody PostfixFunc where
     toBody v (PfCase x) = toBody v x <&> PfCase
-    toBody _ (PfFromNom x) = toTId x <&> PfFromNom
+    toBody _ (PfFromNom x) = walk x <&> PfFromNom
     toBody _ (PfGetField x) = toTagRefOf Tag x <&> PfGetField
 
 instance ToBody PostfixApply where
@@ -373,16 +350,16 @@ toNullaryInject ::
 toNullaryInject v (NullaryInject t n) =
     NullaryInject
     <$> toTagRefOf Tag t
-    <*> toNode v (Lens._Wrapped toTagChoice) n
+    <*> toNode v (Lens._Wrapped walk) n
 
-toLeaf :: MonadNaming m => Leaf (OldName m) (IM m) o -> m (Leaf (NewName m) (IM m) o)
-toLeaf =
-    \case
-    LeafInject       x -> x & toTagRefOf Tag <&> LeafInject
-    LeafHole         x -> x & toHole <&> LeafHole
-    LeafGetVar       x -> x & toGetVar <&> LeafGetVar
-    LeafLiteral      x -> x & LeafLiteral & pure
-    LeafPlaceHolder    -> pure LeafPlaceHolder
+instance (a ~ OldName m, b ~ NewName m, i ~ IM m) => Walk m (Leaf a i o) (Leaf b i o) where
+    walk =
+        \case
+        LeafInject       x -> x & toTagRefOf Tag <&> LeafInject
+        LeafHole         x -> x & walk <&> LeafHole
+        LeafGetVar       x -> x & walk <&> LeafGetVar
+        LeafLiteral      x -> x & LeafLiteral & pure
+        LeafPlaceHolder    -> pure LeafPlaceHolder
 
 instance ToBody Term where
     toBody v =
@@ -397,7 +374,7 @@ instance ToBody Term where
         BodyLam          x -> x & lamFunc (toFunction (binderAmiguity (x ^. lamMode)) v) <&> BodyLam
         BodyFragment     x -> x & toBody v <&> BodyFragment
         BodyNullaryInject x -> x & toNullaryInject v <&> BodyNullaryInject
-        BodyLeaf         x -> toLeaf x <&> BodyLeaf
+        BodyLeaf         x -> walk x <&> BodyLeaf
 
 funcSignature :: LabeledApply v name i o a -> FunctionSignature
 funcSignature apply =
@@ -417,7 +394,7 @@ withParamInfo ::
 withParamInfo unambig (ParamInfo tag fpActions) =
     ParamInfo
     <$> withTagRef unambig TaggedVar tag
-    <*> liftCPS ((fpAddNext . Sugar._AddNext) toTagChoice fpActions)
+    <*> liftCPS ((fpAddNext . Sugar._AddNext) walk fpActions)
 
 withFuncParam ::
     MonadNaming m =>
@@ -442,46 +419,59 @@ withBinderParams ::
 withBinderParams _ v (NullParam x) = withFuncParam v pure x <&> NullParam
 withBinderParams u v (Params xs) = traverse (withFuncParam v (withParamInfo u)) xs <&> Params
 
-type Top t n m o a = t (Annotation (EvaluationScopes n (IM m)) n) n (IM m) o (Pl (EvaluationScopes n (IM m)) n o, a)
-type WalkTop t m o a = Top t (OldName m) m o a -> m (Top t (NewName m) m o a)
+type Top t n i o p = t (Annotation (EvaluationScopes n i) n) n i o (Pl (EvaluationScopes n i) n o, p)
 
-toDefExpr :: MonadNaming m => WalkTop DefinitionExpression m o a
-toDefExpr (DefinitionExpression typ presMode content) =
-    DefinitionExpression
-    <$> toScheme typ
-    <*> pure presMode
-    <*> toExpression toValAnnotation content
+instance
+    (a ~ OldName m, b ~ NewName m, i ~ IM m) =>
+    Walk m (Top DefinitionExpression a i o p) (Top DefinitionExpression b i o p)
+     where
+    walk (DefinitionExpression typ presMode content) =
+        DefinitionExpression
+        <$> walk typ
+        <*> pure presMode
+        <*> toExpression walk content
 
-toDefinitionBody :: MonadNaming m => WalkTop DefinitionBody m o a
-toDefinitionBody (DefinitionBodyBuiltin bi) =
-    bi & biType %%~ toScheme <&> DefinitionBodyBuiltin
-toDefinitionBody (DefinitionBodyExpression expr) =
-    toDefExpr expr <&> DefinitionBodyExpression
+instance
+    (a ~ OldName m, b ~ NewName m, i ~ IM m) =>
+    Walk m (Top DefinitionBody a i o p) (Top DefinitionBody b i o p) where
+        walk (DefinitionBodyBuiltin bi) =
+            bi & biType %%~ walk <&> DefinitionBodyBuiltin
+        walk (DefinitionBodyExpression expr) =
+            walk expr <&> DefinitionBodyExpression
 
-toDef :: MonadNaming m => WalkTop Definition m o a
-toDef def@Definition{_drName, _drBody} =
-    do
-        -- NOTE: A global def binding is not considered a binder, as
-        -- it exists everywhere, not just inside the binding
-        _drName <- toTagRefOf GlobalDef _drName
-        _drBody <- toDefinitionBody _drBody
-        pure def{_drName, _drBody}
+instance
+    (a ~ OldName m, b ~ NewName m, i ~ IM m) =>
+    Walk m (Top Definition a i o p) (Top Definition b i o p) where
+    walk def@Definition{_drName, _drBody} =
+        do
+            -- NOTE: A global def binding is not considered a binder, as
+            -- it exists everywhere, not just inside the binding
+            _drName <- toTagRefOf GlobalDef _drName
+            _drBody <- walk _drBody
+            pure def{_drName, _drBody}
 
-toTagPane :: MonadNaming m => TagPane (OldName m) o -> m (TagPane (NewName m) o)
-toTagPane (TagPane tag i18n setSymbol setName) =
-    toTagOf Tag tag <&> \x -> TagPane x i18n setSymbol setName
+instance (a ~ OldName m, b ~ NewName m) => Walk m (TagPane a o) (TagPane b o) where
+    walk (TagPane tag i18n setSymbol setName) =
+        toTagOf Tag tag <&> \x -> TagPane x i18n setSymbol setName
 
-toPaneBody :: MonadNaming m => WalkTop PaneBody m o a
-toPaneBody (PaneDefinition def) = toDef def <&> PaneDefinition
-toPaneBody (PaneTag x) = toTagPane x <&> PaneTag
+instance
+    (a ~ OldName m, b ~ NewName m, i ~ IM m) =>
+    Walk m (Top PaneBody a i o p) (Top PaneBody b i o p) where
+    walk (PaneDefinition def) = walk def <&> PaneDefinition
+    walk (PaneTag x) = walk x <&> PaneTag
 
-toWorkArea :: MonadNaming m => WalkTop WorkArea m o a
-toWorkArea WorkArea { _waPanes, _waRepl, _waGlobals } =
-    do
-        run <- opRun
-        panes <- (traverse . paneBody) toPaneBody _waPanes
-        repl <- replExpr (toNode toValAnnotation (toBody toValAnnotation)) _waRepl
-        let globals = _waGlobals >>= run . toGlobals
-        WorkArea panes repl globals & pure
-    where
-        toGlobals = (traverse . nrName) (opGetName Nothing MayBeAmbiguous GlobalDef)
+instance
+    (a ~ OldName m, b ~ NewName m, i ~ IM m) =>
+    Walk m (Top WorkArea a i o p) (Top WorkArea b i o p) where
+    walk WorkArea { _waPanes, _waRepl, _waGlobals } =
+        do
+            run <- opRun
+            panes <- (traverse . paneBody) walk _waPanes
+            repl <- replExpr (toNode walk (toBody walk)) _waRepl
+            let globals = _waGlobals >>= run . toGlobals
+            WorkArea panes repl globals & pure
+        where
+            toGlobals = (traverse . nrName) (opGetName Nothing MayBeAmbiguous GlobalDef)
+
+toWorkArea :: MonadNaming m => Top WorkArea (OldName m) (IM m) o p -> m (Top WorkArea (NewName m) (IM m) o p)
+toWorkArea = walk
