@@ -161,8 +161,6 @@ instance (a ~ OldName m, b ~ NewName m, Walk m va vb) => Walk m (Annotation va a
     walk (AnnotationType typ) = walk typ <&> AnnotationType
     walk (AnnotationVal x) = walk x <&> AnnotationVal
 
-type Pl v n = Payload (Annotation v n)
-
 instance Walk m va vb => Walk m (Payload va o) (Payload vb o) where
     walk = plAnnotation walk
 
@@ -410,11 +408,11 @@ withBinderParams ::
 withBinderParams _ (NullParam x) = withFuncParam pure x <&> NullParam
 withBinderParams u (Params xs) = traverse (withFuncParam (withParamInfo u)) xs <&> Params
 
-type Top t n i o p = t (Annotation (EvaluationScopes n i) n) n i o (Pl (EvaluationScopes n i) n o, p)
+type Top t n i (o :: Type -> Type) p = t (Annotation (EvaluationScopes n i) n) n i o p
 
 instance
-    (a ~ OldName m, b ~ NewName m, i ~ IM m) =>
-    Walk m (Top DefinitionExpression a i o p) (Top DefinitionExpression b i o p)
+    (a ~ OldName m, b ~ NewName m, i ~ IM m, Walk m pa pb) =>
+    Walk m (Top DefinitionExpression a i o pa) (Top DefinitionExpression b i o pb)
      where
     walk (DefinitionExpression typ presMode content) =
         DefinitionExpression
@@ -423,16 +421,16 @@ instance
         <*> toExpression content
 
 instance
-    (a ~ OldName m, b ~ NewName m, i ~ IM m) =>
-    Walk m (Top DefinitionBody a i o p) (Top DefinitionBody b i o p) where
+    (a ~ OldName m, b ~ NewName m, i ~ IM m, Walk m pa pb) =>
+    Walk m (Top DefinitionBody a i o pa) (Top DefinitionBody b i o pb) where
         walk (DefinitionBodyBuiltin bi) =
             bi & biType %%~ walk <&> DefinitionBodyBuiltin
         walk (DefinitionBodyExpression expr) =
             walk expr <&> DefinitionBodyExpression
 
 instance
-    (a ~ OldName m, b ~ NewName m, i ~ IM m) =>
-    Walk m (Top Definition a i o p) (Top Definition b i o p) where
+    (a ~ OldName m, b ~ NewName m, i ~ IM m, Walk m pa pb) =>
+    Walk m (Top Definition a i o pa) (Top Definition b i o pb) where
     walk def@Definition{_drName, _drBody} =
         do
             -- NOTE: A global def binding is not considered a binder, as
@@ -446,14 +444,14 @@ instance (a ~ OldName m, b ~ NewName m) => Walk m (TagPane a o) (TagPane b o) wh
         toTagOf Tag tag <&> \x -> TagPane x i18n setSymbol setName
 
 instance
-    (a ~ OldName m, b ~ NewName m, i ~ IM m) =>
-    Walk m (Top PaneBody a i o p) (Top PaneBody b i o p) where
+    (a ~ OldName m, b ~ NewName m, i ~ IM m, Walk m pa pb) =>
+    Walk m (Top PaneBody a i o pa) (Top PaneBody b i o pb) where
     walk (PaneDefinition def) = walk def <&> PaneDefinition
     walk (PaneTag x) = walk x <&> PaneTag
 
 instance
-    (a ~ OldName m, b ~ NewName m, i ~ IM m) =>
-    Walk m (Top WorkArea a i o p) (Top WorkArea b i o p) where
+    (a ~ OldName m, b ~ NewName m, i ~ IM m, Walk m pa pb) =>
+    Walk m (Top WorkArea a i o pa) (Top WorkArea b i o pb) where
     walk WorkArea { _waPanes, _waRepl, _waGlobals } =
         do
             run <- opRun
@@ -464,5 +462,8 @@ instance
         where
             toGlobals = (traverse . nrName) (opGetName Nothing MayBeAmbiguous GlobalDef)
 
-toWorkArea :: MonadNaming m => Top WorkArea (OldName m) (IM m) o p -> m (Top WorkArea (NewName m) (IM m) o p)
+toWorkArea ::
+    MonadNaming m =>
+    Top WorkArea (OldName m) (IM m) o (Payload (Annotation (EvaluationScopes (OldName m) (IM m)) (OldName m)) o, p) ->
+    m (Top WorkArea (NewName m) (IM m) o (Payload (Annotation (EvaluationScopes (NewName m) (IM m)) (NewName m)) o, p))
 toWorkArea = walk
