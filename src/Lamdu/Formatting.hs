@@ -3,6 +3,7 @@ module Lamdu.Formatting
     , formatTextContents
     ) where
 
+import qualified Control.Lens as Lens
 import           Control.Monad (mplus)
 import qualified Data.ByteString.Base16 as Hex
 import qualified Data.Char as Char
@@ -30,7 +31,7 @@ class Format a where
 instance Format ByteString where
     tryParse str =
         case Text.uncons str of
-        Just ('#', xs) -> encodeUtf8 xs & Hex.decode & either (const Nothing) Just
+        Just ('#', xs) -> Hex.decode (encodeUtf8 xs) ^? Lens._Right
         _ -> Nothing
     format bs = Text.cons '#' $ decodeUtf8 (Hex.encode bs)
 

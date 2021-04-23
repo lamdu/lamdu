@@ -1,5 +1,5 @@
 {-# LANGUAGE TemplateHaskell, TypeApplications, RecordWildCards, ScopedTypeVariables #-}
-{-# LANGUAGE GADTs, MultiParamTypeClasses, FlexibleInstances, DefaultSignatures, TypeApplications #-}
+{-# LANGUAGE MultiParamTypeClasses, FlexibleInstances, DefaultSignatures #-}
 
 module Lamdu.Sugar.Eval
     ( addEvaluationResults

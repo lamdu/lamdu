@@ -1,5 +1,5 @@
 {-# LANGUAGE TypeApplications, FlexibleInstances, DefaultSignatures, MultiParamTypeClasses #-}
-{-# LANGUAGE ScopedTypeVariables, TypeFamilies, TupleSections #-}
+{-# LANGUAGE ScopedTypeVariables, TypeFamilies #-}
 
 module Lamdu.Sugar.Lens
     ( SugarExpr(..), Annotations(..), HAnnotations(..)
