@@ -5,8 +5,8 @@ module Lamdu.GUI.ParamEdit
 
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Reader as Reader
+import qualified GUI.Momentu as M
 import           GUI.Momentu.Align (TextWidget)
-import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.I18N as MomentuTexts
@@ -130,7 +130,7 @@ make annotationOpts prevId nextId (param, info) =
             <&> (Widget.widget %~)
             ?? Responsive.fromWithTextPos (iNameEdit info)
             <&> Widget.widget . Widget.eventMapMaker . Lens.mapped %~ (<> paramEventMap)
-            & Reader.local (Element.animIdPrefix .~ Widget.toAnimId myId)
+            & Reader.local (M.animIdPrefix .~ Widget.toAnimId myId)
         mAddParam <-
             GuiState.isSubCursor ?? addId
             <&> guard
@@ -140,6 +140,7 @@ make annotationOpts prevId nextId (param, info) =
             Nothing -> pure []
             Just addParam ->
                 TagEdit.makeTagHoleEdit addParam mkParamPickResult addId
+                & Reader.local (has . Menu.configKeys . Menu.keysPickOptionAndGotoNext <>~ [M.MetaKey M.noMods M.Key'Space])
                 & Styled.withColor TextColors.parameterColor
                 <&> Responsive.fromWithTextPos
                 <&> (:[])

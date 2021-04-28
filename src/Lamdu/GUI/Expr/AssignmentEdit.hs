@@ -28,6 +28,7 @@ import qualified GUI.Momentu.Responsive.Options as Options
 import qualified GUI.Momentu.State as GuiState
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Label as Label
+import qualified GUI.Momentu.Widgets.Menu as Menu
 import qualified GUI.Momentu.Widgets.TextView as TextView
 import qualified Lamdu.Annotations as Annotations
 import qualified Lamdu.Config as Config
@@ -288,6 +289,7 @@ makeMParamsEdit mScopeCursor isScopeNavFocused delVarBackwardsId myId bodyId add
             case addFirstParam of
             Sugar.PrependParam selection | isPrepend ->
                 TagEdit.makeTagHoleEdit selection ParamEdit.mkParamPickResult prependId
+                & Reader.local (has . Menu.configKeys . Menu.keysPickOptionAndGotoNext <>~ [M.MetaKey M.noMods M.Key'Space])
                 & Styled.withColor TextColors.parameterColor
                 <&> Responsive.fromWithTextPos
                 <&> (:[])
