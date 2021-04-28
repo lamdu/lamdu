@@ -38,7 +38,6 @@ convert c tag exprPl =
             >>= ConvertM . lift
     <&> c
     >>= addActions (Const ()) exprPl
-    <&> annotation . pActions . mApply .~ Nothing
     where
         entityId = exprPl ^. Input.entityId
         valI = exprPl ^. Input.stored . ExprIRef.iref
