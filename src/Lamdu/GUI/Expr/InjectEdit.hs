@@ -11,6 +11,7 @@ import           GUI.Momentu.Responsive (Responsive)
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.Responsive.Expression as ResponsiveExpr
 import qualified GUI.Momentu.State as GuiState
+import qualified GUI.Momentu.Widget as Widget
 import qualified Lamdu.Config as Config
 import qualified Lamdu.GUI.Expr.RecordEdit as RecordEdit
 import qualified Lamdu.GUI.Expr.TagEdit as TagEdit
@@ -41,6 +42,24 @@ data NullaryRecord o
     = HiddenNullaryRecord (E.EventMap (o GuiState.Update)) -- enter it
     | FocusedNullaryRecord (Responsive o)
 
+enterSubexpr :: _ => Widget.Id -> f (E.EventMap (o GuiState.Update))
+enterSubexpr myId =
+    Lens.view id <&>
+    \env ->
+    E.keysEventMapMovesCursor
+    (env ^. has . Config.enterSubexpressionKeys)
+    (E.toDoc env [has . MomentuTexts.navigation, has . Texts.enterSubexpression])
+    (pure myId)
+
+leaveSubexpr :: _ => Widget.Id -> f (E.EventMap (o GuiState.Update))
+leaveSubexpr myId =
+    Lens.view id <&>
+    \env ->
+    E.keysEventMapMovesCursor
+    (env ^. has . Config.leaveSubexpressionKeys)
+    (E.toDoc env [has . MomentuTexts.navigation, has . Texts.leaveSubexpression])
+    (pure myId)
+
 nullaryRecord ::
     _ =>
     Annotated (ExprGui.Payload i o) # Const (Sugar.TagChoice Name i o Sugar.EntityId) ->
@@ -50,14 +69,7 @@ nullaryRecord x =
         isActive <- GuiState.isSubCursor ?? myId
         if isActive
             then RecordEdit.makeEmpty x <&> FocusedNullaryRecord
-            else
-                Lens.view id <&>
-                \env ->
-                E.keysEventMapMovesCursor
-                (env ^. has . Config.enterSubexpressionKeys)
-                (E.toDoc env [has . MomentuTexts.navigation, has . Texts.enterSubexpression])
-                (pure myId)
-                & HiddenNullaryRecord
+            else enterSubexpr myId <&> HiddenNullaryRecord
     where
         myId = x ^. annotation . _1 & WidgetIds.fromExprPayload
 
@@ -68,11 +80,14 @@ makeNullary (Ann (Const pl) (Sugar.NullaryInject tag r)) =
         nullary <- nullaryRecord r
         rawInjectEdit <- injectTag tag <&> Responsive.fromWithTextPos
 
-        let widgets =
+        widgets <-
                 case nullary of
                 HiddenNullaryRecord enterNullary ->
-                    [M.weakerEvents enterNullary rawInjectEdit]
-                FocusedNullaryRecord w -> [rawInjectEdit, w]
+                    pure [M.weakerEvents enterNullary rawInjectEdit]
+                FocusedNullaryRecord w ->
+                    leaveSubexpr myId
+                    <&> \leaveEventMap ->
+                    [rawInjectEdit, Widget.weakerEvents leaveEventMap w]
 
         valEventMap <-
             case r ^. annotation . _1 . Sugar.plActions . Sugar.delete of
@@ -88,6 +103,7 @@ makeNullary (Ann (Const pl) (Sugar.NullaryInject tag r)) =
             ?? widgets
             <&> M.weakerEvents valEventMap
     & GuiState.assignCursor
-        (pl ^. _1 & WidgetIds.fromExprPayload)
-        (tag ^. Sugar.tagRefTag . Sugar.tagInstance & WidgetIds.fromEntityId)
+        myId (tag ^. Sugar.tagRefTag . Sugar.tagInstance & WidgetIds.fromEntityId)
     & Wrap.stdWrap pl
+    where
+        myId = pl ^. _1 & WidgetIds.fromExprPayload
