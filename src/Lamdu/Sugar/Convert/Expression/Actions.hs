@@ -176,12 +176,12 @@ makeActions exprPl =
             , _extract = ext
             , _mReplaceParent = Nothing
             , _mNewLet = outerPos <&> DataOps.redexWrap <&> fmap EntityId.ofValI
-            , _mApply = apply
+            , _mApply = Just apply
             }
     where
         stored = exprPl ^. Input.stored
 
-makeApply :: Monad m => Input.Payload m a # V.Term -> ConvertM m (Maybe (T m EntityId))
+makeApply :: Monad m => Input.Payload m a # V.Term -> ConvertM m (T m EntityId)
 makeApply pl =
     (,)
     <$> Lens.view ConvertM.scPostProcessRoot
@@ -196,7 +196,6 @@ makeApply pl =
     & ConvertM.typeProtect checkOk
     >>= maybe (DataOps.applyHoleTo (pl ^. Input.stored) <* postProcess) pure
     <&> EntityId.ofValI
-    & Just
 
 fragmentAnnIndex ::
     (Applicative f, Lens.Indexable j p) =>
