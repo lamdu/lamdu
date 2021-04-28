@@ -3,6 +3,7 @@ module Lamdu.GUI.Expr.InjectEdit
     ) where
 
 import qualified Control.Lens as Lens
+import           GUI.Momentu ((/|/))
 import qualified GUI.Momentu as M
 import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.I18N as MomentuTexts
@@ -15,9 +16,9 @@ import qualified Lamdu.GUI.Expr.RecordEdit as RecordEdit
 import qualified Lamdu.GUI.Expr.TagEdit as TagEdit
 import           Lamdu.GUI.Monad (GuiM)
 import           Lamdu.GUI.Styled (text, grammar)
-import qualified Lamdu.GUI.WidgetIds as WidgetIds
-import           Lamdu.GUI.Wrap (stdWrap)
 import qualified Lamdu.GUI.Types as ExprGui
+import qualified Lamdu.GUI.WidgetIds as WidgetIds
+import qualified Lamdu.GUI.Wrap as Wrap
 import qualified Lamdu.I18N.Code as Texts
 import qualified Lamdu.I18N.CodeUI as Texts
 import qualified Lamdu.I18N.Navigation as Texts
@@ -27,24 +28,28 @@ import qualified Lamdu.Sugar.Types as Sugar
 import           Lamdu.Prelude
 
 injectTag :: _ => Sugar.TagRef Name i o -> GuiM env i o (M.WithTextPos (M.Widget o))
-injectTag tag = grammar (text ["injectIndicator"] Texts.injectSymbol) M./|/ TagEdit.makeVariantTag tag
+injectTag tag = grammar (text ["injectIndicator"] Texts.injectSymbol) /|/ TagEdit.makeVariantTag tag
 
 make :: _ => Annotated (ExprGui.Payload i o) # Const (Sugar.TagRef Name i o) -> GuiM env i o (Responsive o)
 make (Ann (Const pl) (Const tag)) =
     maybe (pure id) (ResponsiveExpr.addParens ??) (ExprGui.mParensId pl)
     <*> injectTag tag
     <&> Responsive.fromWithTextPos
-    & stdWrap pl
+    & Wrap.stdWrap pl
+
+data NullaryRecord o
+    = HiddenNullaryRecord (E.EventMap (o GuiState.Update)) -- enter it
+    | FocusedNullaryRecord (Responsive o)
 
 nullaryRecord ::
     _ =>
     Annotated (ExprGui.Payload i o) # Const (Sugar.TagChoice Name i o Sugar.EntityId) ->
-    GuiM env i o (Either _ (Responsive o))
+    GuiM env i o (NullaryRecord o)
 nullaryRecord x =
     do
         isActive <- GuiState.isSubCursor ?? myId
         if isActive
-            then RecordEdit.makeEmpty x <&> Right
+            then RecordEdit.makeEmpty x <&> FocusedNullaryRecord
             else
                 Lens.view id <&>
                 \env ->
@@ -52,7 +57,7 @@ nullaryRecord x =
                 (env ^. has . Config.enterSubexpressionKeys)
                 (E.toDoc env [has . MomentuTexts.navigation, has . Texts.enterSubexpression])
                 (pure myId)
-                & Left
+                & HiddenNullaryRecord
     where
         myId = x ^. annotation . _1 & WidgetIds.fromExprPayload
 
@@ -61,9 +66,14 @@ makeNullary ::
 makeNullary (Ann (Const pl) (Sugar.NullaryInject tag r)) =
     do
         nullary <- nullaryRecord r
-        t <-
-            injectTag tag <&> Responsive.fromWithTextPos
-            <&> either M.weakerEvents (const id) nullary
+        rawInjectEdit <- injectTag tag <&> Responsive.fromWithTextPos
+
+        let widgets =
+                case nullary of
+                HiddenNullaryRecord enterNullary ->
+                    [M.weakerEvents enterNullary rawInjectEdit]
+                FocusedNullaryRecord w -> [rawInjectEdit, w]
+
         valEventMap <-
             case r ^. annotation . _1 . Sugar.plActions . Sugar.delete of
             Sugar.SetToHole a ->
@@ -73,9 +83,11 @@ makeNullary (Ann (Const pl) (Sugar.NullaryInject tag r)) =
                 (E.toDoc env [has . MomentuTexts.edit, has . Texts.injectValue])
                 (a <&> WidgetIds.fromEntityId)
             _ -> error "cannot set injected empty record to hole??"
-        ResponsiveExpr.boxSpacedMDisamb ?? ExprGui.mParensId pl ?? (t : nullary ^.. Lens._Right)
+        ResponsiveExpr.boxSpacedMDisamb
+            ?? ExprGui.mParensId pl
+            ?? widgets
             <&> M.weakerEvents valEventMap
     & GuiState.assignCursor
         (pl ^. _1 & WidgetIds.fromExprPayload)
         (tag ^. Sugar.tagRefTag . Sugar.tagInstance & WidgetIds.fromEntityId)
-    & stdWrap pl
+    & Wrap.stdWrap pl
