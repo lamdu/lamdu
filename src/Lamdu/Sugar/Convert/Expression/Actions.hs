@@ -5,8 +5,10 @@ module Lamdu.Sugar.Convert.Expression.Actions
     , makeTypeAnnotation, convertPayloads, convertPayload
     ) where
 
+import           Control.Applicative ((<|>))
 import qualified Control.Lens.Extended as Lens
 import           Control.Monad.Once (OnceT)
+import           Control.Monad.Trans.Maybe (MaybeT(..))
 import           Control.Monad.Transaction (MonadTransaction)
 import qualified Data.Map as Map
 import qualified Data.Property as Property
@@ -181,7 +183,7 @@ makeActions exprPl =
     where
         stored = exprPl ^. Input.stored
 
-makeApply :: Monad m => Input.Payload m a # V.Term -> ConvertM m (T m EntityId)
+makeApply :: forall m a. Monad m => Input.Payload m a # V.Term -> ConvertM m (T m EntityId)
 makeApply pl =
     (,)
     <$> Lens.view ConvertM.scPostProcessRoot
@@ -189,13 +191,31 @@ makeApply pl =
     <&>
     \(checkOk, postProcess) ->
     do
-        arg <- V.BLeaf V.LHole & ExprIRef.newValI
-        V.App (pl ^. Input.stored . ExprIRef.iref) arg & V.BApp & ExprIRef.newValI
-            >>= pl ^. Input.stored . ExprIRef.setIref
-        pure arg
-    & ConvertM.typeProtect checkOk
-    >>= maybe (DataOps.applyHoleTo (pl ^. Input.stored) <* postProcess) pure
-    <&> EntityId.ofValI
+        tryApp checkOk noop noop
+            <|> tryApp checkOk wrap noop -- prefer wrapping outside
+            <|> tryApp checkOk noop wrap -- then wrapping inside
+            <|> tryApp checkOk noop noop -- then both
+            & runMaybeT
+        -- if this doesn't type-check, it can be because stored is not applicable
+        -- OR because the type of its application mismatches the parent
+        >>= maybe (DataOps.applyHoleTo stored <* postProcess) pure
+        <&> EntityId.ofValI
+    where
+        tryApp checkOk outside inside =
+            do
+                holeArg <- V.BLeaf V.LHole & ExprIRef.newValI
+                thing <- inside (stored ^. ExprIRef.iref)
+                V.App thing holeArg & V.BApp & ExprIRef.newValI
+                    >>= outside
+                    >>= stored ^. ExprIRef.setIref
+                pure holeArg
+                & ConvertM.typeProtect checkOk
+                & MaybeT
+        noop :: ExprIRef.ValI m -> T m (ExprIRef.ValI m)
+        noop = pure
+        wrap :: ExprIRef.ValI m -> T m (ExprIRef.ValI m)
+        wrap iref = V.App <$> DataOps.newHole ?? iref <&> V.BApp >>= ExprIRef.newValI
+        stored = pl ^. Input.stored
 
 fragmentAnnIndex ::
     (Applicative f, Lens.Indexable j p) =>
