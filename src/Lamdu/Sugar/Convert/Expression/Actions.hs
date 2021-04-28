@@ -185,20 +185,15 @@ makeActions exprPl =
 
 makeApply :: forall m a. Monad m => Input.Payload m a # V.Term -> ConvertM m (T m EntityId)
 makeApply pl =
-    (,)
-    <$> Lens.view ConvertM.scPostProcessRoot
-    <*> ConvertM.postProcessAssert
-    <&>
-    \(checkOk, postProcess) ->
+    Lens.view ConvertM.scPostProcessRoot
+    <&> \checkOk ->
     do
         tryApp checkOk noop noop
             <|> tryApp checkOk wrap noop -- prefer wrapping outside
             <|> tryApp checkOk noop wrap -- then wrapping inside
-            <|> tryApp checkOk noop noop -- then both
+            <|> tryApp checkOk wrap wrap -- then both
             & runMaybeT
-        -- if this doesn't type-check, it can be because stored is not applicable
-        -- OR because the type of its application mismatches the parent
-        >>= maybe (DataOps.applyHoleTo stored <* postProcess) pure
+            <&> fromMaybe (error "Failed to type-check apply with fragments in&out of it")
         <&> EntityId.ofValI
     where
         tryApp checkOk outside inside =
