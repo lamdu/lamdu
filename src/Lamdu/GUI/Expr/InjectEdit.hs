@@ -40,8 +40,8 @@ make (Ann (Const pl) (Const tag)) =
     ( maybe (pure id) (ResponsiveExpr.addParens ??) (ExprGui.mParensId pl)
         <*> (injectTag tag <&> Lens.mapped %~ Widget.fromView)
         <&> Responsive.fromWithTextPos
-        & Wrap.stdWrap pl
     )
+    & Wrap.stdWrap pl
     where
         myId = pl ^. _1 & WidgetIds.fromExprPayload
 
