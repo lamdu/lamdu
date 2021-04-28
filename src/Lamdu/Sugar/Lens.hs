@@ -9,7 +9,7 @@ module Lamdu.Sugar.Lens
     , assignmentBodyAddFirstParam
     , binderFuncParamActions
     , binderResultExpr
-    , holeTransformExprs, holeOptionTransformExprs
+    , holeTransformExprs
     , getVarName
     , paneBinder
     ) where
