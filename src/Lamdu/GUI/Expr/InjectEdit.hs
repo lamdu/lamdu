@@ -13,10 +13,11 @@ import qualified GUI.Momentu.Responsive.Expression as ResponsiveExpr
 import qualified GUI.Momentu.State as GuiState
 import qualified GUI.Momentu.Widget as Widget
 import qualified Lamdu.Config as Config
+import qualified Lamdu.Config.Theme.TextColors as TextColors
 import qualified Lamdu.GUI.Expr.RecordEdit as RecordEdit
-import qualified Lamdu.GUI.Expr.TagEdit as TagEdit
 import           Lamdu.GUI.Monad (GuiM)
-import           Lamdu.GUI.Styled (text, grammar)
+import           Lamdu.GUI.Styled (text, grammar, withColor)
+import qualified Lamdu.GUI.TagView as TagView
 import qualified Lamdu.GUI.Types as ExprGui
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.GUI.Wrap as Wrap
@@ -28,15 +29,21 @@ import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
 
-injectTag :: _ => Sugar.TagRef Name i o -> GuiM env i o (M.WithTextPos (M.Widget o))
-injectTag tag = grammar (text ["injectIndicator"] Texts.injectSymbol) /|/ TagEdit.makeVariantTag tag
+injectTag :: _ => Sugar.TagRef Name i o -> GuiM env i o (M.WithTextPos M.View)
+injectTag tag =
+    grammar (text ["injectIndicator"] Texts.injectSymbol) /|/
+    withColor TextColors.caseTagColor (TagView.make (tag ^. Sugar.tagRefTag))
 
 make :: _ => Annotated (ExprGui.Payload i o) # Const (Sugar.TagRef Name i o) -> GuiM env i o (Responsive o)
 make (Ann (Const pl) (Const tag)) =
-    maybe (pure id) (ResponsiveExpr.addParens ??) (ExprGui.mParensId pl)
-    <*> injectTag tag
-    <&> Responsive.fromWithTextPos
-    & Wrap.stdWrap pl
+    (Widget.makeFocusableWidget ?? myId <&> (Widget.widget %~)) <*>
+    ( maybe (pure id) (ResponsiveExpr.addParens ??) (ExprGui.mParensId pl)
+        <*> (injectTag tag <&> Lens.mapped %~ Widget.fromView)
+        <&> Responsive.fromWithTextPos
+        & Wrap.stdWrap pl
+    )
+    where
+        myId = pl ^. _1 & WidgetIds.fromExprPayload
 
 data NullaryRecord o
     = HiddenNullaryRecord (E.EventMap (o GuiState.Update)) -- enter it
@@ -77,13 +84,17 @@ makeNullary ::
     _ => Annotated (ExprGui.Payload i o) # Sugar.NullaryInject Name i o -> GuiM env i o (Responsive o)
 makeNullary (Ann (Const pl) (Sugar.NullaryInject tag r)) =
     do
+        makeFocusable <- Widget.makeFocusableView
         nullary <- nullaryRecord r
-        rawInjectEdit <- injectTag tag <&> Responsive.fromWithTextPos
+        rawInjectEdit <-
+            injectTag tag <&> M.tValue %~ makeFocusable myId <&> Responsive.fromWithTextPos
 
         widgets <-
                 case nullary of
                 HiddenNullaryRecord enterNullary ->
-                    pure [M.weakerEvents enterNullary rawInjectEdit]
+                    pure
+                    [ rawInjectEdit & Widget.widget %~ M.weakerEvents enterNullary
+                    ]
                 FocusedNullaryRecord w ->
                     leaveSubexpr myId
                     <&> \leaveEventMap ->
@@ -102,8 +113,6 @@ makeNullary (Ann (Const pl) (Sugar.NullaryInject tag r)) =
             ?? ExprGui.mParensId pl
             ?? widgets
             <&> M.weakerEvents valEventMap
-    & GuiState.assignCursor
-        myId (tag ^. Sugar.tagRefTag . Sugar.tagInstance & WidgetIds.fromEntityId)
     & Wrap.stdWrap pl
     where
         myId = pl ^. _1 & WidgetIds.fromExprPayload
