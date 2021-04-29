@@ -3,7 +3,10 @@ module Lamdu.GUI.Expr.EventMap
     , Options(..), defaultOptions
     , extractCursor
     , addLetEventMap
-    , makeLiteralEventMap, makeLiteralNumberEventMap
+    , makeLiteralNumberEventMap
+    , makeLiteralTextEventMap
+    , makeRecordEventMap
+    , makeLiteralEventMap
     ) where
 
 import qualified Control.Lens as Lens

@@ -28,7 +28,7 @@ import qualified GUI.Momentu.Widgets.TextEdit.Property as TextEdits
 import qualified GUI.Momentu.Widgets.TextView as TextView
 import qualified Lamdu.Config as Config
 import           Lamdu.Formatting (Format(..))
-import           Lamdu.GUI.Expr.EventMap (makeLiteralEventMap)
+import qualified Lamdu.GUI.Expr.EventMap as ExprEventMap
 import qualified Lamdu.GUI.Expr.HoleEdit.WidgetIds as HoleWidgetIds
 import           Lamdu.GUI.Monad (GuiM)
 import           Lamdu.GUI.Styled (label)
@@ -198,7 +198,7 @@ numEdit prop pl =
                 _ -> mempty
         newLiteralEvent <-
             if Text.null text
-            then makeLiteralEventMap ?? pl ^. Sugar.plActions
+            then makeLiteralTextOrRecordEventMap ?? pl ^. Sugar.plActions
             else pure mempty
         TextEdit.make ?? empty ?? text ?? innerId
             <&> M.tValue . Widget.eventMapMaker . Lens.mapped %~
@@ -223,6 +223,12 @@ numEdit prop pl =
             , TextEdit._focused = ""
             }
         myId = WidgetIds.fromExprPayload pl
+
+makeLiteralTextOrRecordEventMap :: _ => m (Sugar.NodeActions o -> EventMap (o GuiState.Update))
+makeLiteralTextOrRecordEventMap =
+    (<>)
+    <$> (ExprEventMap.makeLiteralTextEventMap <&> (. (^. Sugar.setToLiteral)))
+    <*> (ExprEventMap.makeRecordEventMap <&> (. (^. Sugar.setToEmptyRecord)))
 
 make ::
     _ =>
