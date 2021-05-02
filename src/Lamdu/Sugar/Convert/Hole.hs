@@ -231,7 +231,7 @@ mkNominalOptions nominals =
         mkToNomInjections tid nominal =
             nominal ^..
             nScheme . sTyp . _Pure . T._TVariant .
-            T.flatRow . freExtends >>= Map.keys
+            T.flatRow . freExtends . Lens.itraversed . Lens.asIndex
             <&> V.BLeafP . V.LInject
             <&> (`V.BAppP` V.BLeafP V.LHole)
             <&> V.BToNomP tid
