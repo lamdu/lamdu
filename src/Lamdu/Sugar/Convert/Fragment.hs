@@ -182,7 +182,7 @@ convertAppliedHole posInfo app@(V.App funcI argI) exprPl argS =
             BodyFragment Fragment
                 { _fExpr =
                     argS
-                    & annotation . pActions . detach .~ FragmentExprAlready storedEntityId
+                    & annotation . pActions . detach .~ FragmentedAlready storedEntityId
                     & annotation . pActions . delete .~
                         SetToHole
                         (DataOps.setToHole stored <* postProcess <&> EntityId.ofValI)
@@ -197,7 +197,7 @@ convertAppliedHole posInfo app@(V.App funcI argI) exprPl argS =
                 } & pure
             >>= Actions.addActions app exprPl
             & lift
-        <&> annotation . pActions . detach .~ FragmentAlready storedEntityId
+        <&> annotation . pActions . detach .~ FragmentedAlready storedEntityId
     where
         argPl = argS ^. annotation . pInput
         argIRef = argI ^. hAnn . Input.stored . iref

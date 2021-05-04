@@ -12,7 +12,7 @@ module Lamdu.Sugar.Types.Parts
     , -- Annotations
       Annotation(..), _AnnotationVal, _AnnotationType, _AnnotationNone
     -- Node actions
-    , DetachAction(..), _FragmentAlready, _FragmentExprAlready, _DetachAction
+    , DetachAction(..), _FragmentedAlready, _DetachAction
     , Delete(..), _SetToHole, _Delete, _CannotDelete
     , NodeActions(..)
         , detach, delete, setToLiteral, setToEmptyRecord
@@ -91,8 +91,7 @@ data ExtractDestination
     | ExtractToDef EntityId
 
 data DetachAction o
-    = FragmentAlready EntityId -- I'm an apply-of-hole, no need to detach
-    | FragmentExprAlready EntityId -- I'm an arg of apply-of-hole, no need to detach
+    = FragmentedAlready EntityId -- Already a fragment, its expr or hole
     | DetachAction (o EntityId) -- Detach me
     deriving Generic
 

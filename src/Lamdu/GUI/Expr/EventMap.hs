@@ -206,8 +206,7 @@ transformEventMap =
                 where
                     detachAndOpen =
                         detach <&> WidgetIds.fromEntityId <&> WidgetIds.fragmentHoleId
-            Sugar.FragmentAlready holeId -> widgetId holeId <&> WidgetIds.fragmentHoleId
-            Sugar.FragmentExprAlready holeId -> widgetId holeId <&> WidgetIds.fragmentHoleId
+            Sugar.FragmentedAlready holeId -> widgetId holeId <&> WidgetIds.fragmentHoleId
     in
     transform exprInfo eventCtx
     <&> SearchMenu.enterWithSearchTerm
