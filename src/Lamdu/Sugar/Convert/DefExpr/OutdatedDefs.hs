@@ -4,7 +4,7 @@ module Lamdu.Sugar.Convert.DefExpr.OutdatedDefs
     ) where
 
 import           Control.Applicative ((<|>))
-import qualified Control.Lens as Lens
+import qualified Control.Lens.Extended as Lens
 import           Control.Monad (foldM)
 import qualified Data.Map as Map
 import qualified Data.Monoid as Monoid
@@ -137,11 +137,11 @@ changeFields ::
     (IsHoleArg -> Ann (HRef m) # V.Term -> T m ()) ->
     T m ()
 changeFields changes arg go
-    | Map.null changes = go NotHoleArg arg
+    | Lens.hasn't traverse changes = go NotHoleArg arg
     | otherwise =
         case arg ^. hVal of
         V.BRecExtend (RowExtend tag fieldVal rest) ->
-            case Map.lookup tag changes of
+            case changes ^. Lens.at tag of
             Nothing ->
                 do
                     go NotHoleArg fieldVal
@@ -149,7 +149,7 @@ changeFields changes arg go
             Just fieldChange ->
                 do
                     fixArg fieldChange fieldVal go
-                    changeFields (Map.delete tag changes) rest go
+                    changeFields (changes & Lens.at tag .~ Nothing) rest go
         _ -> fixArg ArgChange arg go
 
 changeFuncArg :: Monad m => ArgChange -> V.Var -> Ann (HRef m) # V.Term -> T m ()
@@ -242,23 +242,24 @@ scan ::
     T m PostProcess.Result ->
     T m (Map V.Var (Sugar.DefinitionOutdatedType InternalName (T m) ()))
 scan entityId defExpr setDefExpr typeCheck =
-    defExpr ^. Def.exprFrozenDeps . depsGlobalTypes
-    & Map.toList & traverse (uncurry scanDef) <&> mconcat
+    defExpr ^@.. Def.exprFrozenDeps . depsGlobalTypes . Lens.itraversed
+    & traverse (uncurry scanDef) <&> mconcat
     where
         scanDef globalVar usedType =
             ExprIRef.defI globalVar & Transaction.readIRef
             <&> (^. Def.defType)
             >>= processDef globalVar usedType
         processDef globalVar usedType newUsedDefType
-            | alphaEq usedType newUsedDefType = pure Map.empty
+            | alphaEq usedType newUsedDefType = pure mempty
             | otherwise =
                 do
                     usedTypeS <- ConvertType.convertScheme (EntityId.usedTypeOf entityId) usedType
                     currentTypeS <- ConvertType.convertScheme (EntityId.currentTypeOf entityId) newUsedDefType
-                    Sugar.DefinitionOutdatedType
+                    globalVar Lens.~~>
+                        Sugar.DefinitionOutdatedType
                         { Sugar._defTypeWhenUsed = usedTypeS
                         , Sugar._defTypeCurrent = currentTypeS
                         , Sugar._defTypeUseCurrent =
                             updateDefType usedType newUsedDefType globalVar
                             defExpr setDefExpr typeCheck
-                        } & Map.singleton globalVar & pure
+                        } & pure

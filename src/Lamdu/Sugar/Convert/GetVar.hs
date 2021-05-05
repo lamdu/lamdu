@@ -10,7 +10,6 @@ import           Control.Monad.Trans.Except.Extended (runMatcherT, justToLeft)
 import           Control.Monad.Trans.Maybe (MaybeT)
 import           Control.Monad.Transaction (MonadTransaction, getP, setP)
 import qualified Control.Monad.Transaction as Transaction
-import qualified Data.Map as Map
 import           Data.Maybe.Extended (maybeToMPlus)
 import qualified Data.Property as Property
 import qualified Data.Set as Set
@@ -165,7 +164,7 @@ convertParamsRecord param exprPl =
     { _prvFieldNames =
         exprPl
         ^.. Input.inferredType . _Pure . T._TRecord . T.flatRow
-        . freExtends . Lens.to Map.toList . traverse . _1
+        . freExtends . Lens.itraversed . Lens.asIndex
         <&> nameWithContext Nothing param
     } <$ check
     where

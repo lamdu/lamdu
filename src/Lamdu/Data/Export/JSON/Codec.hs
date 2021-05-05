@@ -133,6 +133,7 @@ encodeIdentMap getIdent encode m =
     & Map.mapKeys (identHex . getIdent)
     & Aeson.toJSON
 
+{-# ANN decodeIdentMap ("HLint: ignore Use ^@.." :: String) #-}
 decodeIdentMap ::
     (Aeson.FromJSON j, Ord k) =>
     (Identifier -> k) -> (j -> AesonTypes.Parser a) -> Decoder (Map k a)

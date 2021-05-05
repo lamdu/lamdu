@@ -43,7 +43,7 @@ verifyTagsTest =
     >>= verifyTagNames . fmap (^. name)
     where
         verifyHasName (tagId, tag)
-            | Map.null (tag ^. tagTexts) && tag ^. tagSymbol == NoSymbol =
+            | Lens.hasn't (tagTexts . traverse) tag && tag ^. tagSymbol == NoSymbol =
                 fail ("stdlib tag with no name:" <> show tagId)
             | "" `elem` tag ^.. tagTexts . traverse . name =
                 fail ("empty name for tag:" <> show tagId)
@@ -105,8 +105,8 @@ verifyNoBrokenDefsTest =
 
 verifyDefs :: (T.Tag -> Text) -> [Def.Definition v (presMode, T.Tag, V.Var)] -> IO ()
 verifyDefs tagName defs =
-    defs ^.. Lens.folded . Def.defBody . Def._BodyExpr . Def.exprFrozenDeps . depsGlobalTypes
-    <&> Map.toList & concat
+    defs
+    ^@.. traverse . Def.defBody . Def._BodyExpr . Def.exprFrozenDeps . depsGlobalTypes . Lens.itraversed
     & traverse_ (uncurry verifyGlobalType)
     where
         defTypes =

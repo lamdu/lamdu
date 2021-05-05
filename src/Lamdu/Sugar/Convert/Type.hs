@@ -5,8 +5,8 @@ module Lamdu.Sugar.Convert.Type
     , convertScheme
     ) where
 
+import qualified Control.Lens as Lens
 import           Control.Monad.Transaction (MonadTransaction)
-import qualified Data.Map as Map
 import           Hyper.Type.AST.FuncType (FuncType(..))
 import           Hyper.Type.AST.Nominal (NominalInst(..))
 import           Hyper.Type.AST.Row (RowExtend(..))
@@ -50,11 +50,11 @@ convertType entityId typ =
         <*> convertType (ofFunResult entityId) res
         <&> TFun
     T.TInst (NominalInst tid args)
-        | Map.null rParams ->
+        | Lens.has traverse rParams -> error "Currently row-params are unsupported"
+        | otherwise ->
             TInst
             <$> ConvertTId.convert tid
-            <*> (Map.toList tParams & traverse convertTypeParam)
-        | otherwise -> error "Currently row-params are unsupported"
+            <*> traverse convertTypeParam (tParams ^@.. Lens.itraversed)
         where
             T.Types (S.QVarInstances tParams) (S.QVarInstances rParams) = args
             convertTypeParam (tv, val) =

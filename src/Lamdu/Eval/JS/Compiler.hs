@@ -484,9 +484,9 @@ compileRecExtend x =
         Flatten.Composite tags mRest <-
             Flatten.recExtend x & Lens.traverse (compileVal NotTailCall)
         extends <-
-            Map.toList tags
+            tags ^@.. Lens.itraversed
             <&> _2 %~ codeGenExpression
-            & Lens.traversed . _1 %%~ fmap JS.propId . tagIdent
+            & (traverse . _1) (fmap JS.propId . tagIdent)
             <&> JS.object
         case mRest of
             Nothing -> codeGenFromExpr extends
@@ -519,7 +519,7 @@ compileCaseOnVar ::
     JSS.Expression () -> M m [JSS.Statement ()]
 compileCaseOnVar isTail valId x scrutineeVar =
     do
-        tagsStr <- Map.toList tags & Lens.traverse . _1 %%~ tagString
+        tagsStr <- tags ^@.. Lens.itraversed & (traverse . _1) tagString
         cases <- traverse makeCase tagsStr
         defaultCase <-
             case mRestHandler of

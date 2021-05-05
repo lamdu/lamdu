@@ -5,7 +5,6 @@ module Lamdu.Sugar.Convert.Binder.Float
     ) where
 
 import qualified Control.Lens as Lens
-import qualified Data.Map as Map
 import qualified Data.Property as Property
 import qualified Data.Set as Set
 import           Hyper
@@ -160,9 +159,9 @@ addLetParam var redex =
         case redex ^. Redex.arg . hAnn . Input.inferredType . _Pure of
         T.TFun (FuncType (Pure (T.TRecord composite)) _)
             | FlatRowExtends fieldsMap (Pure T.REmpty) <- composite ^. T.flatRow
-            , let fields = Map.toList fieldsMap
             , Params.isParamAlwaysUsedWithGetField lam ->
-            addFieldToLetParamsRecord (fields <&> fst) var (storedRedex ^. Redex.lam) storedLam
+            addFieldToLetParamsRecord (fieldsMap ^.. Lens.itraversed . Lens.asIndex)
+            var (storedRedex ^. Redex.lam) storedLam
         _ -> convertLetParamToRecord var (storedRedex ^. Redex.lam) storedLam
         where
             storedLam = Params.StoredLam lam (storedRedex ^. Redex.arg . hAnn)
@@ -186,12 +185,12 @@ processLet redex =
         let usedLocalVars =
                 redex ^.. Redex.arg . ExprLens.valLeafs . V._LVar
                 & ordNub
-                & filter (`Set.member` innerScopeLocalVars)
+                & filter ((innerScopeLocalVars ^.) . Lens.contains)
         let varsExitingScope =
                 case scopeInfo ^. ConvertM.siMOuter of
                 Nothing -> usedLocalVars
                 Just outerScopeInfo ->
-                    filter (`Map.notMember` outerScope) usedLocalVars
+                    filter ((`Lens.hasn't` outerScope) . Lens.ix) usedLocalVars
                     where
                         outerScope = outerScopeInfo ^. ConvertM.osiScope . V.scopeVarTypes
         case varsExitingScope of

@@ -92,7 +92,7 @@ run store (Transaction transaction) = do
         transaction
         & (`runReaderT` Askable store mempty)
         & (`runStateT` mempty)
-    storeAtomicWrite store $ Map.toList changes
+    storeAtomicWrite store (changes ^@.. Lens.itraversed)
     pure res
 
 newtype Changes = Changes ChangesMap

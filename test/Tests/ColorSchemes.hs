@@ -1,6 +1,7 @@
 {-# LANGUAGE TypeApplications #-}
 module Tests.ColorSchemes (test) where
 
+import qualified Control.Lens as Lens
 import qualified Control.Monad.Trans.FastWriter as Writer
 import           Data.Aeson.Config (load)
 import           Data.Data.Lens (template)
@@ -30,7 +31,7 @@ verifyTheme filename =
             | otherwise =
                 assertString
                 ("Too many saturation options in theme " ++ filename ++ ":\n" ++
-                prettyShow (Map.toList saturations))
+                prettyShow (saturations ^@.. Lens.itraversed))
             where
                 saturations =
                     colors <&> (\c -> (roundIn 0.001 (colorSat c), [c]))

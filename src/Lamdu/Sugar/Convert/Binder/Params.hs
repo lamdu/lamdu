@@ -11,7 +11,7 @@ module Lamdu.Sugar.Convert.Binder.Params
     , mkVarInfo
     ) where
 
-import qualified Control.Lens as Lens
+import qualified Control.Lens.Extended as Lens
 import           Control.Monad.Once (OnceT)
 import           Control.Monad.Transaction (MonadTransaction, getP, setP)
 import qualified Data.List.Extended as List
@@ -340,9 +340,7 @@ fpIdEntityId param = EntityId.ofTaggedEntity param . fpTag
 
 mkParamInfo :: V.Var -> FieldParam -> Map T.Tag ConvertM.TagParamInfo
 mkParamInfo param fp =
-    fpIdEntityId param fp
-    & ConvertM.TagParamInfo param
-    & Map.singleton (fpTag fp)
+    fpTag fp Lens.~~> ConvertM.TagParamInfo param (fpIdEntityId param fp)
 
 changeGetFieldTags ::
     Monad m =>
@@ -691,7 +689,7 @@ convertNonRecordParam binderKind lam@(V.TypedLam param _ _) lamExprPl =
                         <&> PrependParam
         pure ConventionalParams
             { cpTags = mempty
-            , _cpParamInfos = Map.empty
+            , _cpParamInfos = mempty
             , _cpParams = Just funcParam
             , _cpAddFirstParam = addFirstParam
             , cpMLamParam = Just (lamExprPl ^. Input.entityId, param)
@@ -748,7 +746,7 @@ convertNonEmptyParams mPresMode binderKind lambda lambdaPl =
             T.TFun (FuncType (Pure (T.TRecord composite)) _)
                 | sugarParamsRecord
                 , FlatRowExtends fieldsMap (Pure T.REmpty) <- composite ^. T.flatRow
-                , let fields = Map.toList fieldsMap
+                , let fields = fieldsMap ^@.. Lens.itraversed
                 , List.isLengthAtLeast 2 fields
                 , isParamAlwaysUsedWithGetField lambda
                 , let myTags = fields <&> fst & Set.fromList
