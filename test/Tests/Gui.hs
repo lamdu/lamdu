@@ -132,6 +132,8 @@ mApplyEvent env virtCursor event workArea =
                 { Widget._eVirtualCursor = virtCursor
                 , Widget._ePrevTextRemainder = ""
                 }
+        traceM $ "Cursor is at " ++ show (env ^. cursor)
+        traceM $ "Applying " ++ show event
         E.lookup (Identity Nothing) event eventMap
             & runIdentity
             <&> (^. E.dhHandler)
