@@ -15,11 +15,20 @@ let config = {
                         momentu = self.callPackage ./nix/momentu.nix {};
                         lamdu-calculus = self.callPackage ./nix/lamdu-calculus.nix {};
                         nodejs-exec = self.callPackage ./nix/nodejs-exec.nix {};
+                        cryptohash-md5 =
+                            haskell.lib.dontCheck
+                            (self.callHackage "cryptohash-md5" "0.11.100.1" {});
+                        cryptohash-sha1 =
+                            haskell.lib.dontCheck
+                            (self.callHackage "cryptohash-sha1" "0.11.100.1" {});
                         language-ecmascript = haskell.lib.dontCheck (self.callHackageDirect
                             { pkg = "language-ecmascript";
                               ver = "0.19.1.0";
                               sha256 = "0mbwz6m9666l7kmg934205gxw1627s3yzk4w9zkpr0irx7xqml5i";
                             } {});
+                        base16-bytestring =
+                            haskell.lib.dontCheck
+                            (self.callHackage "base16-bytestring" "1.0.1.0" {});
                     };
                 };
             };

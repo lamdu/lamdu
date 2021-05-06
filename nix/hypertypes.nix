@@ -1,4 +1,4 @@
-{ mkDerivation, base, base-compat, base16-bytestring, binary
+{ mkDerivation, base, base-compat, binary
 , constraints, containers, deepseq, fetchFromGitHub, generic-data, lattices, lens, monad-st
 , mtl, one-liner, pretty, QuickCheck, show-combinators, template-haskell, th-abstraction
 , transformers, stdenv, generic-constraints
