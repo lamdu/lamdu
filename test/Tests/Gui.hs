@@ -137,14 +137,14 @@ mApplyEvent env virtCursor event workArea =
             <&> (^. E.dhHandler)
             & sequenceA & lift
 
-applyEventWith :: String -> Env -> VirtualCursor -> Event -> OnceT (T ViewM) Env
+applyEventWith :: HasCallStack => String -> Env -> VirtualCursor -> Event -> OnceT (T ViewM) Env
 applyEventWith msg env virtCursor event =
     convertWorkArea env
     >>= mApplyEvent env virtCursor event
     <&> fromMaybe (error msg)
     <&> (`GuiState.update` env)
 
-applyEvent :: Env -> VirtualCursor -> Event -> OnceT (T ViewM) Env
+applyEvent :: HasCallStack => Env -> VirtualCursor -> Event -> OnceT (T ViewM) Env
 applyEvent = applyEventWith "no event in applyEvent"
 
 fromWorkArea ::
@@ -183,7 +183,7 @@ simpleKeyEvent (MetaKey mods key) =
 
 -- | Test for issue #411
 -- https://trello.com/c/IF6kY9AZ/411-deleting-lambda-parameter-red-cursor
-testLambdaDelete :: Test
+testLambdaDelete :: HasCallStack => Test
 testLambdaDelete =
     testCase "delete-lambda" $
     Env.make >>=
@@ -208,7 +208,7 @@ topLevelLamParamCursor env =
 
 -- | Test for regression in creating new tags when there are tags matching the search string.
 -- (regression introduced at 2020.11.12 in 7bf691ce675f897)
-testNewTag :: Test
+testNewTag :: HasCallStack => Test
 testNewTag =
     testCase "new-tag" $
     Env.make >>=
@@ -264,7 +264,7 @@ testOpPrec =
 
 -- | Test for
 -- https://trello.com/c/uLlMpi5g/509-when-picking-record-tag-makes-the-field-pun-it-causes-red-cursor
-testPunCursor :: Test
+testPunCursor :: HasCallStack => Test
 testPunCursor =
     testCase "pun-cursor" $
     Env.make >>=
@@ -493,13 +493,13 @@ charEvent '\n' = EventKey (KeyEvent GLFW.Key'Enter 0 GLFW.KeyState'Pressed mempt
 charEvent '\t' = EventKey (KeyEvent GLFW.Key'Tab 0 GLFW.KeyState'Pressed mempty)
 charEvent x = EventChar x
 
-applyActions :: String -> Env.Env -> OnceT (T ViewM) Env.Env
+applyActions :: HasCallStack => String -> Env.Env -> OnceT (T ViewM) Env.Env
 applyActions [] env = pure env
 applyActions (x:xs) env =
     applyEventWith ("No char " <> show x) env dummyVirt (charEvent x)
     >>= applyActions xs
 
-wytiwys :: String -> ByteString -> Test
+wytiwys :: HasCallStack => String -> ByteString -> Test
 wytiwys src result =
     Env.make
     >>= testFresh . (>> lift (readRepl >>= ExportJS.compile)) . applyActions src
@@ -507,7 +507,7 @@ wytiwys src result =
     >>= assertEqual "Expected output" (result <> "\n")
     & testCase src
 
-testWYTIWYS :: Test
+testWYTIWYS :: HasCallStack => Test
 testWYTIWYS =
     testGroup "WYTIWYS"
     [ wytiwys "1+1" "2"
