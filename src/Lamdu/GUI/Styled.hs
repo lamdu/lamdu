@@ -28,6 +28,7 @@ import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.Font as Font
 import qualified GUI.Momentu.View as View
 import qualified GUI.Momentu.Widget as Widget
+import qualified GUI.Momentu.Widgets.Clickable as Clickable
 import qualified GUI.Momentu.Widgets.TextView as TextView
 import           Graphics.DrawingCombinators.Extended ((%%))
 import qualified Graphics.DrawingCombinators.Extended as GLDraw
@@ -153,8 +154,8 @@ actionable myId txtLens doc action =
                 }
         actionKeys <- Lens.view (has . Config.actionKeys)
         let eventMap = E.keysEventMapMovesCursor actionKeys doc action
-        (Widget.makeFocusableView ?? myId <&> (Align.tValue %~))
-            <*> label txtLens
+        Lens.view has <&> (^. txtLens)
+            >>= Clickable.makeText myId (Clickable.Config action doc actionKeys)
             & Reader.local (TextView.color .~ color)
             & Reader.local (TextView.underline ?~ underline)
             <&> Align.tValue %~ Widget.weakerEvents eventMap

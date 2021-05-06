@@ -142,6 +142,7 @@ definitionTypeChangeBox info getVarId =
                 [has . MomentuTexts.edit, has . Texts.updateDefType]
         oldTypeRow <- Styled.info (label Texts.defUpdateWas)
         newTypeRow <-
+            -- TODO: Only actionable when focused with hover?
             Styled.actionable myId Texts.defUpdateHeader
             updateDoc update
             M./|/ Spacer.stdHSpace
