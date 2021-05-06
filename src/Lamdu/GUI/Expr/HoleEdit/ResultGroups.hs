@@ -213,4 +213,9 @@ groupOrdering searchTerm group =
 holeMatches :: Text -> [Group i o] -> [Group i o]
 holeMatches searchTerm groups
     | Text.null searchTerm = groups
-    | otherwise = sortOn (groupOrdering searchTerm) groups
+    | otherwise =
+          groups
+          <&> (\group -> (groupOrdering searchTerm group, group))
+          & filter (any not . fst)
+          & sortOn fst
+          <&> snd
