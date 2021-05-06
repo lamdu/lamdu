@@ -242,6 +242,7 @@ genLamVar = Transaction.newKey <&> V.Var . Identifier . BS.strictify . UUID.toBy
 mkBaseForms :: Monad m => ConvertM.PositionInfo -> T m [HPlain V.Term]
 mkBaseForms posInfo =
     [ genLamVar <&> \v -> V.BLamP v Pruned (V.BLeafP V.LHole)
+    , V.BLeafP V.LRecEmpty & pure
     , V.BLeafP V.LAbsurd & pure
     ] <>
     [ genLamVar <&> \v -> V.BLamP v Pruned (V.BLeafP V.LHole) `V.BAppP` V.BLeafP V.LHole

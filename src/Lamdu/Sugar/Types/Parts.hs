@@ -15,8 +15,7 @@ module Lamdu.Sugar.Types.Parts
     , DetachAction(..), _FragmentedAlready, _DetachAction
     , Delete(..), _SetToHole, _Delete, _CannotDelete
     , NodeActions(..)
-        , detach, delete, setToLiteral, setToEmptyRecord
-        , extract, mReplaceParent, mNewLet, mApply
+        , detach, delete, setToLiteral, extract, mReplaceParent, mNewLet, mApply
     , -- Let
       ExtractDestination(..)
     , -- Binders
@@ -107,7 +106,6 @@ data NodeActions o = NodeActions
     { _detach :: DetachAction o
     , _delete :: Delete o
     , _setToLiteral :: Literal Identity -> o EntityId
-    , _setToEmptyRecord :: o EntityId
     , _extract :: o ExtractDestination
     , _mReplaceParent :: Maybe (o EntityId)
     , _mNewLet :: Maybe (o EntityId)

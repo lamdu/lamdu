@@ -194,7 +194,7 @@ unicodeAlts haystack =
         extras '≥' = [">="]
         extras '≤' = ["<="]
         extras '≠' = ["/=", "!=", "<>"]
-        extras '⋲' = ["<"]
+        extras '⋲' = ["<{"]
         extras _ = []
 
 groupOrdering :: Text -> Group i o -> [Bool]

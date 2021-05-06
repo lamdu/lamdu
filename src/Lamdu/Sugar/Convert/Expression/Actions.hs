@@ -144,19 +144,6 @@ makeSetToLiteral exprPl =
         _ <- setToVal (exprPl ^. Input.stored) l
         EntityId.ofValI l & pure
 
-makeSetToEmptyRecord ::
-    Monad m =>
-    Input.Payload m a # V.Term -> ConvertM m (T m EntityId)
-makeSetToEmptyRecord exprPl =
-    ConvertM.typeProtectedSetToVal <&>
-    \setToVal ->
-    EntityId.ofValI i <$
-    do
-        V.BLeaf V.LRecEmpty & ExprIRef.writeValI i
-        setToVal (exprPl ^. Input.stored) i
-    where
-        i = exprPl ^. Input.stored . ExprIRef.iref
-
 makeActions ::
     Monad m =>
     Input.Payload m a # V.Term -> ConvertM m (NodeActions (T m))
@@ -168,13 +155,11 @@ makeActions exprPl =
             Lens.view (ConvertM.scScopeInfo . ConvertM.siMOuter)
             <&> (^? Lens._Just . ConvertM.osiPos)
         setToLit <- makeSetToLiteral exprPl
-        setToRec <- makeSetToEmptyRecord exprPl
         apply <- makeApply exprPl
         pure NodeActions
             { _detach = DataOps.applyHoleTo stored <* postProcess <&> EntityId.ofValI & DetachAction
             , _delete = DataOps.setToHole stored <* postProcess <&> EntityId.ofValI & SetToHole
             , _setToLiteral = setToLit
-            , _setToEmptyRecord = setToRec
             , _extract = ext
             , _mReplaceParent = Nothing
             , _mNewLet = outerPos <&> DataOps.redexWrap <&> fmap EntityId.ofValI

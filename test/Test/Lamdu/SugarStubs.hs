@@ -226,7 +226,6 @@ nodeActions =
     { Sugar._detach = Sugar.DetachAction Unit
     , Sugar._delete = Sugar.CannotDelete
     , Sugar._setToLiteral = pure Unit
-    , Sugar._setToEmptyRecord = Unit
     , Sugar._extract = Unit
     , Sugar._mReplaceParent = Nothing
     , Sugar._mNewLet = Nothing

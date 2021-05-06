@@ -198,7 +198,7 @@ numEdit prop pl =
                 _ -> mempty
         newLiteralEvent <-
             if Text.null text
-            then makeLiteralTextOrRecordEventMap ?? pl ^. Sugar.plActions
+            then ExprEventMap.makeLiteralTextEventMap ?? pl ^. Sugar.plActions . Sugar.setToLiteral
             else pure mempty
         TextEdit.make ?? empty ?? text ?? innerId
             <&> M.tValue . Widget.eventMapMaker . Lens.mapped %~
@@ -223,12 +223,6 @@ numEdit prop pl =
             , TextEdit._focused = ""
             }
         myId = WidgetIds.fromExprPayload pl
-
-makeLiteralTextOrRecordEventMap :: _ => m (Sugar.NodeActions o -> EventMap (o GuiState.Update))
-makeLiteralTextOrRecordEventMap =
-    (<>)
-    <$> (ExprEventMap.makeLiteralTextEventMap <&> (. (^. Sugar.setToLiteral)))
-    <*> (ExprEventMap.makeRecordEventMap <&> (. (^. Sugar.setToEmptyRecord)))
 
 make ::
     _ =>

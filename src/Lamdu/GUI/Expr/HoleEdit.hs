@@ -42,7 +42,7 @@ make (Ann (Const pl) (Const hole)) =
     do
         searchTerm <- SearchMenu.readSearchTerm searchMenuId
         let mkLitEventMap
-                | searchTerm == "" = ExprEventMap.makeLiteralEventMap ?? pl ^. Sugar.plActions
+                | searchTerm == "" = ExprEventMap.makeLiteralEventMap ?? pl ^. Sugar.plActions . Sugar.setToLiteral
                 | searchTerm == "-" = ExprEventMap.makeLiteralNumberEventMap "-" ?? pl ^. Sugar.plActions . Sugar.setToLiteral
                 | otherwise = mempty
         litEventMap <- mkLitEventMap

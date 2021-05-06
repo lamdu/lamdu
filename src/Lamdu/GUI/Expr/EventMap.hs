@@ -5,7 +5,6 @@ module Lamdu.GUI.Expr.EventMap
     , addLetEventMap
     , makeLiteralNumberEventMap
     , makeLiteralTextEventMap
-    , makeRecordEventMap
     , makeLiteralEventMap
     ) where
 
@@ -129,7 +128,7 @@ actionsEventMap options exprInfo =
         , actions ^. Sugar.delete & replaceEventMap
         , actions ^. Sugar.mNewLet & foldMap addLetEventMap
         , actions ^. Sugar.mApply & foldMap applyEventMap
-        , makeLiteralEventMap ?? actions
+        , makeLiteralEventMap ?? actions ^. Sugar.setToLiteral
         ] <&> const -- throw away EventContext here
     ) <> (transformEventMap ?? options ?? exprInfo)
     where
@@ -271,21 +270,5 @@ makeLiteralTextEventMap =
     (toDoc [has . MomentuTexts.edit, has . Texts.literalText]) "\""
     (const (makeLiteral (Sugar.LiteralText (Identity "")) <&> goToLiteral))
 
-makeRecordEventMap :: _ => m (o Sugar.EntityId -> EventMap (o GuiState.Update))
-makeRecordEventMap =
-    Lens.view id <&>
-    \env makeRec ->
-    E.charGroup Nothing
-    (E.toDoc env [has . MomentuTexts.edit, has . Texts.record])
-    ( case env ^. has of
-        Dir.LeftToRight -> "{"
-        Dir.RightToLeft -> "}"
-    ) (const (makeRec <&> WidgetIds.fromEntityId <&> GuiState.updateCursor))
-
-makeLiteralEventMap :: _ => m (Sugar.NodeActions o -> EventMap (o GuiState.Update))
-makeLiteralEventMap =
-    (<>)
-    <$> ( (<>) <$> makeLiteralTextEventMap <*> makeLiteralNumberEventMap ""
-            <&> (. (^. Sugar.setToLiteral))
-        )
-    <*> (makeRecordEventMap <&> (. (^. Sugar.setToEmptyRecord)))
+makeLiteralEventMap :: _ => m ((Sugar.Literal Identity -> o Sugar.EntityId) -> EventMap (o GuiState.Update))
+makeLiteralEventMap = (<>) <$> makeLiteralTextEventMap <*> makeLiteralNumberEventMap ""
