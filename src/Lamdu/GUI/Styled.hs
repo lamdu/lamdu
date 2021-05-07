@@ -154,7 +154,7 @@ actionable myId txtLens doc action =
                 }
         actionKeys <- Lens.view (has . Config.actionKeys)
         let eventMap = E.keysEventMapMovesCursor actionKeys doc action
-        Lens.view has <&> (^. txtLens)
+        Lens.view (has . txtLens)
             >>= Clickable.makeText myId (Clickable.Config action doc actionKeys)
             & Reader.local (TextView.color .~ color)
             & Reader.local (TextView.underline ?~ underline)

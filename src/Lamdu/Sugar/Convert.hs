@@ -10,7 +10,6 @@ import           Data.CurAndPrev (CurAndPrev(..))
 import           Data.List.Extended (insertAt, removeAt)
 import           Data.Property (Property(Property))
 import qualified Data.Property as Property
-import qualified Data.Set as Set
 import           Hyper
 import qualified Lamdu.Cache as Cache
 import qualified Lamdu.Calc.Term as V
@@ -322,6 +321,6 @@ loadWorkArea env cp =
             { _waRepl = repl
             , _waPanes = panes
             , _waGlobals =
-                Anchors.globals cp & Property.getP & lift <&> Set.toList
+                Anchors.globals cp & Property.getP & lift <&> (^.. Lens.folded)
                 >>= traverse (ConvertGetVar.globalNameRef cp)
             }

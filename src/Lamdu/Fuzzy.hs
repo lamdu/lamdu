@@ -11,7 +11,6 @@ import           Control.Lens.Extended ((~~>))
 import           Data.Char (toLower)
 import           Data.List (sortOn)
 import           Data.MMap (MMap)
-import qualified Data.Set as Set
 import qualified Data.Text as Text
 import           Data.Vector ((!))
 import qualified Data.Vector as Vector
@@ -49,7 +48,7 @@ trieOf s (c:cs) x =
 make :: Ord a => [(Text, a)] -> Fuzzy (Set a)
 make items =
     items
-    <&> (\(text, x) -> trieOf text (Text.unpack text) (Set.singleton x))
+    <&> (\(text, x) -> trieOf text (Text.unpack text) (mempty & Lens.contains x .~ True))
     & mconcat
 
 -- | Takes the number of skips in given string that are allowed
@@ -110,7 +109,7 @@ memoableMake memoMake pairs =
     <&> _2 %~ (v !)
     where
         -- Use const cause lower scores are better, use those for dups
-        flatten (dist, indices) = Set.toList indices <&> (,) dist
+        flatten (dist, indices) = indices ^.. Lens.folded <&> (,) dist
         f =
             pairs ^@.. Lens.ifolded
             <&> (\(idx, (text, _)) -> (text, idx))

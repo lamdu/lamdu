@@ -263,7 +263,7 @@ decodeType json =
 encodeCompositeVarConstraints :: T.RConstraints -> [Aeson.Value]
 encodeCompositeVarConstraints (T.RowConstraints forbidden scopeLevel)
     | scopeLevel == mempty =
-        Set.toList forbidden
+        forbidden ^.. Lens.folded
         <&> T.tagName
         <&> encodeIdent
     | otherwise =
@@ -279,8 +279,8 @@ decodeCompositeConstraints json =
 encodeTypeVars :: T.Types # QVars -> Aeson.Object
 encodeTypeVars (T.Types (QVars tvs) (QVars rvs)) =
     encodeSquash "typeVars"
-    (Aeson.toJSON . map (encodeIdent . T.tvName) . Set.toList)
-    (Map.keysSet tvs)
+    (Aeson.toJSON . map (encodeIdent . T.tvName))
+    (tvs ^.. Lens.itraversed . Lens.asIndex)
     <>
     encodeSquash "rowVars"
     (encodeIdentMap T.tvName encodeCompositeVarConstraints)

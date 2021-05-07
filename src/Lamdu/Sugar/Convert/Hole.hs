@@ -203,7 +203,7 @@ getListing ::
     ConvertM.Context f -> T m [a]
 getListing anchor sugarContext =
     sugarContext ^. Anchors.codeAnchors
-    & anchor & Property.getP <&> Set.toList
+    & anchor & Property.getP <&> (^.. Lens.folded)
 
 getNominals :: Monad m => ConvertM.Context m -> T m [(T.NominalId, Pure # NominalDecl T.Type)]
 getNominals sugarContext =
@@ -321,7 +321,7 @@ loadNewDeps currentDeps scope x =
             Getting' Deps (Map r x) -> Folding' (Ann a # V.Term) r -> [r]
         newDeps depsLens valLens =
             Set.fromList (x ^.. valLens) `Set.difference` Map.keysSet (currentDeps ^. depsLens)
-            & Set.toList
+            ^.. Lens.folded
         newDepVars = newDeps depsGlobalTypes (ExprLens.valGlobals scopeVars)
         newNoms = newDeps depsNominals ExprLens.valNominals
 

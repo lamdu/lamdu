@@ -172,6 +172,7 @@ addLetParam var redex =
 sameLet :: Redex # HRef m -> HRef m # V.Term
 sameLet redex = redex ^. Redex.arg . hAnn
 
+{-# ANN ordNub ("HLint: ignore Use ^.."::String) #-}
 ordNub :: Ord a => [a] -> [a]
 ordNub = Set.toList . Set.fromList
 

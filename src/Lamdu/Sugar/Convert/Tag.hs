@@ -102,8 +102,7 @@ replaceWith name forbiddenTags allowAnon mkInstance setTag tagsProp =
     { _tcOptions =
         getP tagsProp & lift
         <&> (`Set.difference` forbiddenTags)
-        <&> Set.toList
-        <&> map toOption
+        <&> (^.. Lens.folded . Lens.to toOption)
     , _tcNewTag =
         mkNewTag
         <&>

@@ -51,6 +51,7 @@
     - warn: {lhs: "mconcat [a | x <- take 1 b]", rhs: "foldMap (\\x -> a) (b ^? traverse)"}
     - warn: {lhs: "Data.Map.keys", rhs: "(^.. Control.Lens.itraversed . Control.Lens.asIndex)"}
     - warn: {lhs: "Data.Map.toList", rhs: "(^@.. Control.Lens.itraversed)", note: more general types}
+    - warn: {lhs: "Data.Set.toList", rhs: "(^.. Control.Lens.folded)", note: more general types}
     - warn: {lhs: "a ^. b ^.. y", rhs: "a ^.. b . y", note: "may change results"}
 
 # extend existing group
