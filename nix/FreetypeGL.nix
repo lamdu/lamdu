@@ -7,8 +7,8 @@ mkDerivation {
   src = fetchFromGitHub {
     owner = "lamdu";
     repo = "FreetypeGL";
-    sha256 = "1hq27372690p5rycb0wkbl2q6d5rg1qxcgiv96xybqa1jcxcxz74";
-    rev = "d2312f89cdf1412d584d13cda235ef683fa9c832";
+    sha256 = "1c27bpyx0pl5xw7bwlfrf9nlbkz4k988nipnw0wlllb0dlih4rrw";
+    rev = "18ca298d8fd48ad18f75264553b57714bf070c77";
   };
   isLibrary = true;
   isExecutable = true;
