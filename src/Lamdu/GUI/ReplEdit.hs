@@ -7,7 +7,6 @@ module Lamdu.GUI.ReplEdit
 import qualified Control.Lens as Lens
 import           Control.Lens.Extended (OneOf)
 import           Control.Monad.Once (OnceT)
-import qualified Control.Monad.Reader as Reader
 import           Data.CurAndPrev (CurPrevTag(..), curPrevTag, fallbackToPrev)
 import qualified GUI.Momentu as M
 import qualified GUI.Momentu.Element as Element
@@ -94,7 +93,7 @@ makeIndicator :: _ => CurPrevTag -> Lens' Theme M.Color -> Text -> m (M.WithText
 makeIndicator tag enabledColor text =
     do
         color <- indicatorColor tag enabledColor
-        Label.make text & Reader.local (TextView.color .~ color)
+        Label.make text & local (TextView.color .~ color)
 
 compiledErrorDesc :: Sugar.CompiledErrorType -> OneOf Texts.CodeUI
 compiledErrorDesc Sugar.ReachedHole = Texts.jsReachedAHole
@@ -112,7 +111,7 @@ errorDesc err =
                 label Texts.jsException
                 M./|/ ((TextView.make ?? exc)
                         <*> (Element.subAnimId ?? ["exception text"]))
-            & Reader.local (TextView.color .~ errorColor)
+            & local (TextView.color .~ errorColor)
 
 errorIndicator :: _ => Widget.Id -> CurPrevTag -> Sugar.EvalException o -> m (M.TextWidget o)
 errorIndicator myId tag (Sugar.EvalException errorType jumpToErr) =
@@ -192,7 +191,7 @@ make expRepl (Sugar.Repl replExpr varInfo replResult) =
             (resultWidget expRepl varInfo <$> curPrevTag <&> fmap) <*> replResult
             & fallbackToPrev
             & fromMaybe (noIndicator <&> M.WithTextPos 0)
-            & Reader.local (M.animIdPrefix <>~ ["result widget"])
+            & local (M.animIdPrefix <>~ ["result widget"])
         (|---|) <- Glue.mkGlue ?? Glue.Vertical
         let centeredBelow down up =
                 (M.Aligned 0.5 up |---| M.Aligned 0.5 down) ^. M.value

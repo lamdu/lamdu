@@ -4,7 +4,6 @@ module Lamdu.GUI.CodeEdit.GotoDefinition
     ) where
 
 import qualified Control.Lens as Lens
-import qualified Control.Monad.Reader as Reader
 import qualified Data.ByteString.Char8 as BS8
 import           Data.MRUMemo (memo)
 import qualified Data.Text as Text
@@ -68,7 +67,7 @@ makeOptions readGlobals (SearchMenu.ResultsContext searchTerm prefix)
             let makeOption (idx, nameRef) =
                     GetVarEdit.makeSimpleView TextColors.definitionColor name optId
                     <&> toRenderedOption nameRef
-                    & Reader.local (M.animIdPrefix .~ Widget.toAnimId optId)
+                    & local (M.animIdPrefix .~ Widget.toAnimId optId)
                     & wrapOption optId
                     where
                         name = nameRef ^. Sugar.nrName
@@ -95,7 +94,7 @@ make readGlobals =
         goto <- Lens.view (has . Navigation.goto)
         SearchMenu.make (SearchMenu.searchTermEdit myId (pure . allowSearchTerm))
             (makeOptions readGlobals) M.empty myId ?? Menu.Below
-            & Reader.local (has . Theme.searchTerm %~ onTermStyle goto)
+            & local (has . Theme.searchTerm %~ onTermStyle goto)
             <&> \searchWidget -> StatusBar.StatusWidget
             { StatusBar._widget = searchWidget
             , StatusBar._globalEventMap = mempty

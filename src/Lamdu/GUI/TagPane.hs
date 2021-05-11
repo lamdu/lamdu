@@ -3,7 +3,6 @@ module Lamdu.GUI.TagPane
     ) where
 
 import qualified Control.Lens as Lens
-import qualified Control.Monad.Reader as Reader
 import           Data.Binary.Extended (encodeS)
 import qualified Data.Char as Char
 import           Data.Property (Property(..), pVal)
@@ -261,7 +260,7 @@ make tagPane =
             (tagPane ^. Sugar.tpTagData . Tag.tagTexts) (tagPane ^. Sugar.tpSetTexts)
             /-/ (makeSymbol myId symbolProp <&> (^. Align.tValue))
             & GuiState.assignCursor myId (nameId (langWidgetId myId lang))
-        & Reader.local (Element.animIdPrefix .~ Widget.toAnimId myId)
+        & local (Element.animIdPrefix .~ Widget.toAnimId myId)
     where
         symbolProp =
             Property

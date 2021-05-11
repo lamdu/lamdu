@@ -3,7 +3,6 @@ module Lamdu.GUI.Expr.LambdaEdit
     ) where
 
 import qualified Control.Lens as Lens
-import qualified Control.Monad.Reader as Reader
 import qualified GUI.Momentu as M
 import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.Glue as Glue
@@ -72,7 +71,7 @@ mkShrunk paramIds myId =
             (Widget.makeFocusableView ?? lamId myId <&> (M.tValue %~))
             <*> grammar (label Texts.lam)
             <&> Responsive.fromWithTextPos
-            & Reader.local (TextView.underline ?~ LightLambda.underline theme)
+            & local (TextView.underline ?~ LightLambda.underline theme)
         addScopeEd <- addScopeEdit
         pure $ \mScopeEdit ->
             [ addScopeEd mScopeEdit lamLabel

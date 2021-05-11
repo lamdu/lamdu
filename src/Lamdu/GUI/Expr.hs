@@ -2,7 +2,6 @@ module Lamdu.GUI.Expr
     ( make
     ) where
 
-import qualified Control.Monad.Reader as Reader
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.Responsive (Responsive)
 import qualified GUI.Momentu.Responsive as Responsive
@@ -65,7 +64,7 @@ makeEditor (Ann (Const pl) body) =
         Sugar.LeafLiteral     x -> editor pl (Const x) LiteralEdit.make
         Sugar.LeafInject      x -> editor pl (Const x) InjectEdit.make
         Sugar.LeafGetVar      x -> editor pl (Const x) GetVarEdit.make
-    & Reader.local
+    & local
         (Element.animIdPrefix .~ Widget.toAnimId (WidgetIds.fromExprPayload pl))
 
 editor :: a -> h # Annotated a -> (Annotated a # h -> r) -> r

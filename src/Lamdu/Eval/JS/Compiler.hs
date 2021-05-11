@@ -8,7 +8,6 @@ module Lamdu.Eval.JS.Compiler
     ) where
 
 import qualified Control.Lens as Lens
-import           Control.Monad.Reader (MonadReader(..))
 import           Control.Monad.State (MonadState)
 import           Control.Monad.Trans.FastRWS (RWST, runRWST)
 import           Control.Monad.Writer (MonadWriter(..), censor)

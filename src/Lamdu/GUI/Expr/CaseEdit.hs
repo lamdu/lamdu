@@ -3,7 +3,6 @@ module Lamdu.GUI.Expr.CaseEdit
     ) where
 
 import qualified Control.Lens as Lens
-import qualified Control.Monad.Reader as Reader
 import qualified GUI.Momentu as M
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
@@ -101,7 +100,7 @@ makeAltRow (Sugar.CompositeItem delete tag altExpr) =
             , _taggedItem = altExprGui
             , _tagPost = Nothing
             }
-    & Reader.local (M.animIdPrefix .~ Widget.toAnimId altId)
+    & local (M.animIdPrefix .~ Widget.toAnimId altId)
     where
         altId = tag ^. Sugar.tagRefTag . Sugar.tagInstance & WidgetIds.fromEntityId
 
@@ -140,7 +139,7 @@ makeAddAltRow ::
 makeAddAltRow addAlt myId =
     TagEdit.makeTagHoleEdit addAlt mkPickResult myId
     & Styled.withColor TextColors.caseTagColor
-    & Reader.local (has . Menu.configKeys . Menu.keysPickOptionAndGotoNext <>~ [M.MetaKey M.noMods M.Key'Space])
+    & local (has . Menu.configKeys . Menu.keysPickOptionAndGotoNext <>~ [M.MetaKey M.noMods M.Key'Space])
     <&>
     \tagHole ->
     TaggedItem

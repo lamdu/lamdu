@@ -11,7 +11,6 @@ module Lamdu.GUI.Expr.HoleEdit.SearchArea
     ) where
 
 import qualified Control.Lens as Lens
-import qualified Control.Monad.Reader as Reader
 import qualified Data.Monoid as Monoid
 import qualified Data.Text as Text
 import           Hyper
@@ -107,7 +106,7 @@ makeInferredTypeAnnotation ann animId =
     Annotation.addAnnotationBackground
     <*> TypeView.make (ann ^?! Sugar._AnnotationType)
     <&> (^. M.tValue)
-    & Reader.local (M.animIdPrefix .~ animId)
+    & local (M.animIdPrefix .~ animId)
 
 -- Filter out events which should be taken by search term event map instead.
 filterSearchTermEvents :: (Text -> Bool) -> Text -> EventMap a -> EventMap a
@@ -191,7 +190,7 @@ make mode annMode mkOptions pl allowedTerms widgetIds =
                 frameWidth <- Spacer.stdFontHeight <&> pure <&> (* theme ^. Theme.holeFrameWidth)
                 addFrame <-
                     M.addInnerFrame ?? theme ^. Theme.holeFrameColor ?? frameWidth
-                    & Reader.local (M.animIdPrefix .~ animId <> ["hole-frame"])
+                    & local (M.animIdPrefix .~ animId <> ["hole-frame"])
                 SearchMenu.searchTermEdit searchMenuId allowedTermsCtx mPickFirst
                     <&> SearchMenu.termWidget %~
                         addFrame . M.padAround (frameWidth & _2 .~ 0)

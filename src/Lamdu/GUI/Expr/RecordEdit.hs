@@ -3,7 +3,6 @@ module Lamdu.GUI.Expr.RecordEdit
     ) where
 
 import qualified Control.Lens as Lens
-import qualified Control.Monad.Reader as Reader
 import qualified Data.Char as Char
 import qualified Data.Text as Text
 import qualified GUI.Momentu as M
@@ -174,7 +173,7 @@ makeAddFieldRow ::
 makeAddFieldRow addField pl =
     TagEdit.makeTagHoleEdit addField mkPickResult tagHoleId
     & Styled.withColor TextColors.recordTagColor
-    & Reader.local (has . Menu.configKeys . Menu.keysPickOptionAndGotoNext <>~ [M.MetaKey M.noMods M.Key'Space])
+    & local (has . Menu.configKeys . Menu.keysPickOptionAndGotoNext <>~ [M.MetaKey M.noMods M.Key'Space])
     <&>
     \tagHole ->
     TaggedItem

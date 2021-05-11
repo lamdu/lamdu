@@ -23,7 +23,6 @@ module Lamdu.GUI.Monad
 
 import qualified Control.Lens as Lens
 import           Control.Monad.Reader (ReaderT(..))
-import qualified Control.Monad.Reader as Reader
 import           Control.Monad.Transaction (MonadTransaction(..))
 import           Data.CurAndPrev (CurAndPrev)
 import qualified Data.Monoid as Monoid
@@ -141,7 +140,7 @@ advanceDepth f action =
         depth <- Lens.view aDepthLeft
         if depth <= 0
             then mkErrorWidget >>= f
-            else action & Reader.local (aDepthLeft -~ 1)
+            else action & local (aDepthLeft -~ 1)
     where
         mkErrorWidget = Label.make "..."
 
@@ -150,7 +149,7 @@ readMScopeId = Lens.view aMScopeId
 
 withLocalMScopeId ::
     MonadReader (Askable env i o) m => CurAndPrev (Maybe ScopeId) -> m a -> m a
-withLocalMScopeId mScopeId = Reader.local (aMScopeId .~ mScopeId)
+withLocalMScopeId mScopeId = local (aMScopeId .~ mScopeId)
 
 instance MonadTransaction n i => MonadTransaction n (GuiM env i o) where
     transaction = im . transaction
@@ -166,7 +165,7 @@ make sub expr =
         maker <- Lens.view sub
         maker expr
     & advanceDepth (pure . Responsive.fromTextView)
-    & Reader.local (Element.animIdPrefix .~ animId)
+    & local (Element.animIdPrefix .~ animId)
     where
         animId = expr ^. annotation & WidgetIds.fromExprPayload & toAnimId
 
@@ -184,7 +183,7 @@ isHoleResult :: MonadReader (Askable env i o) m => m Bool
 isHoleResult = Lens.view aIsHoleResult
 
 withLocalIsHoleResult :: MonadReader (Askable env i o) m => m a -> m a
-withLocalIsHoleResult = Reader.local (aIsHoleResult .~ True)
+withLocalIsHoleResult = local (aIsHoleResult .~ True)
 
 run ::
     _ =>

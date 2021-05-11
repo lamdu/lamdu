@@ -6,7 +6,6 @@ module Lamdu.Sugar.Convert.Binder
 
 import qualified Control.Lens as Lens
 import           Control.Monad.Once (OnceT)
-import           Control.Monad.Reader (local)
 import qualified Data.Map as Map
 import           Data.Monoid (Any(..))
 import           Data.Property (MkProperty')

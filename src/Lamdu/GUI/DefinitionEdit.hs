@@ -3,7 +3,6 @@ module Lamdu.GUI.DefinitionEdit
     ) where
 
 import qualified Control.Lens as Lens
-import qualified Control.Monad.Reader as Reader
 import qualified Data.Property as Property
 import qualified GUI.Momentu as M
 import qualified GUI.Momentu.Element as Element
@@ -69,7 +68,7 @@ makeBuiltinDefinition def builtin =
     M./|/ Label.make " = "
     M./|/ BuiltinEdit.make builtin myId
     M./-/ ( topLevelSchemeTypeView (builtin ^. Sugar.biType)
-            & Reader.local (M.animIdPrefix .~ animId ++ ["builtinType"])
+            & local (M.animIdPrefix .~ animId ++ ["builtinType"])
         )
     where
         name = def ^. Sugar.drName
@@ -110,7 +109,7 @@ make defEventMap def =
                             & Responsive.alignedWidget . M.tValue .> Widget.wFocused %@~ wholeFocused
                             & style
                     Responsive.vbox ?? [buttonGui, defGuiStyled]
-    & Reader.local (M.animIdPrefix .~ Widget.toAnimId myId)
+    & local (M.animIdPrefix .~ Widget.toAnimId myId)
     where
         defStateProp = def ^. Sugar.drDefinitionState
         myId = def ^. Sugar.drEntityId & WidgetIds.fromEntityId

@@ -6,7 +6,6 @@ module Lamdu.GUI.EvalView
 import qualified Control.Lens as Lens
 import           Control.Monad (zipWithM)
 import           Control.Monad.Reader (ReaderT(..))
-import qualified Control.Monad.Reader as Reader
 import qualified Data.List as List
 import qualified Data.Text as Text
 import           Data.Vector.Vector2 (Vector2(..))
@@ -81,7 +80,7 @@ makeError ::
     ) =>
     Sugar.EvalTypeError -> m (WithTextPos View)
 makeError (Sugar.EvalTypeError msg) =
-    textView msg & Reader.local (Element.animIdPrefix <>~ ["error"])
+    textView msg & local (Element.animIdPrefix <>~ ["error"])
 
 advanceDepth :: _ => M env m (WithTextPos View) -> M env m (WithTextPos View)
 advanceDepth action =
@@ -89,7 +88,7 @@ advanceDepth action =
         depth <- Lens.view depthLeft
         if depth <= 0
             then Label.make "..."
-            else action & Reader.local (depthLeft -~ 1)
+            else local (depthLeft -~ 1) action
 
 arrayCutoff :: Int
 arrayCutoff = 10
@@ -219,7 +218,7 @@ makeInner (Sugar.ResVal entityId body) =
     Sugar.RTable x -> makeTable x
     Sugar.RList x -> makeList x
     & advanceDepthParents
-    & Reader.local (Element.animIdPrefix .~ animId)
+    & local (Element.animIdPrefix .~ animId)
     where
         animId = WidgetIds.fromEntityId entityId & Widget.toAnimId
         -- Only cut non-leaf expressions due to depth limits

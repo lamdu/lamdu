@@ -3,7 +3,6 @@ module Lamdu.GUI.Expr.BuiltinEdit
     ) where
 
 import qualified Control.Lens as Lens
-import qualified Control.Monad.Reader as Reader
 import           Data.Property (Property(..))
 import qualified Data.Text as Text
 import qualified GUI.Momentu as M
@@ -52,7 +51,7 @@ makeNamePartEditor color namePartStr setter myId =
     <*> ( TextEdits.makeWordEdit ?? empty ?? Property namePartStr setter ??
           myId `Widget.joinId` ["textedit"]
         )
-    & Reader.local (TextView.color .~ color)
+    & local (TextView.color .~ color)
     where
         empty =
             TextEdit.Modes

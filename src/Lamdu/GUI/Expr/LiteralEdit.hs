@@ -4,7 +4,6 @@ module Lamdu.GUI.Expr.LiteralEdit
 
 import           Control.Lens (LensLike')
 import qualified Control.Lens as Lens
-import qualified Control.Monad.Reader as Reader
 import qualified Data.Char as Char
 import           Data.Property (Property)
 import qualified Data.Property as Property
@@ -55,7 +54,7 @@ mkEditEventMap =
 
 withStyle :: _ => Lens.Getting TextEdit.Style Style TextEdit.Style -> m a -> m a
 withStyle whichStyle =
-    Reader.local (\x -> x & has .~ x ^. has . whichStyle)
+    local (\x -> x & has .~ x ^. has . whichStyle)
 
 genericEdit ::
     _ =>

@@ -5,7 +5,6 @@ module Lamdu.GUI.Expr.GetVarEdit
     ) where
 
 import qualified Control.Lens as Lens
-import qualified Control.Monad.Reader as Reader
 import qualified Data.ByteString.Char8 as SBS8
 import qualified GUI.Momentu as M
 import qualified GUI.Momentu.Align as Align
@@ -72,7 +71,7 @@ makeParamsRecord myId paramsRecordVar =
                     Widget.joinId myId paramId
                     & makeSimpleView TextColors.parameterColor fieldName
                     <&> Responsive.fromWithTextPos
-                    & Reader.local (M.animIdPrefix %~ (<> paramId))
+                    & local (M.animIdPrefix %~ (<> paramId))
                 )
               )
             , grammar (label Texts.recordCloser) <&> Responsive.fromTextView
@@ -115,7 +114,7 @@ makeNameRef role color myId nameRef =
         makeSimpleView color name nameId
             & mAddMarker
             <&> Align.tValue %~ Widget.weakerEvents jumpToDefinitionEventMap
-    & Reader.local (M.animIdPrefix .~ Widget.toAnimId nameId)
+    & local (M.animIdPrefix .~ Widget.toAnimId nameId)
     & GuiState.assignCursor myId nameId
     where
         name = nameRef ^. Sugar.nrName
@@ -161,7 +160,7 @@ definitionTypeChangeBox info getVarId =
         update = info ^. Sugar.defTypeUseCurrent <&> WidgetIds.fromEntityId
         mkTypeView idSuffix scheme =
             TypeView.makeScheme scheme
-            & Reader.local (M.animIdPrefix .~ animId ++ [idSuffix])
+            & local (M.animIdPrefix .~ animId ++ [idSuffix])
         myId = Widget.joinId getVarId ["type change"]
         animId = Widget.toAnimId myId
 
@@ -194,7 +193,7 @@ processDefinitionWidget (Sugar.DefTypeChanged info) myId mkLayout =
                 , _underlineWidth = env ^. has . Theme.wideUnderlineWidth
                 }
         layout <-
-            Reader.local (TextView.underline ?~ underline) mkLayout
+            local (TextView.underline ?~ underline) mkLayout
             & GuiState.assignCursor hiddenId myId
         isSelected <- GuiState.isSubCursor ?? myId
         isHidden <- GuiState.isSubCursor ?? hiddenId
@@ -237,7 +236,7 @@ makeGetParam param myId =
         case param ^. Sugar.pBinderMode of
             Sugar.LightLambda ->
                 mk
-                & Reader.local (TextView.underline ?~ underline)
+                & local (TextView.underline ?~ underline)
                 & Styled.nameAtBinder name
             Sugar.NormalBinder -> mk
     where

@@ -5,7 +5,6 @@ module Lamdu.GUI.Expr.IfElseEdit
     ) where
 
 import qualified Control.Lens as Lens
-import qualified Control.Monad.Reader as Reader
 import           Data.Functor.Compose (Compose(..))
 import           Data.Vector.Vector2 (Vector2(..))
 import qualified GUI.Momentu as M
@@ -79,7 +78,7 @@ makeElse parentAnimId (Ann (Const pl) (Sugar.SimpleElse expr)) =
     Row elseAnimId
     <$> (grammar (label Texts.else_) <&> Responsive.fromTextView)
     <*> (grammar (Label.make ":")
-            & Reader.local (M.animIdPrefix .~ elseAnimId)
+            & local (M.animIdPrefix .~ elseAnimId)
             <&> Responsive.fromTextView)
     <*> GuiM.makeSubexpression (Ann (Const pl) expr)
     <&> pure
@@ -95,7 +94,7 @@ makeElse _ (Ann (Const pl) (Sugar.ElseIf content)) =
                   <&> Lens.mapped %~ M.weakerEvents letEventMap
                 )
             <*> makeElse animId (content ^. Sugar.iElse)
-            & Reader.local (M.animIdPrefix .~ animId)
+            & local (M.animIdPrefix .~ animId)
     where
         animId = WidgetIds.fromEntityId entityId & Widget.toAnimId
         entityId = pl ^. Sugar.plEntityId

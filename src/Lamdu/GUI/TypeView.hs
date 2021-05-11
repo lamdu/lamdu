@@ -4,7 +4,6 @@ module Lamdu.GUI.TypeView
     ) where
 
 import qualified Control.Lens as Lens
-import qualified Control.Monad.Reader as Reader
 import qualified Data.ByteString.Char8 as BS8
 import qualified Data.Text as Text
 import           Data.Vector.Vector2 (Vector2(..))
@@ -130,7 +129,7 @@ makeTInst parentPrecedence tid typeParams =
         tconsName =
             NameView.make (tid ^. Sugar.tidName) & disambAnimId ["TCons"]
         disambAnimId suffixes =
-            Reader.local (Element.animIdPrefix <>~ (suffixes <&> BS8.pack))
+            local (Element.animIdPrefix <>~ (suffixes <&> BS8.pack))
 
 addTypeBG :: _ => a -> m a
 addTypeBG view =
@@ -233,7 +232,7 @@ makeInternal parentPrecedence (Ann (Const entityId) tbody) =
         makeComposite (Styled.label Texts.variantTypeOpener)
         (Styled.grammar (Styled.label Texts.variantTypeSep)) (pure Element.empty)
         makeVariantField composite
-    & Reader.local (Element.animIdPrefix .~ animId)
+    & local (Element.animIdPrefix .~ animId)
     where
         animId = WidgetIds.fromEntityId entityId & Widget.toAnimId
 

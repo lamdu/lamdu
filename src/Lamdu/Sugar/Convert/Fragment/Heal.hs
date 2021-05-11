@@ -5,7 +5,6 @@ module Lamdu.Sugar.Convert.Fragment.Heal
     ) where
 
 import qualified Control.Lens as Lens
-import qualified Control.Monad.Reader as Reader
 import qualified Data.Property as Property
 import           Hyper
 import           Hyper.Infer.Blame (BlameResult(..), blame)
@@ -142,7 +141,7 @@ healMismatch =
                 addDeps <- Infer.loadDeps deps
                 prepare fragment topLevelExpr
                     & blame (^. Lens._Wrapped . _1) (_ANode # topLevelType)
-                    & Reader.local (addRecursiveRef . addDeps)
+                    & local (addRecursiveRef . addDeps)
             & Infer.runPureInfer V.emptyScope
                 (Infer.InferState Infer.emptyPureInferState Infer.varGen)
             & either (error "bug in heal!")

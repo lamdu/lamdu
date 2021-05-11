@@ -3,7 +3,6 @@ module Lamdu.GUI.Expr.BinderEdit
     ) where
 
 import qualified Control.Lens as Lens
-import qualified Control.Monad.Reader as Reader
 import qualified GUI.Momentu as M
 import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.I18N as MomentuTexts
@@ -96,7 +95,7 @@ make (Ann (Const pl) (Sugar.BinderLet l)) =
             , make body
             ]
         & stdWrapParentExpr pl
-        & Reader.local (M.animIdPrefix .~ Widget.toAnimId myId)
+        & local (M.animIdPrefix .~ Widget.toAnimId myId)
     where
         myId = WidgetIds.fromExprPayload pl
         body = l ^. Sugar.lBody

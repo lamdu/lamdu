@@ -4,7 +4,6 @@ module Lamdu.GUI.VersionControl
     ) where
 
 import qualified Control.Lens as Lens
-import qualified Control.Monad.Reader as Reader
 import qualified Data.List.Extended as List
 import qualified Data.Property as Property
 import           GUI.Momentu.Align (TextWidget)
@@ -120,7 +119,7 @@ makeBranchSelector rwtransaction rtransaction actions =
                         )
                     & if branch == Property.value (A.currentBranch actions)
                         then
-                            Reader.local $
+                            local $
                             \env ->
                             env &
                             TextView.color .~

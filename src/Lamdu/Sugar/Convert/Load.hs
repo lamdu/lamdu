@@ -11,7 +11,6 @@ module Lamdu.Sugar.Convert.Load
     ) where
 
 import qualified Control.Lens as Lens
-import qualified Control.Monad.Reader as Reader
 import qualified Control.Monad.State as State
 import qualified Data.Map as Map
 import           Hyper
@@ -51,7 +50,7 @@ unmemoizedInfer defExpr =
     do
         addDeps <- loadDeps (defExpr ^. Definition.exprFrozenDeps)
         scope <- Lens.view id <&> addDeps
-        infer (defExpr ^. Definition.expr) & Reader.local (const scope)
+        infer (defExpr ^. Definition.expr) & local (const scope)
             <&> (, scope)
 
 preparePayloads ::
@@ -137,7 +136,7 @@ inferDef inferFunc monitors defExpr defVar =
         defTv <- newUnbound
         (inferredVal, scope) <-
             inferFunc defExpr
-            & Reader.local (V.scopeVarTypes . Lens.at defVar ?~ MkHFlip (GMono defTv))
+            & local (V.scopeVarTypes . Lens.at defVar ?~ MkHFlip (GMono defTv))
         (inferredVal, scope) <$ unify defTv (inferredVal ^. hAnn . _2 . inferResult)
     & runInferResult monitors
 

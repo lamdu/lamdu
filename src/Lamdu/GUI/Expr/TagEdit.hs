@@ -7,7 +7,6 @@ module Lamdu.GUI.Expr.TagEdit
     ) where
 
 import qualified Control.Lens as Lens
-import qualified Control.Monad.Reader as Reader
 import qualified Data.Char as Char
 import           Data.MRUMemo (memo)
 import qualified Data.Property as Property
@@ -165,7 +164,7 @@ makeOptions tagRefReplace newTagOpt mkPickResult ctx
                     , Menu._oRender =
                         (Widget.makeFocusableView ?? optionWId <&> fmap)
                         <*> NameView.make (opt ^. Sugar.toInfo . Sugar.tagName)
-                        & Reader.local (M.animIdPrefix .~ Widget.toAnimId instanceId)
+                        & local (M.animIdPrefix .~ Widget.toAnimId instanceId)
                         <&>
                         \widget ->
                         Menu.RenderedOption
@@ -250,9 +249,9 @@ makeHoleSearchTerm newTagOption mkPickResult holeId =
                             in  anchor termW
                                 <&> Hover.hoverInPlaceOf hoverOptions
                     term & SearchMenu.termWidget %~ termWithHover & pure
-                    & Reader.local (Hover.backgroundColor .~ tooltip ^. Theme.tooltipBgColor)
-                    & Reader.local (TextView.color .~ tooltip ^. Theme.tooltipFgColor)
-                    & Reader.local (M.animIdPrefix <>~ ["label"])
+                    & local (Hover.backgroundColor .~ tooltip ^. Theme.tooltipBgColor)
+                    & local (TextView.color .~ tooltip ^. Theme.tooltipFgColor)
+                    & local (M.animIdPrefix <>~ ["label"])
             else pure term
     where
         newTagId = newTagOption ^. Sugar.toInfo . Sugar.tagInstance & WidgetIds.fromEntityId & Widget.toAnimId
@@ -369,7 +368,7 @@ makeLHSTag onPickNext color tag =
         (tagEditType, tagEdit) <-
             makeTagRefEditWith onView onPickNext tag
             & Styled.withColor color
-            & Reader.local (has .~ env ^. has . Style.nameAtBinder)
+            & local (has .~ env ^. has . Style.nameAtBinder)
         let chooseEventMap =
                 E.charEventMap "Letter"
                 (E.toDoc env
@@ -405,7 +404,7 @@ makeArgTag :: _ => Name -> Sugar.EntityId -> m (M.WithTextPos M.View)
 makeArgTag name tagInstance =
     NameView.make name
     & Styled.withColor TextColors.argTagColor
-    & Reader.local (M.animIdPrefix .~ animId)
+    & local (M.animIdPrefix .~ animId)
     where
         animId = WidgetIds.fromEntityId tagInstance & Widget.toAnimId
 
@@ -415,4 +414,4 @@ makeBinderTagEdit ::
     GuiM env i o (M.TextWidget o)
 makeBinderTagEdit color tag =
     makeLHSTag (const Nothing) color tag
-    & Reader.local (has . Menu.configKeys . Menu.keysPickOptionAndGotoNext .~ [])
+    & local (has . Menu.configKeys . Menu.keysPickOptionAndGotoNext .~ [])

@@ -17,7 +17,6 @@ module Lamdu.GUI.Styled
 
 import qualified Control.Lens as Lens
 import           Control.Lens.Extended (OneOf)
-import qualified Control.Monad.Reader as Reader
 import qualified GUI.Momentu as M
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Animation as Anim
@@ -97,7 +96,7 @@ addValFrame =
     (.)
     <$> addValBG
     <*> addValPadding
-    & Reader.local (Element.animIdPrefix <>~ ["val"])
+    & local (Element.animIdPrefix <>~ ["val"])
 
 -- | Add a diagonal line (top-left to right-bottom).
 addDiagonal :: _ => m (Draw.Color -> Draw.R -> a -> a)
@@ -140,7 +139,7 @@ withColor :: _ => Lens.ALens' TextColors Draw.Color -> m a -> m a
 withColor textColor act =
     do
         color <- Lens.view (has . Theme.textColors . Lens.cloneLens textColor)
-        Reader.local (TextView.color .~ color) act
+        local (TextView.color .~ color) act
 
 actionable :: _ => Widget.Id -> OneOf t -> E.Doc -> f Widget.Id -> m (M.TextWidget f)
 actionable myId txtLens doc action =
@@ -156,15 +155,15 @@ actionable myId txtLens doc action =
         let eventMap = E.keysEventMapMovesCursor actionKeys doc action
         Lens.view (has . txtLens)
             >>= Clickable.makeText myId (Clickable.Config action doc actionKeys)
-            & Reader.local (TextView.color .~ color)
-            & Reader.local (TextView.underline ?~ underline)
+            & local (TextView.color .~ color)
+            & local (TextView.underline ?~ underline)
             <&> Align.tValue %~ Widget.weakerEvents eventMap
 
 nameAtBinder :: _ => Name -> m a -> m a
 nameAtBinder name act =
     do
         textEditStyle <- Lens.view (has . style)
-        act & Reader.local (has .~ textEditStyle)
+        act & local (has .~ textEditStyle)
     where
         style =
             case name of

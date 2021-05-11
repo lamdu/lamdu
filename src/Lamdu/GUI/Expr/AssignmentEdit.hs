@@ -6,7 +6,6 @@ module Lamdu.GUI.Expr.AssignmentEdit
 
 import           Control.Applicative ((<|>), liftA2)
 import qualified Control.Lens as Lens
-import qualified Control.Monad.Reader as Reader
 import           Data.CurAndPrev (CurAndPrev, current, fallbackToPrev)
 import           Data.List.Extended (withPrevNext)
 import qualified Data.Map as Map
@@ -139,7 +138,7 @@ makeScopeNavArrow setScope arrowText mScopeId =
             <&> M.tValue %~
                 Widget.sizedState <. Widget._StateUnfocused . Widget.uMEnter
                 .@~ mEnter
-            & Reader.local
+            & local
             ( TextView.color .~
                 case mScopeId of
                 Nothing -> theme ^. Theme.disabledColor
@@ -289,7 +288,7 @@ makeMParamsEdit mScopeCursor isScopeNavFocused delVarBackwardsId myId bodyId add
             case addFirstParam of
             Sugar.PrependParam selection | isPrepend ->
                 TagEdit.makeTagHoleEdit selection ParamEdit.mkParamPickResult prependId
-                & Reader.local (has . Menu.configKeys . Menu.keysPickOptionAndGotoNext <>~ [M.MetaKey M.noMods M.Key'Space])
+                & local (has . Menu.configKeys . Menu.keysPickOptionAndGotoNext <>~ [M.MetaKey M.noMods M.Key'Space])
                 & Styled.withColor TextColors.parameterColor
                 <&> Responsive.fromWithTextPos
                 <&> (:[])
@@ -448,7 +447,7 @@ make pMode tag color assignment =
             , bodyEdit
             ]
             & pure
-        & Reader.local (M.animIdPrefix .~ Widget.toAnimId myId)
+        & local (M.animIdPrefix .~ Widget.toAnimId myId)
         & maybe id stdWrap mLamPl
         <&> Widget.weakerEvents eventMap
     where

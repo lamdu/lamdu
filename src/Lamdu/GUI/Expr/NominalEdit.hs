@@ -5,7 +5,6 @@ module Lamdu.GUI.Expr.NominalEdit
     ) where
 
 import qualified Control.Lens as Lens
-import qualified Control.Monad.Reader as Reader
 import qualified GUI.Momentu as M
 import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.I18N as MomentuTexts
@@ -72,4 +71,4 @@ mkNomLabel :: _ => Sugar.TId Name -> GuiM env i o (M.WithTextPos M.View)
 mkNomLabel tid =
     do
         nomColor <- Lens.view (has . Theme.textColors . TextColors.nomColor)
-        NameView.make (tid ^. Sugar.tidName) & Reader.local (TextView.color .~ nomColor)
+        NameView.make (tid ^. Sugar.tidName) & local (TextView.color .~ nomColor)

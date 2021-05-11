@@ -455,7 +455,7 @@ p2cpsNameConvertor u (P1Name (P1TagName aName isOp texts) tagsBelow isAutoGen) =
     CPS $ \inner ->
     (,)
     <$> p2tagName u tagsBelow aName texts isAutoGen isOp
-    <*> Reader.local l inner
+    <*> local l inner
     where
         isClash = Clash.infoOf aName
         tag = aName ^. Annotated.tag
