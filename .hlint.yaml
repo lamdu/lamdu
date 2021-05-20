@@ -3,6 +3,11 @@
 - ignore: { name: Too strict if }
 
 - group:
+    name: default
+    rules:
+    - warn: {lhs: traverse (pure . a), rhs: (fmap . fmap) a}
+
+- group:
     name: lamdu-style
     enabled: true
     imports:
@@ -71,3 +76,4 @@
     - error: {lhs: "Control.Lens.has (a . Control.Lens.at b)", rhs: "Control.Lens.has a"}
     - error: {lhs: "Control.Lens.nullOf (Control.Lens.at a)", rhs: "False"}
     - error: {lhs: "Control.Lens.nullOf (a . Control.Lens.at b)", rhs: "Control.Lens.nullOf a"}
+    - warn: {lhs: "Control.Monad.Reader.local (a %~ b)", rhs: "Control.Lens.locally a b"}
