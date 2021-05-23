@@ -5,7 +5,6 @@ module Tests.Suggest where
 
 import qualified Control.Lens as Lens
 import           Control.Monad.ListT (ListT)
-import           Control.Monad.Reader (local)
 import           Control.Monad.State (runStateT)
 import           Data.List.Class (toList)
 import qualified Data.Map as Map
