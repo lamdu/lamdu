@@ -265,6 +265,7 @@ makeParamsEdit annotationOpts delVarBackwardsId lhsId rhsId params =
                 where
                     widgetId =
                         x ^. Sugar.piTag . Sugar.tagRefTag . Sugar.tagInstance & WidgetIds.fromEntityId
+    & local (has . Menu.configKeys . Menu.keysPickOptionAndGotoNext <>~ [M.MetaKey M.noMods M.Key'Space])
     where
         fromParamList delDestFirst delDestLast paramList =
             withPrevNext delDestFirst delDestLast
