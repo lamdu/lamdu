@@ -24,7 +24,6 @@ import qualified Lamdu.Config.Theme as Theme
 import           Lamdu.Config.Theme.TextColors (TextColors)
 import qualified Lamdu.Config.Theme.TextColors as TextColors
 import qualified Lamdu.GUI.Expr.GetVarEdit as GetVarEdit
-import qualified Lamdu.GUI.Expr.EventMap as ExprEventMap
 import qualified Lamdu.GUI.Expr.TagEdit as TagEdit
 import qualified Lamdu.GUI.Annotation as Annotation
 import           Lamdu.GUI.Monad (GuiM)
@@ -71,11 +70,8 @@ make (Ann (Const pl) (Sugar.Composite alts punned caseTail addAlt)) =
             ( Styled.addValFrame <*>
                 (Options.boxSpaced ?? Options.disambiguationNone ?? [header, altsGui]))
             <&> Widget.weakerEvents addAltEventMap
-    & wrap
+    & Wrap.stdWrapParentExpr pl
     where
-        wrap x =
-            ExprEventMap.add ExprEventMap.defaultOptions pl <*>
-            (Wrap.parentDelegator myId <*> x)
         myId = WidgetIds.fromExprPayload pl
         headerId = Widget.joinId myId ["header"]
         altsId = Widget.joinId myId ["alts"]
