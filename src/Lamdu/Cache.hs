@@ -15,7 +15,7 @@ import           Hyper
 import           Hyper.Class.ZipMatch
 import           Hyper.Infer (InferResult)
 import           Hyper.Recurse
-import           Hyper.Unify.Binding (UVar)
+import           Hyper.Unify (UVar)
 import           Lamdu.Calc.Infer (InferState, PureInfer(..), runPureInfer)
 import           Lamdu.Calc.Term (Val)
 import qualified Lamdu.Calc.Term as V

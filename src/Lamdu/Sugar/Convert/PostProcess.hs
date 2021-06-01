@@ -10,7 +10,7 @@ import           Data.Property (MkProperty')
 import qualified Data.Property as Property
 import           Hyper
 import           Hyper.Type.AST.Scheme (saveScheme)
-import           Hyper.Unify.Binding (UVar)
+import           Hyper.Unify (UVar)
 import           Hyper.Unify.Generalize (generalize)
 import           Lamdu.Calc.Infer (runPureInfer)
 import qualified Lamdu.Calc.Term as V

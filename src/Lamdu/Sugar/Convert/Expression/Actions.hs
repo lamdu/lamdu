@@ -18,7 +18,7 @@ import           Hyper
 import           Hyper.Type.AST.Nominal (ToNom(..), NominalDecl(..), NominalInst(..))
 import qualified Hyper.Type.AST.Scheme as S
 import           Hyper.Type.Prune (Prune(..))
-import           Hyper.Unify.Binding (UVar)
+import           Hyper.Unify (UVar)
 import           Hyper.Unify.Generalize (generalize)
 import qualified Lamdu.Builtins.Anchors as Builtins
 import qualified Lamdu.Builtins.PrimVal as PrimVal

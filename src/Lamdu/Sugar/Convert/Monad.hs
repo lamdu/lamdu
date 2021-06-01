@@ -26,7 +26,7 @@ import           Control.Monad.Trans.Reader (ReaderT, runReaderT)
 import qualified Control.Monad.Trans.Reader as Reader
 import           Control.Monad.Transaction (MonadTransaction(..))
 import           Data.Property (Property)
-import           Hyper.Unify.Binding (UVar)
+import           Hyper.Unify (UVar)
 import qualified Lamdu.Cache as Cache
 import           Lamdu.Calc.Definition (Deps)
 import           Lamdu.Calc.Infer (InferState)

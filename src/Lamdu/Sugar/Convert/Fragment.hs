@@ -23,8 +23,7 @@ import           Hyper.Class.Infer.InferOf (InferOfConstraint, inferOfConstraint
 import           Hyper.Infer (InferResult(..), inferResult, inferUVarsApplyBindings)
 import           Hyper.Type.AST.FuncType (FuncType(..))
 import qualified Hyper.Type.AST.Nominal as N
-import           Hyper.Unify (Unify(..), BindingDict(..), unify, applyBindings)
-import           Hyper.Unify.Binding (UVar)
+import           Hyper.Unify (Unify(..), BindingDict(..), UVar, unify, applyBindings)
 import           Hyper.Unify.Term (UTerm(..), UTermBody(..))
 import           Lamdu.Calc.Infer (InferState, runPureInfer, PureInfer)
 import qualified Lamdu.Calc.Infer as Infer

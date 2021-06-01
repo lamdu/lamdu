@@ -37,8 +37,7 @@ import           Hyper.Type.AST.Row (freExtends)
 import           Hyper.Type.AST.Scheme (sTyp)
 import           Hyper.Type.Functor (_F)
 import           Hyper.Type.Prune (Prune(..))
-import           Hyper.Unify (Unify(..), BindingDict(..), unify)
-import           Hyper.Unify.Binding (UVar)
+import           Hyper.Unify (Unify(..), BindingDict(..), UVar, unify)
 import           Hyper.Unify.Term (UTerm(..), UTermBody(..))
 import qualified Lamdu.Builtins.Anchors as Builtins
 import qualified Lamdu.Cache as Cache

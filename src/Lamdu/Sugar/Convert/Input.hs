@@ -15,7 +15,7 @@ import           Hyper
 import           Hyper.Infer (InferResult, inferResult)
 import           Hyper.Type.AST.FuncType (funcIn)
 import           Hyper.Type.Prune (Prune)
-import           Hyper.Unify.Binding (UVar)
+import           Hyper.Unify (UVar)
 import           Hyper.Unify.Generalize (GTerm(..))
 import qualified Lamdu.Calc.Term as V
 import           Lamdu.Calc.Type (Type, Row)
