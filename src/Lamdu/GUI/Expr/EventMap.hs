@@ -6,6 +6,7 @@ module Lamdu.GUI.Expr.EventMap
     , makeLiteralNumberEventMap
     , makeLiteralTextEventMap
     , allowedSearchTerm
+    , parenKeysEvent
     ) where
 
 import qualified Control.Lens as Lens
@@ -203,22 +204,26 @@ transformEventMap =
     where
         widgetId = pure . WidgetIds.fromEntityId
 
+parenKeysEvent ::
+    (MonadReader env m, Has Dir.Layout env) => m ([Lens.ALens' env Text] -> o a -> EventMap (o a))
+parenKeysEvent =
+    Lens.view id <&>
+    \env texts act ->
+    let parenKeys =
+            case env ^. has of
+            Dir.LeftToRight -> "(["
+            Dir.RightToLeft -> ")]"
+    in
+    E.charGroup (Just "Open Paren")
+    (E.toDoc env texts) parenKeys (const act)
+
 detachEventMap :: _ => m (ExprInfo o -> EventMap (o GuiState.Update))
 detachEventMap =
-    Lens.view id
-    <&>
-    \env exprInfo ->
+    parenKeysEvent <&>
+    \mkEvent exprInfo ->
     case exprInfoActions exprInfo ^. Sugar.detach of
-    Sugar.DetachAction act
-        | exprInfoIsSelected exprInfo ->
-            E.charGroup (Just "Open Paren")
-            (E.toDoc env [has . MomentuTexts.edit, has . Texts.detach])
-            parenKeys (const (mempty <$ act))
-        where
-            parenKeys =
-                case env ^. has of
-                Dir.LeftToRight -> "(["
-                Dir.RightToLeft -> ")]"
+    Sugar.DetachAction act | exprInfoIsSelected exprInfo ->
+        mkEvent [has . MomentuTexts.edit, has . Texts.detach] (mempty <$ act)
     _ -> mempty
 
 replaceEventMap :: _ => Sugar.Delete f -> m (EventMap (f GuiState.Update))

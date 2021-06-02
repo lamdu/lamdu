@@ -14,6 +14,7 @@ import qualified GUI.Momentu.State as GuiState
 import qualified GUI.Momentu.Widget as Widget
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Theme.TextColors as TextColors
+import qualified Lamdu.GUI.Expr.EventMap as EventMap
 import qualified Lamdu.GUI.Expr.RecordEdit as RecordEdit
 import           Lamdu.GUI.Monad (GuiM)
 import           Lamdu.GUI.Styled (text, grammar, withColor)
@@ -86,9 +87,15 @@ makeNullary (Ann (Const pl) (Sugar.NullaryInject tag r)) =
     do
         makeFocusable <- Widget.makeFocusableView
         nullary <- nullaryRecord r
+        parenEvent <- EventMap.parenKeysEvent
         rawInjectEdit <-
-            injectTag tag <&> M.tValue %~ makeFocusable myId <&> Responsive.fromWithTextPos
-
+            injectTag (tag ^. hVal . Lens._Wrapped) <&> M.tValue %~ makeFocusable myId <&> Responsive.fromWithTextPos
+            <&>
+            case tag ^. annotation . Sugar.plActions . Sugar.mReplaceParent of
+            Nothing -> id
+            Just act ->
+                M.weakerEvents (parenEvent [has . MomentuTexts.edit, has . Texts.injectSection]
+                (act <&> GuiState.updateCursor . WidgetIds.fromEntityId))
         widgets <-
                 case nullary of
                 HiddenNullaryRecord enterNullary ->

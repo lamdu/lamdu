@@ -130,6 +130,7 @@
             "moveBefore": "Move before",
             "moveAfter": "Move after",
             "fragment": "Fragment",
+            "injectSection": "To inject-section",
             "heal": "Heal",
             "add": "Add",
             "letClause": "Let Clause",

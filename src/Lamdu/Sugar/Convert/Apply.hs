@@ -96,13 +96,13 @@ convertEmptyInject ::
     MaybeT (ConvertM m) (ExpressionU v m a)
 convertEmptyInject subexprs funcS argS applyPl =
     do
-        injectTag <- funcS ^? hVal . _BodyLeaf . _LeafInject & maybeToMPlus
+        inject <- annValue (^? _BodyLeaf . _LeafInject . Lens._Unwrapped) funcS & maybeToMPlus
         r <- annValue (^? _BodyRecord) argS & maybeToMPlus
         r ^. hVal . cItems & null & guard
         r ^. hVal . cPunnedItems & null & guard
         Lens.has (hVal . cTail . _ClosedComposite) r & guard
         r & annValue %~ (^. cAddItem . Lens._Unwrapped)
-            & NullaryInject injectTag & BodyNullaryInject
+            & NullaryInject inject & BodyNullaryInject
             & addActions subexprs applyPl & lift
 
 convertPostfix ::
@@ -171,16 +171,28 @@ convertLabeled subexprs funcS argS exprPl =
         addActionsWith userPayload exprPl bod & lift
 
 convertPrefix ::
-    (Monad m, Monoid a, Recursively HFoldable h) =>
-    h # Ann (Input.Payload m a) ->
+    (Monad m, Monoid a) =>
+    V.App V.Term # Ann (Input.Payload m a) ->
     ExpressionU v m a -> ExpressionU v m a -> Input.Payload m a # V.Term ->
     ConvertM m (ExpressionU v m a)
 convertPrefix subexprs funcS argS applyPl =
     do
         del <- makeDel applyPl
+        protectedSetToVal <- ConvertM.typeProtectedSetToVal
+        let injectToNullary x
+                | Lens.has (hVal . _BodyLeaf . _LeafInject) funcS =
+                    do
+                        ExprIRef.writeValI argIref (V.BLeaf V.LRecEmpty)
+                        protectedSetToVal (applyPl ^. Input.stored) (applyPl ^. Input.stored . ExprIRef.iref)
+                    <&> EntityId.ofValI
+                | otherwise = x
+                where
+                    argIref = subexprs ^. V.appArg . hAnn . Input.stored . ExprIRef.iref
         BodySimpleApply App
             { _appFunc = funcS & annotation . pActions . delete .~ del argS
-            , _appArg = argS & annotation . pActions . delete . Lens.filteredBy _CannotDelete .~ del funcS
+            , _appArg =
+                argS
+                & annotation . pActions . delete %~ (_Delete %~ injectToNullary) . (Lens.filteredBy _CannotDelete .~ del funcS)
             } & addActions subexprs applyPl
 
 makeDel ::

@@ -26,7 +26,7 @@ module Lamdu.Sugar.Types.Parts
       Payload(..), plEntityId, plAnnotation, plActions, plHiddenEntityIds, plParenInfo
     , ClosedCompositeActions(..), closedCompositeOpen
     , PunnedVar(..), pvVar, pvTagEntityId
-    , NullaryInject(..), iTag, iContent
+    , NullaryInject(..), iInject, iContent
 
     , ParenInfo(..), piNeedParens, piMinOpPrec
     ) where
@@ -153,7 +153,7 @@ data Literal f
     deriving Generic
 
 data NullaryInject name i o k = NullaryInject
-    { _iTag :: TagRef name i o
+    { _iInject :: k :# Const (TagRef name i o)
     , -- Child represents the empty record, and has action to add an item
       _iContent :: k :# Const (TagChoice name i o EntityId)
     } deriving Generic

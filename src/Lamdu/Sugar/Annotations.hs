@@ -154,9 +154,9 @@ instance Functor m => MarkBodyAnnotations v m Term where
     markBodyAnnotations (BodyLeaf (LeafInject x)) = (dontShowEval, BodyLeaf (LeafInject x))
     markBodyAnnotations (BodyNullaryInject x) =
         ( dontShowEval
-        , x & morphMapped1 %~
-                (\(Ann a (Const b)) ->
-                    Ann (a & Lens._Wrapped . pInput . userData %~ (,) neverShowAnnotations) (Const b))
+        , x & hmap
+                (Proxy @(Recursively HFunctor) #>
+                    hflipped %~ hmap (const (Lens._Wrapped . pInput . userData %~ (,) neverShowAnnotations)))
             & BodyNullaryInject
         )
     markBodyAnnotations (BodySimpleApply x) =

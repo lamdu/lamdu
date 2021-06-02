@@ -345,7 +345,7 @@ instance
     Walk m (NullaryInject a i o # Annotated pa) (NullaryInject b i o # Annotated pb) where
     walk (NullaryInject t n) =
         NullaryInject
-        <$> toTagRefOf Tag t
+        <$> toNode (Lens._Wrapped walk) t
         <*> toNode (Lens._Wrapped walk) n
 
 instance (a ~ OldName m, b ~ NewName m, i ~ IM m) => Walk m (TagRef a i o) (TagRef b i o) where

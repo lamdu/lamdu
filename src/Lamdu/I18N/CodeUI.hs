@@ -89,6 +89,7 @@ data CodeUI a = CodeUI
     , _leftToRightSymbol :: a
     , _rightToLeftSymbol :: a
     , _typeOperatorHere :: a
+    , _injectSection :: a
     }
     deriving stock (Generic, Generic1, Eq, Functor, Foldable, Traversable)
     deriving anyclass ElemIds
