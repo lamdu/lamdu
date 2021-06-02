@@ -134,16 +134,17 @@ makeFragOpt (Ann (Const a) b) =
     Sugar.FragInject x -> InjectEdit.make (Ann (Const a) (Const x))
     Sugar.FragGetVar x -> GetVarEdit.make (Ann (Const a) (Const x))
     Sugar.FragOp x -> makeFragOperator x
-    Sugar.FragToNom x -> NominalEdit.label x <&> Responsive.fromTextView & stdWrap a
+    Sugar.FragToNom x -> NominalEdit.label x & fromView
     Sugar.FragIf t ->
         (grammar (label Texts.if_) M./|/ grammar (Label.make ":")) M./|/
         Spacer.stdHSpace M./|/ GuiM.makeSubexpression t
-    Sugar.FragLam -> grammar (label Texts.lam) <&> Responsive.fromTextView & stdWrap a
+    Sugar.FragLam -> grammar (label Texts.lam) & fromView
     -- Reproduction of behaviour from Lamdu.GUI.Expr.make,
     -- otherwise fragment editors would have clashing anim ids
     & local (M.animIdPrefix .~ Widget.toAnimId myId)
     where
         myId = WidgetIds.fromExprPayload a
+        fromView act = (Widget.makeFocusableWidget ?? myId <&> (Widget.widget %~)) <*> (act <&> Responsive.fromTextView) & stdWrap a
 
 makeFragOperator :: _ => ExprGui.Body Sugar.FragOperator i o -> GuiM env i o (Responsive o)
 makeFragOperator (Sugar.FragOperator f arg) = ApplyEdit.makeOperatorRow id f arg
