@@ -91,6 +91,7 @@ data ResultGroups a = ResultGroups
     , gFromNoms :: a
     , gForType :: a
     , gGetFields :: a
+    , gWrapInRecs :: a
     } deriving (Functor, Foldable, Traversable)
 
 filterResults ::
@@ -102,6 +103,8 @@ filterResults order res query
     | "." `Text.isPrefixOf` (query ^. qSearchTerm) =
         groups (gForType <> gSyntax <> gDefs <> gFromNoms <> gGetFields) <&> (^. traverse)
     | "'" `Text.isPrefixOf` (query ^. qSearchTerm) = groups (gToNoms <> gInjects) <&> (^. traverse)
+    | "{" `Text.isPrefixOf` (query ^. qSearchTerm) =
+        groups (gForType <> gSyntax <> gWrapInRecs) <&> (^. traverse)
     | otherwise =
         -- Within certain search-term matching level (exact/prefix/infix),
         -- prefer locals over globals even for type mismatches

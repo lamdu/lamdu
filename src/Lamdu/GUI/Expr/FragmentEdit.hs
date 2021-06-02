@@ -33,6 +33,7 @@ import           Lamdu.GUI.Expr.OptionEdit
 import           Lamdu.GUI.Monad (GuiM)
 import qualified Lamdu.GUI.Monad as GuiM
 import           Lamdu.GUI.Styled (label, grammar)
+import qualified Lamdu.GUI.TagView as TagView
 import qualified Lamdu.GUI.Types as ExprGui
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.GUI.Wrap (stdWrapParentExpr, stdWrap)
@@ -47,6 +48,15 @@ fragmentDoc env lens =
     E.toDoc env
     [has . MomentuTexts.edit, has . Texts.fragment, lens]
 
+allowedSearchTerm :: Text -> Bool
+allowedSearchTerm x =
+    ExprEventMap.allowedSearchTerm x || isWrapInRec
+    where
+        isWrapInRec =
+            case x ^? Lens._Cons of
+            Nothing -> False
+            Just (p, r) -> p `elem` ['{', '}'] && ExprEventMap.isAlphaNumericName r
+
 make :: _ => ExprGui.Expr Sugar.Fragment i o -> GuiM env i o (Responsive o)
 make (Ann (Const pl) fragment) =
     do
@@ -56,7 +66,7 @@ make (Ann (Const pl) fragment) =
 
         searchMenu <-
             SearchMenu.make
-            (SearchMenu.searchTermEdit menuId (pure . ExprEventMap.allowedSearchTerm))
+            (SearchMenu.searchTermEdit menuId (pure . allowedSearchTerm))
             (makeResults (fragment ^. Sugar.fOptions)) M.empty menuId
             ?? Menu.AnyPlace
             & local (has . SearchMenu.emptyStrings . Lens.mapped .~ "?")
@@ -139,6 +149,8 @@ makeFragOpt (Ann (Const a) b) =
         (grammar (label Texts.if_) M./|/ grammar (Label.make ":")) M./|/
         Spacer.stdHSpace M./|/ GuiM.makeSubexpression t
     Sugar.FragLam -> grammar (label Texts.lam) & fromView
+    Sugar.FragWrapInRec x ->
+        grammar (label Texts.recordOpener) M./|/ TagView.make (x ^. Sugar.tagRefTag) & fromView
     -- Reproduction of behaviour from Lamdu.GUI.Expr.make,
     -- otherwise fragment editors would have clashing anim ids
     & local (M.animIdPrefix .~ Widget.toAnimId myId)

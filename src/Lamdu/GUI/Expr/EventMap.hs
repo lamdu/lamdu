@@ -5,7 +5,7 @@ module Lamdu.GUI.Expr.EventMap
     , addLetEventMap
     , makeLiteralNumberEventMap
     , makeLiteralTextEventMap
-    , allowedSearchTerm
+    , allowedSearchTerm, isAlphaNumericName
     , parenKeysEvent
     ) where
 

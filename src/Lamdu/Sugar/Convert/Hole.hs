@@ -50,6 +50,7 @@ convert posInfo holePl =
                 <&> filtForType
             , gForType = forType ^.. Lens._Just & pure
             , gGetFields = makeTagRes "." (Pure . V.BLeaf . V.LGetField)
+            , gWrapInRecs = pure [] -- Only used in fragments
             }
             <&> (>>= traverse (makeOption holePl . fmap (\x -> [((), wrap (const (Ann ExprIRef.WriteNew)) x)])))
             & traverse ConvertM.convertOnce

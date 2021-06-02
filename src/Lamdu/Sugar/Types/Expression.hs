@@ -112,6 +112,7 @@ data Fragment v name i o k = Fragment
 data FragOpt v name i o k
     = FragPostfix [k :# PostfixFunc v name i o]
     | FragInject (TagRef name i o)
+    | FragWrapInRec (TagRef name i o)
     | FragGetVar (GetVar name o)
     | FragOp (FragOperator v name i o k)
     | FragToNom (TId name)

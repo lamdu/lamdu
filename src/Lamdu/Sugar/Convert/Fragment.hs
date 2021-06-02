@@ -97,6 +97,17 @@ convertAppliedHole app@(V.App funcI argI) exprPl argS =
                         , gForType = forType ^.. Lens._Just . _2 & pure
                         , gGetFields = makeTagRes "." (Pure . V.BLeaf . V.LGetField) <&> funcOpt
                         , gSyntax = makeResultsSyntax argI & transaction
+                        , gWrapInRecs =
+                            makeTagRes "{"
+                            (\t ->
+                                [ (TypeMatches
+                                    , V.RowExtend t
+                                        (argI & hflipped %~ hmap (const (ExistingRef . (^. Input.stored . ExprIRef.iref))))
+                                        (Ann WriteNew (V.BLeaf V.LRecEmpty))
+                                        & V.BRecExtend & Ann WriteNew
+                                    )
+                                ]
+                            )
                         } <&> (>>= traverse (makeOption exprPl))
                         <&> Lens.mapped . traverse . rExpr . _2 . optionExpr %~ toFragOpt
                         & traverse ConvertM.convertOnce
@@ -213,6 +224,8 @@ toFragOpt o =
     BinderTerm (BodyToNom n) -> n ^. nTId & FragToNom & Ann (Const (o ^. annotation))
     BinderTerm (BodyIfElse i) -> i ^. iThen & FragIf & Ann (Const (o ^. annotation))
     BinderTerm BodyLam{} -> o & annValue .~ FragLam
+    BinderTerm (BodyRecord r) ->
+        r ^?! cItems . traverse . ciTag & FragWrapInRec & Ann (Const (o ^. annotation))
     BinderTerm x -> error ("unexpected result in fragment result: " <> show (gconIndex x))
     BinderLet{} -> error "let in fragment result"
 
