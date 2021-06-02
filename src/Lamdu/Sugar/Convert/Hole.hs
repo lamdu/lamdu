@@ -124,7 +124,10 @@ makeResultsSyntax posInfo =
 makeGetDef :: Monad m => V.Var -> Pure # T.Type -> T m (Maybe (Pure # V.Term))
 makeGetDef v t =
     case t of
-    Pure (T.TFun (FuncType a _)) -> suggestVal a <&> Pure . V.BApp . V.App base
+    Pure (T.TFun (FuncType a _))
+        -- Avoid filling in params for open records
+        | Lens.nullOf (_Pure . T._TRecord . T.flatRow . freRest . _Pure . T._RVar) a ->
+            suggestVal a <&> Pure . V.BApp . V.App base
     _ -> pure base
     <&> Just
     where
