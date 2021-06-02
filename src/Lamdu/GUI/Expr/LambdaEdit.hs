@@ -43,11 +43,11 @@ mkLhsEdits =
 
 mkExpanded :: _ => f (Maybe (Responsive o) -> Maybe (M.Widget o) -> [Responsive o])
 mkExpanded =
-    (,)
-    <$> mkLhsEdits
-    <*> (grammar (label Texts.arrow) <&> Responsive.fromTextView)
-    <&> \(lhsEdits, labelEdit) mParamsEdit mScopeEdit ->
-    lhsEdits mParamsEdit mScopeEdit ++ [labelEdit]
+    do
+        lam <- grammar (label Texts.lam) <&> Responsive.fromTextView
+        lhsEdits <- mkLhsEdits
+        arrow <- grammar (label Texts.arrow) <&> Responsive.fromTextView
+        pure (\mParamsEdit mScopeEdit -> lam : lhsEdits mParamsEdit mScopeEdit <> [arrow])
 
 lamId :: Widget.Id -> Widget.Id
 lamId = (`Widget.joinId` ["lam"])
