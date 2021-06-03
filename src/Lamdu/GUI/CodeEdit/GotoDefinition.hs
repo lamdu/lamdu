@@ -48,7 +48,7 @@ nameSearchTerm name =
 makeOptions ::
     _ => m [Sugar.NameRef Name o] -> SearchMenu.ResultsContext -> m (Menu.OptionList (Menu.Option m o))
 makeOptions readGlobals (SearchMenu.ResultsContext searchTerm prefix)
-    | Text.null searchTerm = pure Menu.TooMany
+    | Text.null searchTerm = pure Menu.OptionList { Menu._olIsTruncated = False, Menu._olOptions = [] }
     | otherwise =
         do
             goto <- Lens.view (has . Navigation.goto)
@@ -76,8 +76,9 @@ makeOptions readGlobals (SearchMenu.ResultsContext searchTerm prefix)
                 >>= traverse withText
                 <&> (Fuzzy.memoableMake fuzzyMaker ?? searchTerm)
                 <&> map (makeOption . snd)
-                <&> Menu.FullList
+                <&> Menu.OptionList isTruncated
     where
+        isTruncated = False
         withText (idx, nameRef) =
             nameSearchTerm (nameRef ^. Sugar.nrName) <&> \x -> (x, (idx, nameRef))
         wrapOption optId mkRenedered =

@@ -208,7 +208,9 @@
             "pickNotApplicable": "Scegli (N/A)",
             "searchTerm": "Cerca Termine",
             "appendChar": "Aggiungi carattere",
-            "deleteBackwards": "Cancella all'indietro"
+            "deleteBackwards": "Cancella all'indietro",
+            "openResults": "Apri risultati",
+            "closeResults": "Chiudi risultati"
         },
         "textEdit": {
             "word": "Parola",

@@ -124,7 +124,7 @@ makeResults ::
     SearchMenu.ResultsContext ->
     GuiM env i o (Menu.OptionList (Menu.Option (GuiM env i o) o))
 makeResults opts ctx
-    | ctx ^. SearchMenu.rSearchTerm == "" = pure Menu.TooMany
+    | ctx ^. SearchMenu.rSearchTerm == "" = pure Menu.OptionList { Menu._olIsTruncated = False, Menu._olOptions = [] }
     | otherwise =
         do
             c <- Lens.view (has . Config.completion . Config.completionResultCount)
@@ -133,7 +133,9 @@ makeResults opts ctx
                 >>= GuiM.im
                 <&> take c
                 <&> Lens.mapped %~ makeResult makeFragOpt ctx
-                <&> Menu.FullList
+                <&> Menu.OptionList isTruncated
+    where
+        isTruncated = False -- TODO: Need to specify whether we have more options
 
 makeFragOpt :: _ => ExprGui.Expr Sugar.FragOpt i o -> GuiM env i o (Responsive o)
 makeFragOpt (Ann (Const a) b) =

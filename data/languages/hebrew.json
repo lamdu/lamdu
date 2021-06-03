@@ -209,7 +209,9 @@
             "pickNotApplicable": "בחר (לא ישים)",
             "searchTerm": "שורת חיפוש",
             "appendChar": "הוספת אות",
-            "deleteBackwards": "מחק אחורה"
+            "deleteBackwards": "מחק אחורה",
+            "openResults": "פתח תוצאות",
+            "closeResults": "סגור תוצאות"
         },
         "textEdit": {
             "word": "מילה",

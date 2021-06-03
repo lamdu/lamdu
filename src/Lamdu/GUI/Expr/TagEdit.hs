@@ -138,7 +138,7 @@ makeOptions ::
     SearchMenu.ResultsContext ->
     GuiM env i o (Menu.OptionList (Menu.Option m o))
 makeOptions tagRefReplace newTagOpt mkPickResult ctx
-    | Text.null searchTerm = pure Menu.TooMany
+    | Text.null searchTerm = pure Menu.OptionList { Menu._olIsTruncated = True, Menu._olOptions = [] }
     | otherwise =
         do
             resultCount <-
@@ -190,7 +190,7 @@ makeOptions tagRefReplace newTagOpt mkPickResult ctx
                 & splitAt resultCount
                 & _2 %~ not . null
                 & _1 %~ maybeAddNewTagOption . map makeOption
-                & uncurry Menu.toOptionList
+                & (\(list, isTrunc) -> Menu.OptionList isTrunc list)
                 & pure
     where
         withText tagOption = tagOption ^.. nameText <&> ((,) ?? tagOption)
@@ -220,7 +220,7 @@ makeHoleSearchTerm newTagOption mkPickResult holeId =
                 <&> fmap (mempty <$)
         let addPreEvents =
                 Widget.wState . Widget._StateFocused . Lens.mapped .
-                Widget.fPreEvents %~ (Widget.PreEvents newTagPreEvents <>)
+                Widget.fPreEvents %~ (newTagPreEvents <>)
         term <-
             SearchMenu.addDelSearchTerm holeId
             <*> SearchMenu.basicSearchTermEdit newTagId holeId (pure . allowedSearchTerm)

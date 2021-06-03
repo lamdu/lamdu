@@ -208,7 +208,9 @@
             "pickNotApplicable": "Pick (N/A)",
             "searchTerm": "Search Term",
             "appendChar": "Append character",
-            "deleteBackwards": "Delete backwards"
+            "deleteBackwards": "Delete backwards",
+            "openResults": "Open results",
+            "closeResults": "Close results"
         },
         "textEdit": {
             "word": "Word",
