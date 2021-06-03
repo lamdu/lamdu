@@ -67,7 +67,7 @@ makeResults ::
     SearchMenu.ResultsContext ->
     GuiM env i o (Menu.OptionList (Menu.Option (GuiM env i o) o))
 makeResults (Ann (Const pl) (Const hole)) ctx
-    | ctx ^. SearchMenu.rSearchTerm == "" = pure Menu.TooMany
+    | ctx ^. SearchMenu.rSearchTerm == "" = pure Menu.OptionList { Menu._olIsTruncated = False, Menu._olOptions = [] }
     | otherwise =
         do
             c <- Lens.view (has . Config.completion . Config.completionResultCount)
@@ -81,4 +81,7 @@ makeResults (Ann (Const pl) (Const hole)) ctx
                     -- Without this results accept too many operators (and a test fails).
                     (Sugar.optionExpr . annotation . Sugar.plParenInfo . Sugar.piMinOpPrec .~
                         pl ^. Sugar.plParenInfo . Sugar.piMinOpPrec)
-                <&> Menu.FullList
+                <&> Menu.OptionList isTruncated
+    where
+        -- TODO: Need to check whether we have more options
+        isTruncated = False
