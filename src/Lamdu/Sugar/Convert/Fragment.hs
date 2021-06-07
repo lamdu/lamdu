@@ -258,7 +258,7 @@ emplaceExtendArg typ arg =
             case s ^. _Pure of
             V.BLeaf{} -> [] -- Redundant with plain emplace
             _ ->
-                recursiveContexts (writeNew s)
+                annContexts (writeNew s)
                 ^.. ExprLens.valLeafs . V._LHole . Lens.asIndex
                 <&> \(HFunc f :*: _) -> (TypeMatches, f a ^. Lens._Wrapped)
     in

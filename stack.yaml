@@ -14,7 +14,7 @@ extra-deps:
 - github: lamdu/momentu
   commit: 2df16cf5f3be3552a28c0a42f9c82e8b58a0a93e
 - github: lamdu/hypertypes
-  commit: de21cb3bb17018b929e71be863a48b640524888d
+  commit: b3382e1d233c3aaa74c7845247d1bd533301a58a
 - github: lamdu/graphics-drawingcombinators
   commit: 39500dd189b0676468848d1f452ac31c7f0ec461
 - github: lamdu/freetype2
