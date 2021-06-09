@@ -604,13 +604,13 @@
         "tagOrder": 0,
         "tag": "42493a696e6669786c00000000000000",
         "names": {
-            "english": {
-                "abbreviation": "lhs",
-                "name": "leftHandSide"
-            },
             "hebrew": {
                 "abbreviation": "ימני",
                 "name": "מימין_לאופרטור"
+            },
+            "english": {
+                "abbreviation": "lhs",
+                "name": "leftHandSide"
             }
         }
     },
@@ -618,13 +618,13 @@
         "tagOrder": 1,
         "tag": "42493a696e6669787200000000000000",
         "names": {
-            "english": {
-                "abbreviation": "rhs",
-                "name": "rightHandSide"
-            },
             "hebrew": {
                 "abbreviation": "שמאלי",
                 "name": "משמאל_לאופרטור"
+            },
+            "english": {
+                "abbreviation": "rhs",
+                "name": "rightHandSide"
             }
         }
     },
@@ -715,6 +715,7 @@
         "tagOrder": 0,
         "tag": "42493a7265636f726400000000000000",
         "names": {
+            "hebrew": "רשומה",
             "english": {
                 "abbreviation": "rec",
                 "name": "record"
@@ -823,6 +824,14 @@
         }
     },
     {
+        "tagOrder": 1,
+        "tag": "42493a756e6974000000000000000000",
+        "names": {
+            "hebrew": "יחידה",
+            "english": "unit"
+        }
+    },
+    {
         "tagOrder": 3,
         "tag": "42493a75736572000000000000000000",
         "names": {
@@ -841,11 +850,18 @@
         }
     },
     {
-        "tagOrder": 0,
+        "tagOrder": 2,
         "tag": "42493a76617269616e74000000000000",
         "names": {
             "english": "variant",
             "italiano": "variante"
+        }
+    },
+    {
+        "tagOrder": 3,
+        "tag": "42493a766f6964000000000000000000",
+        "names": {
+            "english": "void"
         }
     },
     {
@@ -1420,8 +1436,8 @@
         "tag": "a59adbafb2f7abc303d62cfac267c9e8",
         "names": {
             "english": "pivotPosRef",
-            "hebrew:": "מייחס_ציר_מיקום",
-            "italiano": "pivotPosRef"
+            "italiano": "pivotPosRef",
+            "hebrew:": "מייחס_ציר_מיקום"
         }
     },
     {

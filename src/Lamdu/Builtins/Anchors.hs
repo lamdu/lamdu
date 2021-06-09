@@ -5,7 +5,7 @@ module Lamdu.Builtins.Anchors
     ( bytesTid, floatTid, listTid, textTid, treeTid, arrayTid, boolTid, mutTid
     , headTag, tailTag, rootTag, subtreesTag, trueTag, falseTag
     , valTypeParamId
-    , genericVarTag, functionTag, recordTag, variantTag
+    , genericVarTag, functionTag, recordTag, variantTag, unitTag, voidTag
     ) where
 
 import           Data.List.Extended (rightPad)
@@ -75,6 +75,12 @@ recordTag = bi "record"
 
 variantTag :: Tag
 variantTag = bi "variant"
+
+unitTag :: Tag
+unitTag = bi "unit"
+
+voidTag :: Tag
+voidTag = bi "void"
 
 genericVarTag :: Tag
 genericVarTag =

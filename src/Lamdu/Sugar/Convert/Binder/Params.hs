@@ -618,9 +618,11 @@ makeNonRecordParamActions binderKind storedLam =
 
 mkVarInfo :: MonadTransaction n m => Pure # T.Type -> m VarInfo
 mkVarInfo (Pure T.TFun{}) = pure VarFunction
-mkVarInfo (Pure T.TRecord{}) = pure VarRecord
-mkVarInfo (Pure T.TVariant{}) = pure VarVariant
 mkVarInfo (Pure T.TVar{}) = pure VarGeneric
+mkVarInfo (Pure (T.TRecord (Pure T.REmpty))) = pure VarUnit
+mkVarInfo (Pure T.TRecord{}) = pure VarRecord
+mkVarInfo (Pure (T.TVariant (Pure T.REmpty))) = pure VarVoid
+mkVarInfo (Pure T.TVariant{}) = pure VarVariant
 mkVarInfo (Pure (T.TInst (NominalInst tid _))) = ConvertTId.convert tid <&> VarNominal . fmap (^. inTag)
 
 mkFuncParam ::

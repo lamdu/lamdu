@@ -106,6 +106,8 @@ autoName VarGeneric = Builtins.genericVarTag
 autoName VarFunction = Builtins.functionTag
 autoName VarRecord = Builtins.recordTag
 autoName VarVariant = Builtins.variantTag
+autoName VarUnit = Builtins.unitTag
+autoName VarVoid = Builtins.voidTag
 
 taggedName :: (MonadTransaction n m, UniqueId.ToUUID a) => Maybe VarInfo -> a -> m InternalName
 taggedName mVarInfo x = Anchors.assocTag x & getP <&> nameWithContext mVarInfo x

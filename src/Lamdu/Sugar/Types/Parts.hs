@@ -131,7 +131,7 @@ data BinderParams v name i o
 -- * Name pass giving parameters names according to types
 data VarInfo
     = VarNominal (TId T.Tag)
-    | VarGeneric | VarFunction | VarRecord | VarVariant
+    | VarGeneric | VarFunction | VarRecord | VarUnit | VarVariant | VarVoid
     deriving (Generic, Eq)
 
 data Payload v o = Payload
