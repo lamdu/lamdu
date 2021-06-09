@@ -34,6 +34,7 @@ Data-files:          config.json
                    , js/protocol.js
                    , js/rts.js
                    , js/rtsConfig.js
+                   , Lamdu.png
                    , languages/base.mixin.json
                    , languages/english.json
                    , languages/hebrew.json
@@ -137,6 +138,7 @@ Library
                   , base-compat >= 0.8.2 && < 0.12
                   , base16-bytestring >=1
                   , binary >= 0.7
+                  , bitmap
                   , bytestring
                   , containers >= 0.4
                   , constraints
@@ -168,6 +170,7 @@ Library
                   , safe-exceptions >= 0.1.4
                   , split
                   , StateVar
+                  , stb-image
                   , hypertypes
                   , template-haskell
                   , temporary

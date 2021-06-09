@@ -5,6 +5,7 @@ module Lamdu.Editor
     ( run
     ) where
 
+import qualified Codec.Image.STB as Image
 import           Control.Concurrent.MVar
 import           Control.DeepSeq (deepseq)
 import qualified Control.Exception as E
@@ -13,6 +14,8 @@ import           Control.Monad.Once (OnceT, _OnceT, OnceState, MonadOnce(..), ru
 import           Control.Monad.State (mapStateT)
 import           Control.Monad.Trans.FastWriter (evalWriterT)
 import qualified Data.Aeson.Config as AesonConfig
+import qualified Data.Bitmap as Bitmap
+import qualified Data.Bitmap.Pure.Pixels as BitmapPixels
 import           Data.CurAndPrev (current)
 import           Data.IORef (IORef, newIORef, readIORef, writeIORef)
 import           Data.Property (Property(..), MkProperty', mkProperty)
@@ -23,6 +26,7 @@ import           GUI.Momentu.Main (MainLoop, Handlers(..))
 import qualified GUI.Momentu.Main as MainLoop
 import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
+import qualified Graphics.UI.GLFW as GLFW
 import           Graphics.UI.GLFW.Utils (printGLVersion)
 import qualified Lamdu.Annotations as Annotations
 import           Lamdu.Cache (Cache)
@@ -53,15 +57,16 @@ import qualified Lamdu.I18N.Language as Language
 import           Lamdu.Main.Env (Env(..))
 import qualified Lamdu.Main.Env as Env
 import qualified Lamdu.Opts as Opts
+import qualified Lamdu.Paths as Paths
 import           Lamdu.Settings (Settings(..))
 import qualified Lamdu.Settings as Settings
 import qualified Lamdu.Style.Make as MakeStyle
 import           Lamdu.Sugar (sugarWorkArea)
 import qualified Lamdu.VersionControl as VersionControl
 import           Revision.Deltum.IRef (IRef)
+import           Revision.Deltum.Rev.Version (Version)
 import           Revision.Deltum.Transaction (Transaction)
 import qualified Revision.Deltum.Transaction as Transaction
-import           Revision.Deltum.Rev.Version (Version)
 import qualified System.Environment as Env
 import           System.IO (hPutStrLn, hFlush, stderr)
 import qualified System.Metrics as Metrics
@@ -350,6 +355,19 @@ makeRootWidget env perfMonitors db evaluator sample cacheRef =
                 Debug.Evaluator report = monitors ^. Debug.layout . Debug.mPure
                 f x = report ((x ^. Widget.fFocalAreas) `deepseq` x)
 
+setIcon :: GLFW.Window -> Image.Bitmap Bitmap.Word8 -> IO ()
+setIcon win image =
+    GLFW.setWindowIcon win [GLFW.mkImage width height getPixel]
+    where
+        getPixel x y =
+            case BitmapPixels.unsafeReadPixel image (x, y) of
+            [a] -> (a,a,a,a)
+            [a, l] -> (a,a,a,l)
+            [r, g, b] -> (r,g,b,1)
+            [r, g, b, a] -> (r,g,b,a)
+            _ -> (0, 0, 0, 0)
+        (width, height) = Bitmap.bitmapSize image
+
 run ::
     HasCallStack =>
     Opts.EditorOpts -> Transaction.Store DbM -> IO ()
@@ -379,6 +397,13 @@ run opts rawDb =
                     M.createWindow
                     (opts ^. Opts.eoWindowTitle)
                     (opts ^. Opts.eoWindowMode)
+
+                lamduIconFile <- Paths.getDataFileName "Lamdu.png"
+                eLamduIcon <- Image.loadImage lamduIconFile
+                case eLamduIcon of
+                    Left err -> "Failed to load Lamdu icon: " ++ err & hPutStrLn stderr
+                    Right icon -> setIcon win icon
+
                 printGLVersion
                 evaluator <- newEvaluator refresh dbMVar opts
                 mkSettingsProp <-

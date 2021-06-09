@@ -1,12 +1,12 @@
 { mkDerivation, aeson, aeson-diff, aeson-pretty, ansi-wl-pprint, base
-, base-compat, base16-bytestring, binary, bytestring
+, base-compat, base16-bytestring, binary, bitmap, bytestring
 , Cabal, constraints, containers, cryptohash-sha256, data-default, deepseq
 , directory, edit-distance, ekg-core
 , executable-path, filepath, generic-data, GLFW-b
 , graphics-drawingcombinators, hashable, HUnit, lamdu-calculus, momentu
 , language-ecmascript, lattices, lens, lens-aeson, leveldb-haskell, List, mtl
 , nodejs-exec, OpenGL, optparse-applicative, pretty, process
-, random, safe-exceptions, split, StateVar, stdenv, hypertypes
+, random, safe-exceptions, split, StateVar, stb-image, hypertypes
 , template-haskell, temporary, test-framework, test-framework-hunit
 , text, time, timeit, transformers
 , unicode-properties, unordered-containers, uuid, uuid-types, vector, yaml
@@ -41,13 +41,13 @@ mkDerivation {
   enableSeparateDataOutput = true;
   libraryHaskellDepends = [
     aeson aeson-pretty ansi-wl-pprint base base-compat
-    base16-bytestring binary bytestring constraints containers cryptohash-sha256
+    base16-bytestring binary bitmap bytestring constraints containers cryptohash-sha256
     data-default deepseq directory edit-distance generic-data
     ekg-core executable-path filepath GLFW-b
     graphics-drawingcombinators hashable lamdu-calculus momentu
     language-ecmascript lattices lens lens-aeson leveldb-haskell List mtl
     nodejs-exec OpenGL optparse-applicative pretty process random
-    safe-exceptions split StateVar hypertypes temporary text time timeit
+    safe-exceptions split StateVar stb-image hypertypes temporary text time timeit
     transformers unicode-properties unordered-containers uuid uuid-types vector
     zip-archive
   ];
