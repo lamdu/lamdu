@@ -401,10 +401,14 @@ makeLocals f scope =
         deps <- Lens.view (ConvertM.scFrozenDeps . pVal . depsGlobalTypes)
         Infer.runPureInfer scope ctx
             (scope ^@.. V.scopeVarTypes . Lens.itraversed
-                -- Avoid repeating globals
-                & filter (\(k, _) -> Lens.nullOf (Lens.ix k) deps && Just k /= recRef)
+                & filter (\(k, _) ->
+                    -- Avoid repeating globals
+                    Lens.nullOf (Lens.ix k) deps &&
+                    Just k /= recRef)
                 & (traverse . _2) (instantiate . (^. _HFlip) >=> applyBindings)
             ) ^?! Lens._Right . _1
+            -- Avoid unit variables (like those hidden in pipe syntax)
+            & filter (Lens.hasn't (_2 . _Pure . T._TRecord . _Pure . T._REmpty))
             & traverse mkVar & transaction
             <&> (<> fieldParams)
     where
