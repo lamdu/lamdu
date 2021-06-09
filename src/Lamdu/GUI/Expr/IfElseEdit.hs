@@ -15,6 +15,7 @@ import           GUI.Momentu.Responsive (Responsive)
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.Responsive.Expression as ResponsiveExpr
 import qualified GUI.Momentu.Responsive.Options as Options
+import qualified GUI.Momentu.State as GuiState
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Label as Label
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
@@ -27,6 +28,7 @@ import qualified Lamdu.GUI.Types as ExprGui
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.GUI.Wrap (stdWrapParentExpr)
 import qualified Lamdu.I18N.Code as Texts
+import qualified Lamdu.I18N.Navigation as Texts
 import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
@@ -47,15 +49,21 @@ makeIfThen ::
     GuiM env i o (Row (Responsive o))
 makeIfThen ifKind animId ifElse =
     do
+        env <- Lens.view id
+        let jumpToThen =
+                ifElse ^?! Sugar.iThen .
+                Lens.failing (hVal . Sugar._BodyLam . Sugar.lamFunc . Sugar.fBody . annotation) annotation
+                & WidgetIds.fromExprPayload & GuiState.updateCursor & pure & const
+                & E.charGroup Nothing (E.toDoc env [has . MomentuTexts.navigation, has . Texts.jumpToThen]) ":"
         ifGui <-
             GuiM.makeSubexpression (ifElse ^. Sugar.iIf)
             M./|/ (grammar (Label.make ":") M./|/ Spacer.stdHSpace)
+            <&> M.weakerEvents jumpToThen
         thenGui <- GuiM.makeSubexpression (ifElse ^. Sugar.iThen)
         keyword <-
             grammar ifKeyword
             M./|/ Spacer.stdHSpace
             <&> Responsive.fromTextView
-        env <- Lens.view id
         let eventMap =
                 foldMap
                 (E.keysEventMapMovesCursor (Config.delKeys env)

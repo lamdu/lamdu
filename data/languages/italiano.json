@@ -63,6 +63,7 @@
             "blocked": "(Bloccato)",
             "prev": "Precedente",
             "next": "Prossimo",
+            "jumpToThen": "Vai al then",
             "jumpToTag": "Vai al Tag",
             "jumpToDef": "Vai alla definizione",
             "jumpToDefBody": "Vai al corpo della definizione",

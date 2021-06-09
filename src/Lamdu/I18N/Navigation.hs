@@ -21,6 +21,7 @@ data Navigation a = Navigation
     , _next :: a
     , _prevScopeArrow :: a
     , _nextScopeArrow :: a
+    , _jumpToThen :: a
     , _jumpToTag :: a
     , _jumpToDef :: a
     , _jumpToDefBody :: a

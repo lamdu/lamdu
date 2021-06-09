@@ -24,11 +24,11 @@ type Prec = Int
 
 -- Lower precedences are reserved for grammars
 minNamePrec :: Prec
-minNamePrec = 2
+minNamePrec = 1
 
 -- Higher precedences are reserved for grammars
 maxNamePrec :: Prec
-maxNamePrec = 12
+maxNamePrec = 13
 
 class HasPrecedence a where
     -- | Returns a precedence between minNamePrec..maxNamePrec
@@ -41,7 +41,8 @@ instance HasPrecedence Char where
 -- Inspired by Table 2 in https://www.haskell.org/onlinereport/decls.html
 precedenceMap :: Map Char Prec
 precedenceMap =
-    [ ('$', 2)
+    [ (':', 1)
+    , ('$', 2)
     , (';', 3)
     , ('|', 4)
     , ('&', 5)

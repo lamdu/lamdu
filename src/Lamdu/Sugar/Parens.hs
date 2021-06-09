@@ -93,7 +93,14 @@ instance HasPrecedence name => AddParens (Term v name i o) where
         BodySimpleApply  x -> simpleApply x
         BodyLabeledApply x -> labeledApply x
         BodyPostfixApply x -> postfixApply x
-        BodyIfElse       x -> (parentPrec ^. after > 1, unambiguousBody x & BodyIfElse)
+        BodyIfElse       x ->
+            ( parentPrec ^. after > 1
+            , BodyIfElse IfElse
+                { _iIf = Const (precedence ':' + 1, Precedence 0 0) :*: x ^. iIf
+                , _iThen = Const (0, Precedence 0 0) :*: x ^. iThen
+                , _iElse = Const (0, Precedence 0 0) :*: x ^. iElse
+                }
+            )
         BodyFragment     x -> (True, x & fExpr %~ (Const (13, pure 1) :*:) & BodyFragment)
         BodyNullaryInject x -> (False, unambiguousBody x & BodyNullaryInject)
         BodyLeaf         x ->
