@@ -4,7 +4,7 @@ module Lamdu.GUI.Expr.EventMap
     , extractCursor
     , addLetEventMap
     , makeLiteralNumberEventMap
-    , makeLiteralTextEventMap
+    , makeLiteralEventMap
     , allowedSearchTerm, isAlphaNumericName
     , parenKeysEvent
     ) where
@@ -264,13 +264,11 @@ makeLiteralCommon mGroupDesc chars help f =
     E.charGroup mGroupDesc (toDoc [has . MomentuTexts.edit, has . Lens.cloneLens help])
     chars (fmap goToLiteral . makeLiteral . f)
 
-makeLiteralTextEventMap ::
-    _ => m ((Sugar.Literal Identity -> o Sugar.EntityId) -> EventMap (o GuiState.Update))
-makeLiteralTextEventMap =
-    makeLiteralCommon Nothing "\"" Texts.literalText (const (Sugar.LiteralText (Identity "")))
-
 makeLiteralEventMap :: _ => m ((Sugar.Literal Identity -> o Sugar.EntityId) -> EventMap (o GuiState.Update))
-makeLiteralEventMap = (<>) <$> makeLiteralTextEventMap <*> makeLiteralNumberEventMap ""
+makeLiteralEventMap =
+    makeLiteralCommon Nothing "\"" Texts.literalText (const (Sugar.LiteralText (Identity ""))) <>
+    makeLiteralCommon Nothing "#" Texts.literalText (const (Sugar.LiteralBytes (Identity ""))) <>
+    makeLiteralNumberEventMap ""
 
 allowedSearchTerm :: Text -> Bool
 allowedSearchTerm searchTerm =

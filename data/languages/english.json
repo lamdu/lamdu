@@ -119,6 +119,7 @@
             "detach": "Detach",
             "literal": "Literal",
             "literalText": "Literal Text",
+            "literalBytes": "Literal Bytes",
             "literalNumber": "Literal Number",
             "startEditing": "Start editing",
             "stopEditing": "Stop editing",

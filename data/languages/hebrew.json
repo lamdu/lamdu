@@ -120,6 +120,7 @@
             "detach": "נתק",
             "literal": "ליטרלי",
             "literalText": "מחרוזת ליטרלית",
+            "literalBytes": "בתים ליטרליים",
             "literalNumber": "מספר ליטרלי",
             "startEditing": "התחל עריכה",
             "stopEditing": "הפסק עריכה",

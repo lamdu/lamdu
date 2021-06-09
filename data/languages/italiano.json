@@ -119,6 +119,7 @@
             "detach": "Stacca",
             "literal": "Letterale",
             "literalText": "Testo letterale",
+            "literalBytes": "Byte letterale",
             "literalNumber": "Numero letterale",
             "startEditing": "Inizia modifica",
             "stopEditing": "Termina modifica",

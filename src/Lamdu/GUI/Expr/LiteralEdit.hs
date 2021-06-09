@@ -2,15 +2,16 @@ module Lamdu.GUI.Expr.LiteralEdit
     ( make
     ) where
 
-import           Control.Lens (LensLike')
 import qualified Control.Lens as Lens
+import qualified Data.ByteString.Base16 as Hex
+import           Data.ByteString.Lens (chars)
 import qualified Data.Char as Char
 import           Data.Property (Property)
 import qualified Data.Property as Property
 import qualified Data.Text as Text
+import           Data.Text.Encoding (encodeUtf8)
 import qualified GUI.Momentu as M
 import qualified GUI.Momentu.Element as Element
-import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.I18N as MomentuTexts
 import qualified GUI.Momentu.MetaKey as MetaKey
@@ -20,11 +21,11 @@ import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.State as GuiState
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.FocusDelegator as FocusDelegator
+import qualified GUI.Momentu.Widgets.Label as Label
 import qualified GUI.Momentu.Widgets.Menu as Menu
 import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
 import qualified GUI.Momentu.Widgets.TextEdit.Property as TextEdits
-import qualified GUI.Momentu.Widgets.TextView as TextView
 import qualified Lamdu.Config as Config
 import           Lamdu.Formatting (Format(..))
 import qualified Lamdu.GUI.Expr.EventMap as ExprEventMap
@@ -42,37 +43,33 @@ import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
 
-mkEditEventMap :: _ => m (Text -> o Sugar.EntityId -> EventMap (o M.Update))
-mkEditEventMap =
-    Lens.view id
-    <&> \env valText setToHole ->
-    setToHole <&> WidgetIds.fromEntityId
-    <&> SearchMenu.enterWithSearchTerm valText
-    & E.keyPresses [ModKey mempty MetaKey.Key'Enter]
-    (E.toDoc env [has . MomentuTexts.edit, has . Texts.value])
-
 withStyle :: _ => Lens.Getting TextEdit.Style Style TextEdit.Style -> m a -> m a
 withStyle whichStyle =
     local (\x -> x & has .~ x ^. has . whichStyle)
 
-genericEdit ::
-    _ =>
-    LensLike' (Const TextEdit.Style) Style TextEdit.Style ->
-    Property o a ->
-    Sugar.Payload v o -> f (Responsive o)
-genericEdit whichStyle prop pl =
-    do
-        editEventMap <-
-            case pl ^. Sugar.plActions . Sugar.delete of
-            Sugar.SetToHole action -> mkEditEventMap ?? valText ?? action
-            _ -> error "Cannot set literal to hole?!"
-        TextView.makeFocusable ?? valText ?? myId
-            <&> M.tValue %~ M.weakerEvents editEventMap
-            <&> Responsive.fromWithTextPos
-            & withStyle whichStyle
+groupsOf :: Int -> [a] -> [[a]]
+groupsOf _ [] = []
+groupsOf c l =
+    x : groupsOf c xs
     where
-        myId = WidgetIds.fromExprPayload pl
-        valText = prop ^. Property.pVal & format
+        (x, xs) = splitAt c l
+
+bytesEdit ::
+    _ =>
+    Property o ByteString ->
+    Sugar.Payload v o -> m (M.TextWidget o)
+bytesEdit prop pl =
+    Label.make "#" M./|/
+    ( TextEdits.makeLineEdit ?? emptyTexts ??
+        Property.pureCompose enc dec prop ??
+        WidgetIds.literalEditOf (WidgetIds.fromExprPayload pl)
+    )
+    where
+        enc s = Hex.encode s ^.. chars & groupsOf 2 & unwords & Text.pack
+        dec s =
+            Hex.decode (encodeUtf8 (mconcat
+                (Text.splitOn " " s <&> Text.take 2 . (<> "00") . Text.filter Char.isHexDigit)))
+            ^?! Lens._Right
 
 fdConfig :: _ => m FocusDelegator.Config
 fdConfig =
@@ -105,26 +102,20 @@ fdConfig =
         ]
     }
 
-withFd :: _ => m (Widget.Id -> M.TextWidget f -> M.TextWidget f)
-withFd =
-    FocusDelegator.make <*> fdConfig ?? FocusDelegator.FocusEntryParent
-    <&> Lens.mapped %~ (M.tValue %~)
-
 textEdit :: _ => Property o Text -> Sugar.Payload v o -> m (M.TextWidget o)
 textEdit prop pl =
     do
-        text <- TextEdits.make ?? empty ?? prop ?? WidgetIds.literalEditOf myId
-        (withFd ?? myId) <*>
-            label Texts.textOpener
+        text <- TextEdits.make ?? emptyTexts ?? prop ?? WidgetIds.literalEditOf (WidgetIds.fromExprPayload pl)
+        label Texts.textOpener
             M./|/ pure text
             M./|/ ((M.tValue %~)
                     <$> (Element.padToSize ?? (text ^. Element.size & _1 .~ 0) ?? 1)
                     <*> label Texts.textCloser
                 )
     & withStyle Style.text
-    where
-        empty = TextEdit.Modes "" ""
-        myId = WidgetIds.fromExprPayload pl
+
+emptyTexts :: TextEdit.Modes Text
+emptyTexts = TextEdit.Modes "" ""
 
 parseNum :: Text -> Maybe Double
 parseNum newText
@@ -134,7 +125,6 @@ parseNum newText
 
 numEdit :: _ => Property o Double -> Sugar.Payload v o -> m (M.TextWidget o)
 numEdit prop pl =
-    (withFd ?? myId) <*>
     do
         text <-
             M.readWidgetState myId
@@ -196,7 +186,7 @@ numEdit prop pl =
                 _ -> mempty
         newLiteralEvent <-
             if Text.null text
-            then ExprEventMap.makeLiteralTextEventMap ?? pl ^. Sugar.plActions . Sugar.setToLiteral
+            then ExprEventMap.makeLiteralEventMap ?? pl ^. Sugar.plActions . Sugar.setToLiteral
             else pure mempty
         TextEdit.make ?? empty ?? text ?? innerId
             <&> M.tValue . Widget.eventMapMaker . Lens.mapped %~
@@ -227,8 +217,11 @@ make ::
     Annotated (ExprGui.Payload i o) # Const (Sugar.Literal (Property o)) ->
     GuiM env i o (Responsive o)
 make (Ann (Const p) (Const lit)) =
+    (FocusDelegator.make <*> fdConfig ?? FocusDelegator.FocusEntryParent ?? WidgetIds.fromExprPayload p
+        <&> (M.tValue %~)) <*>
     case lit of
-    Sugar.LiteralNum x -> numEdit x p <&> Responsive.fromWithTextPos
-    Sugar.LiteralBytes x -> genericEdit Style.bytes x p
-    Sugar.LiteralText x -> textEdit x p <&> Responsive.fromWithTextPos
+    Sugar.LiteralNum x -> numEdit x p
+    Sugar.LiteralBytes x -> bytesEdit x p
+    Sugar.LiteralText x -> textEdit x p
+    <&> Responsive.fromWithTextPos
     & stdWrap p
