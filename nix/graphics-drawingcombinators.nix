@@ -1,5 +1,5 @@
 { mkDerivation, base, bitmap, bitmap-opengl, fetchFromGitHub, freetype-gl
-, OpenGL, stb-image, stdenv, text, transformers
+, OpenGL, stb-image, stdenv, text, transformers, vector
 }:
 mkDerivation {
   pname = "graphics-drawingcombinators";
@@ -14,7 +14,7 @@ mkDerivation {
   isExecutable = true;
   libraryHaskellDepends = [
     base bitmap bitmap-opengl freetype-gl OpenGL stb-image text
-    transformers
+    transformers vector
   ];
   homepage = "http://github.com/luqui/graphics-drawingcombinators";
   description = "A functional interface to 2D drawing in OpenGL";
