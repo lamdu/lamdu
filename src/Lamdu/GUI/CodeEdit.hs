@@ -27,6 +27,7 @@ import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
+import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import           Hyper.Type.AST.Scheme (Scheme(..), QVars(..))
 import qualified Lamdu.Builtins.Anchors as Builtins
 import qualified Lamdu.Calc.Term as V
@@ -38,6 +39,7 @@ import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Data.Ops as DataOps
 import           Lamdu.Data.Tag (Tag, IsOperator, TextsInLang, getTagName)
 import qualified Lamdu.Eval.Results as EvalResults
+import           Lamdu.Expr.IRef (DefI)
 import qualified Lamdu.GUI.CodeEdit.GotoDefinition as GotoDefinition
 import qualified Lamdu.GUI.DefinitionEdit as DefinitionEdit
 import qualified Lamdu.GUI.Expr as ExpressionEdit
@@ -57,6 +59,7 @@ import qualified Lamdu.I18N.Collaboration as Texts
 import qualified Lamdu.I18N.Definitions as Texts
 import qualified Lamdu.I18N.Navigation as Texts
 import           Lamdu.Name (Name)
+import           Lamdu.Sugar.Internal.EntityId (ofTaggedEntity)
 import qualified Lamdu.Sugar.Types as Sugar
 import           Revision.Deltum.Transaction (Transaction)
 
@@ -198,7 +201,7 @@ makePaneEdit theExportActions pane =
             <&> Widget.weakerEvents paneEventMap
 
 makeNewDefinition ::
-    Monad m => Anchors.CodeAnchors m -> GuiM env (OnceT (T m)) (T m) (T m Widget.Id)
+    Monad m => Anchors.CodeAnchors m -> GuiM env (OnceT (T m)) (T m) (T m (DefI m))
 makeNewDefinition cp =
     GuiM.mkPrejumpPosSaver <&>
     \savePrecursor ->
@@ -213,7 +216,6 @@ makeNewDefinition cp =
                 , _sTyp = _Pure # T.TVar "a"
             }) ()
             & DataOps.newPublicDefinitionWithPane cp
-    <&> WidgetIds.fromIRef
 
 newDefinitionDoc :: _ => m E.Doc
 newDefinitionDoc =
@@ -225,9 +227,16 @@ makeNewDefinitionButton cp =
     do
         newDefId <- Element.subAnimId ?? ["New definition"] <&> Widget.Id
         newDefDoc <- newDefinitionDoc
-        makeNewDefinition cp
-            >>= Styled.actionable newDefId Texts.newDefinitionButton newDefDoc
+        action <- makeNewDefinition cp
+        let nameNewDef c =
+                action
+                <&> (`ofTaggedEntity` Anchors.anonTag)
+                <&> WidgetIds.fromEntityId <&> WidgetIds.tagHoleId
+                <&> SearchMenu.enterWithSearchTerm (Lens._Cons # (c, ""))
+        Styled.actionable newDefId Texts.newDefinitionButton newDefDoc
+            (action <&> WidgetIds.fromIRef)
             <&> (^. Align.tValue)
+            <&> Widget.weakerEvents (E.allChars "Character" newDefDoc nameNewDef)
 
 jumpBack :: Monad m => Anchors.GuiAnchors (T m) (T m) -> T m (Maybe (T m Widget.Id))
 jumpBack gp =
@@ -248,6 +257,7 @@ panesEventMap theExportActions cp gp replVarInfo =
         newDefDoc <- newDefinitionDoc
         newDefinitionEventMap <-
             makeNewDefinition cp
+            <&> Lens.mapped %~ WidgetIds.fromIRef
             <&> E.keysEventMapMovesCursor
             (env ^. has . Config.pane . Config.newDefinitionKeys) newDefDoc
         let collaborationDoc = E.toDoc (env ^. has)
