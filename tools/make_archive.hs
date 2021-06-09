@@ -159,7 +159,7 @@ main =
                         traverse_ fixDylibPaths ("lamdu" : (dependencies <&> takeFileName))
                         callProcess "sh"
                             [ "tools/data/macos_icon.sh"
-                            , "tools/data/Lamdu.png"
+                            , "data/Lamdu.png"
                             , pkgDir </> "Contents" </> "Resources" </> "lamdu.icns"
                             ]
                 let finalize
