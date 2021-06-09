@@ -54,7 +54,6 @@
         "navigationTexts": {
             "goto": "Goto",
             "jumpToError": "Jump to error",
-            "closeHole": "Close hole",
             "goBack": "Go back",
             "goToParent": "Go to parent",
             "nextEntry": "Next entry",

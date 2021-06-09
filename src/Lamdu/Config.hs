@@ -49,8 +49,6 @@ data Completion = Completion
     { _completionJumpToNextKeys :: [MetaKey]
     , _completionJumpToPrevKeys :: [MetaKey]
     , _completionResultCount :: Int
-    , _completionOpenKeys :: [MetaKey]
-    , _completionCloseKeys :: [MetaKey]
     } deriving (Eq, Show)
 JsonTH.derivePrefixed "_completion" ''Completion
 

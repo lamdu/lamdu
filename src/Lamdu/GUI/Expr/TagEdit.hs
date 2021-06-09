@@ -314,18 +314,9 @@ makeTagRefEditWith onView onPickNext tag =
             TagView.make info
             <&> Lens.mapped %~ Widget.weakerEvents eventMap
             & onView
-        let leaveHoleEventMap =
-                E.keysEventMapMovesCursor
-                (env ^. has . Config.completion . Config.completionCloseKeys)
-                (E.toDoc env
-                    [ has . MomentuTexts.navigation
-                    , has . Texts.closeHole
-                    ])
-                (pure myId)
         if isHole
             then
                 makeTagHoleEdit (tag ^. Sugar.tagRefReplace) mkPickResult holeId
-                <&> M.tValue %~ Widget.weakerEvents leaveHoleEventMap
                 <&> (,) TagHole
             else pure (SimpleView, nameView)
         & GuiState.assignCursor myId viewId

@@ -54,7 +54,6 @@
         "navigationTexts": {
             "goto": "Vai a",
             "jumpToError": "Vai all'errore",
-            "closeHole": "Chiudi hole",
             "goBack": "Torna indietro",
             "goToParent": "Torna al principale",
             "nextEntry": "Prossima voce",

@@ -60,9 +60,7 @@
     "completion": {
         "jumpToNextKeys"  : [ "Tab" ],
         "resultCount"     : 5,
-        "jumpToPrevKeys"  : [ "Shift+Tab" ],
-        "openKeys"        : [ "Space", "Enter" ],
-        "closeKeys"       : [ "Escape", "Cmd+LeftBracket" ]
+        "jumpToPrevKeys"  : [ "Shift+Tab" ]
     },
     "literal": {
         "startEditingKeys" : [ "Enter", "Shift+Right" ],

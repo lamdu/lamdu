@@ -9,7 +9,6 @@ import           Lamdu.Prelude
 
 data Navigation a = Navigation
     { _jumpToError :: a
-    , _closeHole :: a
     , _goto :: a
     , _goBack :: a
     , _goToParent :: a
