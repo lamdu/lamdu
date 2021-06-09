@@ -34,22 +34,22 @@ make ::
     GuiM env i o (Responsive o)
 make hole@(Ann (Const pl) _) =
     do
+        searchTerm <- SearchMenu.readSearchTerm myId
         negativeNumberEventMap <-
-            SearchMenu.readSearchTerm myId >>=
-            \case
-            "-" -> ExprEventMap.makeLiteralNumberEventMap "-" ?? pl ^. Sugar.plActions . Sugar.setToLiteral
-            _ -> pure mempty
+            if searchTerm == "-"
+            then ExprEventMap.makeLiteralNumberEventMap "-" ?? pl ^. Sugar.plActions . Sugar.setToLiteral
+            else pure mempty
         env <- Lens.view id
         let innerHoleEventMap =
                 -- Make space go to the hole inside a result
                 E.keysEventMap [MetaKey MetaKey.noMods MetaKey.Key'Space]
                 (E.toDoc env [has . MomentuTexts.edit, has . Texts.nextEntry]) (pure ())
+        let mkSearchTerm firstRes =
+                SearchMenu.searchTermEdit myId (pure . ExprEventMap.allowedSearchTerm) firstRes
+                <&> if searchTerm == "" then SearchMenu.termEditEventMap .~ mempty else id
         (ExprEventMap.add options pl <&> (M.tValue %~))
             <*> ((maybeAddAnnotationPl pl <&> (M.tValue %~)) 
-                <*> (SearchMenu.make
-                        (SearchMenu.searchTermEdit myId (pure . ExprEventMap.allowedSearchTerm))
-                        (makeResults hole) M.empty myId
-                        ?? Menu.AnyPlace))
+                <*> (SearchMenu.make mkSearchTerm (makeResults hole) M.empty myId ?? Menu.AnyPlace))
             & local (has . SearchMenu.emptyStrings . Lens.mapped .~ "_")
             <&> Responsive.fromWithTextPos
             <&> M.weakerEvents innerHoleEventMap
