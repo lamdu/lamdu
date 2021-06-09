@@ -249,21 +249,25 @@ makeLiteralNumberEventMap ::
     String ->
     m ((Sugar.Literal Identity -> o Sugar.EntityId) -> EventMap (o GuiState.Update))
 makeLiteralNumberEventMap prefix =
+    makeLiteralCommon (Just "Digit") Chars.digit Texts.literalNumber
+    (Sugar.LiteralNum . Identity . read . (prefix <>) . (: []))
+
+makeLiteralCommon ::
+    _ =>
+    Maybe Text -> String ->
+    Lens.ALens' (Texts.CodeUI Text) Text ->
+    (Char -> Sugar.Literal Identity) ->
+    m ((Sugar.Literal Identity -> o Sugar.EntityId) -> EventMap (o GuiState.Update))
+makeLiteralCommon mGroupDesc chars help f =
     Lens.view id <&> E.toDoc
     <&> \toDoc makeLiteral ->
-    E.charGroup (Just "Digit")
-    (toDoc [has . MomentuTexts.edit, has . Texts.literalNumber])
-    Chars.digit
-    (fmap goToLiteral . makeLiteral . Sugar.LiteralNum . Identity . read . (prefix <>) . (: []))
+    E.charGroup mGroupDesc (toDoc [has . MomentuTexts.edit, has . Lens.cloneLens help])
+    chars (fmap goToLiteral . makeLiteral . f)
 
 makeLiteralTextEventMap ::
     _ => m ((Sugar.Literal Identity -> o Sugar.EntityId) -> EventMap (o GuiState.Update))
 makeLiteralTextEventMap =
-    Lens.view id <&> E.toDoc <&>
-    \toDoc makeLiteral ->
-    E.charGroup Nothing
-    (toDoc [has . MomentuTexts.edit, has . Texts.literalText]) "\""
-    (const (makeLiteral (Sugar.LiteralText (Identity "")) <&> goToLiteral))
+    makeLiteralCommon Nothing "\"" Texts.literalText (const (Sugar.LiteralText (Identity "")))
 
 makeLiteralEventMap :: _ => m ((Sugar.Literal Identity -> o Sugar.EntityId) -> EventMap (o GuiState.Update))
 makeLiteralEventMap = (<>) <$> makeLiteralTextEventMap <*> makeLiteralNumberEventMap ""
