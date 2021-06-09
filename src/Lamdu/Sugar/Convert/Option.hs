@@ -100,6 +100,7 @@ filterResults ::
     ResultGroups (OnceT (T m) [Result (a, Option t name i o)]) -> Query Text ->
     OnceT (T m) [Option t name i o]
 filterResults order res query
+    | "" == query ^. qSearchTerm = groups (gForType <> gLocals <> gSyntax) <&> (^. traverse)
     | "." `Text.isPrefixOf` (query ^. qSearchTerm) =
         groups (gForType <> gSyntax <> gDefs <> gFromNoms <> gGetFields) <&> (^. traverse)
     | "'" `Text.isPrefixOf` (query ^. qSearchTerm) = groups (gToNoms <> gInjects) <&> (^. traverse)
@@ -108,7 +109,7 @@ filterResults order res query
     | otherwise =
         -- Within certain search-term matching level (exact/prefix/infix),
         -- prefer locals over globals even for type mismatches
-        groups (gForType <> gSyntax <> gLocals) <> groups (gDefs <> gToNoms) <&> (^. traverse)
+        groups (gForType <> gLocals <> gSyntax) <> groups (gDefs <> gToNoms) <&> (^. traverse)
     where
         groups f =
             f res <&> fmap ((^.. traverse . _2) . sortOn s) . foldMap (matchResult query)

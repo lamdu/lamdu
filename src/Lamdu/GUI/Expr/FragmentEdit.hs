@@ -123,17 +123,15 @@ makeResults ::
     i (Sugar.Query Text -> i [Sugar.Option Sugar.FragOpt Name i o]) ->
     SearchMenu.ResultsContext ->
     GuiM env i o (Menu.OptionList (Menu.Option (GuiM env i o) o))
-makeResults opts ctx
-    | ctx ^. SearchMenu.rSearchTerm == "" = pure Menu.OptionList { Menu._olIsTruncated = False, Menu._olOptions = [] }
-    | otherwise =
-        do
-            c <- Lens.view (has . Config.completion . Config.completionResultCount)
-            GuiM.im opts <*>
-                makeQuery ctx
-                >>= GuiM.im
-                <&> take c
-                <&> Lens.mapped %~ makeResult makeFragOpt ctx
-                <&> Menu.OptionList isTruncated
+makeResults opts ctx =
+    do
+        c <- Lens.view (has . Config.completion . Config.completionResultCount)
+        GuiM.im opts <*>
+            makeQuery ctx
+            >>= GuiM.im
+            <&> take c
+            <&> Lens.mapped %~ makeResult makeFragOpt ctx
+            <&> Menu.OptionList isTruncated
     where
         isTruncated = False -- TODO: Need to specify whether we have more options
 
