@@ -527,4 +527,6 @@ testWYTIWYS =
 
     , wytiwys "sum 1..10.filter nu>5" "30"
     , wytiwys "sum 1..10.filter n>5" "30"
+
+    , wytiwys "if {={:1\t2" "1" -- "{" expands to "{}"
     ]
