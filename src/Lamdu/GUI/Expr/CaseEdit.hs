@@ -31,6 +31,7 @@ import           Lamdu.GUI.Styled (label, grammar)
 import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.GUI.Types as ExprGui
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
+import           Lamdu.GUI.Wrap (stdWrapParentExpr)
 import qualified Lamdu.I18N.Code as Texts
 import qualified Lamdu.I18N.CodeUI as Texts
 import           Lamdu.Name (Name(..))
@@ -49,8 +50,8 @@ doc env lens =
 addAltId :: Widget.Id -> Widget.Id
 addAltId = (`Widget.joinId` ["add alt"])
 
-make :: _ => Widget.Id -> ExprGui.Body Sugar.Composite i o -> GuiM env i o (Responsive o)
-make myId (Sugar.Composite alts punned caseTail addAlt) =
+make :: _ => ExprGui.Expr Sugar.Composite i o -> GuiM env i o (Responsive o)
+make (Ann (Const pl) (Sugar.Composite alts punned caseTail addAlt)) =
     do
         env <- Lens.view id
         altsGui <-
@@ -66,8 +67,10 @@ make myId (Sugar.Composite alts punned caseTail addAlt) =
         header <- grammar (Label.make ".") M./|/ makeCaseLabel
         Styled.addValFrame <*>
             (Options.boxSpaced ?? Options.disambiguationNone ?? [header, altsGui])
+            & stdWrapParentExpr pl
             <&> Widget.weakerEvents addAltEventMap
     where
+        myId = WidgetIds.fromExprPayload pl
         headerId = Widget.joinId myId ["header"]
         altsId = Widget.joinId myId ["alts"]
         makeCaseLabel =
