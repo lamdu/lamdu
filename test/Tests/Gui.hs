@@ -529,4 +529,5 @@ testWYTIWYS =
     , wytiwys "sum 1..10.filter n>5" "30"
 
     , wytiwys "if {={:1\t2" "1" -- "{" expands to "{}"
+    , wytiwys "let {val 1\trec.val\n" "1" -- "let " jumps straight to value of let
     ]
