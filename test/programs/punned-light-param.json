@@ -1,0 +1,41 @@
+[
+    {
+        "schemaVersion": 14
+    },
+    {
+        "tagOrder": 0,
+        "tag": "a386d980d96f732451f7b7b7ebab441c",
+        "names": {
+            "hebrew": "א",
+            "english": "x",
+            "italiano": "x"
+        }
+    },
+    {
+        "tag": "a386d980d96f732451f7b7b7ebab441c",
+        "lamVar": "ac347f634eed4545a281854f7c069024"
+    },
+    {
+        "repl": {
+            "val": {
+                "lamParamType": {
+                    "id": "ba0d9af9-3962-41c2-88e5-8bd1334cb2e1"
+                },
+                "lamVar": "ac347f634eed4545a281854f7c069024",
+                "id": "14562778-b602-4fed-9a7a-916d47d636ee",
+                "lamBody": {
+                    "extendVal": {
+                        "var": "ac347f634eed4545a281854f7c069024",
+                        "id": "35e548b2-6ac2-44de-9e61-29b5f1a95518"
+                    },
+                    "extendTag": "a386d980d96f732451f7b7b7ebab441c",
+                    "id": "1b1f1d2c-b98d-495e-893f-b765564ab8b9",
+                    "extendRest": {
+                        "recEmpty": {},
+                        "id": "6df74683-ad04-4174-b9aa-79086e343fbd"
+                    }
+                }
+            }
+        }
+    }
+]

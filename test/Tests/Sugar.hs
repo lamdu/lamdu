@@ -45,6 +45,7 @@ test =
     , testUnnamed
     , testPunnedIso
     , testNullParamUnused
+    , testPunnedLightParam
     , testGroup "insist-tests"
         [ testInsistFactorial
         , testInsistEq
@@ -527,4 +528,16 @@ testNullParamUnused =
     testCase "null-param-unused" $
     Env.make >>= testProgram "null-param-cond.json" . convertWorkArea
     <&> Lens.has (replBinder . _BinderLet . lValue . hVal . _BodyFunction . fParams . _Params)
+    >>= assertBool "Null param only if unused"
+
+-- Test for https://github.com/lamdu/lamdu/issues/123
+testPunnedLightParam :: Test
+testPunnedLightParam =
+    testCase "punned-light-param" $
+    Env.make >>= testProgram "punned-light-param.json" . convertWorkArea
+    <&> Lens.has
+        ( replBinder . _BinderTerm . _BodyLam . lamFunc . fBody . hVal .
+            _BinderTerm . _BodyRecord . cPunnedItems . traverse . pvVar . hVal .
+            Lens._Wrapped . _GetParam . pBinderMode . _LightLambda
+        )
     >>= assertBool "Null param only if unused"
