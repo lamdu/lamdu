@@ -8,6 +8,7 @@ module Lamdu.Sugar.Internal
     , nameWithoutContext, nameWithContext, taggedName
     , ExpressionU
     , replaceWith
+    , autoName
     ) where
 
 import qualified Control.Lens as Lens

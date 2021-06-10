@@ -33,7 +33,6 @@ import           Hyper.Type.Functor (_F)
 import           Hyper.Type.Prune (Prune(..))
 import           Hyper.Unify (UVar, applyBindings, unify)
 import           Hyper.Unify.Generalize (instantiate)
-import qualified Lamdu.Builtins.Anchors as Builtins
 import           Lamdu.Calc.Definition (Deps, depsNominals, depsGlobalTypes)
 import           Lamdu.Calc.Identifier (Identifier(..))
 import qualified Lamdu.Calc.Infer as Infer
@@ -48,6 +47,7 @@ import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Tag as Tag
 import qualified Lamdu.Expr.IRef as ExprIRef
 import           Lamdu.Sugar.Convert.Binder (convertBinder)
+import           Lamdu.Sugar.Convert.Binder.Params (mkVarInfo)
 import           Lamdu.Sugar.Convert.Expression.Actions (convertPayload)
 import qualified Lamdu.Sugar.Convert.Input as Input
 import           Lamdu.Sugar.Convert.Monad (ConvertM)
@@ -433,10 +433,8 @@ localName :: Monad m => Pure # T.Type -> V.Var -> T m (QueryLangInfo Text -> [Te
 localName typ var =
     do
         tag <- Anchors.assocTag var & getP
-        case typ ^. _Pure of
-            _ | tag /= Anchors.anonTag -> pure tag
-            T.TInst n -> n ^. nId & Anchors.assocTag & getP
-            T.TFun{} -> pure Builtins.functionTag
-            _ -> pure Builtins.genericVarTag
-            >>= ExprIRef.readTagData
+        if tag == Anchors.anonTag
+            then mkVarInfo typ <&> autoName
+            else pure tag
+    >>= ExprIRef.readTagData
     <&> tagTexts
