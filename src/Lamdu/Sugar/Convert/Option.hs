@@ -273,7 +273,9 @@ makeForType t =
         mkTexts v =
             case v ^. _Pure of
             V.BRecExtend{} -> pure recTexts
+            V.BLeaf V.LRecEmpty -> pure recTexts
             V.BCase{} -> pure caseTexts
+            V.BLeaf V.LAbsurd -> pure caseTexts
             V.BLeaf (V.LFromNom nomId) -> symTexts "." nomId
             _ -> pure (const [])
 
