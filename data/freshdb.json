@@ -20432,7 +20432,12 @@
     },
     {
         "tag": "6f295a8f5a939a2b66c7cb7ed46db554",
-        "defPresentationMode": "Verbose",
+        "defPresentationMode": {
+            "Operator": [
+                "1b6990743fcc77560fdb139d1ac01a2c",
+                "dabd3aff769f07eb2965401eb029974e"
+            ]
+        },
         "def": "e27bdf21117443ffb3bce8c5557fe6e8",
         "typ": {
             "schemeType": {
