@@ -327,11 +327,20 @@ markNodeLightParams ::
 markNodeLightParams paramNames =
     hVal %~ markLightParams paramNames
 
-instance MarkLightParams (Const a)
+-- instance MarkLightParams (Const a)
+instance MarkLightParams (Const (BinderVarRef InternalName o))
+instance MarkLightParams (Const (TagChoice InternalName i o EntityId))
+instance MarkLightParams (Const (TagRef InternalName i o))
 instance MarkLightParams (Else v InternalName i o)
 instance MarkLightParams (Let v InternalName i o)
 instance MarkLightParams (Function v InternalName i o)
 instance MarkLightParams (PostfixFunc v InternalName i o)
+
+instance MarkLightParams (Const (GetVar InternalName o)) where
+    markLightParams paramNames =
+        Lens._Wrapped . _GetParam . Lens.filteredBy (pNameRef . nrName . Lens.filtered f) . pBinderMode .~ LightLambda
+        where
+            f n = paramNames ^. Lens.contains n
 
 instance MarkLightParams (Assignment v InternalName i o) where
     markLightParams ps (BodyPlain x) = x & apBody %~ markLightParams ps & BodyPlain
@@ -342,11 +351,8 @@ instance MarkLightParams (Binder v InternalName i o) where
     markLightParams ps (BinderLet x) = markLightParams ps x & BinderLet
 
 instance MarkLightParams (Term v InternalName i o) where
-    markLightParams paramNames (BodyLeaf (LeafGetVar (GetParam n)))
-        | paramNames ^. Lens.contains (n ^. pNameRef . nrName) =
-            n
-            & pBinderMode .~ LightLambda
-            & GetParam & LeafGetVar & BodyLeaf
+    markLightParams paramNames (BodyLeaf (LeafGetVar x)) =
+        markLightParams paramNames (Const x) ^. Lens._Wrapped & LeafGetVar & BodyLeaf
     markLightParams paramNames bod = defaultMarkLightParams paramNames bod
 
 -- Let-item or definition (form of <name> [params] = <body>)
