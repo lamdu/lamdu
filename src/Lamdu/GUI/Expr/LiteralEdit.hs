@@ -168,7 +168,7 @@ numEdit prop pl =
             (pure ())
             <&> Lens.mapped . GuiState.uPreferStroll .~ True ^. Lens._Unwrapped
         let delEvent =
-                case pl ^? Sugar.plActions . Sugar.delete . Lens.failing Sugar._SetToHole Sugar._Delete of
+                case pl ^? Sugar.plActions . Sugar.delete . (Sugar._SetToHole <> Sugar._Delete) of
                 -- Allow to delete when text is empty
                 Just action | Text.null text ->
                     E.keyPresses [ModKey mempty MetaKey.Key'Backspace]

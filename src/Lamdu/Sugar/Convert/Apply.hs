@@ -83,9 +83,10 @@ defParamsMatchArgs var record frozenDeps =
                 . _Pure . T._TRecord . T.flatRow
         defArgs ^? freRest . _Pure . T._REmpty
         let sFields =
-                record ^.. cItems . traverse . ciTag . tagRefTag . tagVal <>
-                record ^.. cPunnedItems . traverse . pvVar . hVal . Lens._Wrapped . getVarName . inTag
-                & Set.fromList
+                record ^..
+                ( cItems . traverse . ciTag . tagRefTag . tagVal
+                    <> cPunnedItems . traverse . pvVar . hVal . Lens._Wrapped . getVarName . inTag
+                ) & Set.fromList
         guard (sFields == Map.keysSet (defArgs ^. freExtends))
     & Lens.has Lens._Just
 

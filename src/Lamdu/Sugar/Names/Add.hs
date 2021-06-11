@@ -263,8 +263,7 @@ isReserved env name =
     || (name ^? Lens.ix 0 & any Char.isDigit)
     where
         reservedWords =
-            env ^.. has @(Texts.Code Text) . Lens.folded
-            <> env ^.. has @(Texts.Name Text) . Lens.folded
+            env ^.. (has @(Texts.Code Text) . Lens.folded <> has @(Texts.Name Text) . Lens.folded)
             & Set.fromList
 
 toSuffixMap :: MMap T.Tag (Set UUID) -> Map TaggedVarId Int

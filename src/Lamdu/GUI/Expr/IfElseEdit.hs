@@ -52,7 +52,7 @@ makeIfThen ifKind animId ifElse =
         env <- Lens.view id
         let jumpToThen =
                 ifElse ^?! Sugar.iThen .
-                Lens.failing (hVal . Sugar._BodyLam . Sugar.lamFunc . Sugar.fBody . annotation) annotation
+                (hVal . Sugar._BodyLam . Sugar.lamFunc . Sugar.fBody . annotation <> annotation)
                 & WidgetIds.fromExprPayload & GuiState.updateCursor & pure & const
                 & E.charGroup Nothing (E.toDoc env [has . MomentuTexts.navigation, has . Texts.jumpToThen]) ":"
         ifGui <-
