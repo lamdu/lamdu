@@ -286,7 +286,7 @@ tagTexts t l
     | otherwise = names
     where
         names =
-            t ^.. Tag.tagTexts . Lens.ix (l ^. qLangId) . Tag.name <>
+            t ^.. Tag.tagTexts . Lens.ix (l ^. qLangId) . (Tag.name <> Tag.abbreviation . Lens._Just) <>
             t ^.. Tag.tagSymbol . Tag._UniversalSymbol <>
             t ^.. Tag.tagSymbol . Tag._DirectionalSymbol . dir
         dir =

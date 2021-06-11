@@ -4,6 +4,7 @@ module Lamdu.GUI.Expr.LambdaEdit
 
 import qualified Control.Lens as Lens
 import qualified GUI.Momentu as M
+import qualified GUI.Momentu.Direction as Dir
 import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.Glue as Glue
 import qualified GUI.Momentu.I18N as MomentuTexts
@@ -26,6 +27,7 @@ import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.GUI.Wrap (stdWrapParentExpr)
 import qualified Lamdu.I18N.Code as Texts
 import qualified Lamdu.I18N.CodeUI as Texts
+import qualified Lamdu.I18N.Navigation as Texts
 import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
@@ -121,12 +123,23 @@ make (Ann (Const pl) lam) =
             (_, Sugar.NullParam{}) -> mkLhsEdits ?? mParamsEdit ?? mScopeEdit
             (Sugar.LightLambda, _) -> mkLightLambda params myId ?? mParamsEdit ?? mScopeEdit
             _ -> mkExpanded ?? mParamsEdit ?? mScopeEdit
+        env <- Lens.view id
+        let closeParenChars =
+                case env ^. has of
+                Dir.LeftToRight -> ")]"
+                Dir.RightToLeft -> "(["
+        let navigateOut =
+                E.charGroup (Just "Close Paren")
+                (E.toDoc env
+                    [ has . MomentuTexts.navigation, has . Texts.lambda
+                    , has . Texts.leaveSubexpression])
+                closeParenChars (const (pure (GuiState.updateCursor myId)))
         (ResponsiveExpr.boxSpacedMDisamb ?? ExprGui.mParensId pl)
             <*> (Options.boxSpaced ?? Options.disambiguationNone ?? paramsAndLabelEdits
                 <&> Widget.strongerEvents rhsJumperEquals
                 <&> (: [bodyEdit]))
             & stdWrapParentExpr pl
-            <&> M.weakerEvents eventMap
+            <&> M.weakerEvents (eventMap <> navigateOut)
     where
         myId = WidgetIds.fromExprPayload pl
         params = func ^. Sugar.fParams
