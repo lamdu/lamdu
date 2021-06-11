@@ -110,7 +110,7 @@ filterResults order res query
     | otherwise =
         -- Within certain search-term matching level (exact/prefix/infix),
         -- prefer locals over globals even for type mismatches
-        groups (gForType <> gLocals <> gSyntax) <> groups (gDefs <> gToNoms) <&> (^. traverse)
+        groups (gForType <> gLocals) <> groups (gSyntax <> gDefs <> gToNoms) <&> (^. traverse)
     where
         groups f =
             f res <&> fmap ((^.. traverse . _2) . sortOn s) . foldMap (matchResult query)
