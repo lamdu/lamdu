@@ -43,6 +43,7 @@ import qualified Lamdu.Expr.Load as Load
 import           Lamdu.Expr.UniqueId (ToUUID)
 import qualified Lamdu.I18N.Code as Texts
 import qualified Lamdu.I18N.CodeUI as Texts
+import qualified Lamdu.I18N.Name as Texts
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Tag as Tag
 import qualified Lamdu.Expr.IRef as ExprIRef
@@ -280,11 +281,14 @@ makeForType t =
             _ -> pure (const [])
 
 tagTexts :: Tag.Tag -> QueryLangInfo Text -> [Text]
-tagTexts t l =
-    t ^.. Tag.tagTexts . Lens.ix (l ^. qLangId) . Tag.name <>
-    t ^.. Tag.tagSymbol . Tag._UniversalSymbol <>
-    t ^.. Tag.tagSymbol . Tag._DirectionalSymbol . dir
+tagTexts t l
+    | null names = l ^.. qNameTexts . Texts.unnamed
+    | otherwise = names
     where
+        names =
+            t ^.. Tag.tagTexts . Lens.ix (l ^. qLangId) . Tag.name <>
+            t ^.. Tag.tagSymbol . Tag._UniversalSymbol <>
+            t ^.. Tag.tagSymbol . Tag._DirectionalSymbol . dir
         dir =
             case l ^. qLangDir of
             LeftToRight -> Tag.opLeftToRight

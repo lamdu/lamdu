@@ -27,7 +27,7 @@ module Lamdu.Sugar.Types.Expression
     -- Holes
     , Hole(..), holeOptions
     , Query(..), qLangInfo, qSearchTerm
-    , QueryLangInfo(..), qLangId, qLangDir, qCodeTexts, qUITexts
+    , QueryLangInfo(..), qLangId, qLangDir, qCodeTexts, qUITexts, qNameTexts
     , Option(..), optionExpr, optionPick, optionTypeMatch
     -- Fragments
     , Fragment(..), fExpr, fHeal, fTypeMismatch, fOptions
@@ -55,6 +55,7 @@ import           Lamdu.Data.Anchors (BinderParamScopeId(..), bParamScopeId)
 import qualified Lamdu.Data.Meta as Meta
 import qualified Lamdu.I18N.Code as Texts
 import qualified Lamdu.I18N.CodeUI as Texts
+import qualified Lamdu.I18N.Name as Texts
 import           Lamdu.I18N.LangId (LangId)
 import           Lamdu.Sugar.Internal.EntityId (EntityId)
 import           Lamdu.Sugar.Types.Eval (ParamScopes)
@@ -141,6 +142,7 @@ data QueryLangInfo a = QueryLangInfo
     , _qLangDir :: Layout
     , _qCodeTexts :: Texts.Code a
     , _qUITexts :: Texts.CodeUI a
+    , _qNameTexts :: Texts.Name a
     } deriving (Functor, Foldable, Traversable)
 
 data Query a = Query

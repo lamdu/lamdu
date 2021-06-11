@@ -28,7 +28,7 @@ makeQuery ctx =
     Lens.view id <&>
     \env ->
     Sugar.Query
-    { Sugar._qLangInfo = Sugar.QueryLangInfo (env ^. has) (env ^. has) (env ^. has) (env ^. has)
+    { Sugar._qLangInfo = Sugar.QueryLangInfo (env ^. has) (env ^. has) (env ^. has) (env ^. has) (env ^. has)
     , Sugar._qSearchTerm = ctx ^. SearchMenu.rSearchTerm
     }
 

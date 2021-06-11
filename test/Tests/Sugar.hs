@@ -156,7 +156,7 @@ testInline =
     do
         queryLangInfo <-
             Env.make <&>
-            \env -> QueryLangInfo (env ^. has) (env ^. has) (env ^. has) (env ^. has)
+            \env -> QueryLangInfo (env ^. has) (env ^. has) (env ^. has) (env ^. has) (env ^. has)
         let inline workArea =
                 do
                     result <-
