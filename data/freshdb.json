@@ -9721,7 +9721,12 @@
     },
     {
         "tag": "ad1a64057f9ab34fecfe3f4ee78660bb",
-        "defPresentationMode": "Verbose",
+        "defPresentationMode": {
+            "Operator": [
+                "15c7e7857025b2fd744386ffdddf3c6d",
+                "ae1eba0f0719f10b147cfcbb67fcb4d4"
+            ]
+        },
         "def": "7a5f649a576447a08084db2fe300352b",
         "typ": {
             "schemeType": {
@@ -16301,7 +16306,12 @@
     },
     {
         "tag": "ad1a64057f9ab34fecfe3f4ee78660bb",
-        "defPresentationMode": "Verbose",
+        "defPresentationMode": {
+            "Operator": [
+                "9d2ea8044c2c29b27fe0398afec9ac40",
+                "ae1eba0f0719f10b147cfcbb67fcb4d4"
+            ]
+        },
         "def": "b21053ea92ed45029fa78a5121bf6e3a",
         "typ": {
             "schemeType": {
