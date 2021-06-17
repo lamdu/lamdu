@@ -72,7 +72,7 @@
         "nextScopeKeys": [ "Alt+Down" ]
     },
     "searchMenu" : {
-        "openKeys": [ "Enter" ],
+        "openKeys": [ "Space", "Enter" ],
         "closeKeys": [ "Escape" ],
         "menu": {
             "keysPickOption": [ "Enter" ],
