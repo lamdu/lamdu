@@ -121,20 +121,22 @@ instance HasPrecedence name => AddParens (Term v name i o) where
                 | needParens = pure 0
                 | otherwise = parentPrec
             labeledApply x =
-                maybe (False, BodyLabeledApply (unambiguousBody x)) simpleInfix (x ^? bareInfix)
-            simpleInfix (func, OperatorArgs l r s) =
                 ( needParens
-                , bareInfix #
-                    ( unambiguousChild func
-                    , OperatorArgs
-                        (Const (0, p & after .~ prec) :*: l)
-                        (Const (prec+1, p & before .~ prec) :*: r)
-                        s
-                    ) & BodyLabeledApply
+                , maybe (BodyLabeledApply (unambiguousBody x)) (simpleInfix needParens) (x ^? bareInfix)
                 )
                 where
-                    prec = getPrec func
+                    prec = getPrec (x ^. aFunc)
                     needParens = parentPrec ^. before >= prec || parentPrec ^. after > prec
+            simpleInfix needParens (func, OperatorArgs l r s) =
+                bareInfix #
+                ( unambiguousChild func
+                , OperatorArgs
+                    (Const (0, p & after .~ prec) :*: l)
+                    (Const (prec+1, p & before .~ prec) :*: r)
+                    s
+                ) & BodyLabeledApply
+                where
+                    prec = getPrec func
                     p = newParentPrec needParens
             postfixApply (PostfixApply a f) =
                 ( needParens
