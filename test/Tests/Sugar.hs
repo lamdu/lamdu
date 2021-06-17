@@ -46,6 +46,8 @@ test =
     , testPunnedIso
     , testNullParamUnused
     , testPunnedLightParam
+    , testParamsOrder
+    , testAddToInferredParamList
     , testGroup "insist-tests"
         [ testInsistFactorial
         , testInsistEq
@@ -541,3 +543,57 @@ testPunnedLightParam =
             Lens._Wrapped . _GetParam . pBinderMode . _LightLambda
         )
     >>= assertBool "Null param only if unused"
+
+-- Test for https://github.com/lamdu/lamdu/issues/124
+testParamsOrder :: Test
+testParamsOrder =
+    testCase "params-order" $
+    do
+        env <- Env.make
+        let reorder msg =
+                do
+                    mOrderBefore <-
+                        convertWorkArea env
+                        <&> (^?! funcParams . Lens.ix 1 . _2 . piActions . fpMOrderBefore)
+                    case mOrderBefore of
+                        Just a -> lift a
+                        Nothing -> error ("cant reorder before " <> msg)
+        let readTags =
+                convertWorkArea env <&> (^.. funcParams . traverse . _2 . piTag . tagRefTag . tagVal)
+        testProgram "func-params.json" $
+            do
+                params0 <- readTags
+                reorder "at beginning"
+                params1 <- readTags
+                when (params0 == params1) (error ("params didn't change: " <> show params0))
+                reorder "after reorder"
+                params2 <- readTags
+                assertEq "params should be same" params0 params2
+    where
+        funcParams :: Lens.Traversal' (WorkArea v n i o a) [(FuncParam v n, ParamInfo n i o)]
+        funcParams = replBinder . _BinderLet . lValue . hVal . _BodyFunction . fParams . _Params
+
+testAddToInferredParamList :: Test
+testAddToInferredParamList =
+    testCase "add-to-inferred-param-list" $
+    do
+        env <- Env.make
+        workArea <-
+            testProgram "func-params.json" $
+            do
+                convertWorkArea env
+                    >>= (^?! elseClause . lamBodyParams .
+                            Lens.ix 0 . _2 . piActions . fpAddNext . _AddNext . tcNewTag)
+                    >>= lift . (^. toPick)
+                convertWorkArea env
+        let paramList = workArea ^?! elseClause . _BodyFragment . fExpr . hVal . lamBodyParams
+        assertEqual "Parameter list length" (length paramList) 3
+    where
+        elseClause :: Lens.Traversal' (WorkArea v n i o a) (Term v n i o # Annotated a)
+        elseClause =
+            replBinder . _BinderLet . lBody .
+            hVal . _BinderTerm . _BodyIfElse . iElse .
+            hVal . _SimpleElse . _BodyLam . lamFunc . fBody .
+            hVal . _BinderTerm
+        lamBodyParams :: Lens.Traversal' (Term v n i o # k) [(FuncParam v n, ParamInfo n i o)]
+        lamBodyParams = _BodyLam . lamFunc . fParams . _Params
