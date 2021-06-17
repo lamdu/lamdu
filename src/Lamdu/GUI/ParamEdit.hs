@@ -139,7 +139,7 @@ make annotationOpts prevId nextId (param, info) =
             Nothing -> pure []
             Just addParam ->
                 TagEdit.makeTagHoleEdit addParam mkParamPickResult addId
-                & local (has . Menu.configKeys . Menu.keysPickOptionAndGotoNext <>~ [M.MetaKey M.noMods M.Key'Space])
+                & local (has . Menu.configKeysPickOptionAndGotoNext <>~ [M.MetaKey M.noMods M.Key'Space])
                 & Styled.withColor TextColors.parameterColor
                 <&> Responsive.fromWithTextPos
                 <&> (:[])

@@ -51,9 +51,8 @@ makePickEventMap :: _ => f Menu.PickResult -> m (EventMap (f M.Update))
 makePickEventMap action =
     Lens.view id <&>
     \env ->
-    let config = env ^. has . Config.menu
-        pickKeys = config ^. Menu.keysPickOption
-        jumpNextKeys = config ^. Menu.keysPickOptionAndGotoNext
+    let pickKeys = env ^. has . Menu.configKeysPickOption
+        jumpNextKeys = env ^. has . Menu.configKeysPickOptionAndGotoNext
         mkDoc lens =
             E.toDoc env [has . MomentuTexts.edit, has . Texts.tag, has . lens]
     in
@@ -405,4 +404,4 @@ makeBinderTagEdit ::
     GuiM env i o (M.TextWidget o)
 makeBinderTagEdit color tag =
     makeLHSTag (const Nothing) color tag
-    & local (has . Menu.configKeys . Menu.keysPickOptionAndGotoNext .~ [])
+    & local (has . Menu.configKeysPickOptionAndGotoNext .~ [])

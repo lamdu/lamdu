@@ -76,7 +76,7 @@ fdConfig =
     Lens.view id
     <&> \env ->
     let litConf = env ^. has . Config.literal
-        menuKeys = env ^. has . Menu.configKeys
+        menuConfig = env ^. has
     in
     FocusDelegator.Config
     { FocusDelegator.focusChildKeys = litConf ^. Config.literalStartEditingKeys
@@ -90,10 +90,10 @@ fdConfig =
         litConf ^. Config.literalStopEditingKeys
         -- The literal edit should behave like holes, in that the "pick option"
         -- key goes to the resulting expr.
-        <> menuKeys ^. Menu.keysPickOption
+        <> menuConfig ^. Menu.configKeysPickOption
         -- Only taken when the literal edit doesn't handle it by
         -- jumping to next entry:
-        <> menuKeys ^. Menu.keysPickOptionAndGotoNext
+        <> menuConfig ^. Menu.configKeysPickOptionAndGotoNext
     , FocusDelegator.focusParentDoc =
         E.toDoc env
         [ has . MomentuTexts.edit
@@ -157,7 +157,7 @@ numEdit prop pl =
                           ]) "-"
                 | otherwise = mempty
         strollEvent <-
-            Lens.view (has . Menu.configKeys . Menu.keysPickOptionAndGotoNext)
+            Lens.view (has . Menu.configKeysPickOptionAndGotoNext)
             <&>
             \keys ->
             E.keysEventMap keys

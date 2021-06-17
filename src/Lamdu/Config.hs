@@ -9,7 +9,7 @@ import qualified Data.Aeson.Types as Aeson
 import           Data.Char (toLower)
 import           Data.List.Lens (prefixed)
 import           GUI.Momentu.MetaKey (MetaKey)
-import qualified GUI.Momentu.Widgets.Menu as Menu
+import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import qualified GUI.Momentu.Zoom as Zoom
 import qualified Lamdu.Debug.Tasks as Debug
 import qualified Lamdu.GUI.VersionControl.Config as VersionControl
@@ -98,7 +98,7 @@ data Config = Config
     , _literal :: Literal
     , _eval :: Eval
     , _debug :: Debug
-    , _menu :: Menu.Keys
+    , _searchMenu :: SearchMenu.Config
 
     , _maxExprDepth :: Int
 

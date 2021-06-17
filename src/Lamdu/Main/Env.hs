@@ -87,8 +87,9 @@ instance Has SugarConfig.Config Env where has = config . has
 instance Has Hover.Style Env where has = theme . has
 instance Has VCConfig.Theme Env where has = has . Theme.versionControl
 instance Has VCConfig.Config Env where has = has . Config.versionControl
-instance Has Menu.Config Env where
-    has = Menu.configLens (config . Config.menu) (theme . Theme.menu)
+instance Has SearchMenu.Config Env where has = has . Config.searchMenu
+instance Has Menu.Config Env where has = has . SearchMenu.configMenu
+instance Has Menu.Style Env where has = theme . Theme.menu
 instance Has SearchMenu.TermStyle Env where has = theme . Theme.searchTerm
 instance Has Debug.Monitors Env where has = debugMonitors
 instance Has Cache.Functions Env where has = cachedFunctions

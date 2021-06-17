@@ -71,7 +71,7 @@ make (Ann (Const pl) fragment) =
             ?? Menu.AnyPlace
             & local (has . SearchMenu.emptyStrings . Lens.mapped .~ "?")
             -- Space goes to next hole in target (not necessarily visible)
-            & local (has . Config.menu . Menu.keysPickOptionAndGotoNext <>~ [MetaKey.MetaKey MetaKey.noMods MetaKey.Key'Space])
+            & local (has . Menu.configKeysPickOptionAndGotoNext <>~ [MetaKey.MetaKey MetaKey.noMods MetaKey.Key'Space])
 
         let healKeys = env ^. has . Config.healKeys
         let healChars =

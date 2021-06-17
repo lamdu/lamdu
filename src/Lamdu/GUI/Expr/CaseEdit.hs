@@ -133,7 +133,7 @@ makeAddAltRow ::
 makeAddAltRow addAlt myId =
     TagEdit.makeTagHoleEdit addAlt mkPickResult myId
     & Styled.withColor TextColors.caseTagColor
-    & local (has . Menu.configKeys . Menu.keysPickOptionAndGotoNext <>~ [M.MetaKey M.noMods M.Key'Space])
+    & local (has . Menu.configKeysPickOptionAndGotoNext <>~ [M.MetaKey M.noMods M.Key'Space])
     <&>
     \tagHole ->
     TaggedItem

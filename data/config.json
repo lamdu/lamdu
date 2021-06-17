@@ -71,9 +71,13 @@
         "prevScopeKeys": [ "Alt+Up" ],
         "nextScopeKeys": [ "Alt+Down" ]
     },
-    "menu" : {
-        "keysPickOption": [ "Enter" ],
-        "keysPickOptionAndGotoNext": [ "Tab" ]
+    "searchMenu" : {
+        "openKeys": [ "Enter" ],
+        "closeKeys": [ "Escape" ],
+        "menu": {
+            "keysPickOption": [ "Enter" ],
+            "keysPickOptionAndGotoNext": [ "Tab" ]
+        }
     },
     "helpKeys": [ "F1", "Alt+H" ],
     "previousCursorKeys"       : [ "Alt+Left" ],
