@@ -36,15 +36,15 @@ instance Format ByteString where
     format bs = Text.cons '#' $ decodeUtf8 (Hex.encode bs)
 
 instance Format Double where
-    tryParse searchTerm
-        | "." `Text.isPrefixOf` searchTerm =
-            readMaybe ('0':Text.unpack searchTerm)
-        | "-." `Text.isPrefixOf` searchTerm =
-            tryParse (Text.tail searchTerm) <&> negate
+    tryParse str
+        | "." `Text.isPrefixOf` str =
+            readMaybe ('0':Text.unpack str)
+        | "-." `Text.isPrefixOf` str =
+            tryParse (Text.tail str) <&> negate
         | otherwise =
-            case reads (Text.unpack searchTerm) of
+            case reads (Text.unpack str) of
             [(val, "")] -> Just val
-            [(val, ".")] | '.' `notElem` init (Text.unpack searchTerm) -> Just val
+            [(val, ".")] | '.' `notElem` init (Text.unpack str) -> Just val
             _ -> Nothing
     format x
         | fromIntegral i /= x = printf "%f" x & Text.pack
