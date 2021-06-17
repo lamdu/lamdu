@@ -8,11 +8,13 @@ import qualified Data.Char as Char
 import           Data.Property (Property(..), pVal)
 import qualified Data.Property as Property
 import qualified Data.Set as Set
+import qualified Data.Text as Text
+import qualified GUI.Momentu as M
 import           GUI.Momentu.Align (TextWidget, Aligned(..), WithTextPos(..))
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as E
-import           GUI.Momentu.Glue ((/-/), (/|/))
+import           GUI.Momentu.Glue ((/-/), (/|/), hbox)
 import qualified GUI.Momentu.I18N as MomentuTexts
 import           GUI.Momentu.MetaKey (MetaKey(..), noMods)
 import qualified GUI.Momentu.MetaKey as MetaKey
@@ -23,6 +25,7 @@ import qualified GUI.Momentu.Widgets.Choice as Choice
 import qualified GUI.Momentu.Widgets.FocusDelegator as FocusDelegator
 import qualified GUI.Momentu.Widgets.Grid as Grid
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
+import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
 import qualified GUI.Momentu.Widgets.TextEdit.Property as TextEdits
 import qualified GUI.Momentu.Widgets.TextView as TextView
 import qualified Lamdu.CharClassification as Chars
@@ -30,6 +33,7 @@ import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Theme.TextColors as TextColors
 import           Lamdu.Data.Tag (TextsInLang(..))
 import qualified Lamdu.Data.Tag as Tag
+import           Lamdu.Formatting (Format(..))
 import           Lamdu.GUI.Styled (addValFrame, label, info, withColor)
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.I18N.CodeUI as Texts
@@ -123,8 +127,10 @@ nameId :: Widget.Id -> Widget.Id
 nameId = (`Widget.joinId` ["name"])
 
 hspace :: _ => m (TextWidget f)
-hspace =
-    Spacer.stdHSpace <&> WithTextPos 0 <&> Align.tValue %~ Widget.fromView
+hspace = Spacer.stdHSpace <&> Widget.fromView <&> WithTextPos 0
+
+hspaceOf :: Widget.R -> TextWidget f
+hspaceOf w = Spacer.makeHorizontal w & Widget.fromView & WithTextPos 0
 
 textsRow ::
     _ =>
@@ -209,16 +215,20 @@ makeLangsTable myId tagTexts setName =
 data SymType = NoSymbol | UniversalSymbol | DirectionalSymbol
     deriving Eq
 
-makeSymbol :: _ => Widget.Id -> Property o Tag.Symbol -> m (TextWidget o)
+makeSymbol ::
+    _ => Widget.Id -> Property o Tag.Symbol -> m (TextWidget o, TextWidget o)
 makeSymbol myId symProp =
     case symProp ^. pVal of
-    Tag.NoSymbol -> makeChoice NoSymbol (toSym "" "")
+    Tag.NoSymbol ->
+        flip (,) Element.empty <$> makeChoice NoSymbol (toSym "" "")
     Tag.UniversalSymbol text ->
-        makeChoice UniversalSymbol (toSym text text)
-        /-/ nameEdit (Property text (set . Tag.UniversalSymbol)) "universal"
+        (,)
+        <$> makeChoice UniversalSymbol (toSym text text)
+        <*> nameEdit (Property text (set . Tag.UniversalSymbol)) "universal"
     Tag.DirectionalSymbol (Tag.DirOp ltr rtl) ->
-        makeChoice DirectionalSymbol (toSym ltr rtl)
-        /-/
+        (,)
+        <$> makeChoice DirectionalSymbol (toSym ltr rtl)
+        <*>
         ( (label Texts.leftToRightSymbol & info <&> fmap Widget.fromView)
             /|/ hspace /|/ nameEdit (Property ltr (`setDirectional` rtl)) "ltr"
             /|/ hspace /|/ info (label Texts.rightToLeftSymbol)
@@ -251,19 +261,67 @@ makeSymbol myId symProp =
                     ?? defConf ?? mkId "symType"
                 & withColor TextColors.actionTextColor
 
+
+parseInt :: Text -> Maybe Int
+parseInt newText
+    | newText /= Text.strip newText = Nothing
+    | newText == "" = Just 0
+    | otherwise = tryParse newText
+
+makeIntEdit :: _ => Widget.Id -> Property o Int -> m (TextWidget o)
+makeIntEdit myId prop =
+    do
+        text <-
+            M.readWidgetState myId
+            <&> (^? Lens._Just . Lens.filtered ((== Just prevVal) . parseInt))
+            <&> fromMaybe prevValStr
+        ( TextEdit.make ?? TextEdit.Modes "0" "0" ?? text ?? myId
+            <&> Align.tValue . Widget.eventMapMaker . Lens.mapped %~
+            -- Avoid taking keys that don't belong to us,
+            -- so weakerEvents with them will work.
+            E.filter (Lens.has Lens._Just . parseInt . fst)
+            <&> Align.tValue . Widget.updates %~
+            \(newText, eventRes) ->
+                eventRes <> GuiState.updateWidgetState myId newText
+                <$ (parseInt newText & parseAssert & Property.set prop)
+            )
+    where
+        parseAssert = error "parsing int failed" & fromMaybe
+        prevVal = Property.value prop
+        prevValStr = show prevVal & Text.pack
+
+makeOrderEdit :: _ => Widget.Id -> Property o Int -> m (TextWidget o)
+makeOrderEdit tagPaneId prop =
+    info (label Texts.order) /|/ hspace /|/
+    makeIntEdit orderEditId prop
+    where
+        orderEditId = tagPaneId `Widget.joinId` ["tagOrder"]
+
+
 make :: _ => Sugar.TagPane Name o -> m (Widget o)
 make tagPane =
+    Lens.view has
+    >>= \lang ->
     addValFrame <*>
     do
-        lang <- Lens.view has
-        makeLangsTable myId
+        (symbol, nextLine) <- makeSymbol myId symbolProp
+        langsTable <-
+            makeLangsTable myId
             (tagPane ^. Sugar.tpTagData . Tag.tagTexts) (tagPane ^. Sugar.tpSetTexts)
-            /-/ (makeSymbol myId symbolProp <&> (^. Align.tValue))
-            & GuiState.assignCursor myId (nameId (langWidgetId myId lang))
+        orderEdit <- makeOrderEdit myId orderProp
+        let totalWidth =
+                max (nextLine ^. Element.width) (langsTable ^. Element.width)
+        let gap = totalWidth - (symbol ^. Element.width + orderEdit ^. Element.width)
+        pure langsTable
+            /-/ (hbox ?? [symbol, hspaceOf gap, orderEdit] <&> (^. Align.tValue))
+            /-/ pure (nextLine ^. Align.tValue)
         & local (Element.animIdPrefix .~ Widget.toAnimId myId)
+        & GuiState.assignCursor myId (nameId (langWidgetId myId lang))
     where
-        symbolProp =
+        prop lens setterLens =
             Property
-            (tagPane ^. Sugar.tpTagData . Tag.tagSymbol)
-            (tagPane ^. Sugar.tpSetSymbol)
+            (tagPane ^. Sugar.tpTagData . lens)
+            (tagPane ^. setterLens)
+        orderProp  = prop Tag.tagOrder  Sugar.tpSetOrder
+        symbolProp = prop Tag.tagSymbol Sugar.tpSetSymbol
         myId = tagPane ^. Sugar.tpTag . Sugar.tagInstance & WidgetIds.fromEntityId

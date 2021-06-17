@@ -132,6 +132,7 @@
             "moveAfter": "Muovi dopo",
             "fragment": "Frammenta",
             "injectSection": "Trasformare per iniettare sezione",
+            "order": "Ordine",
             "heal": "Ripara",
             "add": "Aggiungi",
             "letClause": "Clausola 'sia'",

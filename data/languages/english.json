@@ -132,6 +132,7 @@
             "moveAfter": "Move after",
             "fragment": "Fragment",
             "injectSection": "To inject-section",
+            "order": "Order",
             "heal": "Heal",
             "add": "Add",
             "letClause": "Let Clause",

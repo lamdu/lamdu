@@ -54,6 +54,13 @@ instance Format Double where
             i :: Integer
             i = truncate x
 
+instance Format Int where
+    tryParse str =
+        case reads (Text.unpack str) of
+        [(val, "")] -> Just val
+        _ -> Nothing
+    format = Text.pack . show
+
 instance Format Text where
     tryParse x = mplus (readMaybe (Text.unpack x)) (readMaybe (Text.unpack x ++ "\""))
     format text = mconcat ["\"", formatTextContents text, "\""]
