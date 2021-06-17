@@ -89,18 +89,36 @@ instance (MonadTransaction m o, MonadTransaction m i) => Order i (Sugar.Function
         >>= Sugar.fBody orderNode
         <&> Sugar.fParams . Sugar._Params %~ addReorders
 
-addReorders :: MonadTransaction m o => [(a, Sugar.ParamInfo n i o)] -> [(a, Sugar.ParamInfo n i o)]
+tagRefOptions ::
+    Functor i =>
+    Lens.Setter
+    (Sugar.TagChoice n0 i o a) (Sugar.TagChoice n1 i o a)
+    (Sugar.TagOption n0 o a) (Sugar.TagOption n1 o a)
+tagRefOptions =
+    Lens.setting (\f (Sugar.TagChoice o n a) -> Sugar.TagChoice (o <&> traverse %~ f) (n <&> f) a)
+
+addReorders ::
+    (MonadTransaction m o, Functor i) =>
+    [(a, Sugar.ParamInfo n i o)] -> [(a, Sugar.ParamInfo n i o)]
 addReorders params =
-    params & Lens.itraversed <. _2 . Sugar.piActions %@~ addParamActions
+    params & Lens.itraversed <. _2 %@~ addParamActions
     where
         tags = params ^.. traverse . _2 . Sugar.piTag . Sugar.tagRefTag . Sugar.tagVal
         addParamActions ::
-            MonadTransaction m o => Int -> Sugar.FuncParamActions n i o -> Sugar.FuncParamActions n i o
+            (MonadTransaction m o, Functor i) =>
+            Int -> Sugar.ParamInfo n i o -> Sugar.ParamInfo n i o
         addParamActions i a =
             a
-            & Sugar.fpMOrderBefore .~
+            & Sugar.piTag . Sugar.tagRefReplace . tagRefOptions .
+                Lens.filteredBy (Sugar.toInfo . Sugar.tagVal) <. Sugar.toPick %@~
+                (\t p ->
+                    p >>
+                    transaction (
+                        ExprIRef.readTagData (a ^. Sugar.piTag . Sugar.tagRefTag . Sugar.tagVal)
+                        <&> (^. tagOrder) >>= DataOps.setTagOrder t))
+            & Sugar.piActions . Sugar.fpMOrderBefore .~
                 (setOrder ([0..i-1] <> [i, i-1] <> [i+1..length tags-1]) <$ guard (i > 0))
-            & Sugar.fpMOrderAfter .~
+            & Sugar.piActions . Sugar.fpMOrderAfter .~
                 (setOrder ([0..i] <> [i+1, i] <> [i+2..length tags-1]) <$ guard (i + 1 < length tags))
         setOrder :: MonadTransaction m o => [Int] -> o ()
         setOrder o =

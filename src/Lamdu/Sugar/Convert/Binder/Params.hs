@@ -341,8 +341,6 @@ setFieldParamTag mPresMode binderKind storedLam prevTagList prevTag =
     \(fixUsages, postProcess) chosenTag ->
     do
         traverse_ (`modP` (<&> Lens.filteredBy (Lens.only prevTag) .~ chosenTag)) mPresMode
-        tagsBefore ++ chosenTag : tagsAfter
-            & Lens.itraverse_ (flip DataOps.setTagOrder)
         case storedParamType ^. hVal . _HCompose of
             Pruned ->
                 writeNewParamList (prevTagList <&> Lens.filteredBy (Lens.only prevTag) .~ chosenTag)
@@ -385,7 +383,6 @@ setFieldParamTag mPresMode binderKind storedLam prevTagList prevTag =
         postProcess
     where
         storedParamType = storedLam ^. slLam . V.tlInType
-        (tagsBefore, tagsAfter) = break (== prevTag) prevTagList & _2 %~ tail
 
 convertRecordParams ::
     Monad m =>
