@@ -48,6 +48,7 @@ test =
     , testPunnedLightParam
     , testParamsOrder
     , testAddToInferredParamList
+    , testInfixWithArgParens
     , testGroup "insist-tests"
         [ testInsistFactorial
         , testInsistEq
@@ -597,3 +598,10 @@ testAddToInferredParamList =
             hVal . _BinderTerm
         lamBodyParams :: Lens.Traversal' (Term v n i o # k) [(FuncParam v n, ParamInfo n i o)]
         lamBodyParams = _BodyLam . lamFunc . fParams . _Params
+
+testInfixWithArgParens :: Test
+testInfixWithArgParens =
+    testCase "infix-with-arg-parens" $
+    Env.make >>= testProgram "infix-with-args-needs-paren.json" . convertWorkArea
+    <&> (^?! replBinder . _BinderTerm . _BodySimpleApply . appArg . annotation . plParenInfo . piNeedParens)
+    >>= assertBool "Expected paren"
