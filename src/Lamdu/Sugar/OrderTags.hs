@@ -9,6 +9,7 @@ import           Control.Monad ((>=>))
 import           Control.Monad.Transaction (MonadTransaction(..), setP)
 import           Data.List (sortOn)
 import           Hyper
+import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Ops as DataOps
 import           Lamdu.Data.Tag (tagOrder)
@@ -89,13 +90,16 @@ instance (MonadTransaction m o, MonadTransaction m i) => Order i (Sugar.Function
         >>= Sugar.fBody orderNode
         <&> Sugar.fParams . Sugar._Params %~ addReorders
 
-tagRefOptions ::
+tagChoiceOptions ::
     Functor i =>
     Lens.Setter
     (Sugar.TagChoice n0 i o a) (Sugar.TagChoice n1 i o a)
     (Sugar.TagOption n0 o a) (Sugar.TagOption n1 o a)
-tagRefOptions =
+tagChoiceOptions =
     Lens.setting (\f (Sugar.TagChoice o n a) -> Sugar.TagChoice (o <&> traverse %~ f) (n <&> f) a)
+
+tagChoicePick :: Functor i => Lens.IndexedSetter' T.Tag (Sugar.TagChoice n i o a) (o a)
+tagChoicePick = tagChoiceOptions . Lens.filteredBy (Sugar.toInfo . Sugar.tagVal) <. Sugar.toPick
 
 addReorders ::
     (MonadTransaction m o, Functor i) =>
@@ -109,17 +113,19 @@ addReorders params =
             Int -> Sugar.ParamInfo n i o -> Sugar.ParamInfo n i o
         addParamActions i a =
             a
-            & Sugar.piTag . Sugar.tagRefReplace . tagRefOptions .
-                Lens.filteredBy (Sugar.toInfo . Sugar.tagVal) <. Sugar.toPick %@~
-                (\t p ->
-                    p >>
-                    transaction (
+            & Sugar.piTag . Sugar.tagRefReplace . tagChoicePick %@~
+                (\t ->
+                    (transaction (
                         ExprIRef.readTagData (a ^. Sugar.piTag . Sugar.tagRefTag . Sugar.tagVal)
-                        <&> (^. tagOrder) >>= DataOps.setTagOrder t))
+                        <&> (^. tagOrder) >>= DataOps.setTagOrder t) >>))
+            & Sugar.piActions . Sugar.fpAddNext . Sugar._AddNext . tagChoicePick %@~
+                (\t -> (transaction (Lens.itraverse_ (flip DataOps.setTagOrder) (before <> [t] <> after)) >>))
             & Sugar.piActions . Sugar.fpMOrderBefore .~
                 (setOrder ([0..i-1] <> [i, i-1] <> [i+1..length tags-1]) <$ guard (i > 0))
             & Sugar.piActions . Sugar.fpMOrderAfter .~
                 (setOrder ([0..i] <> [i+1, i] <> [i+2..length tags-1]) <$ guard (i + 1 < length tags))
+            where
+                (before, after) = splitAt (i+1) tags
         setOrder :: MonadTransaction m o => [Int] -> o ()
         setOrder o =
             Lens.itraverse_ (flip DataOps.setTagOrder) (o <&> \i -> tags ^?! Lens.ix i)
