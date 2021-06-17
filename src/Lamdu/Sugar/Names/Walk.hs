@@ -448,8 +448,8 @@ instance
             pure def{_drName, _drBody}
 
 instance (a ~ OldName m, b ~ NewName m) => Walk m (TagPane a o) (TagPane b o) where
-    walk (TagPane tag i18n setSymbol setName) =
-        toTagOf Tag tag <&> \x -> TagPane x i18n setSymbol setName
+    walk (TagPane tag i18n setSymbol setName setOrder) =
+        toTagOf Tag tag <&> \x -> TagPane x i18n setSymbol setName setOrder
 
 instance
     (a ~ OldName m, b ~ NewName m, i ~ IM m, Walk m pa pb) =>

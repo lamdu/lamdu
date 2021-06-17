@@ -225,6 +225,7 @@ convertPaneBody _ _ (Anchors.PaneTag tagId) =
         }
     , _tpTagData = tagData
     , _tpSetSymbol = \sym -> tagData & Tag.tagSymbol .~ sym & writeTag
+    , _tpSetOrder = \order -> tagData & Tag.tagOrder .~ order & writeTag
     , _tpSetTexts =
             \langId text -> tagData & Tag.tagTexts . Lens.at langId ?~ text & writeTag
     }

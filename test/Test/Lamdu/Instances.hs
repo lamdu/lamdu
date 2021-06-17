@@ -106,7 +106,7 @@ instance Eq (a -> Unit b) where _ == _ = True
 instance Eq a => Eq (Property Unit a) where
     Property x _ == Property y _ = x == y
 instance Eq n => Eq (Sugar.TagPane n Unit) where
-    Sugar.TagPane t0 n0 _ _ == Sugar.TagPane t1 n1 _ _ =
+    Sugar.TagPane t0 n0 _ _ _ == Sugar.TagPane t1 n1 _ _ _ =
         t0 == t1 && n0 == n1
 
 deriving instance (Eq a, Eq n) => Eq (Sugar.Annotation a n)
