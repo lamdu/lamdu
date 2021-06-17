@@ -48,8 +48,8 @@
     "pane": {
         "newDefinitionKeys" : [ "Alt+N", "Alt+L" ],
         "closeKeys"         : [ "Alt+W" ],
-        "moveUpKeys"        : [ "Cmd+Up" ],
-        "moveDownKeys"      : [ "Cmd+Down" ]
+        "moveUpKeys"        : [ "Alt+Up" ],
+        "moveDownKeys"      : [ "Alt+Down" ]
     },
     "versionControl": {
         "undoKeys"           : [ "Cmd+Z" ],
