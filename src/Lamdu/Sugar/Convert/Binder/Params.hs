@@ -80,21 +80,6 @@ mkStoredLam lam pl =
     (hmap (Proxy @(Recursively HFunctor) #>  hflipped %~ hmap (const (^. Input.stored))) lam)
     (pl ^. Input.stored)
 
-setParamsOrder ::
-    Monad m =>
-    Maybe (MkProperty' (T m) PresentationMode) -> [T.Tag] -> T m ()
-setParamsOrder mPresMode newParamList =
-    do
-        Lens.itraverse_ (flip DataOps.setTagOrder) newParamList
-        case mPresMode of
-            Nothing -> pure ()
-            Just presModeProp ->
-                do
-                    presMode <- getP presModeProp
-                    case presMode of
-                        Operator f0 f1 | [f0, f1] /= take 2 newParamList -> setP presModeProp Verbose
-                        _ -> pure ()
-
 unappliedUsesOfVar :: V.Var -> Ann a # V.Term -> [a # V.Term]
 unappliedUsesOfVar var (Ann pl (V.BLeaf (V.LVar v)))
     | v == var = [pl]
@@ -178,12 +163,10 @@ addFieldParam =
     <&>
     \fixUsages mkArg binderKind storedLam mkTags tag ->
     do
-        let newTags = mkTags tag
-        Lens.itraverse_ (flip DataOps.setTagOrder) newTags
         let t = storedLam ^. slLam . V.tlInType
         case t ^. hVal . _HCompose of
             Pruned ->
-                writeNewParamList newTags
+                writeNewParamList (mkTags tag)
                 >>= t ^. hAnn . ExprIRef.setIref
             Unpruned (HCompose (T.TRecord (HCompose r))) ->
                 do
@@ -298,16 +281,15 @@ delFieldParamAndFixCalls binderKind tags fp storedLam =
 
 fieldParamActions ::
     Monad m =>
-    Maybe (MkProperty' (T m) PresentationMode) ->
     BinderKind m -> [T.Tag] -> FieldParam -> StoredLam m ->
     ConvertM m (FuncParamActions InternalName (OnceT (T m)) (T m))
-fieldParamActions mPresMode binderKind tags fp storedLam =
+fieldParamActions binderKind tags fp storedLam =
     do
         postProcess <- ConvertM.postProcessAssert
         add <- addFieldParam
         let addParamAfter newTag =
                 do
-                    add DataOps.newHole binderKind storedLam (\x -> tagsBefore <> [x] <> tagsAfter) newTag
+                    add DataOps.newHole binderKind storedLam (: tags) newTag
                     postProcess
         addNext <-
             ConvertTag.replace (nameWithContext Nothing param)
@@ -318,22 +300,11 @@ fieldParamActions mPresMode binderKind tags fp storedLam =
         pure FuncParamActions
             { _fpAddNext = AddNext addNext
             , _fpDelete = del
-            , _fpMOrderBefore =
-                case tagsBefore of
-                [] -> Nothing
-                b ->
-                    init b ++ (fpTag fp : last b : tagsAfter)
-                    & setParamsOrder mPresMode & Just
-            , _fpMOrderAfter =
-                case tagsAfter of
-                [] -> Nothing
-                (x:xs) ->
-                    tagsBefore ++ (x : fpTag fp : xs)
-                    & setParamsOrder mPresMode & Just
+            , _fpMOrderBefore = Nothing
+            , _fpMOrderAfter = Nothing
             }
     where
         param = storedLam ^. slLam . V.tlIn
-        (tagsBefore, tagsAfter) = break (== fpTag fp) tags & _2 %~ tail
 
 fpIdEntityId :: V.Var -> FieldParam -> EntityId
 fpIdEntityId param = EntityId.ofTaggedEntity param . fpTag
@@ -460,7 +431,7 @@ convertRecordParams mPresMode binderKind fieldParams lam@(V.TypedLam param _ _) 
                                 (EntityId.ofTaggedEntity param)
                             >>= ConvertM . lift
                         )
-                    <*> fieldParamActions mPresMode binderKind tags fp storedLam
+                    <*> fieldParamActions binderKind tags fp storedLam
                 let paramEntityId = paramInfo ^. piTag . tagRefTag . tagInstance
                 vinfo <- mkVarInfo (fpFieldType fp)
                 pure

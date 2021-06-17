@@ -6,9 +6,11 @@ module Lamdu.Sugar.OrderTags
 
 import qualified Control.Lens as Lens
 import           Control.Monad ((>=>))
-import           Control.Monad.Transaction (MonadTransaction(..))
+import           Control.Monad.Transaction (MonadTransaction(..), setP)
 import           Data.List (sortOn)
 import           Hyper
+import qualified Lamdu.Data.Anchors as Anchors
+import qualified Lamdu.Data.Ops as DataOps
 import           Lamdu.Data.Tag (tagOrder)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Sugar.Lens as SugarLens
@@ -55,7 +57,7 @@ orderTBody t =
 orderType :: MonadTransaction m i => OrderT i (Ann a # Sugar.Type name)
 orderType = hVal orderTBody
 
-instance MonadTransaction m i => Order i (Sugar.Composite v name i o) where
+instance (MonadTransaction m o, MonadTransaction m i) => Order i (Sugar.Composite v name i o) where
     order (Sugar.Composite items punned tail_ addItem) =
         Sugar.Composite
         <$> (orderByTag (^. Sugar.ciTag . Sugar.tagRefTag) items
@@ -64,27 +66,48 @@ instance MonadTransaction m i => Order i (Sugar.Composite v name i o) where
         <*> Sugar._OpenComposite orderNode tail_
         <*> pure addItem
 
-instance MonadTransaction m i => Order i (Sugar.LabeledApply v name i o) where
+instance (MonadTransaction m o, MonadTransaction m i) => Order i (Sugar.LabeledApply v name i o) where
     order (Sugar.LabeledApply func specialArgs annotated punned) =
         Sugar.LabeledApply func specialArgs
         <$> orderByTag (^. Sugar.aaTag) annotated
         <*> pure punned
         >>= htraverse (Proxy @(Order i) #> orderNode)
 
-instance MonadTransaction m i => Order i (Sugar.Lambda v name i o)
 instance MonadTransaction m i => Order i (Const a)
-instance MonadTransaction m i => Order i (Sugar.Else v name i o)
-instance MonadTransaction m i => Order i (Sugar.IfElse v name i o)
-instance MonadTransaction m i => Order i (Sugar.Let v name i o)
-instance MonadTransaction m i => Order i (Sugar.PostfixApply v name i o)
+instance (MonadTransaction m o, MonadTransaction m i) => Order i (Sugar.Else v name i o)
+instance (MonadTransaction m o, MonadTransaction m i) => Order i (Sugar.IfElse v name i o)
+instance (MonadTransaction m o, MonadTransaction m i) => Order i (Sugar.Let v name i o)
+instance (MonadTransaction m o, MonadTransaction m i) => Order i (Sugar.PostfixApply v name i o)
 
-instance MonadTransaction m i => Order i (Sugar.Function v name i o) where
+instance (MonadTransaction m o, MonadTransaction m i) => Order i (Sugar.Lambda v name i o) where
+    order = Sugar.lamFunc order
+
+instance (MonadTransaction m o, MonadTransaction m i) => Order i (Sugar.Function v name i o) where
     order x =
         x
         & (Sugar.fParams . Sugar._Params) orderParams
         >>= Sugar.fBody orderNode
+        <&> Sugar.fParams . Sugar._Params %~ addReorders
 
-instance MonadTransaction m i => Order i (Sugar.PostfixFunc v name i o) where
+addReorders :: MonadTransaction m o => [(a, Sugar.ParamInfo n i o)] -> [(a, Sugar.ParamInfo n i o)]
+addReorders params =
+    params & Lens.itraversed <. _2 . Sugar.piActions %@~ addParamActions
+    where
+        tags = params ^.. traverse . _2 . Sugar.piTag . Sugar.tagRefTag . Sugar.tagVal
+        addParamActions ::
+            MonadTransaction m o => Int -> Sugar.FuncParamActions n i o -> Sugar.FuncParamActions n i o
+        addParamActions i a =
+            a
+            & Sugar.fpMOrderBefore .~
+                (setOrder ([0..i-1] <> [i, i-1] <> [i+1..length tags-1]) <$ guard (i > 0))
+            & Sugar.fpMOrderAfter .~
+                (setOrder ([0..i] <> [i+1, i] <> [i+2..length tags-1]) <$ guard (i + 1 < length tags))
+        setOrder :: MonadTransaction m o => [Int] -> o ()
+        setOrder o =
+            Lens.itraverse_ (flip DataOps.setTagOrder) (o <&> \i -> tags ^?! Lens.ix i)
+            & transaction
+
+instance (MonadTransaction m o, MonadTransaction m i) => Order i (Sugar.PostfixFunc v name i o) where
     order (Sugar.PfCase x) = order x <&> Sugar.PfCase
     order x@Sugar.PfFromNom{} = pure x
     order x@Sugar.PfGetField{} = pure x
@@ -96,15 +119,15 @@ orderParams = orderByTag (^. _2 . Sugar.piTag . Sugar.tagRefTag)
 
 -- Special case assignment and binder to invoke the special cases in expr
 
-instance MonadTransaction m i => Order i (Sugar.Assignment v name i o) where
+instance (MonadTransaction m o, MonadTransaction m i) => Order i (Sugar.Assignment v name i o) where
     order (Sugar.BodyPlain x) = Sugar.apBody order x <&> Sugar.BodyPlain
     order (Sugar.BodyFunction x) = order x <&> Sugar.BodyFunction
 
-instance MonadTransaction m i => Order i (Sugar.Binder v name i o) where
+instance (MonadTransaction m o, MonadTransaction m i) => Order i (Sugar.Binder v name i o) where
     order (Sugar.BinderTerm x) = order x <&> Sugar.BinderTerm
     order (Sugar.BinderLet x) = order x <&> Sugar.BinderLet
 
-instance MonadTransaction m i => Order i (Sugar.Term v name i o) where
+instance (MonadTransaction m o, MonadTransaction m i) => Order i (Sugar.Term v name i o) where
     order (Sugar.BodyLam l) = order l <&> Sugar.BodyLam
     order (Sugar.BodyRecord r) = order r <&> Sugar.BodyRecord
     order (Sugar.BodyLabeledApply a) = order a <&> Sugar.BodyLabeledApply
@@ -131,9 +154,16 @@ orderNode ::
 orderNode = hVal order
 
 orderDef ::
-    MonadTransaction m i =>
+    (MonadTransaction m o, MonadTransaction m i) =>
     OrderT i (Sugar.Definition v name i o a)
 orderDef def =
     def
     & (SugarLens.defSchemes . Sugar.schemeType) orderType
     >>= (Sugar.drBody . Sugar._DefinitionBodyExpression . Sugar.deContent) orderNode
+    <&> Sugar.drBody . Sugar._DefinitionBodyExpression . Sugar.deContent .
+        hVal . Sugar._BodyFunction . Sugar.fParams . Sugar._Params %~
+        setVerboseWhenNeeded 2 Sugar.fpMOrderAfter . setVerboseWhenNeeded 3 Sugar.fpMOrderBefore
+    where
+        setVerboseWhenNeeded c l =
+            Lens.taking c traverse . _2 . Sugar.piActions . l . Lens._Just %~ (setToVerbose >>)
+        setToVerbose = setP (Anchors.assocPresentationMode (def ^. Sugar.drDefI)) Sugar.Verbose
