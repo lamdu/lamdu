@@ -4,6 +4,7 @@
         "showFPS": false,
         "virtualCursorShown": false,
         "printCursor": false,
+        "printEvents": false,
         "jumpToSourceKeys": [ "Cmd+F12" ],
         "breakpoints": {
             "inference": false,

@@ -152,6 +152,13 @@ mainLoopOptions mkSettingsProp configSampler getFonts stateStorage
         , jumpToSourceKeys =
             ConfigSampler.getSample configSampler
             <&> (^. sConfigData . Config.debug . Config.jumpToSourceKeys)
+        , postProcessEvent =
+            \event ->
+            do
+                shouldPrintEvents <-
+                    ConfigSampler.getSample configSampler
+                    <&> (^. sConfigData . Config.debug . Config.printEvents)
+                when shouldPrintEvents $ print event
         }
     , getTexts = ConfigSampler.getSample configSampler <&> MainLoop.makeAllTexts . (^. sLanguageData)
     }
