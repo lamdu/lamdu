@@ -186,12 +186,12 @@ processLet redex =
         let usedLocalVars =
                 redex ^.. Redex.arg . ExprLens.valLeafs . V._LVar
                 & ordNub
-                & filter ((innerScopeLocalVars ^.) . Lens.contains)
+                & filter (\x -> innerScopeLocalVars ^. Lens.contains x)
         let varsExitingScope =
                 case scopeInfo ^. ConvertM.siMOuter of
                 Nothing -> usedLocalVars
                 Just outerScopeInfo ->
-                    filter ((`Lens.hasn't` outerScope) . Lens.ix) usedLocalVars
+                    filter (\x -> Lens.hasn't (Lens.ix x) outerScope) usedLocalVars
                     where
                         outerScope = outerScopeInfo ^. ConvertM.osiScope . V.scopeVarTypes
         case varsExitingScope of

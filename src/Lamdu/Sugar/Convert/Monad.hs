@@ -183,5 +183,5 @@ convertSubexpression ::
     ConvertM m (ExpressionU EvalPrep m a)
 convertSubexpression exprI =
     do
-        convertSub <- Lens.view (Lens.to scConvertSubexpression)
+        convertSub <- Lens.view id <&> \env -> scConvertSubexpression env
         convertSub ExpressionPos exprI
