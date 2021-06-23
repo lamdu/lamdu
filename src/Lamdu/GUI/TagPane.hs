@@ -275,7 +275,7 @@ makeIntEdit myId prop =
             M.readWidgetState myId
             <&> (^? Lens._Just . Lens.filtered ((== Just prevVal) . parseInt))
             <&> fromMaybe prevValStr
-        ( TextEdit.make ?? TextEdit.Modes "0" "0" ?? text ?? myId
+        TextEdit.make ?? TextEdit.Modes "0" "0" ?? text ?? myId
             <&> Align.tValue . Widget.eventMapMaker . Lens.mapped %~
             -- Avoid taking keys that don't belong to us,
             -- so weakerEvents with them will work.
@@ -284,7 +284,6 @@ makeIntEdit myId prop =
             \(newText, eventRes) ->
                 eventRes <> GuiState.updateWidgetState myId newText
                 <$ (parseInt newText & parseAssert & Property.set prop)
-            )
     where
         parseAssert = error "parsing int failed" & fromMaybe
         prevVal = Property.value prop
