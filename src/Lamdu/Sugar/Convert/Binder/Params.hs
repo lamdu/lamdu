@@ -20,10 +20,10 @@ import           Data.Maybe.Extended (unsafeUnjust)
 import           Data.Property (MkProperty', modP)
 import qualified Data.Set as Set
 import           Hyper
-import           Hyper.Type.AST.FuncType (FuncType(..), funcIn)
-import           Hyper.Type.AST.Nominal (NominalInst(..))
-import           Hyper.Type.AST.Row (RowExtend(..), FlatRowExtends(..))
-import qualified Hyper.Type.AST.Row as Row
+import           Hyper.Syntax (FuncType(..), funcIn)
+import           Hyper.Syntax.Nominal (NominalInst(..))
+import           Hyper.Syntax.Row (RowExtend(..), FlatRowExtends(..))
+import qualified Hyper.Syntax.Row as Row
 import           Hyper.Type.Functor (F)
 import           Hyper.Type.Prune (Prune(..), _Unpruned)
 import qualified Lamdu.Calc.Lens as ExprLens

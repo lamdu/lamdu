@@ -5,7 +5,7 @@ module Lamdu.Expr.Load
 
 import qualified Data.Property as Property
 import           Hyper
-import           Hyper.Type.AST.Nominal (NominalDecl)
+import           Hyper.Syntax.Nominal (NominalDecl)
 import           Lamdu.Calc.Term (Term)
 import qualified Lamdu.Calc.Type as T
 import           Lamdu.Data.Definition (Definition(..))

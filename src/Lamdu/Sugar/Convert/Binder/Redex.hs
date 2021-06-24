@@ -9,7 +9,7 @@ module Lamdu.Sugar.Convert.Binder.Redex
 import qualified Control.Lens as Lens
 import           Hyper
 import           Hyper.Recurse (HRecWitness(..))
-import           Hyper.Type.AST.TypedLam
+import           Hyper.Syntax (W_TypedLam(..))
 import           Hyper.Type.Prune (Prune)
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T

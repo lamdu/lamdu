@@ -6,7 +6,7 @@ module Lamdu.Sugar.Convert.DefExpr
 import qualified Control.Lens as Lens
 import           Control.Monad.Once (OnceT)
 import qualified Data.Property as Property
-import           Hyper.Type.AST.Scheme (saveScheme)
+import           Hyper.Syntax.Scheme (saveScheme)
 import           Hyper.Unify (UVar)
 import           Hyper.Unify.Generalize (generalize)
 import           Lamdu.Calc.Infer (alphaEq, runPureInfer)

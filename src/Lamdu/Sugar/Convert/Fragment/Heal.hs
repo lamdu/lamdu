@@ -8,7 +8,7 @@ import qualified Control.Lens as Lens
 import qualified Data.Property as Property
 import           Hyper
 import           Hyper.Infer.Blame (BlameResult(..), blame)
-import qualified Hyper.Type.AST.Row as Row
+import qualified Hyper.Syntax.Row as Row
 import           Hyper.Type.Prune (Prune(..), _Unpruned)
 import           Hyper.Unify.Generalize (GTerm(..))
 import           Hyper.Unify.New (newUnbound)

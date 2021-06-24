@@ -22,7 +22,7 @@ import qualified Data.Set as Set
 import qualified Data.UUID as UUID
 import qualified GUI.Momentu.Direction as Dir
 import           Hyper (_HCompose)
-import           Hyper.Type.AST.Row (RowExtend(..))
+import           Hyper.Syntax.Row (RowExtend(..))
 import           Hyper.Type.Prune (Prune(..))
 import           Lamdu.Calc.Identifier (Identifier(..))
 import qualified Lamdu.Calc.Term as V

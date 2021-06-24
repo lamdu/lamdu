@@ -20,10 +20,10 @@ import qualified Data.Set as Set
 import           Data.UUID.Types (UUID)
 import qualified Data.Vector as Vector
 import           Hyper
-import           Hyper.Type.AST.FuncType (FuncType(..))
-import           Hyper.Type.AST.Nominal (ToNom(..), NominalDecl(..), NominalInst(..))
-import           Hyper.Type.AST.Row (RowExtend(..))
-import           Hyper.Type.AST.Scheme (Scheme(..), QVars(..), QVarInstances(..), _QVarInstances)
+import           Hyper.Syntax (FuncType(..))
+import           Hyper.Syntax.Nominal (ToNom(..), NominalDecl(..), NominalInst(..))
+import           Hyper.Syntax.Row (RowExtend(..))
+import           Hyper.Syntax.Scheme (Scheme(..), QVars(..), QVarInstances(..), _QVarInstances)
 import           Hyper.Type.Prune (Prune(..), _Unpruned)
 import           Lamdu.Calc.Definition
 import           Lamdu.Calc.Identifier (Identifier, identHex, identFromHex)

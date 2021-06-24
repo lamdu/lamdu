@@ -7,8 +7,8 @@ import           Control.Monad.Transaction (MonadTransaction(..))
 import           Data.Typeable (Typeable)
 import           Hyper
 import           Hyper.Recurse (wrap)
-import           Hyper.Type.AST.FuncType (FuncType(..))
-import           Hyper.Type.AST.Row (freExtends, freRest)
+import           Hyper.Syntax (FuncType(..))
+import           Hyper.Syntax.Row (freExtends, freRest)
 import           Hyper.Type.Prune (Prune(..))
 import qualified Lamdu.Builtins.Anchors as Builtins
 import           Lamdu.Calc.Definition (depsNominals)

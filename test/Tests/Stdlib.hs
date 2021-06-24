@@ -11,7 +11,7 @@ import qualified Data.Map as Map
 import qualified Data.Set as Set
 import qualified Data.Text as Text
 import           Hyper (htraverse_, (#>))
-import qualified Hyper.Type.AST.Scheme as S
+import qualified Hyper.Syntax.Scheme as S
 import           Lamdu.Calc.Definition (depsGlobalTypes)
 import           Lamdu.Calc.Identifier (identHex)
 import           Lamdu.Calc.Infer (alphaEq)

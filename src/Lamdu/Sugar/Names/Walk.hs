@@ -14,7 +14,7 @@ import qualified Control.Lens as Lens
 import           Data.Kind (Type)
 import qualified Data.Set as Set
 import           Hyper.Class.Morph (morphTraverse1)
-import           Hyper.Type.AST.FuncType (FuncType(..))
+import           Hyper.Syntax (FuncType(..))
 import qualified Lamdu.Calc.Type as T
 import           Lamdu.Sugar.Convert.Input (userData)
 import           Lamdu.Sugar.Internal

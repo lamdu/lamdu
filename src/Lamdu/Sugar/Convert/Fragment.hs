@@ -15,10 +15,10 @@ import           Generic.Data (gconIndex)
 import           Hyper
 import           Hyper.Class.Context
 import           Hyper.Recurse
-import           Hyper.Type.AST.FuncType (FuncType(..), funcIn)
-import           Hyper.Type.AST.Nominal (nId, nScheme)
-import           Hyper.Type.AST.Row (FlatRowExtends, freExtends)
-import           Hyper.Type.AST.Scheme (sTyp)
+import           Hyper.Syntax (FuncType(..), funcIn)
+import           Hyper.Syntax.Nominal (nId, nScheme)
+import           Hyper.Syntax.Row (FlatRowExtends, freExtends)
+import           Hyper.Syntax.Scheme (sTyp)
 import           Hyper.Type.Prune (Prune(..))
 import           Hyper.Unify (UVar, applyBindings, unify)
 import           Lamdu.Calc.Definition (depsNominals)

@@ -9,7 +9,7 @@ module Lamdu.Calc.Term.Utils
 
 import qualified Control.Lens as Lens
 import           Hyper (Recursively(..), HFoldable(..), (#>), withDict)
-import           Hyper.Type.AST.Row (RowExtend(..))
+import           Hyper.Syntax.Row (RowExtend(..))
 import           Lamdu.Calc.Term (Val)
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T

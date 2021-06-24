@@ -14,8 +14,8 @@ import           Data.Maybe.Extended (maybeToMPlus)
 import qualified Data.Property as Property
 import qualified Data.Set as Set
 import           Hyper
-import           Hyper.Type.AST.Row (freExtends)
-import qualified Hyper.Type.AST.Scheme as S
+import           Hyper.Syntax.Row (freExtends)
+import qualified Hyper.Syntax.Scheme as S
 import qualified Lamdu.Calc.Lens as ExprLens
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T

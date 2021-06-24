@@ -10,7 +10,7 @@ import           Data.CurAndPrev (CurAndPrev)
 import           Data.Kind (Type)
 import           Hyper
 import           Hyper.Class.Morph
-import           Hyper.Type.AST.Nominal (NominalDecl)
+import           Hyper.Syntax.Nominal (NominalDecl)
 import           Lamdu.Calc.Lens (tIds)
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Data.Anchors as Anchors

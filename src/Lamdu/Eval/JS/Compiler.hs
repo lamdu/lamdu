@@ -22,8 +22,8 @@ import           Data.Text.Encoding (decodeUtf8)
 import           Data.UUID.Types (UUID)
 import qualified Data.UUID.Utils as UUIDUtils
 import           Hyper
-import           Hyper.Type.AST.Nominal (ToNom(..))
-import           Hyper.Type.AST.Row (RowExtend(..))
+import           Hyper.Syntax.Nominal (ToNom(..))
+import           Hyper.Syntax.Row (RowExtend(..))
 import           Hyper.Type.Prune (Prune)
 import qualified Lamdu.Builtins.Anchors as Builtins
 import qualified Lamdu.Builtins.PrimVal as PrimVal

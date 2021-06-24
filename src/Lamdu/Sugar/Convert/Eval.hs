@@ -12,9 +12,9 @@ import qualified Data.Map as Map
 import           Data.Maybe.Extended (maybeToMPlus)
 import           Data.Text.Encoding (decodeUtf8')
 import           Data.UUID (UUID)
-import           Hyper.Type.AST.Nominal (NominalInst(..))
-import           Hyper.Type.AST.Row (RowExtend(..))
-import           Hyper.Type.AST.Scheme (QVarInstances(..))
+import           Hyper.Syntax.Nominal (NominalInst(..))
+import           Hyper.Syntax.Row (RowExtend(..))
+import           Hyper.Syntax.Scheme (QVarInstances(..))
 import qualified Lamdu.Builtins.Anchors as Builtins
 import qualified Lamdu.Builtins.PrimVal as PrimVal
 import qualified Lamdu.Calc.Term as V

@@ -15,8 +15,8 @@ import qualified Data.Property as Property
 import qualified Data.Set as Set
 import           Data.Text.Encoding (encodeUtf8)
 import           Hyper
-import           Hyper.Type.AST.Nominal (ToNom(..), NominalDecl(..), NominalInst(..))
-import qualified Hyper.Type.AST.Scheme as S
+import           Hyper.Syntax.Nominal (ToNom(..), NominalDecl(..), NominalInst(..))
+import qualified Hyper.Syntax.Scheme as S
 import           Hyper.Type.Prune (Prune(..))
 import           Hyper.Unify (UVar)
 import           Hyper.Unify.Generalize (generalize)

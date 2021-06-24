@@ -50,7 +50,7 @@ import           Data.Property (Property)
 import           Data.Kind (Type)
 import           GUI.Momentu.Direction (Layout)
 import           Hyper
-import           Hyper.Type.AST.App (App(..), appFunc, appArg)
+import           Hyper.Syntax (App(..), appFunc, appArg)
 import           Lamdu.Data.Anchors (BinderParamScopeId(..), bParamScopeId)
 import qualified Lamdu.Data.Meta as Meta
 import qualified Lamdu.I18N.Code as Texts

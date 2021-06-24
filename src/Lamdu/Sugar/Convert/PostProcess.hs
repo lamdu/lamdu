@@ -9,7 +9,7 @@ import qualified Control.Lens as Lens
 import           Data.Property (MkProperty')
 import qualified Data.Property as Property
 import           Hyper
-import           Hyper.Type.AST.Scheme (saveScheme)
+import           Hyper.Syntax.Scheme (saveScheme)
 import           Hyper.Unify (UVar)
 import           Hyper.Unify.Generalize (generalize)
 import           Lamdu.Calc.Infer (runPureInfer)

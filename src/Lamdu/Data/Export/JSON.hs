@@ -23,7 +23,7 @@ import qualified Data.Set as Set
 import           Data.UUID.Types (UUID)
 import           Hyper
 import           Hyper.Recurse (unwrapM, (##>>))
-import           Hyper.Type.AST.Nominal (NominalDecl)
+import           Hyper.Syntax.Nominal (NominalDecl)
 import           Hyper.Type.Functor (_F)
 import           Hyper.Type.Prune (Prune)
 import           Lamdu.Calc.Identifier (Identifier)

@@ -8,10 +8,10 @@ import qualified Data.Map as Map
 import qualified Data.Text as Text
 import           Hyper
 import           Hyper.Class.Optic (HNodeLens(..))
-import qualified Hyper.Type.AST.Nominal as N
-import           Hyper.Type.AST.Row (RowExtend(..))
-import qualified Hyper.Type.AST.Row as Row
-import           Hyper.Type.AST.Scheme (sTyp, _QVarInstances, QVarInstances, Scheme)
+import qualified Hyper.Syntax.Nominal as N
+import           Hyper.Syntax.Row (RowExtend(..))
+import qualified Hyper.Syntax.Row as Row
+import           Hyper.Syntax.Scheme (sTyp, _QVarInstances, QVarInstances, Scheme)
 import           Hyper.Unify.QuantifiedVar (HasQuantifiedVar(..))
 import qualified Lamdu.Builtins.Anchors as Builtins
 import qualified Lamdu.Calc.Type as T

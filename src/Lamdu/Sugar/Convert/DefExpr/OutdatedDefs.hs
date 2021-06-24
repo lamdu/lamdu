@@ -10,9 +10,9 @@ import qualified Data.Map as Map
 import qualified Data.Monoid as Monoid
 import qualified Data.Set as Set
 import           Hyper
-import           Hyper.Type.AST.FuncType (funcIn, funcOut)
-import           Hyper.Type.AST.Row (RowExtend(..), freExtends, freRest)
-import           Hyper.Type.AST.Scheme (sTyp)
+import           Hyper.Syntax (funcIn, funcOut)
+import           Hyper.Syntax.Row (RowExtend(..), freExtends, freRest)
+import           Hyper.Syntax.Scheme (sTyp)
 import           Lamdu.Calc.Definition (depsGlobalTypes)
 import           Lamdu.Calc.Infer (alphaEq)
 import qualified Lamdu.Calc.Lens as ExprLens

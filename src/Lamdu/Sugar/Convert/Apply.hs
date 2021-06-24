@@ -13,9 +13,9 @@ import           Data.Maybe.Extended (maybeToMPlus)
 import qualified Data.Property as Property
 import qualified Data.Set as Set
 import           Hyper
-import           Hyper.Type.AST.FuncType (funcIn)
-import           Hyper.Type.AST.Row (freExtends, freRest)
-import           Hyper.Type.AST.Scheme (sTyp)
+import           Hyper.Syntax (funcIn)
+import           Hyper.Syntax.Row (freExtends, freRest)
+import           Hyper.Syntax.Scheme (sTyp)
 import           Lamdu.Calc.Definition (Deps, depsGlobalTypes)
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T

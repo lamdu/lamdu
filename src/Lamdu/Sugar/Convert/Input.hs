@@ -13,7 +13,7 @@ import           Control.Lens.Extended ((~~>))
 import qualified Control.Lens as Lens
 import           Hyper
 import           Hyper.Infer (InferResult, inferResult)
-import           Hyper.Type.AST.FuncType (funcIn)
+import           Hyper.Syntax (funcIn)
 import           Hyper.Type.Prune (Prune)
 import           Hyper.Unify (UVar)
 import           Hyper.Unify.Generalize (GTerm(..))

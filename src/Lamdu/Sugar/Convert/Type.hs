@@ -7,10 +7,10 @@ module Lamdu.Sugar.Convert.Type
 
 import qualified Control.Lens as Lens
 import           Control.Monad.Transaction (MonadTransaction)
-import           Hyper.Type.AST.FuncType (FuncType(..))
-import           Hyper.Type.AST.Nominal (NominalInst(..))
-import           Hyper.Type.AST.Row (RowExtend(..))
-import qualified Hyper.Type.AST.Scheme as S
+import           Hyper.Syntax (FuncType(..))
+import           Hyper.Syntax.Nominal (NominalInst(..))
+import           Hyper.Syntax.Row (RowExtend(..))
+import qualified Hyper.Syntax.Scheme as S
 import qualified Lamdu.Calc.Type as T
 import           Lamdu.Data.Anchors (anonTag)
 import qualified Lamdu.Sugar.Convert.TId as ConvertTId

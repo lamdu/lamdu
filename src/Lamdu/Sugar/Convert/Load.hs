@@ -15,8 +15,8 @@ import qualified Control.Monad.State as State
 import qualified Data.Map as Map
 import           Hyper
 import           Hyper.Infer
-import           Hyper.Type.AST.Nominal (NominalDecl, nScheme)
-import           Hyper.Type.AST.Scheme (sTyp)
+import           Hyper.Syntax.Nominal (NominalDecl, nScheme)
+import           Hyper.Syntax.Scheme (sTyp)
 import           Hyper.Type.Functor (_F)
 import           Hyper.Unify (UVar, unify)
 import           Hyper.Unify.Generalize (GTerm(..))

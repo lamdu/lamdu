@@ -25,10 +25,10 @@ import           GUI.Momentu.Direction (Layout(..))
 import           Hyper
 import           Hyper.Recurse
 import           Hyper.Infer
-import           Hyper.Type.AST.FuncType (FuncType(..), funcIn, funcOut)
-import           Hyper.Type.AST.Nominal (nId, nScheme)
-import           Hyper.Type.AST.Row (RowExtend(..), freExtends)
-import           Hyper.Type.AST.Scheme (sTyp)
+import           Hyper.Syntax (FuncType(..), funcIn, funcOut)
+import           Hyper.Syntax.Nominal (nId, nScheme)
+import           Hyper.Syntax.Row (RowExtend(..), freExtends)
+import           Hyper.Syntax.Scheme (sTyp)
 import           Hyper.Type.Functor (_F)
 import           Hyper.Type.Prune (Prune(..))
 import           Hyper.Unify (UVar, applyBindings, unify)

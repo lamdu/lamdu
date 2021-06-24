@@ -8,8 +8,8 @@ import qualified Control.Lens as Lens
 import qualified Data.Property as Property
 import qualified Data.Set as Set
 import           Hyper
-import           Hyper.Type.AST.FuncType (FuncType(..))
-import           Hyper.Type.AST.Row (FlatRowExtends(..))
+import           Hyper.Syntax (FuncType(..))
+import           Hyper.Syntax.Row (FlatRowExtends(..))
 import           Hyper.Type.Prune (Prune)
 import qualified Lamdu.Cache as Cache
 import qualified Lamdu.Calc.Definition as Def

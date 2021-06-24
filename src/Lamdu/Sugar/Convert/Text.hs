@@ -10,7 +10,7 @@ import           Data.Maybe.Extended (maybeToMPlus)
 import           Data.Property (Property(..))
 import           Data.Text.Encoding (decodeUtf8', encodeUtf8)
 import           Hyper (_ANode)
-import           Hyper.Type.AST.Nominal (ToNom(..))
+import           Hyper.Syntax.Nominal (ToNom(..))
 import qualified Lamdu.Builtins.Anchors as Builtins
 import qualified Lamdu.Builtins.PrimVal as PrimVal
 import qualified Lamdu.Calc.Lens as ExprLens

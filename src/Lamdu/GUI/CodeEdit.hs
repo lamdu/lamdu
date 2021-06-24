@@ -27,7 +27,7 @@ import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
-import           Hyper.Type.AST.Scheme (Scheme(..), QVars(..))
+import           Hyper.Syntax.Scheme (Scheme(..), QVars(..))
 import qualified Lamdu.Builtins.Anchors as Builtins
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T

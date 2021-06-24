@@ -2,7 +2,7 @@ module Lamdu.Sugar.Convert.Record
     ( convertEmpty, convertExtend
     ) where
 
-import           Hyper.Type.AST.Row (RowExtend(..))
+import           Hyper.Syntax.Row (RowExtend(..))
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Data.Ops as DataOps
