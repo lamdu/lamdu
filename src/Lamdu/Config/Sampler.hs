@@ -15,8 +15,10 @@ import qualified Control.Lens as Lens
 import           Control.Monad.Trans.FastWriter (WriterT, runWriterT, tell)
 import           Data.Aeson (FromJSON)
 import qualified Data.Aeson.Config as AesonConfig
+import qualified Data.Text as Text
 import           Data.Time.Clock (UTCTime)
 import           GUI.Momentu.MetaKey (MetaKey)
+import qualified GUI.Momentu.MetaKey as MetaKey
 import qualified Graphics.DrawingCombinators as Draw
 import           Lamdu.Config (Config)
 import           Lamdu.Config.Folder (Selection(..))
@@ -38,7 +40,7 @@ type ModificationTime = UTCTime
 data FiledConfig a = FiledConfig
     { _primaryPath :: FilePath
     , _fileData :: !a
-    }
+    } deriving (Functor, Foldable, Traversable)
 Lens.makeLenses ''FiledConfig
 
 data SampleData = SampleData
@@ -91,10 +93,16 @@ loadSprite relPath =
         path <- Folder.spritePath relPath & lift
         tell [path] *> lift (Draw.openSprite path)
 
+toMetaKey :: String -> MetaKey
+toMetaKey s =
+    MetaKey.parse (Text.pack s) & fromMaybe (error ("Bad key string: " ++ show s))
+
 loadPaths :: FilePath -> FilePath -> IO Sample
 loadPaths themePath langPath =
     do
-        config <- Paths.getDataFileName "config.json" & lift >>= loadConfigFile
+        config <-
+            Paths.getDataFileName "config.json" & lift >>= loadConfigFile
+            <&> Lens.mapped . Lens.mapped %~ toMetaKey
         theme <- loadConfigFile themePath
         SampleData config theme
             <$> loadConfigFile langPath
