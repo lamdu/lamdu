@@ -20,7 +20,7 @@ import qualified GUI.Momentu.Glue as Glue
 import qualified GUI.Momentu.I18N as MomentuTexts
 import qualified GUI.Momentu.Main.Animation as Anim
 import qualified GUI.Momentu.Main.Config as MainConfig
-import           GUI.Momentu.MetaKey (MetaKey)
+import           GUI.Momentu.ModKey (ModKey)
 import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Cursor as Cursor
@@ -103,7 +103,7 @@ instance Has EventMapHelp.Style HelpEnv where has = heStyle
 instance Has (MomentuTexts.Texts Text) HelpEnv where has = heCommonTexts
 
 addHelp ::
-    Config MetaKey -> Theme -> Language -> Font ->
+    Config ModKey -> Theme -> Language -> Font ->
     Widget.Size -> Widget f -> Widget f
 addHelp config theme language font size widget =
     widget
@@ -127,15 +127,16 @@ addHelp config theme language font size widget =
 
 mainLoopConfig ::
     MkProperty IO o EventMapHelp.IsHelpShown ->
-    (Zoom -> IO (Fonts Font)) -> IO (Config MetaKey, Theme, Language) -> MainConfig.Config
+    (Zoom -> IO (Fonts Font)) -> IO (Config ModKey, Theme, Language) -> MainConfig.Config
 mainLoopConfig helpProp getFonts getConfig =
     MainConfig.Config
     { _cAnim =
         getConfig <&> (^. _2)
         <&> \theme ->
         Anim.Config
-        { acTimePeriod = theme ^. Theme.animationTimePeriodSec & realToFrac
-        , acRemainingRatioInPeriod = theme ^. Theme.animationRemainInPeriod
+        { _acTimePeriod = theme ^. Theme.animationTimePeriodSec & realToFrac
+        , _acRemainingRatioInPeriod = theme ^. Theme.animationRemainInPeriod
+        , _acSpiral = Anim.SpiralAnimConf 0 0
         }
     , _cCursor =
         \zoom ->

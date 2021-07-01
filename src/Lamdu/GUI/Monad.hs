@@ -33,7 +33,7 @@ import           GUI.Momentu.Animation.Id (AnimId)
 import qualified GUI.Momentu.Direction as Dir
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.Hover as Hover
-import           GUI.Momentu.MetaKey (MetaKey)
+import           GUI.Momentu.ModKey (ModKey)
 import           GUI.Momentu.Responsive (Responsive)
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.Responsive.Expression as ResponsiveExpr
@@ -41,10 +41,12 @@ import           GUI.Momentu.State (GUIState(..))
 import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.View (View)
 import           GUI.Momentu.Widget.Id (toAnimId)
+import qualified GUI.Momentu.Widgets.Grid as Grid
 import qualified GUI.Momentu.Widgets.Label as Label
 import qualified GUI.Momentu.Widgets.Menu as Menu
 import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
+import qualified GUI.Momentu.Widgets.StdKeys as StdKeys
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
 import qualified GUI.Momentu.Widgets.TextView as TextView
 import qualified Lamdu.Calc.Type as T
@@ -72,7 +74,7 @@ data Askable env i o = Askable
     , _aStdSpacing :: Vector2 Double
     , _aAnimIdPrefix :: AnimId
     , _aSettings :: Settings
-    , _aConfig :: Config MetaKey
+    , _aConfig :: Config ModKey
     , _aTheme :: Theme
     , _aAssocTagName :: T.Tag -> MkProperty' o Text
     , _aMakeSubexpression :: ExprGui.Expr Sugar.Term i o -> GuiM env i o (Responsive o)
@@ -102,11 +104,14 @@ instance Has TextView.Style (Askable env i o) where has = aTextEditStyle . has
 instance Has TextEdit.Style (Askable env i o) where has = aTextEditStyle
 instance Spacer.HasStdSpacing (Askable env i o) where stdSpacing = aStdSpacing
 instance Element.HasAnimIdPrefix (Askable env i o) where animIdPrefix = aAnimIdPrefix
-instance key ~ MetaKey => Has (Config key) (Askable env i o) where has = aConfig
+instance key ~ ModKey => Has (Config key) (Askable env i o) where has = aConfig
+instance key ~ ModKey => Has (Grid.Keys key) (Askable env i o) where has = Config.hasConfig . Config.grid
+instance key ~ ModKey => Has (StdKeys.DirKeys key) (Askable env i o) where has = Config.hasConfig . Config.dirKeys
+instance key ~ ModKey => Has (TextEdit.Keys key) (Askable env i o) where has = Config.hasConfig . Config.textEdit
 instance Has Theme (Askable env i o) where has = aTheme
 instance Has ResponsiveExpr.Style (Askable env i o) where has = aTheme . has
-instance Has SearchMenu.Config (Askable env i o) where has = Config.hasConfig . Config.searchMenu
-instance Has Menu.Config (Askable env i o) where has = has . SearchMenu.configMenu
+instance key ~ ModKey => Has (SearchMenu.Config key) (Askable env i o) where has = Config.hasConfig . Config.searchMenu
+instance key ~ ModKey => Has (Menu.Config key) (Askable env i o) where has = has . SearchMenu.configMenu
 instance Has Menu.Style (Askable env i o) where has = aTheme . Theme.menu
 instance Has SearchMenu.TermStyle (Askable env i o) where
     has = aTheme . Theme.searchTerm

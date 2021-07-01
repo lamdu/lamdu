@@ -71,9 +71,39 @@
         "prevScopeKeys": [ "Alt+Up" ],
         "nextScopeKeys": [ "Alt+Down" ]
     },
-    "searchMenu" : {
+    "dirKeys": {
+        "left": ["Left"],
+        "right": ["Right"],
+        "up": ["Up"],
+        "down": ["Down"]
+    },
+    "grid": {
+        "moreLeft": [ "Home" ],
+        "moreRight": [ "End" ],
+        "leftMost": [ "Cmd+Home" ],
+        "rightMost": [ "Cmd+End" ],
+        "top": [ "PageUp" ],
+        "bottom": [ "PageDown" ]
+    },
+    "textEdit": {
+        "moveLeftWord": [ "Ctrl+Left" ],
+        "moveRightWord": [ "Ctrl+Right" ],
+        "home": [ "Home", "Ctrl+A" ],
+        "end": [ "End", "Ctrl+E" ],
+        "transposeLetters": [ "Ctrl+T" ],
+        "deleteCharBackward": [ "Backspace" ],
+        "deleteCharForward": [ "Delete" ],
+        "deleteWordBackward": [ "Ctrl+W" ],
+        "deleteWordForward": [ "Alt+D" ],
+        "deleteToEndOfLine": [ "Ctrl+K" ],
+        "deleteToBeginningOfLine": [ "Ctrl+U" ],
+        "copy": [ "Cmd+C" ],
+        "paste": [ "Cmd+V" ]
+    },
+    "searchMenu": {
         "openKeys": [ "Space", "Enter" ],
         "closeKeys": [ "Escape" ],
+        "delSearchTermKeys": [ "Cmd+Delete" ],
         "menu": {
             "keysPickOption": [ "Enter" ],
             "keysPickOptionAndGotoNext": [ "Tab" ]

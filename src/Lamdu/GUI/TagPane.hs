@@ -16,12 +16,12 @@ import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Glue ((/-/), (/|/), hbox)
 import qualified GUI.Momentu.I18N as MomentuTexts
-import           GUI.Momentu.MetaKey (MetaKey(..), noMods)
-import qualified GUI.Momentu.MetaKey as MetaKey
+import           GUI.Momentu.ModKey (noMods)
+import qualified GUI.Momentu.ModKey as ModKey
 import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
-import qualified GUI.Momentu.Widgets.Choice as Choice
+import qualified GUI.Momentu.Widgets.DropDownList as DropDownList
 import qualified GUI.Momentu.Widgets.FocusDelegator as FocusDelegator
 import qualified GUI.Momentu.Widgets.Grid as Grid
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
@@ -83,8 +83,8 @@ makeFocusableTagNameEdit myId prop =
                     , has . Texts.renameTag
                     ]
                 , FocusDelegator.focusParentKeys =
-                    [ MetaKey noMods MetaKey.Key'Escape
-                    , MetaKey noMods MetaKey.Key'Enter
+                    [ noMods ModKey.Key'Escape
+                    , noMods ModKey.Key'Enter
                     ]
                 , FocusDelegator.focusParentDoc =
                     E.toDoc env
@@ -220,14 +220,14 @@ makeSymbol ::
 makeSymbol myId symProp =
     case symProp ^. pVal of
     Tag.NoSymbol ->
-        flip (,) Element.empty <$> makeChoice NoSymbol (toSym "" "")
+        flip (,) Element.empty <$> makeDropDownList NoSymbol (toSym "" "")
     Tag.UniversalSymbol text ->
         (,)
-        <$> makeChoice UniversalSymbol (toSym text text)
+        <$> makeDropDownList UniversalSymbol (toSym text text)
         <*> nameEdit (Property text (set . Tag.UniversalSymbol)) "universal"
     Tag.DirectionalSymbol (Tag.DirOp ltr rtl) ->
         (,)
-        <$> makeChoice DirectionalSymbol (toSym ltr rtl)
+        <$> makeDropDownList DirectionalSymbol (toSym ltr rtl)
         <*>
         ( (label Texts.leftToRightSymbol & info <&> fmap Widget.fromView)
             /|/ hspace /|/ nameEdit (Property ltr (`setDirectional` rtl)) "ltr"
@@ -247,13 +247,13 @@ makeSymbol myId symProp =
         nameEdit prop = makeSymbolNameEdit prop . mkId
         focusableLabel l suffix =
             TextView.makeFocusable <*> Lens.view (has . l) ?? mkId suffix
-        makeChoice curType toTagSym =
+        makeDropDownList curType toTagSym =
             do
                 noSymLabel <- focusableLabel Texts.noSymbol "nosym"
                 uniLabel <- focusableLabel Texts.symbol "unisym"
                 dirLabel <- focusableLabel Texts.directionalSymbol "dirsym"
-                defConf <- Choice.defaultConfig <*> Lens.view (has . Texts.symbolType)
-                Choice.make ?? Property curType (set . toTagSym)
+                defConf <- DropDownList.defaultConfig <*> Lens.view (has . Texts.symbolType)
+                DropDownList.make ?? Property curType (set . toTagSym)
                     ?? [ (NoSymbol, noSymLabel)
                        , (UniversalSymbol, uniLabel)
                        , (DirectionalSymbol, dirLabel)

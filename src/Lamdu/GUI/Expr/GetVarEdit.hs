@@ -13,8 +13,8 @@ import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Font (Underline(..))
 import qualified GUI.Momentu.Hover as Hover
 import qualified GUI.Momentu.I18N as MomentuTexts
-import           GUI.Momentu.MetaKey (MetaKey(..), noMods)
-import qualified GUI.Momentu.MetaKey as MetaKey
+import           GUI.Momentu.ModKey (noMods)
+import qualified GUI.Momentu.ModKey as ModKey
 import           GUI.Momentu.Responsive (Responsive)
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.Responsive.Options as Options
@@ -174,7 +174,7 @@ processDefinitionWidget (Sugar.DefTypeChanged info) myId mkLayout =
         env <- Lens.view id
         let showDialogEventMap =
                 pure myId
-                & E.keysEventMapMovesCursor [MetaKey noMods MetaKey.Key'Enter]
+                & E.keysEventMapMovesCursor [noMods ModKey.Key'Enter]
                 (E.toDoc env
                     [ has . MomentuTexts.view
                     , has . Texts.typeUpdateDialog
@@ -182,7 +182,7 @@ processDefinitionWidget (Sugar.DefTypeChanged info) myId mkLayout =
                     ])
         let hideDialogEventMap =
                 pure hiddenId
-                & E.keysEventMapMovesCursor [MetaKey noMods MetaKey.Key'Escape]
+                & E.keysEventMapMovesCursor [noMods ModKey.Key'Escape]
                 (E.toDoc env
                     [ has . MomentuTexts.view
                     , has . Texts.typeUpdateDialog

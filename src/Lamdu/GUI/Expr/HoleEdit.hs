@@ -7,8 +7,8 @@ import           Hyper
 import qualified GUI.Momentu as M
 import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.I18N as MomentuTexts
-import           GUI.Momentu.MetaKey (MetaKey(..))
-import qualified GUI.Momentu.MetaKey as MetaKey
+import           GUI.Momentu.ModKey (noMods)
+import qualified GUI.Momentu.ModKey as ModKey
 import           GUI.Momentu.Responsive (Responsive)
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.Widget as Widget
@@ -42,7 +42,7 @@ make hole@(Ann (Const pl) _) =
         env <- Lens.view id
         let innerHoleEventMap =
                 -- Make space go to the hole inside a result
-                E.keysEventMap [MetaKey MetaKey.noMods MetaKey.Key'Space]
+                E.keysEventMap [noMods ModKey.Key'Space]
                 (E.toDoc env [has . MomentuTexts.edit, has . Texts.nextEntry]) (pure ())
         let mkSearchTerm firstRes =
                 SearchMenu.searchTermEdit myId (pure . ExprEventMap.allowedSearchTerm) firstRes

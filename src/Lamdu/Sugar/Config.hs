@@ -37,6 +37,6 @@ Lens.makeLenses ''Sugars
 
 newtype Config = Config
     { _sugarsEnabled :: Sugars Bool
-    } deriving stock (Eq, Show)
+    } deriving stock (Eq, Show, Generic)
 JsonTH.derivePrefixed "_" ''Config
 Lens.makeLenses ''Config

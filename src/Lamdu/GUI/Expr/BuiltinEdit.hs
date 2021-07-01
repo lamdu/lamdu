@@ -8,8 +8,8 @@ import qualified Data.Text as Text
 import qualified GUI.Momentu as M
 import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.I18N as MomentuTexts
-import           GUI.Momentu.MetaKey (MetaKey(..), noMods)
-import qualified GUI.Momentu.MetaKey as MetaKey
+import           GUI.Momentu.ModKey (noMods)
+import qualified GUI.Momentu.ModKey as ModKey
 import qualified GUI.Momentu.State as GuiState
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.FocusDelegator as FocusDelegator
@@ -27,9 +27,9 @@ import           Lamdu.Prelude
 
 builtinFDConfig :: _ => env -> FocusDelegator.Config
 builtinFDConfig env = FocusDelegator.Config
-    { FocusDelegator.focusChildKeys = [MetaKey noMods MetaKey.Key'Enter]
+    { FocusDelegator.focusChildKeys = [noMods ModKey.Key'Enter]
     , FocusDelegator.focusChildDoc = doc Texts.changeImportedName
-    , FocusDelegator.focusParentKeys = [MetaKey noMods MetaKey.Key'Escape]
+    , FocusDelegator.focusParentKeys = [noMods ModKey.Key'Escape]
     , FocusDelegator.focusParentDoc = doc Texts.doneChangingImportedName
     }
     where

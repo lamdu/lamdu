@@ -7,17 +7,16 @@ module Lamdu.GUI.VersionControl.Config
 import qualified Control.Lens as Lens
 import qualified Data.Aeson.TH.Extended as JsonTH
 import qualified GUI.Momentu.Draw as Draw
-import           GUI.Momentu.MetaKey (MetaKey)
 
 import           Lamdu.Prelude
 
-data Config = Config
-    { _undoKeys :: [MetaKey]
-    , _redoKeys :: [MetaKey]
-    , _makeBranchKeys :: [MetaKey]
-    , _jumpToBranchesKeys :: [MetaKey]
-    , _delBranchKeys :: [MetaKey]
-    } deriving (Eq, Show)
+data Config key = Config
+    { _undoKeys :: [key]
+    , _redoKeys :: [key]
+    , _makeBranchKeys :: [key]
+    , _jumpToBranchesKeys :: [key]
+    , _delBranchKeys :: [key]
+    } deriving (Eq, Show, Functor, Foldable, Traversable, Generic)
 JsonTH.derivePrefixed "_" ''Config
 
 Lens.makeLenses ''Config

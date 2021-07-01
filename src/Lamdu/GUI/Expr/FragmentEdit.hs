@@ -9,7 +9,8 @@ import qualified GUI.Momentu.Direction as Dir
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.I18N as MomentuTexts
-import qualified GUI.Momentu.MetaKey as MetaKey
+import           GUI.Momentu.ModKey (noMods)
+import qualified GUI.Momentu.ModKey as ModKey
 import           GUI.Momentu.Responsive (Responsive(..))
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.Responsive.Expression as ResponsiveExpr
@@ -22,7 +23,6 @@ import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.Config.Theme.ValAnnotation as ValAnnotation
-import qualified Lamdu.I18N.Code as Texts
 import           Lamdu.GUI.Annotation (addInferredType, shrinkValAnnotationsIfNeeded)
 import qualified Lamdu.GUI.Expr.ApplyEdit as ApplyEdit
 import qualified Lamdu.GUI.Expr.EventMap as ExprEventMap
@@ -37,6 +37,7 @@ import qualified Lamdu.GUI.TagView as TagView
 import qualified Lamdu.GUI.Types as ExprGui
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.GUI.Wrap (stdWrapParentExpr, stdWrap)
+import qualified Lamdu.I18N.Code as Texts
 import qualified Lamdu.I18N.CodeUI as Texts
 import           Lamdu.Name (Name)
 import qualified Lamdu.Sugar.Types as Sugar
@@ -71,7 +72,7 @@ make (Ann (Const pl) fragment) =
             ?? Menu.AnyPlace
             & local (has . SearchMenu.emptyStrings . Lens.mapped .~ "?")
             -- Space goes to next hole in target (not necessarily visible)
-            & local (has . Menu.configKeysPickOptionAndGotoNext <>~ [MetaKey.MetaKey MetaKey.noMods MetaKey.Key'Space])
+            & local (has . Menu.configKeysPickOptionAndGotoNext <>~ [noMods ModKey.Key'Space])
 
         let healKeys = env ^. has . Config.healKeys
         let healChars =

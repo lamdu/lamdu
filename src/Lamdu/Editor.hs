@@ -131,9 +131,9 @@ mainLoopOptions ::
 mainLoopOptions mkSettingsProp configSampler getFonts stateStorage
     reportPerfCounters =
     MainLoop.Options
-    { config = MakeStyle.mainLoopConfig helpProp getFonts getConfig
-    , stateStorage = stateStorage
-    , debug = MainLoop.DebugOptions
+    { _oConfig = MakeStyle.mainLoopConfig helpProp getFonts getConfig
+    , _oStateStorage = stateStorage
+    , _oDebug = MainLoop.DebugOptions
         { fpsFont =
           \zoom ->
           do
@@ -160,7 +160,7 @@ mainLoopOptions mkSettingsProp configSampler getFonts stateStorage
                     <&> (^. sConfigData . Config.debug . Config.printEvents)
                 when shouldPrintEvents $ print event
         }
-    , getTexts = ConfigSampler.getSample configSampler <&> MainLoop.makeAllTexts . (^. sLanguageData)
+    , _oGetTexts = ConfigSampler.getSample configSampler <&> MainLoop.makeAllTexts . (^. sLanguageData)
     }
     where
         helpProp =

@@ -18,7 +18,6 @@ import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.Glue as Glue
 import qualified GUI.Momentu.Hover as Hover
 import qualified GUI.Momentu.I18N as MomentuTexts
-import qualified GUI.Momentu.MetaKey as MetaKey
 import qualified GUI.Momentu.State as GuiState
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Menu as Menu
@@ -59,7 +58,7 @@ makePickEventMap action =
     E.keysEventMapMovesCursor pickKeys (mkDoc Texts.new)
     (action <&> (^. Menu.pickDest))
     -- TODO: DRY with search-menu?
-    <> E.keyPresses (jumpNextKeys <&> MetaKey.toModKey)
+    <> E.keyPresses jumpNextKeys
         (mkDoc Texts.newAndJumpToNextEntry)
         (action <&> \result ->
             case result ^. Menu.pickMNextEntry of

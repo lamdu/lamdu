@@ -11,11 +11,11 @@ import qualified GUI.Momentu.Align as Align
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.I18N as MomentuTexts
-import           GUI.Momentu.MetaKey (MetaKey(..), noMods, toModKey)
-import qualified GUI.Momentu.MetaKey as MetaKey
+import           GUI.Momentu.ModKey (ModKey, noMods)
+import qualified GUI.Momentu.ModKey as ModKey
 import qualified GUI.Momentu.State as GuiState
 import qualified GUI.Momentu.Widget as Widget
-import qualified GUI.Momentu.Widgets.Choice as Choice
+import qualified GUI.Momentu.Widgets.DropDownList as DropDownList
 import qualified GUI.Momentu.Widgets.FocusDelegator as FocusDelegator
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
 import qualified GUI.Momentu.Widgets.TextEdit.Property as TextEdits
@@ -34,29 +34,33 @@ import           Lamdu.Prelude
 
 branchNameFDConfig :: _ => env -> FocusDelegator.Config
 branchNameFDConfig txt = FocusDelegator.Config
-    { FocusDelegator.focusChildKeys = [MetaKey noMods MetaKey.Key'F2]
+    { FocusDelegator.focusChildKeys = [noMods ModKey.Key'F2]
     , FocusDelegator.focusChildDoc =
         E.toDoc txt [has . Texts.branches, has . Texts.rename]
-    , FocusDelegator.focusParentKeys = [MetaKey noMods MetaKey.Key'Enter]
+    , FocusDelegator.focusParentKeys = [noMods ModKey.Key'Enter]
     , FocusDelegator.focusParentDoc =
         E.toDoc txt [has . Texts.branches, has . Texts.doneRenaming]
     }
 
 undoEventMap ::
-    _ => env -> VersionControl.Config -> Maybe (m GuiState.Update) -> EventMap (m GuiState.Update)
+    _ => env -> VersionControl.Config ModKey ->
+    Maybe (m GuiState.Update) -> EventMap (m GuiState.Update)
 undoEventMap env config =
-    E.keyPresses (config ^. VersionControl.undoKeys <&> toModKey)
+    E.keyPresses (config ^. VersionControl.undoKeys)
     (E.toDoc env [has . MomentuTexts.edit, has . Texts.undo])
     & foldMap
 
 redoEventMap ::
-    _ => env -> VersionControl.Config -> Maybe (m GuiState.Update) -> EventMap (m GuiState.Update)
+    _ =>
+    env -> VersionControl.Config ModKey -> Maybe (m GuiState.Update) ->
+    EventMap (m GuiState.Update)
 redoEventMap env config =
-    E.keyPresses (config ^. VersionControl.redoKeys <&> toModKey)
+    E.keyPresses (config ^. VersionControl.redoKeys)
     (E.toDoc env [has . MomentuTexts.edit, has . Texts.redo])
     & foldMap
 
-eventMap :: _ => m (VersionControl.Config -> A.Actions t f -> EventMap (f GuiState.Update))
+eventMap ::
+    _ => m (VersionControl.Config ModKey -> A.Actions t f -> EventMap (f GuiState.Update))
 eventMap =
     Lens.view id
     <&> \env config actions ->
@@ -126,8 +130,8 @@ makeBranchSelector rwtransaction rtransaction actions =
                             env ^. has . VersionControl.selectedBranchColor
                         else id
         branchNameEdits <- A.branches actions & traverse makeBranchNameEdit
-        defConfig <- Choice.defaultConfig ?? txt ^. has . Texts.branches
-        Choice.make ?? A.currentBranch actions ?? branchNameEdits
+        defConfig <- DropDownList.defaultConfig ?? txt ^. has . Texts.branches
+        DropDownList.make ?? A.currentBranch actions ?? branchNameEdits
             ?? defConfig ?? WidgetIds.branchSelection
     where
         empty =

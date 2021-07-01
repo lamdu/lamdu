@@ -16,7 +16,8 @@ import           GUI.Momentu.Draw (Color(..), Sprite)
 import qualified GUI.Momentu.Draw as Draw
 import           GUI.Momentu.Element (HasAnimIdPrefix(..))
 import           GUI.Momentu.Font (openFont, LCDSubPixelEnabled(..))
-import           GUI.Momentu.MetaKey (MetaKey)
+import qualified GUI.Momentu.MetaKey as MetaKey
+import           GUI.Momentu.ModKey (ModKey)
 import           GUI.Momentu.State (HasCursor, GUIState(..))
 import           GUI.Momentu.Widgets.EventMapHelp (IsHelpShown(..))
 import           GUI.Momentu.Widgets.Spacer (HasStdSpacing(..))
@@ -44,6 +45,7 @@ import           Lamdu.Settings (Settings(..), sAnnotationMode)
 import           Lamdu.Style (Style)
 import qualified Lamdu.Style.Make as MakeStyle
 import qualified Lamdu.Sugar.Config as SugarConfig
+import qualified System.Info as SysInfo
 import qualified Test.Lamdu.Config as TestConfig
 
 import           Test.Lamdu.Prelude
@@ -56,7 +58,7 @@ data Env =
     , _eSpacing :: Vector2 Double
     , _eAnimIdPrefix :: Anim.AnimId
     , _eState :: GUIState
-    , _eConfig :: Config MetaKey
+    , _eConfig :: Config ModKey
     , _eSettings :: Settings
     , _eTasksMonitor :: Debug.Monitors
     , _eResults :: EvalResults
@@ -74,7 +76,7 @@ instance Has TextView.Style Env where has = has @TextEdit.Style . has
 instance HasAnimIdPrefix Env where animIdPrefix = eAnimIdPrefix
 instance HasCursor Env
 instance Has GUIState Env where has = eState
-instance key ~ MetaKey => Has (Config key) Env where has = eConfig
+instance key ~ ModKey => Has (Config key) Env where has = eConfig
 instance Has Settings Env where has = eSettings
 instance Has TextEdit.Style Env where has = eTextEditStyle
 instance Has Style Env where has = eStyle
@@ -92,12 +94,18 @@ instance Has (t Text) (Texts Text) => Has (t Text) Env where has = eLanguage . h
 makeLang :: IO Language
 makeLang = TestConfig.loadConfigObject Proxy (Selection "english")
 
+toModKey :: Text -> ModKey
+toModKey s =
+    MetaKey.parse SysInfo.os s
+    & either (error . (("Bad key string: " ++ show s ++ ": ") ++)) id
+
 make :: IO Env
 make =
     do
         testConfig <-
             Paths.getDataFileName "config.json"
             >>= Writer.evalWriterT . AesonConfig.load
+            <&> Lens.mapped %~ toModKey
         testTheme <- TestConfig.loadConfigObject Proxy (Selection "dark")
         testLang <- makeLang
         cache <- Cache.make <&> snd

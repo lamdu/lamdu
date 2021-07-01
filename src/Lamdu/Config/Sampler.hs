@@ -15,10 +15,10 @@ import qualified Control.Lens as Lens
 import           Control.Monad.Trans.FastWriter (WriterT, runWriterT, tell)
 import           Data.Aeson (FromJSON)
 import qualified Data.Aeson.Config as AesonConfig
-import qualified Data.Text as Text
 import           Data.Time.Clock (UTCTime)
-import           GUI.Momentu.MetaKey (MetaKey)
+import           GUI.Momentu.MetaKey (OSString)
 import qualified GUI.Momentu.MetaKey as MetaKey
+import           GUI.Momentu.ModKey (ModKey)
 import qualified Graphics.DrawingCombinators as Draw
 import           Lamdu.Config (Config)
 import           Lamdu.Config.Folder (Selection(..))
@@ -29,6 +29,7 @@ import           Lamdu.Config.Theme.Sprites (Sprites)
 import           Lamdu.I18N.Language (Language)
 import qualified Lamdu.Paths as Paths
 import           System.Directory (getModificationTime)
+import qualified System.Info as SysInfo
 
 import           Lamdu.Prelude
 
@@ -44,7 +45,7 @@ data FiledConfig a = FiledConfig
 Lens.makeLenses ''FiledConfig
 
 data SampleData = SampleData
-    { _sConfig :: FiledConfig (Config MetaKey)
+    { _sConfig :: FiledConfig (Config ModKey)
     , _sTheme :: FiledConfig Theme
     , _sLanguage :: FiledConfig Language
     , _sSprites :: Sprites Draw.Sprite
@@ -58,7 +59,7 @@ data Sample = Sample
     }
 Lens.makeLenses ''Sample
 
-sConfigData :: Lens' Sample (Config MetaKey)
+sConfigData :: Lens' Sample (Config ModKey)
 sConfigData = sData . sConfig . fileData
 
 sThemeData :: Lens' Sample Theme
@@ -93,16 +94,18 @@ loadSprite relPath =
         path <- Folder.spritePath relPath & lift
         tell [path] *> lift (Draw.openSprite path)
 
-toMetaKey :: String -> MetaKey
-toMetaKey s =
-    MetaKey.parse (Text.pack s) & fromMaybe (error ("Bad key string: " ++ show s))
+toModKey :: OSString -> Text -> ModKey
+toModKey os s =
+    MetaKey.parse os s
+    & either (error . (("Bad key string: " ++ show s ++ ": ") ++)) id
 
 loadPaths :: FilePath -> FilePath -> IO Sample
 loadPaths themePath langPath =
     do
+        let os = SysInfo.os
         config <-
             Paths.getDataFileName "config.json" & lift >>= loadConfigFile
-            <&> Lens.mapped . Lens.mapped %~ toMetaKey
+            <&> Lens.mapped . Lens.mapped %~ toModKey os
         theme <- loadConfigFile themePath
         SampleData config theme
             <$> loadConfigFile langPath

@@ -8,11 +8,10 @@ import qualified GUI.Momentu as M
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.I18N as MomentuTexts
-import qualified GUI.Momentu.MetaKey as MetaKey
+import qualified GUI.Momentu.ModKey as ModKey
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.State as GuiState
 import qualified GUI.Momentu.Widget as Widget
-import qualified GUI.Momentu.Widgets.Grid as Grid
 import qualified GUI.Momentu.Widgets.Menu as Menu
 import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import qualified Lamdu.Config as Config
@@ -40,9 +39,8 @@ removeUnwanted =
     Lens.view id <&>
     \c ->
     Config.delKeys c -- Delete key has behaviours in various editors like if-else
-    <> Grid.stdKeys ^.. Lens.folded -- Arrow keys taken by hole is weird
-    <&> MetaKey.toModKey
-    <&> E.KeyEvent MetaKey.KeyState'Pressed
+    <> (c ^.. Config.hasConfig . Config.grid . Lens.folded) -- Arrow keys taken by hole is weird
+    <&> E.KeyEvent ModKey.KeyState'Pressed
     & E.deleteKeys
 
 makeResult ::

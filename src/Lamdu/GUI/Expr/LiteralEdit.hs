@@ -14,8 +14,8 @@ import qualified GUI.Momentu as M
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.I18N as MomentuTexts
-import qualified GUI.Momentu.MetaKey as MetaKey
-import           GUI.Momentu.ModKey (ModKey(..))
+import qualified GUI.Momentu.ModKey as ModKey
+import           GUI.Momentu.ModKey (noMods)
 import           GUI.Momentu.Responsive (Responsive)
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.State as GuiState
@@ -171,7 +171,7 @@ numEdit prop pl =
                 case pl ^? Sugar.plActions . Sugar.delete . (Sugar._SetToHole <> Sugar._Delete) of
                 -- Allow to delete when text is empty
                 Just action | Text.null text ->
-                    E.keyPresses [ModKey mempty MetaKey.Key'Backspace]
+                    E.keyPresses [noMods ModKey.Key'Backspace]
                     (toDoc [has . MomentuTexts.edit, has . MomentuTexts.delete])
                     (action <&> WidgetIds.fromEntityId <&> GuiState.updateCursor)
                     <>

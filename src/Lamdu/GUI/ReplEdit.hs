@@ -61,7 +61,7 @@ data ExportRepl m = ExportRepl
     }
 
 extractEventMap ::
-    _ => env -> Sugar.Payload v (T m) -> [M.MetaKey] -> EventMap (T m M.Update)
+    _ => env -> Sugar.Payload v (T m) -> [M.ModKey] -> EventMap (T m M.Update)
 extractEventMap env pl keys =
     pl ^. Sugar.plActions . Sugar.extract
     <&> ExprEventMap.extractCursor & E.keysEventMapMovesCursor keys doc

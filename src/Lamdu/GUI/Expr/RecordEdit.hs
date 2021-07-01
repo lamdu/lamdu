@@ -173,7 +173,7 @@ makeAddFieldRow ::
 makeAddFieldRow addField pl =
     TagEdit.makeTagHoleEdit addField mkPickResult tagHoleId
     & Styled.withColor TextColors.recordTagColor
-    & local (has . Menu.configKeysPickOptionAndGotoNext <>~ [M.MetaKey M.noMods M.Key'Space])
+    & local (has . Menu.configKeysPickOptionAndGotoNext <>~ [M.noMods M.Key'Space])
     <&>
     \tagHole ->
     TaggedItem

@@ -9,7 +9,7 @@ import           GUI.Momentu.Align (TextWidget)
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.I18N as MomentuTexts
-import           GUI.Momentu.MetaKey (MetaKey, toModKey)
+import           GUI.Momentu.ModKey (ModKey, noMods)
 import           GUI.Momentu.Responsive (Responsive)
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.State as GuiState
@@ -66,7 +66,7 @@ eventMapAddNextParam env myId addNext =
 eventMapOrderParam ::
     _ =>
     env ->
-    Lens.ALens' (Config MetaKey) [MetaKey] ->
+    Lens.ALens' (Config ModKey) [ModKey] ->
     Lens.ALens' (Texts.CodeUI Text) Text -> m () ->
     EventMap (m GuiState.Update)
 eventMapOrderParam env keys moveDoc =
@@ -77,11 +77,11 @@ eventMapOrderParam env keys moveDoc =
 eventParamDelEventMap ::
     _ =>
     env -> m () ->
-    Lens.ALens' (Config MetaKey) [MetaKey] ->
+    Lens.ALens' (Config ModKey) [ModKey] ->
     Lens.ALens' (Texts.CodeUI Text) Text -> Widget.Id -> EventMap (m GuiState.Update)
 eventParamDelEventMap env fpDel keys delParam dstPosId =
     GuiState.updateCursor dstPosId <$ fpDel
-    & E.keyPresses (env ^# has . keys <&> toModKey)
+    & E.keyPresses (env ^# has . keys)
         (E.toDoc env [has . MomentuTexts.edit, has . delParam])
 
 data Info i o = Info
@@ -139,7 +139,7 @@ make annotationOpts prevId nextId (param, info) =
             Nothing -> pure []
             Just addParam ->
                 TagEdit.makeTagHoleEdit addParam mkParamPickResult addId
-                & local (has . Menu.configKeysPickOptionAndGotoNext <>~ [M.MetaKey M.noMods M.Key'Space])
+                & local (has . Menu.configKeysPickOptionAndGotoNext <>~ [noMods M.Key'Space])
                 & Styled.withColor TextColors.parameterColor
                 <&> Responsive.fromWithTextPos
                 <&> (:[])

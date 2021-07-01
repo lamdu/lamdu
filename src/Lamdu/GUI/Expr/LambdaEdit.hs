@@ -8,8 +8,8 @@ import qualified GUI.Momentu.Direction as Dir
 import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.Glue as Glue
 import qualified GUI.Momentu.I18N as MomentuTexts
-import           GUI.Momentu.MetaKey (MetaKey(..), noMods)
-import qualified GUI.Momentu.MetaKey as MetaKey
+import           GUI.Momentu.ModKey (noMods)
+import qualified GUI.Momentu.ModKey as ModKey
 import           GUI.Momentu.Responsive (Responsive)
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.Responsive.Expression as ResponsiveExpr
@@ -90,7 +90,7 @@ mkLightLambda params myId =
             paramIds <&> WidgetIds.fromEntityId
             & traverse (GuiState.isSubCursor ??)
             <&> or
-        let shrinkKeys = [MetaKey noMods MetaKey.Key'Escape]
+        let shrinkKeys = [noMods ModKey.Key'Escape]
         env <- Lens.view id
         let shrinkEventMap =
                 E.keysEventMapMovesCursor shrinkKeys

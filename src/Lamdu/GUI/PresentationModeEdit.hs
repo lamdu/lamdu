@@ -1,4 +1,4 @@
--- | Choice widget for presentation mode
+-- | DropDownList widget for presentation mode
 {-# LANGUAGE RankNTypes #-}
 module Lamdu.GUI.PresentationModeEdit
     ( make
@@ -9,7 +9,7 @@ import           Data.Property (Property)
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.Widget as Widget
-import qualified GUI.Momentu.Widgets.Choice as Choice
+import qualified GUI.Momentu.Widgets.DropDownList as DropDownList
 import qualified GUI.Momentu.Widgets.TextView as TextView
 import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.Config.Theme.TextColors as TextColors
@@ -40,9 +40,9 @@ make myId (Sugar.Params params) prop =
             & local
                 (has . TextView.styleColor .~ theme ^. Theme.textColors . TextColors.presentationChoiceColor)
         defConfig <-
-            Choice.defaultConfig
+            DropDownList.defaultConfig
             <*> Lens.view (has . Texts.presentationMode)
-        Choice.make ?? prop ?? pairs
+        DropDownList.make ?? prop ?? pairs
             ?? defConfig ?? myId
             <&> Element.scale (theme ^. Theme.presentationChoiceScaleFactor)
     where

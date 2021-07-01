@@ -15,8 +15,8 @@ import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (Event(..))
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Main.Events (KeyEvent(..))
-import           GUI.Momentu.MetaKey (MetaKey(..), noMods)
 import qualified GUI.Momentu.MetaKey as MetaKey
+import           GUI.Momentu.ModKey (ModKey(..), noMods)
 import           GUI.Momentu.Rect (Rect(..))
 import qualified GUI.Momentu.Rect as Rect
 import           GUI.Momentu.Responsive (Responsive)
@@ -42,6 +42,7 @@ import qualified Lamdu.Sugar.Types as Sugar
 import           Revision.Deltum.Transaction (Transaction)
 import qualified Revision.Deltum.Transaction as Transaction
 import           System.Directory (listDirectory)
+import qualified System.Info as SysInfo
 import           Test.Lamdu.Code (readRepl)
 import           Test.Lamdu.Env (Env)
 import qualified Test.Lamdu.Env as Env
@@ -172,12 +173,12 @@ testTagPanes =
             >>= lift . sequence_ . (^.. traverse . Sugar.ciTag . Sugar.tagRefJumpTo . Lens._Just)
         () <$ (convertWorkArea baseEnv >>= makeFocusedWidget "opened tag panes" baseEnv)
 
-simpleKeyEvent :: MetaKey -> E.Event
-simpleKeyEvent (MetaKey mods key) =
+simpleKeyEvent :: ModKey -> E.Event
+simpleKeyEvent (ModKey mods key) =
     E.EventKey KeyEvent
     { keKey = key
     , keScanCode = 0 -- dummy
-    , keModKeys = MetaKey.toModKeyModifiers mods
+    , keModKeys = mods
     , keState = GLFW.KeyState'Pressed
     }
 
@@ -191,7 +192,7 @@ testLambdaDelete =
     testProgram "simple-lambda.json" $
     do
         paramCursor <- topLevelLamParamCursor baseEnv
-        let delEvent = MetaKey noMods GLFW.Key'Backspace & simpleKeyEvent
+        let delEvent = noMods GLFW.Key'Backspace & simpleKeyEvent
         env0 <- applyEvent (baseEnv & cursor .~ paramCursor) dummyVirt delEvent
         -- One delete replaces the param tag, next delete deletes param
         env1 <- applyEvent env0 dummyVirt delEvent
@@ -217,7 +218,7 @@ testNewTag =
     do
         paramCursor <- topLevelLamParamCursor baseEnv
         env0 <- applyEvent (baseEnv & cursor .~ paramCursor) dummyVirt (EventChar 'f')
-        let upEvent = MetaKey noMods GLFW.Key'Up & simpleKeyEvent
+        let upEvent = noMods GLFW.Key'Up & simpleKeyEvent
         env1 <- applyEvent env0 dummyVirt upEvent
         _ <- convertWorkArea env1 >>= makeGui "" env1
         pure ()
@@ -276,7 +277,7 @@ testPunCursor =
         env0 <-
             applyEvent (baseEnv & cursor .~ WidgetIds.tagHoleId (WidgetIds.fromEntityId tagId))
             dummyVirt (EventChar 'x')
-        env1 <- MetaKey noMods GLFW.Key'Enter & simpleKeyEvent & applyEvent env0 dummyVirt
+        env1 <- noMods GLFW.Key'Enter & simpleKeyEvent & applyEvent env0 dummyVirt
         workArea <- convertWorkArea env1
         _ <- makeFocusedWidget "" env1 workArea
         workArea ^? Lens.cloneTraversal waRec . Sugar.cPunnedItems <&> length & pure
@@ -301,7 +302,7 @@ workAreaEq x y =
 
 testKeyboardDirAndBack ::
     HasCallStack =>
-    Env.Env -> VirtualCursor -> MetaKey -> MetaKey -> OnceT (T ViewM) ()
+    Env.Env -> VirtualCursor -> ModKey -> ModKey -> OnceT (T ViewM) ()
 testKeyboardDirAndBack posEnv posVirt way back =
     do
         wa <- convertWorkArea posEnv
@@ -325,10 +326,10 @@ testKeyboardDirAndBack posEnv posVirt way back =
                         & error
                 Just{} -> pure ()
     where
-        pPrintMetaKey = Pretty.text . Text.unpack . MetaKey.format
+        pPrintModKey = Pretty.text . Text.unpack . MetaKey.format SysInfo.os
         baseInfo =
             Pretty.text (show (posEnv ^. GuiState.cursor)) $+$
-            pPrintMetaKey way $+$ pPrintMetaKey back <> ": "
+            pPrintModKey way $+$ pPrintModKey back <> ": "
 
 data RectOrdering = Before | Undetermined | After
     deriving Eq
@@ -392,7 +393,7 @@ testConsistentKeyboardNavigation posEnv posVirt =
             ]
         testTabNavigation posEnv posVirt
     where
-        k = MetaKey noMods
+        k = noMods
 
 testActions ::
     HasCallStack =>

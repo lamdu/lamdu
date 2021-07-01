@@ -16,9 +16,9 @@ import           GUI.Momentu.Animation.Id (ElemIds(..))
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.Glue as Glue
-import           GUI.Momentu.MetaKey (MetaKey)
+import           GUI.Momentu.ModKey (ModKey)
 import qualified GUI.Momentu.Widget as Widget
-import qualified GUI.Momentu.Widgets.Choice as Choice
+import qualified GUI.Momentu.Widgets.DropDownList as DropDownList
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config.Theme as Theme
@@ -50,28 +50,28 @@ fromWidget :: M.TextWidget f -> StatusWidget f
 fromWidget w =
     StatusWidget { _widget = w, _globalEventMap = mempty }
 
-makeChoice :: _ => OneOf t -> Property f a -> [(a, M.TextWidget f)] -> m (M.TextWidget f)
-makeChoice headerText prop choices =
+makeDropDownList :: _ => OneOf t -> Property f a -> [(a, M.TextWidget f)] -> m (M.TextWidget f)
+makeDropDownList headerText prop choices =
     do
-        defConf <- Choice.defaultConfig
+        defConf <- DropDownList.defaultConfig
         text <- Lens.view (has . headerText)
-        Choice.make ?? prop ?? choices ?? defConf text ?? myId
+        DropDownList.make ?? prop ?? choices ?? defConf text ?? myId
     where
         myId = Widget.Id ("status" : elemIds ^# headerText)
 
-labeledChoice ::
+labeledDropDownList ::
     _ => M.WithTextPos M.View -> OneOf t -> Property f a -> [(a, M.TextWidget f)] -> m (M.TextWidget f)
-labeledChoice headerView categoryTextLens prop choices =
-    pure headerView M./|/ makeChoice categoryTextLens prop choices
+labeledDropDownList headerView categoryTextLens prop choices =
+    pure headerView M./|/ makeDropDownList categoryTextLens prop choices
 
 makeSwitchStatusWidget ::
     _ =>
-    m (M.WithTextPos M.View) -> OneOf t -> OneOf Texts.StatusBar -> Lens' (Config MetaKey) [MetaKey] -> Property f a ->
+    m (M.WithTextPos M.View) -> OneOf t -> OneOf Texts.StatusBar -> Lens' (Config ModKey) [ModKey] -> Property f a ->
     [(a, M.TextWidget f)] -> m (StatusWidget f)
 makeSwitchStatusWidget mkHeaderWidget categoryTextLens switchTextLens keysGetter prop choiceVals =
     do
         header <- mkHeaderWidget
-        w <- labeledChoice header categoryTextLens prop choiceVals
+        w <- labeledDropDownList header categoryTextLens prop choiceVals
         keys <- Lens.view (has . keysGetter)
         txt <- Lens.view has
         let e =

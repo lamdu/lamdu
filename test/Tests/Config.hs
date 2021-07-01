@@ -3,6 +3,7 @@ module Tests.Config (test) where
 
 import qualified Control.Lens as Lens
 import qualified Control.Monad.Trans.FastWriter as Writer
+import           Control.DeepSeq (deepseq)
 import qualified Data.Aeson as Aeson
 import           Data.Aeson.Config (load)
 import qualified Data.Aeson.Diff as AesonDiff
@@ -13,7 +14,8 @@ import           Data.List (sort, group)
 import           Data.Proxy (asProxyTypeOf)
 import           Data.Text (unpack)
 import qualified GUI.Momentu.Draw as Draw
-import           GUI.Momentu.MetaKey (MetaKey)
+import qualified GUI.Momentu.MetaKey as MetaKey
+import           GUI.Momentu.ModKey (ModKey)
 import           Lamdu.Config (Config)
 import           Lamdu.Config.Folder (HasConfigFolder)
 import qualified Lamdu.Config.Folder as Folder
@@ -22,18 +24,29 @@ import qualified Lamdu.Config.Theme as Theme
 import           Lamdu.I18N.Language (Language)
 import qualified Lamdu.Paths as Paths
 import           System.FilePath (takeFileName)
+import qualified System.Info as SysInfo
 
 import           Test.Lamdu.Prelude
 
 test :: Test
 test =
     testGroup "config-tests"
-    [ testCase "config-parse" (verifyJson (Proxy @(Config MetaKey)) "config.json")
+    [ testCase "config-parse" (verifyJson (Proxy @(Config Text)) metaKeyRoundTrip "config.json")
     , testCase "themes-parse" (verifyConfigFolder (Proxy @Theme))
     , testCase "languages-parse" (verifyConfigFolder (Proxy @Language))
     , testCase "sprites" verifySprites
     , languagesDupTest
     ]
+    where
+        assertParse :: Text -> ModKey
+        assertParse str =
+            MetaKey.parse SysInfo.os str
+            & either (error . (("failed to parse MetaKey: " ++ show str ++ ": ") ++)) id
+        metaKeyRoundTrip config =
+            (config
+            <&> assertParse
+            <&> MetaKey.format SysInfo.os)
+            `deepseq` ()
 
 verifySprites :: IO ()
 verifySprites =
@@ -53,10 +66,12 @@ verifyConfigFolder ::
 verifyConfigFolder p =
     Folder.getSelections p
     >>= traverse (Folder.selectionToPath p)
-    >>= traverse_ (verifyJson p)
+    >>= traverse_ (verifyJson p id)
 
-verifyJson :: (Aeson.FromJSON a, Aeson.ToJSON a) => Proxy a -> FilePath -> IO ()
-verifyJson proxy jsonPath =
+verifyJson ::
+    (Aeson.FromJSON a, Aeson.ToJSON a) =>
+    Proxy a -> (a -> b) -> FilePath -> IO ()
+verifyJson proxy postProcess jsonPath =
     do
         json <- loadJsonPath jsonPath
         case Aeson.fromJSON json <&> (`asProxyTypeOf` proxy) of
@@ -67,7 +82,7 @@ verifyJson proxy jsonPath =
                     assertString ("json " <> jsonPath <> " contains unexpected data:\n" <>
                         LBSChar.unpack (AesonPretty.encodePretty (Aeson.toJSON (AesonDiff.diff rejson json))))
                 where
-                    rejson = Aeson.toJSON val
+                    rejson = postProcess val `seq` Aeson.toJSON val
 
 loadJsonPath :: Aeson.FromJSON a => FilePath -> IO a
 loadJsonPath path =

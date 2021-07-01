@@ -17,8 +17,8 @@ import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.FocusDirection as Direction
 import qualified GUI.Momentu.Glue as Glue
 import qualified GUI.Momentu.I18N as MomentuTexts
-import           GUI.Momentu.MetaKey (MetaKey(..), noMods, toModKey)
-import qualified GUI.Momentu.MetaKey as MetaKey
+import           GUI.Momentu.ModKey (ModKey(..), noMods)
+import qualified GUI.Momentu.ModKey as ModKey
 import           GUI.Momentu.Rect (Rect(..))
 import qualified GUI.Momentu.Rect as Rect
 import           GUI.Momentu.Responsive (Responsive)
@@ -111,7 +111,7 @@ mkChosenScopeCursor func =
 
 makeScopeEventMap ::
     _ =>
-    env -> [MetaKey] -> [MetaKey] -> ScopeCursor -> (Sugar.BinderParamScopeId -> o ()) ->
+    env -> [ModKey] -> [ModKey] -> ScopeCursor -> (Sugar.BinderParamScopeId -> o ()) ->
     EventMap (o M.Update)
 makeScopeEventMap env prevKey nextKey cursor setter =
     mkEventMap (sMPrevParamScope, prevKey, Texts.prev) ++
@@ -159,13 +159,13 @@ makeScopeNavArrow setScope arrowText mScopeId =
 blockEventMap :: _ => env -> EventMap (m M.Update)
 blockEventMap env =
     pure mempty
-    & E.keyPresses (dirKeys <&> toModKey)
+    & E.keyPresses dirKeys
     (E.toDoc env
         [ has . MomentuTexts.navigation, has . MomentuTexts.move
         , has . Texts.blocked
         ])
     where
-        dirKeys = [MetaKey.Key'Left, MetaKey.Key'Right] <&> MetaKey noMods
+        dirKeys = [ModKey.Key'Left, ModKey.Key'Right] <&> noMods
 
 makeScopeNavEdit ::
     _ =>
@@ -204,8 +204,8 @@ makeScopeNavEdit func myId curCursor =
                          (evalConfig ^. Config.nextScopeKeys))
             _ -> pure (mempty, Nothing)
     where
-        leftKeys = [MetaKey noMods MetaKey.Key'Left]
-        rightKeys = [MetaKey noMods MetaKey.Key'Right]
+        leftKeys = [noMods ModKey.Key'Left]
+        rightKeys = [noMods ModKey.Key'Right]
 
 data IsScopeNavFocused = ScopeNavIsFocused | ScopeNavNotFocused
     deriving (Eq, Ord)
@@ -265,7 +265,7 @@ makeParamsEdit annotationOpts delVarBackwardsId lhsId rhsId params =
                 where
                     widgetId =
                         x ^. Sugar.piTag . Sugar.tagRefTag . Sugar.tagInstance & WidgetIds.fromEntityId
-    & local (has . Menu.configKeysPickOptionAndGotoNext <>~ [M.MetaKey M.noMods M.Key'Space])
+    & local (has . Menu.configKeysPickOptionAndGotoNext <>~ [noMods M.Key'Space])
     where
         fromParamList delDestFirst delDestLast paramList =
             withPrevNext delDestFirst delDestLast
@@ -289,7 +289,7 @@ makeMParamsEdit mScopeCursor isScopeNavFocused delVarBackwardsId myId bodyId add
             case addFirstParam of
             Sugar.PrependParam selection | isPrepend ->
                 TagEdit.makeTagHoleEdit selection ParamEdit.mkParamPickResult prependId
-                & local (has . Menu.configKeysPickOptionAndGotoNext <>~ [M.MetaKey M.noMods M.Key'Space])
+                & local (has . Menu.configKeysPickOptionAndGotoNext <>~ [noMods M.Key'Space])
                 & Styled.withColor TextColors.parameterColor
                 <&> Responsive.fromWithTextPos
                 <&> (:[])

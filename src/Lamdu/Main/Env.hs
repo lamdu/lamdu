@@ -25,12 +25,13 @@ import           GUI.Momentu.Draw (Sprite)
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.Hover as Hover
 import qualified GUI.Momentu.Main as MainLoop
-import           GUI.Momentu.MetaKey (MetaKey)
+import           GUI.Momentu.ModKey (ModKey)
 import           GUI.Momentu.State (GUIState)
 import qualified GUI.Momentu.State as GuiState
 import qualified GUI.Momentu.Widgets.Menu as Menu
 import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
+import qualified GUI.Momentu.Widgets.StdKeys as StdKeys
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
 import qualified GUI.Momentu.Widgets.TextView as TextView
 import qualified Lamdu.Annotations as Annotations
@@ -57,7 +58,7 @@ import           Lamdu.Prelude
 data Env = Env
     { _evalRes :: GUIMain.EvalResults
     , _exportActions :: GUIMain.ExportActions ViewM
-    , _config :: Config MetaKey
+    , _config :: Config ModKey
     , _theme :: Theme
     , _sprites :: Sprites Sprite
     , _settings :: Property IO Settings
@@ -70,32 +71,34 @@ data Env = Env
     }
 Lens.makeLenses ''Env
 
-instance Spacer.HasStdSpacing Env where stdSpacing = has . Theme.stdSpacing
-instance GuiState.HasCursor Env
 instance Element.HasAnimIdPrefix Env where animIdPrefix = animIdPrefix
+instance GuiState.HasCursor Env
 instance Has (GUIMain.ExportActions ViewM) Env where has = exportActions
+instance Has (Sprites Sprite) Env where has = sprites
+instance Has (t Text) (Texts Text) => Has (t Text) Env where has = language . has
+instance Has Annotations.Mode Env where has = has . sAnnotationMode
+instance Has Cache.Functions Env where has = cachedFunctions
+instance Has Debug.Monitors Env where has = debugMonitors
+instance Has Dir.Layout Env where has = language . has
 instance Has GUIMain.EvalResults Env where has = evalRes
+instance Has GUIState Env where has = mainLoop . has
+instance Has Hover.Style Env where has = theme . has
+instance Has LangId Env where has = language . has
+instance Has Language Env where has = language
+instance Has MainLoop.Env Env where has = mainLoop
+instance Has Menu.Style Env where has = theme . Theme.menu
+instance Has SearchMenu.TermStyle Env where has = theme . Theme.searchTerm
 instance Has Settings Env where has = settings . Property.pVal
 instance Has Style Env where has = style
-instance Has MainLoop.Env Env where has = mainLoop
-instance Has GUIState Env where has = mainLoop . has
+instance Has SugarConfig.Config Env where has = config . has
 instance Has TextEdit.Style Env where has = style . Style.base
 instance Has TextView.Style Env where has = has @TextEdit.Style . has
 instance Has Theme Env where has = theme
-instance key ~ MetaKey => Has (Config key) Env where has = config
-instance Has Annotations.Mode Env where has = has . sAnnotationMode
-instance Has SugarConfig.Config Env where has = config . has
-instance Has Hover.Style Env where has = theme . has
 instance Has VCConfig.Theme Env where has = has . Theme.versionControl
-instance Has VCConfig.Config Env where has = Config.hasConfig . Config.versionControl
-instance Has SearchMenu.Config Env where has = Config.hasConfig . Config.searchMenu
-instance Has Menu.Config Env where has = has . SearchMenu.configMenu
-instance Has Menu.Style Env where has = theme . Theme.menu
-instance Has SearchMenu.TermStyle Env where has = theme . Theme.searchTerm
-instance Has Debug.Monitors Env where has = debugMonitors
-instance Has Cache.Functions Env where has = cachedFunctions
-instance Has Dir.Layout Env where has = language . has
-instance Has Language Env where has = language
-instance Has LangId Env where has = language . has
-instance Has (Sprites Sprite) Env where has = sprites
-instance Has (t Text) (Texts Text) => Has (t Text) Env where has = language . has
+instance Spacer.HasStdSpacing Env where stdSpacing = has . Theme.stdSpacing
+instance key ~ ModKey => Has (Config key) Env where has = config
+instance key ~ ModKey => Has (Menu.Config key) Env where has = has . SearchMenu.configMenu
+instance key ~ ModKey => Has (SearchMenu.Config key) Env where has = Config.hasConfig . Config.searchMenu
+instance key ~ ModKey => Has (StdKeys.DirKeys key) Env where has = config . Config.dirKeys
+instance key ~ ModKey => Has (TextEdit.Keys key) Env where has = config . Config.textEdit
+instance key ~ ModKey => Has (VCConfig.Config key) Env where has = Config.hasConfig . Config.versionControl

@@ -186,7 +186,7 @@
         "glue": {
             "stroll": "Stroll"
         },
-        "choice": {
+        "dropDownList": {
             "chooseSelected": "Scegli selezionato"
         },
         "grid": {

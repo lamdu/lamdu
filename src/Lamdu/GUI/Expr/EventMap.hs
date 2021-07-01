@@ -16,8 +16,8 @@ import qualified GUI.Momentu.Direction as Dir
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.I18N as MomentuTexts
-import           GUI.Momentu.MetaKey (MetaKey(..))
-import qualified GUI.Momentu.MetaKey as MetaKey
+import           GUI.Momentu.ModKey (noMods)
+import qualified GUI.Momentu.ModKey as ModKey
 import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.Widget (EventContext)
 import qualified GUI.Momentu.Widget as Widget
@@ -146,7 +146,7 @@ applyEventMap action =
     \env ->
     action <&> WidgetIds.fromEntityId
     & E.keysEventMapMovesCursor
-        [MetaKey MetaKey.noMods MetaKey.Key'Space]
+        [noMods ModKey.Key'Space]
         (E.toDoc env
             [ has . MomentuTexts.edit
             , has . Texts.apply

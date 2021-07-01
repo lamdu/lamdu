@@ -1,6 +1,6 @@
 module Lamdu.Editor.Exports (exportActions) where
 
-import           GUI.Momentu.MetaKey (MetaKey)
+import           GUI.Momentu.ModKey (ModKey)
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
 import           Lamdu.Data.Db.Layout (ViewM)
@@ -12,8 +12,7 @@ import qualified Lamdu.GUI.Main as GUIMain
 
 import           Lamdu.Prelude
 
-exportActions ::
-    Config MetaKey -> EvalResults -> IO () -> GUIMain.ExportActions ViewM
+exportActions :: Config ModKey -> EvalResults -> IO () -> GUIMain.ExportActions ViewM
 exportActions config evalResults executeIOProcess =
     GUIMain.ExportActions
     { GUIMain.exportReplActions =

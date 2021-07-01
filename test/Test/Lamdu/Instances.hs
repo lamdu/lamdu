@@ -18,11 +18,16 @@ import           GUI.Momentu.Draw (Color(..))
 import qualified GUI.Momentu.Hover as Hover
 import qualified GUI.Momentu.Responsive.Expression as ResponsiveExpr
 import qualified GUI.Momentu.Widget as Widget
+import qualified GUI.Momentu.Widgets.Grid as Grid
 import qualified GUI.Momentu.Widgets.Menu as Menu
 import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
+import qualified GUI.Momentu.Widgets.StdKeys as StdKeys
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
+import qualified GUI.Momentu.Zoom as Zoom
 import           Lamdu.Calc.Identifier (Identifier(..))
 import qualified Lamdu.Calc.Type as T
+import           Lamdu.Config (Config)
+import qualified Lamdu.Config as Config
 import           Lamdu.Config.Theme (Theme(..))
 import qualified Lamdu.Config.Theme as Theme
 import           Lamdu.Config.Theme.Fonts (Fonts(..))
@@ -32,6 +37,7 @@ import qualified Lamdu.Config.Theme.TextColors as Theme
 import qualified Lamdu.Config.Theme.ValAnnotation as Theme
 import qualified Lamdu.Data.Definition as Def
 import qualified Lamdu.Data.Tag as Tag
+import qualified Lamdu.Debug.Tasks as DebugTasks
 import qualified Lamdu.GUI.VersionControl.Config as VcGuiConfig
 import qualified Lamdu.I18N.Fonts as I18N.Fonts
 import           Lamdu.I18N.LangId (LangId)
@@ -39,6 +45,7 @@ import           Lamdu.Name (Name)
 import qualified Lamdu.Name as Name
 import           Lamdu.Precedence (HasPrecedence(..))
 import           Lamdu.Sugar.Annotations (ShowAnnotation)
+import qualified Lamdu.Sugar.Config as SugarConfig
 import           Lamdu.Sugar.Internal (InternalName(..))
 import           Lamdu.Sugar.Internal.EntityId (EntityId(..))
 import qualified Lamdu.Sugar.Types as Sugar
@@ -98,8 +105,25 @@ instance HasPrecedence InternalName where
     precedence (InternalName _ (T.Tag (Identifier ident)) _) =
         precedence (BS8.head ident)
 
-instance NFData (Transaction m a) where rnf = pure () -- Cheating
+instance NFData (DebugTasks.Tasks Bool)
 instance NFData (OnceT (Transaction m) a) where rnf = pure () -- Cheating
+instance NFData (SugarConfig.Sugars Bool)
+instance NFData (Transaction m a) where rnf = pure () -- Cheating
+instance NFData SugarConfig.Config
+instance NFData key => NFData (Config key)
+instance NFData key => NFData (Config.Completion key)
+instance NFData key => NFData (Config.Debug key)
+instance NFData key => NFData (Config.Eval key)
+instance NFData key => NFData (Config.Export key)
+instance NFData key => NFData (Config.Literal key)
+instance NFData key => NFData (Config.Pane key)
+instance NFData key => NFData (Grid.Keys key)
+instance NFData key => NFData (Menu.Config key)
+instance NFData key => NFData (SearchMenu.Config key)
+instance NFData key => NFData (StdKeys.DirKeys key)
+instance NFData key => NFData (TextEdit.Keys key)
+instance NFData key => NFData (VcGuiConfig.Config key)
+instance NFData key => NFData (Zoom.Config key)
 
 instance Eq (Unit a) where _ == _ = True
 instance Eq (a -> Unit b) where _ == _ = True

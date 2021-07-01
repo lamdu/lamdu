@@ -12,7 +12,7 @@ import qualified GUI.Momentu.EventMap as EventMap
 import qualified GUI.Momentu.Glue as Glue
 import qualified GUI.Momentu.I18N as MomentuTexts
 import qualified GUI.Momentu.Main as MainLoop
-import qualified GUI.Momentu.Widgets.Choice as Choice
+import qualified GUI.Momentu.Widgets.DropDownList as DropDownList
 import qualified GUI.Momentu.Widgets.Grid as Grid
 import qualified GUI.Momentu.Widgets.Menu as Menu
 import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
@@ -47,7 +47,7 @@ data Texts a = Texts
     , _searchMenu :: SearchMenu.Texts a
     , _grid :: Grid.Texts a
     , _eventMap :: EventMap.Texts a
-    , _choice :: Choice.Texts a
+    , _dropDownList :: DropDownList.Texts a
     , _textEdit :: TextEdit.Texts a
     , _zoom :: Zoom.Texts a
     , _mainLoop :: MainLoop.Texts a
@@ -63,7 +63,7 @@ instance Has (Glue.Texts         Text) (Texts Text) where has = glue
 instance Has (Menu.Texts         Text) (Texts Text) where has = menu
 instance Has (SearchMenu.Texts   Text) (Texts Text) where has = searchMenu
 instance Has (Grid.Texts         Text) (Texts Text) where has = grid
-instance Has (Choice.Texts       Text) (Texts Text) where has = choice
+instance Has (DropDownList.Texts Text) (Texts Text) where has = dropDownList
 instance Has (TextEdit.Texts     Text) (Texts Text) where has = textEdit
 instance Has (MainLoop.Texts     Text) (Texts Text) where has = mainLoop
 instance Has (Zoom.Texts         Text) (Texts Text) where has = zoom
