@@ -13,6 +13,7 @@ import           Data.List (sort, group)
 import           Data.Proxy (asProxyTypeOf)
 import           Data.Text (unpack)
 import qualified GUI.Momentu.Draw as Draw
+import           GUI.Momentu.MetaKey (MetaKey)
 import           Lamdu.Config (Config)
 import           Lamdu.Config.Folder (HasConfigFolder)
 import qualified Lamdu.Config.Folder as Folder
@@ -27,7 +28,7 @@ import           Test.Lamdu.Prelude
 test :: Test
 test =
     testGroup "config-tests"
-    [ testCase "config-parse" (verifyJson (Proxy @Config) "config.json")
+    [ testCase "config-parse" (verifyJson (Proxy @(Config MetaKey)) "config.json")
     , testCase "themes-parse" (verifyConfigFolder (Proxy @Theme))
     , testCase "languages-parse" (verifyConfigFolder (Proxy @Language))
     , testCase "sprites" verifySprites

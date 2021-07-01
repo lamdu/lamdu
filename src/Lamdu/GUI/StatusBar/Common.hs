@@ -66,7 +66,7 @@ labeledChoice headerView categoryTextLens prop choices =
 
 makeSwitchStatusWidget ::
     _ =>
-    m (M.WithTextPos M.View) -> OneOf t -> OneOf Texts.StatusBar -> Lens' Config [MetaKey] -> Property f a ->
+    m (M.WithTextPos M.View) -> OneOf t -> OneOf Texts.StatusBar -> Lens' (Config MetaKey) [MetaKey] -> Property f a ->
     [(a, M.TextWidget f)] -> m (StatusWidget f)
 makeSwitchStatusWidget mkHeaderWidget categoryTextLens switchTextLens keysGetter prop choiceVals =
     do

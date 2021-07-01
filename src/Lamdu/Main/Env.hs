@@ -1,6 +1,6 @@
 -- | The Environment threaded in Lamdu main
 {-# LANGUAGE TemplateHaskell, MultiParamTypeClasses, TypeApplications, FlexibleInstances #-}
-{-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE UndecidableInstances, TypeFamilies #-}
 module Lamdu.Main.Env
     ( Env(..)
     , evalRes
@@ -25,6 +25,7 @@ import           GUI.Momentu.Draw (Sprite)
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.Hover as Hover
 import qualified GUI.Momentu.Main as MainLoop
+import           GUI.Momentu.MetaKey (MetaKey)
 import           GUI.Momentu.State (GUIState)
 import qualified GUI.Momentu.State as GuiState
 import qualified GUI.Momentu.Widgets.Menu as Menu
@@ -56,7 +57,7 @@ import           Lamdu.Prelude
 data Env = Env
     { _evalRes :: GUIMain.EvalResults
     , _exportActions :: GUIMain.ExportActions ViewM
-    , _config :: Config
+    , _config :: Config MetaKey
     , _theme :: Theme
     , _sprites :: Sprites Sprite
     , _settings :: Property IO Settings
@@ -81,13 +82,13 @@ instance Has GUIState Env where has = mainLoop . has
 instance Has TextEdit.Style Env where has = style . Style.base
 instance Has TextView.Style Env where has = has @TextEdit.Style . has
 instance Has Theme Env where has = theme
-instance Has Config Env where has = config
+instance key ~ MetaKey => Has (Config key) Env where has = config
 instance Has Annotations.Mode Env where has = has . sAnnotationMode
 instance Has SugarConfig.Config Env where has = config . has
 instance Has Hover.Style Env where has = theme . has
 instance Has VCConfig.Theme Env where has = has . Theme.versionControl
-instance Has VCConfig.Config Env where has = has . Config.versionControl
-instance Has SearchMenu.Config Env where has = has . Config.searchMenu
+instance Has VCConfig.Config Env where has = Config.hasConfig . Config.versionControl
+instance Has SearchMenu.Config Env where has = Config.hasConfig . Config.searchMenu
 instance Has Menu.Config Env where has = has . SearchMenu.configMenu
 instance Has Menu.Style Env where has = theme . Theme.menu
 instance Has SearchMenu.TermStyle Env where has = theme . Theme.searchTerm

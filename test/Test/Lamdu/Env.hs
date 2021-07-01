@@ -1,5 +1,5 @@
 {-# LANGUAGE TemplateHaskell, MultiParamTypeClasses, TypeApplications, FlexibleInstances #-}
-{-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE UndecidableInstances, TypeFamilies #-}
 module Test.Lamdu.Env
     ( Env(..), make, makeLang
     , EvalResults
@@ -16,6 +16,7 @@ import           GUI.Momentu.Draw (Color(..), Sprite)
 import qualified GUI.Momentu.Draw as Draw
 import           GUI.Momentu.Element (HasAnimIdPrefix(..))
 import           GUI.Momentu.Font (openFont, LCDSubPixelEnabled(..))
+import           GUI.Momentu.MetaKey (MetaKey)
 import           GUI.Momentu.State (HasCursor, GUIState(..))
 import           GUI.Momentu.Widgets.EventMapHelp (IsHelpShown(..))
 import           GUI.Momentu.Widgets.Spacer (HasStdSpacing(..))
@@ -55,7 +56,7 @@ data Env =
     , _eSpacing :: Vector2 Double
     , _eAnimIdPrefix :: Anim.AnimId
     , _eState :: GUIState
-    , _eConfig :: Config
+    , _eConfig :: Config MetaKey
     , _eSettings :: Settings
     , _eTasksMonitor :: Debug.Monitors
     , _eResults :: EvalResults
@@ -73,7 +74,7 @@ instance Has TextView.Style Env where has = has @TextEdit.Style . has
 instance HasAnimIdPrefix Env where animIdPrefix = eAnimIdPrefix
 instance HasCursor Env
 instance Has GUIState Env where has = eState
-instance Has Config Env where has = eConfig
+instance key ~ MetaKey => Has (Config key) Env where has = eConfig
 instance Has Settings Env where has = eSettings
 instance Has TextEdit.Style Env where has = eTextEditStyle
 instance Has Style Env where has = eStyle
@@ -82,7 +83,7 @@ instance Has LangId Env where has = eLanguage . has
 instance Has Language Env where has = eLanguage
 instance Has Debug.Monitors Env where has = eTasksMonitor
 instance Has Cache.Functions Env where has = eCacheFunctions
-instance Has SugarConfig.Config Env where has = has . Config.sugar
+instance Has SugarConfig.Config Env where has = Config.hasConfig . Config.sugar
 instance Has EvalResults Env where has = eResults
 instance Has Annotations.Mode Env where has = has . sAnnotationMode
 instance Has (Sprites Sprite) Env where has = eSprites

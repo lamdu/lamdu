@@ -20,6 +20,7 @@ import qualified GUI.Momentu.Glue as Glue
 import qualified GUI.Momentu.I18N as MomentuTexts
 import qualified GUI.Momentu.Main.Animation as Anim
 import qualified GUI.Momentu.Main.Config as MainConfig
+import           GUI.Momentu.MetaKey (MetaKey)
 import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Cursor as Cursor
@@ -102,7 +103,7 @@ instance Has EventMapHelp.Style HelpEnv where has = heStyle
 instance Has (MomentuTexts.Texts Text) HelpEnv where has = heCommonTexts
 
 addHelp ::
-    Config -> Theme -> Language -> Font ->
+    Config MetaKey -> Theme -> Language -> Font ->
     Widget.Size -> Widget f -> Widget f
 addHelp config theme language font size widget =
     widget
@@ -126,7 +127,7 @@ addHelp config theme language font size widget =
 
 mainLoopConfig ::
     MkProperty IO o EventMapHelp.IsHelpShown ->
-    (Zoom -> IO (Fonts Font)) -> IO (Config, Theme, Language) -> MainConfig.Config
+    (Zoom -> IO (Fonts Font)) -> IO (Config MetaKey, Theme, Language) -> MainConfig.Config
 mainLoopConfig helpProp getFonts getConfig =
     MainConfig.Config
     { _cAnim =

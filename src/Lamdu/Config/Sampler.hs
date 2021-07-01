@@ -16,6 +16,7 @@ import           Control.Monad.Trans.FastWriter (WriterT, runWriterT, tell)
 import           Data.Aeson (FromJSON)
 import qualified Data.Aeson.Config as AesonConfig
 import           Data.Time.Clock (UTCTime)
+import           GUI.Momentu.MetaKey (MetaKey)
 import qualified Graphics.DrawingCombinators as Draw
 import           Lamdu.Config (Config)
 import           Lamdu.Config.Folder (Selection(..))
@@ -41,7 +42,7 @@ data FiledConfig a = FiledConfig
 Lens.makeLenses ''FiledConfig
 
 data SampleData = SampleData
-    { _sConfig :: FiledConfig Config
+    { _sConfig :: FiledConfig (Config MetaKey)
     , _sTheme :: FiledConfig Theme
     , _sLanguage :: FiledConfig Language
     , _sSprites :: Sprites Draw.Sprite
@@ -55,7 +56,7 @@ data Sample = Sample
     }
 Lens.makeLenses ''Sample
 
-sConfigData :: Lens' Sample Config
+sConfigData :: Lens' Sample (Config MetaKey)
 sConfigData = sData . sConfig . fileData
 
 sThemeData :: Lens' Sample Theme

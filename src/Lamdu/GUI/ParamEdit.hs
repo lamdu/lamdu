@@ -66,7 +66,7 @@ eventMapAddNextParam env myId addNext =
 eventMapOrderParam ::
     _ =>
     env ->
-    Lens.ALens' Config [MetaKey] ->
+    Lens.ALens' (Config MetaKey) [MetaKey] ->
     Lens.ALens' (Texts.CodeUI Text) Text -> m () ->
     EventMap (m GuiState.Update)
 eventMapOrderParam env keys moveDoc =
@@ -77,7 +77,7 @@ eventMapOrderParam env keys moveDoc =
 eventParamDelEventMap ::
     _ =>
     env -> m () ->
-    Lens.ALens' Config [MetaKey] ->
+    Lens.ALens' (Config MetaKey) [MetaKey] ->
     Lens.ALens' (Texts.CodeUI Text) Text -> Widget.Id -> EventMap (m GuiState.Update)
 eventParamDelEventMap env fpDel keys delParam dstPosId =
     GuiState.updateCursor dstPosId <$ fpDel

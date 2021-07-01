@@ -1,5 +1,5 @@
 {-# OPTIONS -O0 #-}
-{-# LANGUAGE TemplateHaskell, MultiParamTypeClasses #-}
+{-# LANGUAGE TemplateHaskell, MultiParamTypeClasses, TypeApplications #-}
 module Lamdu.Config where
 
 import qualified Control.Lens as Lens
@@ -17,24 +17,24 @@ import qualified Lamdu.Sugar.Config as Sugar
 
 import           Lamdu.Prelude
 
-data Export = Export
+data Export key = Export
     { _exportPath :: FilePath
-    , _exportKeys :: [MetaKey]
-    , _exportFancyKeys :: [MetaKey]
-    , _exportAllKeys :: [MetaKey]
-    , _executeKeys :: [MetaKey]
-    , _importKeys :: [MetaKey]
-    } deriving (Eq, Show)
+    , _exportKeys :: [key]
+    , _exportFancyKeys :: [key]
+    , _exportAllKeys :: [key]
+    , _executeKeys :: [key]
+    , _importKeys :: [key]
+    } deriving (Eq, Show, Functor, Foldable, Traversable)
 JsonTH.derivePrefixed "_" ''Export
 
 Lens.makeLenses ''Export
 
-data Pane = Pane
-    { _paneCloseKeys :: [MetaKey]
-    , _paneMoveDownKeys :: [MetaKey]
-    , _paneMoveUpKeys :: [MetaKey]
-    , _newDefinitionKeys :: [MetaKey]
-    } deriving (Eq, Show)
+data Pane key = Pane
+    { _paneCloseKeys :: [key]
+    , _paneMoveDownKeys :: [key]
+    , _paneMoveUpKeys :: [key]
+    , _newDefinitionKeys :: [key]
+    } deriving (Eq, Show, Functor, Foldable, Traversable)
 deriveJSON Aeson.defaultOptions
     { Aeson.fieldLabelModifier
         = (Lens.ix 0 %~ toLower)
@@ -45,39 +45,39 @@ deriveJSON Aeson.defaultOptions
 
 Lens.makeLenses ''Pane
 
-data Completion = Completion
-    { _completionJumpToNextKeys :: [MetaKey]
-    , _completionJumpToPrevKeys :: [MetaKey]
+data Completion key = Completion
+    { _completionJumpToNextKeys :: [key]
+    , _completionJumpToPrevKeys :: [key]
     , _completionResultCount :: Int
-    } deriving (Eq, Show)
+    } deriving (Eq, Show, Functor, Foldable, Traversable)
 JsonTH.derivePrefixed "_completion" ''Completion
 
 Lens.makeLenses ''Completion
 
-data Eval = Eval
-    { _prevScopeKeys :: [MetaKey]
-    , _nextScopeKeys :: [MetaKey]
-    } deriving (Eq, Show)
+data Eval key = Eval
+    { _prevScopeKeys :: [key]
+    , _nextScopeKeys :: [key]
+    } deriving (Eq, Show, Functor, Foldable, Traversable)
 JsonTH.derivePrefixed "_" ''Eval
 
 Lens.makeLenses ''Eval
 
-data Literal = Literal
-    { _literalStartEditingKeys :: [MetaKey]
-    , _literalStopEditingKeys :: [MetaKey]
-    } deriving (Eq, Show)
+data Literal key = Literal
+    { _literalStartEditingKeys :: [key]
+    , _literalStopEditingKeys :: [key]
+    } deriving (Eq, Show, Functor, Foldable, Traversable)
 JsonTH.derivePrefixed "_literal" ''Literal
 
 Lens.makeLenses ''Literal
 
-data Debug = Debug
+data Debug key = Debug
     { _debugShowFPS :: Bool
     , _printCursor :: Bool
     , _printEvents :: Bool
     , _virtualCursorShown :: Bool
     , _breakpoints :: Debug.Tasks Bool
-    , _jumpToSourceKeys :: [MetaKey]
-    } deriving (Eq, Show)
+    , _jumpToSourceKeys :: [key]
+    } deriving (Eq, Show, Functor, Foldable, Traversable)
 deriveJSON Aeson.defaultOptions
     { Aeson.fieldLabelModifier
         = (Lens.ix 0 %~ toLower)
@@ -88,64 +88,67 @@ deriveJSON Aeson.defaultOptions
 
 Lens.makeLenses ''Debug
 
-data Config = Config
+data Config key = Config
     { _zoom :: Zoom.Config
-    , _export :: Export
-    , _pane :: Pane
+    , _export :: Export key
+    , _pane :: Pane key
     , _versionControl :: VersionControl.Config
     , _sugar :: Sugar.Config
-    , _completion :: Completion
-    , _literal :: Literal
-    , _eval :: Eval
-    , _debug :: Debug
+    , _completion :: Completion key
+    , _literal :: Literal key
+    , _eval :: Eval key
+    , _debug :: Debug key
     , _searchMenu :: SearchMenu.Config
 
     , _maxExprDepth :: Int
 
-    , _helpKeys :: [MetaKey]
-    , _quitKeys :: [MetaKey]
-    , _changeThemeKeys :: [MetaKey]
-    , _changeLanguageKeys :: [MetaKey]
-    , _nextAnnotationModeKeys :: [MetaKey]
-    , _previousCursorKeys :: [MetaKey]
+    , _helpKeys :: [key]
+    , _quitKeys :: [key]
+    , _changeThemeKeys :: [key]
+    , _changeLanguageKeys :: [key]
+    , _nextAnnotationModeKeys :: [key]
+    , _previousCursorKeys :: [key]
 
-    , _addNextParamKeys :: [MetaKey]
-    , _paramOrderBeforeKeys :: [MetaKey]
-    , _paramOrderAfterKeys :: [MetaKey]
-    , _jumpToDefinitionKeys :: [MetaKey]
-    , _delForwardKeys :: [MetaKey]
-    , _delBackwardKeys :: [MetaKey]
-    , _actionKeys :: [MetaKey]
-    , _replaceParentKeys :: [MetaKey]
-    , _healKeys :: [MetaKey]
+    , _addNextParamKeys :: [key]
+    , _paramOrderBeforeKeys :: [key]
+    , _paramOrderAfterKeys :: [key]
+    , _jumpToDefinitionKeys :: [key]
+    , _delForwardKeys :: [key]
+    , _delBackwardKeys :: [key]
+    , _actionKeys :: [key]
+    , _replaceParentKeys :: [key]
+    , _healKeys :: [key]
 
-    , _letAddItemKeys :: [MetaKey]
+    , _letAddItemKeys :: [key]
 
-    , _extractKeys :: [MetaKey]
-    , _inlineKeys :: [MetaKey]
-    , _moveLetInwardKeys:: [MetaKey]
-    , _swapWithLeftKeys :: [MetaKey]
-    , _swapWithRightKeys :: [MetaKey]
+    , _extractKeys :: [key]
+    , _inlineKeys :: [key]
+    , _moveLetInwardKeys:: [key]
+    , _swapWithLeftKeys :: [key]
+    , _swapWithRightKeys :: [key]
 
-    , _enterSubexpressionKeys :: [MetaKey]
-    , _leaveSubexpressionKeys :: [MetaKey]
+    , _enterSubexpressionKeys :: [key]
+    , _leaveSubexpressionKeys :: [key]
 
-    , _recordOpenKeys :: [MetaKey]
-    , _recordCloseKeys :: [MetaKey]
-    , _recordAddFieldKeys :: [MetaKey]
+    , _recordOpenKeys :: [key]
+    , _recordCloseKeys :: [key]
+    , _recordAddFieldKeys :: [key]
 
-    , _caseOpenKeys :: [MetaKey]
-    , _caseAddAltKeys :: [MetaKey]
+    , _caseOpenKeys :: [key]
+    , _caseAddAltKeys :: [key]
 
-    , _injectValueKeys :: [MetaKey]
-    } deriving (Eq, Show)
+    , _injectValueKeys :: [key]
+    } deriving (Eq, Show, Functor, Foldable, Traversable)
 JsonTH.derivePrefixed "_" ''Config
 
 Lens.makeLenses ''Config
 
-instance Has Sugar.Config Config where has = sugar
+hasConfig :: Has (Config MetaKey) env => Lens' env (Config MetaKey)
+hasConfig = has @(Config MetaKey)
 
-delKeys :: (MonadReader env m, Has Config env) => m [MetaKey]
+instance Has Sugar.Config (Config key) where has = sugar
+
+delKeys :: (MonadReader env m, Has (Config MetaKey) env) => m [MetaKey]
 delKeys =
-    Lens.view has
+    Lens.view hasConfig
     <&> \config -> config ^. delForwardKeys <> config ^. delBackwardKeys

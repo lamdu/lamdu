@@ -142,7 +142,7 @@ makeOptions tagRefReplace newTagOpt mkPickResult ctx
         do
             resultCount <-
                 Lens.view
-                (has . Config.completion . Config.completionResultCount)
+                (Config.hasConfig . Config.completion . Config.completionResultCount)
             results <-
                 tagRefReplace ^. Sugar.tcOptions
                 <&> concatMap withText
@@ -291,7 +291,7 @@ makeTagRefEditWith onView onPickNext tag =
         let jumpToTagEventMap jump =
                 jump <&> WidgetIds.fromEntityId
                 & E.keysEventMapMovesCursor
-                (env ^. has . Config.jumpToDefinitionKeys)
+                (env ^. Config.hasConfig . Config.jumpToDefinitionKeys)
                 (E.toDoc env
                     [ has . MomentuTexts.edit
                     , has . Texts.tag
@@ -299,7 +299,7 @@ makeTagRefEditWith onView onPickNext tag =
                     ])
         let chooseNewTagEventMap =
                 E.keysEventMapMovesCursor
-                (Config.delKeys env <> env ^. has . Config.jumpToDefinitionKeys)
+                (Config.delKeys env <> env ^. Config.hasConfig . Config.jumpToDefinitionKeys)
                 ( E.toDoc env
                     [ has . MomentuTexts.edit
                     , has . Texts.tag

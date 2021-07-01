@@ -1,3 +1,4 @@
+{-# LANGUAGE IncoherentInstances, TypeFamilies #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving, TemplateHaskell #-}
 {-# LANGUAGE MultiParamTypeClasses, FlexibleInstances, DerivingVia #-}
 {-# LANGUAGE UndecidableInstances, PolymorphicComponents #-}
@@ -32,6 +33,7 @@ import           GUI.Momentu.Animation.Id (AnimId)
 import qualified GUI.Momentu.Direction as Dir
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.Hover as Hover
+import           GUI.Momentu.MetaKey (MetaKey)
 import           GUI.Momentu.Responsive (Responsive)
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.Responsive.Expression as ResponsiveExpr
@@ -70,7 +72,7 @@ data Askable env i o = Askable
     , _aStdSpacing :: Vector2 Double
     , _aAnimIdPrefix :: AnimId
     , _aSettings :: Settings
-    , _aConfig :: Config
+    , _aConfig :: Config MetaKey
     , _aTheme :: Theme
     , _aAssocTagName :: T.Tag -> MkProperty' o Text
     , _aMakeSubexpression :: ExprGui.Expr Sugar.Term i o -> GuiM env i o (Responsive o)
@@ -100,10 +102,10 @@ instance Has TextView.Style (Askable env i o) where has = aTextEditStyle . has
 instance Has TextEdit.Style (Askable env i o) where has = aTextEditStyle
 instance Spacer.HasStdSpacing (Askable env i o) where stdSpacing = aStdSpacing
 instance Element.HasAnimIdPrefix (Askable env i o) where animIdPrefix = aAnimIdPrefix
-instance Has Config (Askable env i o) where has = aConfig
+instance key ~ MetaKey => Has (Config key) (Askable env i o) where has = aConfig
 instance Has Theme (Askable env i o) where has = aTheme
 instance Has ResponsiveExpr.Style (Askable env i o) where has = aTheme . has
-instance Has SearchMenu.Config (Askable env i o) where has = has . Config.searchMenu
+instance Has SearchMenu.Config (Askable env i o) where has = Config.hasConfig . Config.searchMenu
 instance Has Menu.Config (Askable env i o) where has = has . SearchMenu.configMenu
 instance Has Menu.Style (Askable env i o) where has = aTheme . Theme.menu
 instance Has SearchMenu.TermStyle (Askable env i o) where
@@ -198,7 +200,7 @@ run assocTagName_ makeSubexpr mkBinder theGuiAnchors env (GuiM action) =
     , _aMakeSubexpression = makeSubexpr
     , _aMakeBinder = mkBinder
     , _aGuiAnchors = theGuiAnchors
-    , _aDepthLeft = env ^. has . Config.maxExprDepth
+    , _aDepthLeft = env ^. Config.hasConfig . Config.maxExprDepth
     , _aMScopeId = Just topLevelScopeId & pure
     , _aStyle = env ^. has
     , _aDirLayout = env ^. has
