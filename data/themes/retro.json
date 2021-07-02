@@ -2,6 +2,7 @@
     "imports": ["dark.json"],
     "title": {
         "english": "Retro",
+        "italiano": "Retrò",
         "hebrew": "רטרו"
     },
     "animationTimePeriodSec": 0,
