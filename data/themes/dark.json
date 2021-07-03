@@ -2,7 +2,7 @@
     "imports": ["base.mixin.json"],
     "title": {
         "english": "Dark",
-        "italiano": "Buio",
+        "italiano": "Scuro",
         "hebrew": "כהה"
     },
     "narrowUnderlineWidth": 0.05,
