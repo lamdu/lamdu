@@ -6,7 +6,7 @@
 set -e
 
 echo Signing bundled nodejs
-codesign -s "$1" --timestamp --options runtime -f --entitlements tools/data/entitlements.plist --deep Lamdu.app/Contents/Resources/bin/node.exe
+codesign -s "$1" --timestamp --options runtime --entitlements tools/data/entitlements.plist --deep Lamdu.app/Contents/Resources/bin/node.exe || echo Already signed
 
 echo Signing
 codesign -s "$1" --timestamp --options runtime -f --entitlements tools/data/entitlements.plist --deep Lamdu.app

@@ -139,6 +139,11 @@ parseLamduVersion info =
 main :: IO ()
 main =
     do
+        nodePath <- NodeJS.path
+        when isMacOS $
+            do
+                nodeDeps <- findDeps nodePath
+                when (nodeDeps /= []) (fail "nodejs not statically linked!")
         [lamduExec] <- Env.getArgs
         version <-
             readProcess lamduExec ["--version"] ""
@@ -148,7 +153,6 @@ main =
             do
                 toPackageWith lamduExec destPath
                 toPackageWith "data" dataDir
-                nodePath <- NodeJS.path
                 toPackageWith nodePath (dataDir </> "bin/node.exe")
                 traverse_ libToPackage dependencies
                 when isWindows $
