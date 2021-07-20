@@ -171,7 +171,7 @@ testTagPanes =
     do
         fromWorkArea baseEnv (replExpr . Sugar._BodyRecord . Sugar.cItems)
             >>= lift . sequence_ . (^.. traverse . Sugar.ciTag . Sugar.tagRefJumpTo . Lens._Just)
-        () <$ (convertWorkArea baseEnv >>= makeFocusedWidget "opened tag panes" baseEnv)
+        convertWorkArea baseEnv >>= makeFocusedWidget "opened tag panes" baseEnv & void
 
 simpleKeyEvent :: ModKey -> E.Event
 simpleKeyEvent (ModKey mods key) =

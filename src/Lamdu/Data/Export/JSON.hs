@@ -144,7 +144,7 @@ exportVal x =
         x ^.. ExprLens.valGlobals mempty & traverse_ exportDef
         x ^.. ExprLens.valTags & traverse_ exportTag
         x ^.. ExprLens.valNominals & traverse_ exportNominal
-        () <$ unwrapM (Proxy @ExportSubexpr ##>> \n -> n ^. hVal <$ exportSubexpr n) x
+        unwrapM (Proxy @ExportSubexpr ##>> \n -> n ^. hVal <$ exportSubexpr n) x & void
 
 exportDef :: Monad m => V.Var -> Export m ()
 exportDef globalId =

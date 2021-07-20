@@ -74,8 +74,8 @@ class AddEval i n e where
             (AddEvalToNode i n)
         , Applicative i, Monad m
         ) => AddToBodyType e n i o m a
-    addToBody r _ x =
-        morphMap (Proxy @(AddEvalToNode i n) #?> addToNode r) x
+    addToBody r _ =
+        morphMap (Proxy @(AddEvalToNode i n) #?> addToNode r)
 
 instance AddEval i n Assignment where
     addToBody r i (BodyFunction x) = addToBody r i x & BodyFunction

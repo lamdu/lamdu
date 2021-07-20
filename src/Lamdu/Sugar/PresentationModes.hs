@@ -52,11 +52,11 @@ makeLabeledApply func args punnedArgs exprPl =
                 do
                     do
                         _ <- DataOps.replace ls (unwrap r)
-                        () <$ DataOps.replace rs (unwrap l)
+                        DataOps.replace rs (unwrap l) & void
                         & ConvertM.typeProtect checkOk & MaybeT & justToLeft
                     do
                         _ <- DataOps.replace ls (rs ^. iref)
-                        () <$ DataOps.replace rs (ls ^. iref)
+                        DataOps.replace rs (ls ^. iref) & void
                         & ConvertM.typeProtect checkOk & MaybeT & justToLeft
                     do
                         maybeWrap ls r

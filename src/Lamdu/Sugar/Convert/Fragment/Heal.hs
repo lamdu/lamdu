@@ -61,7 +61,7 @@ instance Prepare Term where
         where
             res diff = Ann (Const ((cat, priority + diff), pl))
             score = annotation . _1 . _2
-    wrap a = () <$ DataOps.applyHoleTo a
+    wrap = void . DataOps.applyHoleTo
 
 instance Prepare (HCompose Prune T.Type) where
     wrap a = writeValI (a ^. iref) (_HCompose # Pruned)
