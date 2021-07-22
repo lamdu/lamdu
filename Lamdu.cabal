@@ -405,6 +405,8 @@ Library
 
   ghc-options:         -O2 -Wall -Wno-partial-type-signatures -Widentities -Wimplicit-prelude -Wmissing-home-modules -Wincomplete-patterns -Wnoncanonical-monad-instances -Wsemigroup -Wincomplete-record-updates -Wredundant-constraints
   ghc-prof-options:    -fprof-auto -fprof-cafs
+  if os(darwin)
+    ld-options: -mmacosx-version-min=10.9
   if flag(ekg)
     cpp-options: -DWITH_EKG
   if flag(ekg)
