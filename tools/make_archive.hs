@@ -1,6 +1,7 @@
 #!/usr/bin/env runhaskell
 
 import           Control.Exception (bracket_)
+import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Monad (when, unless)
 import qualified Data.ByteString.Lazy as LBS
@@ -49,20 +50,24 @@ parseLddOut lddOut =
             "=>":libPath:_ -> [libPath]
             _ -> error "unexpected break output"
 
-parseOtoolOut :: String -> [FilePath]
-parseOtoolOut otoolOut =
-    lines otoolOut & tail <&> words >>= take 1
-    & filter isInteresting
+otoolMinMacosVersion :: FilePath -> IO Float
+otoolMinMacosVersion path =
+    readProcess "otool" ["-l", path] "" <&>
+    (^?! Lens.to lines . traverse .
+        Lens.to words .
+        Lens.filteredBy (Lens.ix 0 . (Lens.only "minos" <> Lens.only "version")) .
+        Lens.ix 1 . Lens._Show)
 
 -- Use `otool` to recursively find macOS deps
 findDylibs :: FilePath -> IO [FilePath]
 findDylibs path =
     do
-        deps <-
-            readProcess "otool" ["-L", path] ""
-            <&> parseOtoolOut
-            <&> filter (/= path)
-        traverse findDylibs deps <&> concat <&> (deps ++)
+        deps <- readProcess "otool" ["-L", path] "" <&> parseOtoolLibs <&> filter (/= path)
+        traverse findDylibs deps <&> concat <&> (deps <>)
+    where
+        parseOtoolLibs otoolOut =
+            lines otoolOut & tail <&> words >>= take 1
+            & filter isInteresting
 
 -- Slightly nicer syntax than using a sum type with case everywhere
 isMacOS :: Bool
@@ -140,11 +145,13 @@ main :: IO ()
 main =
     do
         nodePath <- NodeJS.path
+        [lamduExec] <- Env.getArgs
         when isMacOS $
             do
                 nodeDeps <- findDeps nodePath
                 when (nodeDeps /= []) (fail "nodejs not statically linked!")
-        [lamduExec] <- Env.getArgs
+                minos <- otoolMinMacosVersion lamduExec
+                when (minos > 10.9) (fail "Lamdu executable only runs on new macOS versions")
         version <-
             readProcess lamduExec ["--version"] ""
             <&> parseLamduVersion
