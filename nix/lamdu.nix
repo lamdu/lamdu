@@ -5,7 +5,7 @@
 , executable-path, filepath, generic-data, GLFW-b
 , graphics-drawingcombinators, hashable, HUnit, lamdu-calculus, momentu
 , language-ecmascript, lattices, lens, lens-aeson, leveldb-haskell, List, mtl
-, nodejs-exec, OpenGL, optparse-applicative, pretty, process
+, inline-js-core, OpenGL, optparse-applicative, pretty, process
 , random, safe-exceptions, split, StateVar, stb-image, hypertypes
 , template-haskell, temporary, test-framework, test-framework-hunit
 , text, time, timeit, transformers
@@ -46,7 +46,7 @@ mkDerivation {
     ekg-core executable-path filepath GLFW-b
     graphics-drawingcombinators hashable lamdu-calculus momentu
     language-ecmascript lattices lens lens-aeson leveldb-haskell List mtl
-    nodejs-exec OpenGL optparse-applicative pretty process random
+    inline-js-core OpenGL optparse-applicative pretty process random
     safe-exceptions split StateVar stb-image hypertypes temporary text time timeit
     transformers unicode-properties unordered-containers uuid uuid-types vector
     zip-archive
@@ -59,7 +59,7 @@ mkDerivation {
     aeson aeson-diff aeson-pretty base bytestring Cabal
     containers deepseq directory filepath
     GLFW-b HUnit lamdu-calculus momentu lens lens-aeson List mtl
-    nodejs-exec pretty process random split hypertypes test-framework
+    inline-js-core pretty process random split hypertypes test-framework
     test-framework-hunit text uuid-types
     yaml
   ];

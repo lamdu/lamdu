@@ -43,7 +43,9 @@ stackDepsTest =
                 LensAeson.key "extra-deps" . LensAeson.values . Lens.filteredBy (LensAeson.key "github")
         traverse_ verifyStackDep deps
         let expectedNixFiles =
-                (deps ^.. traverse . LensAeson.key "github" . LensAeson._String . Lens.to Text.unpack
+                (deps ^.. traverse .
+                    Lens.failing (LensAeson.key "subdirs" . LensAeson._Array . traverse) (LensAeson.key "github") .
+                    LensAeson._String . Lens.to Text.unpack
                     <&> packageNameFromGitUrl
                     <&> (<> ".nix")
                 ) <> extraNixFiles
@@ -60,7 +62,9 @@ verifyStackDep dep =
     do
         github <- getKey "github"
         commit <- getKey "commit"
-        let packageName = packageNameFromGitUrl github
+        let packageName =
+                dep ^? LensAeson.key "subdirs" . LensAeson._Array . traverse . LensAeson._String
+                & maybe (packageNameFromGitUrl github) Text.unpack
         do
             nixFile <- readFile ("nix/" <> packageName <> ".nix")
             let nixCommit = splitOn "rev = \"" nixFile !! 1 & takeWhile (/= '"')

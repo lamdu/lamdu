@@ -119,9 +119,9 @@ Test-Suite Tests
                , Tests.Sugar
   build-depends:
       base, HUnit, aeson-diff, deepseq, lens-aeson, split, yaml
-    , Lamdu, lamdu-calculus, momentu, hypertypes, nodejs-exec
+    , Lamdu, lamdu-calculus, momentu, hypertypes
     , aeson, aeson-pretty, bytestring, containers, directory, filepath, GLFW-b
-    , lens, List, mtl, pretty, process, random, text, uuid-types, Cabal
+    , inline-js-core, lens, List, mtl, pretty, process, random, text, uuid-types, Cabal
     , test-framework, test-framework-hunit
   ghc-options: -O0 -Wall -Wno-partial-type-signatures -Widentities -Wimplicit-prelude -Wmissing-home-modules -Wincomplete-patterns -Wnoncanonical-monad-instances -Wsemigroup -Wincomplete-record-updates -Wredundant-constraints -threaded
   ghc-prof-options: -fprof-auto -fprof-cafs -rtsopts
@@ -161,7 +161,7 @@ Library
                   , List >= 0.5.1
                   , momentu
                   , mtl >= 2.2
-                  , nodejs-exec >= 0.2
+                  , inline-js-core
                   , OpenGL
                   , optparse-applicative >= 0.12
                   , pretty >=1.1.2 && <1.2

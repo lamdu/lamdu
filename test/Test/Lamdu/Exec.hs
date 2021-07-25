@@ -2,9 +2,9 @@ module Test.Lamdu.Exec (runJS) where
 
 import qualified Data.ByteString as BS
 import qualified Lamdu.Paths as Paths
+import qualified Language.JavaScript.Inline.Core as NodeJS
 import           System.FilePath ((</>), splitFileName)
 import qualified System.IO as IO
-import qualified System.NodeJS.Path as NodeJS
 import qualified System.Process as Proc
 import           System.Process.Utils (withProcess)
 
@@ -25,8 +25,7 @@ nodeRepl :: IO Proc.CreateProcess
 nodeRepl =
     do
         rtsPath <- Paths.getDataFileName "js/rts.js" <&> fst . splitFileName
-        nodeExePath <- NodeJS.path
-        pure (Proc.proc nodeExePath [])
+        pure (Proc.proc (NodeJS.nodePath NodeJS.defaultConfig) [])
             { Proc.std_in = Proc.CreatePipe
             , Proc.std_out = Proc.CreatePipe
             , Proc.env =

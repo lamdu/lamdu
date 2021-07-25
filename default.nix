@@ -14,7 +14,7 @@ let config = {
                         hypertypes = self.callPackage ./nix/hypertypes.nix {};
                         momentu = self.callPackage ./nix/momentu.nix {};
                         lamdu-calculus = self.callPackage ./nix/lamdu-calculus.nix {};
-                        nodejs-exec = self.callPackage ./nix/nodejs-exec.nix {};
+                        inline-js-core = self.callPackage ./nix/inline-js-core.nix {};
                         cryptohash-md5 =
                             haskell.lib.dontCheck
                             (self.callHackage "cryptohash-md5" "0.11.100.1" {});

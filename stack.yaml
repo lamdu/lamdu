@@ -22,8 +22,10 @@ extra-deps:
   commit: 6f2f0b88fd7197e74cbff92bde94168adce3fb29
 - github: lamdu/FreetypeGL
   commit: 18ca298d8fd48ad18f75264553b57714bf070c77
-- github: lamdu/nodejs-exec
-  commit: b42c7880973a6eed67dffcfb6641e84de07612f2
+- github: tweag/inline-js
+  commit: 5da3690abd454e5e94021dcd4486484e89fc419f
+  subdirs:
+    - inline-js-core
 
 resolver: lts-18.3
 

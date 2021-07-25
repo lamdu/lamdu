@@ -51,12 +51,12 @@ import           Lamdu.Eval.JS.Types
 import           Lamdu.Eval.Results (ScopeId(..), EvalResults(..))
 import qualified Lamdu.Eval.Results as ER
 import qualified Lamdu.Paths as Paths
+import qualified Language.JavaScript.Inline.Core as NodeJS
 import           Numeric (readHex)
 import           System.Environment (getEnvironment)
 import           System.FilePath (splitFileName)
 import           System.IO (IOMode(..), Handle, hIsEOF, hPutStrLn, hFlush, withFile)
 import           System.IO.Temp (withSystemTempFile)
-import qualified System.NodeJS.Path as NodeJS
 import qualified System.Process as Proc
 import           System.Process.Utils (withProcess)
 
@@ -88,9 +88,7 @@ getNodePath :: IO FilePath
 getNodePath =
     -- prefer the relative-path bin/node.exe
     Paths.getDataFileNameMaybe "bin/node.exe"
-    >>= \case
-    Just x -> pure x
-    Nothing -> NodeJS.path
+    <&> fromMaybe (NodeJS.nodePath NodeJS.defaultConfig)
 
 nodeRepl :: IO Proc.CreateProcess
 nodeRepl =
