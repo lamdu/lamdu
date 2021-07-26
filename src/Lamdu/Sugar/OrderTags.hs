@@ -6,7 +6,8 @@ module Lamdu.Sugar.OrderTags
 
 import qualified Control.Lens as Lens
 import           Control.Monad ((>=>))
-import           Control.Monad.Transaction (MonadTransaction(..), setP)
+import           Control.Monad.Transaction (MonadTransaction(..))
+import           Data.Property (mkProperty, pVal, pSet)
 import           Data.List (sortOn)
 import           Hyper
 import qualified Lamdu.Calc.Type as T
@@ -183,11 +184,24 @@ orderDef ::
 orderDef def =
     def
     & (SugarLens.defSchemes . Sugar.schemeType) orderType
-    >>= (Sugar.drBody . Sugar._DefinitionBodyExpression . Sugar.deContent) orderNode
-    <&> Sugar.drBody . Sugar._DefinitionBodyExpression . Sugar.deContent .
-        hVal . Sugar._BodyFunction . Sugar.fParams . Sugar._Params %~
-        setVerboseWhenNeeded 2 Sugar.fpMOrderAfter . setVerboseWhenNeeded 3 Sugar.fpMOrderBefore
+    >>= (Sugar.drBody . Sugar._DefinitionBodyExpression . Sugar.deContent)
+        (orderNode >=> (hVal . Sugar._BodyFunction . Sugar.fParams . Sugar._Params) processPresentationMode)
     where
-        setVerboseWhenNeeded c l =
-            Lens.taking c traverse . _2 . Sugar.piActions . l . Lens._Just %~ (setToVerbose >>)
-        setToVerbose = setP (Anchors.assocPresentationMode (def ^. Sugar.drDefI)) Sugar.Verbose
+        processPresentationMode orig =
+            Anchors.assocPresentationMode (def ^. Sugar.drDefI) ^. mkProperty & transaction <&>
+            \presModeProp ->
+            let
+                setVerboseWhenNeeded c l =
+                    Lens.taking c traverse . _2 . Sugar.piActions . l . Lens._Just %~ (setToVerbose >>)
+                setToVerbose = (presModeProp ^. pSet) Sugar.Verbose & transaction
+                orderOp x =
+                    case presModeProp ^. pVal of
+                    Sugar.Verbose -> x
+                    Sugar.Operator l r ->
+                        fields (== l) <> fields (== r) <> fields (`notElem` [l, r])
+                    where
+                        fields p = filter (p . (^. _2 . Sugar.piTag . Sugar.tagRefTag . Sugar.tagVal)) x
+            in
+            setVerboseWhenNeeded 3 Sugar.fpMOrderBefore orig
+            & setVerboseWhenNeeded 2 Sugar.fpMOrderAfter
+            & orderOp
