@@ -103,32 +103,24 @@ Install:
 * [git](https://git-scm.com/)
 * [stack](https://haskellstack.org/)
 * [msys2](http://msys2.org/)
-* [NVM for Windows](https://github.com/coreybutler/nvm-windows) (a NodeJS distribution)
-
-In the msys2 shell:
-
-    pacman -S mingw-w64-x86_64-{,c}make
-
-Add `c:\msys64\mingw64\bin` to your `PATH`.
+* [NodeJS](https://nodejs.org/en/)
 
 In the Windows `cmd.exe` shell:
 
-    nvm install 7.10.1
-    nvm use 7.10.1
-
-    stack setup
-
-    rem "fastogt" maintain a leveldb fork that is compatible with stack/Haskell (builds with mingw-w64-x86_64)
+    cd <WORK-DIR>
     git clone https://github.com/fastogt/leveldb.git
-    cd leveldb
-    cmake -G "MinGW Makefiles" . -DCMAKE_C_COMPILER=C:/Users/%username%/AppData/Local/Programs/stack/x86_64-windows/ghc-8.4.3/mingw/bin/gcc.exe
-    mingw32-make
-    cd ..
-
     git clone https://github.com/lamdu/lamdu.git
-    stack build --extra-lib-dirs=%cd%\..\leveldb --extra-include-dirs=%cd%\..\leveldb\include
+
+In the msys2 mingw64 shell:
+
+    pacman -S mingw-w64-x86_64-{cmake,make,gcc}
+
+    cd <WORK-DIR>/leveldb
+    cmake -G "MinGW Makefiles" .
+    mingw32-make
+
+In the Windows `cmd.exe` shell:
+
+    cd <WORK-DIR>/lamdu
+    stack build --extra-lib-dirs="%cd%"\..\leveldb --extra-include-dirs="%cd%"\..\leveldb\include
     stack exec lamdu
-
-Notes:
-
-* If `cmake` fails complaining about `sh` being in the path, remove its provider from the path (most likely OpenSSH) and try invoking `cmake` again.
