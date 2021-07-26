@@ -5,7 +5,7 @@ module Lamdu.GUI.PresentationModeEdit
     ) where
 
 import qualified Control.Lens as Lens
-import           Data.Property (Property)
+import           Data.Property (Property, pVal)
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.Widget as Widget
@@ -13,6 +13,7 @@ import qualified GUI.Momentu.Widgets.DropDownList as DropDownList
 import qualified GUI.Momentu.Widgets.TextView as TextView
 import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.Config.Theme.TextColors as TextColors
+import           Lamdu.Data.Meta (_Operator)
 import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.I18N.CodeUI as Texts
 import qualified Lamdu.Sugar.Types as Sugar
@@ -36,7 +37,10 @@ make myId (Sugar.Params params) prop =
     do
         theme <- Lens.view has
         pairs <-
-            traverse mkPair [Sugar.Verbose, Sugar.Operator (paramTags !! 0) (paramTags !! 1)]
+            traverse mkPair
+            [ Sugar.Verbose
+            , prop ^? pVal . _Operator & maybe (Sugar.Operator (paramTags !! 0) (paramTags !! 1)) (_Operator #)
+            ]
             & local
                 (has . TextView.styleColor .~ theme ^. Theme.textColors . TextColors.presentationChoiceColor)
         defConfig <-
