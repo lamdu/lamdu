@@ -4,7 +4,6 @@ module Lamdu.GUI.Expr.LambdaEdit
 
 import qualified Control.Lens as Lens
 import qualified GUI.Momentu as M
-import qualified GUI.Momentu.Direction as Dir
 import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.Glue as Glue
 import qualified GUI.Momentu.I18N as MomentuTexts
@@ -19,6 +18,7 @@ import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.TextView as TextView
 import qualified Lamdu.Config as Config
 import qualified Lamdu.GUI.Expr.AssignmentEdit as AssignmentEdit
+import           Lamdu.GUI.Expr.EventMap (closeParenEvent)
 import qualified Lamdu.GUI.LightLambda as LightLambda
 import           Lamdu.GUI.Monad (GuiM)
 import           Lamdu.GUI.Styled (label, grammar)
@@ -123,17 +123,10 @@ make (Ann (Const pl) lam) =
             (_, Sugar.NullParam{}) -> mkLhsEdits ?? mParamsEdit ?? mScopeEdit
             (Sugar.LightLambda, _) -> mkLightLambda params myId ?? mParamsEdit ?? mScopeEdit
             _ -> mkExpanded ?? mParamsEdit ?? mScopeEdit
-        env <- Lens.view id
-        let closeParenChars =
-                case env ^. has of
-                Dir.LeftToRight -> ")]"
-                Dir.RightToLeft -> "(["
-        let navigateOut =
-                E.charGroup (Just "Close Paren")
-                (E.toDoc env
-                    [ has . MomentuTexts.navigation, has . Texts.lambda
-                    , has . Texts.leaveSubexpression])
-                closeParenChars (const (pure (GuiState.updateCursor myId)))
+        navigateOut <-
+            closeParenEvent
+            [has . MomentuTexts.navigation, has . Texts.lambda, has . Texts.leaveSubexpression]
+            (pure myId)
         (ResponsiveExpr.boxSpacedMDisamb ?? ExprGui.mParensId pl)
             <*> (Options.boxSpaced ?? Options.disambiguationNone ?? paramsAndLabelEdits
                 <&> Widget.strongerEvents rhsJumperEquals

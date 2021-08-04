@@ -5,7 +5,6 @@ module Lamdu.GUI.Expr.FragmentEdit
 import qualified Control.Lens as Lens
 import qualified GUI.Momentu as M
 import qualified GUI.Momentu.Animation as Anim
-import qualified GUI.Momentu.Direction as Dir
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.I18N as MomentuTexts
@@ -14,7 +13,6 @@ import qualified GUI.Momentu.ModKey as ModKey
 import           GUI.Momentu.Responsive (Responsive(..))
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.Responsive.Expression as ResponsiveExpr
-import qualified GUI.Momentu.State as GuiState
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Label as Label
 import qualified GUI.Momentu.Widgets.Menu as Menu
@@ -44,11 +42,6 @@ import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
 
-fragmentDoc :: _ => env -> Lens.ALens' env Text -> E.Doc
-fragmentDoc env lens =
-    E.toDoc env
-    [has . MomentuTexts.edit, has . Texts.fragment, lens]
-
 allowedSearchTerm :: Text -> Bool
 allowedSearchTerm x =
     ExprEventMap.allowedSearchTerm x || isWrapInRec
@@ -61,8 +54,6 @@ allowedSearchTerm x =
 make :: _ => ExprGui.Expr Sugar.Fragment i o -> GuiM env i o (Responsive o)
 make (Ann (Const pl) fragment) =
     do
-        env <- Lens.view id
-
         fragmentExprGui <- fragment ^. Sugar.fExpr & GuiM.makeSubexpression
 
         searchMenu <-
@@ -74,11 +65,6 @@ make (Ann (Const pl) fragment) =
             -- Space goes to next hole in target (not necessarily visible)
             & local (has . Menu.configKeysPickOptionAndGotoNext <>~ [noMods ModKey.Key'Space])
 
-        let healKeys = env ^. has . Config.healKeys
-        let healChars =
-                case env ^. has of
-                Dir.LeftToRight -> ")]"
-                Dir.RightToLeft -> "(["
         hbox <- ResponsiveExpr.boxSpacedMDisamb ?? ExprGui.mParensId pl
 
         addInnerType <-
@@ -95,13 +81,13 @@ make (Ann (Const pl) fragment) =
                         <&> (lineBelow color animId (spacing * stdFontHeight) .)
             & Element.locallyAugmented ("inner type"::Text)
 
-        let healEventMap =
-                E.keysEventMapMovesCursor healKeys doc action <>
-                E.charGroup (Just "Close Paren") doc healChars
-                (const (action <&> GuiState.updateCursor))
-                where
-                    action = fragment ^. Sugar.fHeal <&> WidgetIds.fromEntityId
-                    doc = fragmentDoc env (has . Texts.heal)
+        healEventMap <-
+            ( Lens.view id <&>
+                \env ->
+                E.keysEventMapMovesCursor (env ^. has . Config.healKeys)
+                (E.toDoc env healDoc) healAction
+            ) <>
+            ExprEventMap.closeParenEvent healDoc healAction
 
         hbox
             [ fragmentExprGui
@@ -111,6 +97,8 @@ make (Ann (Const pl) fragment) =
             & pure & stdWrapParentExpr pl
             <&> Widget.weakerEvents healEventMap
     where
+        healDoc = [has . MomentuTexts.edit, has . Texts.fragment, has . Texts.heal]
+        healAction = fragment ^. Sugar.fHeal <&> WidgetIds.fromEntityId
         menuId = WidgetIds.fromExprPayload pl & WidgetIds.fragmentHoleId
         lineBelow color animId spacing ann =
             ann

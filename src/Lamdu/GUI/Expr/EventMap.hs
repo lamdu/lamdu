@@ -7,6 +7,7 @@ module Lamdu.GUI.Expr.EventMap
     , makeLiteralEventMap
     , allowedSearchTerm, isAlphaNumericName
     , parenKeysEvent
+    , closeParenEvent
     ) where
 
 import qualified Control.Lens as Lens
@@ -293,3 +294,19 @@ isAlphaNumericName suffix =
     case Text.uncons suffix of
     Nothing -> True
     Just (x, xs) -> Char.isAlpha x && Text.all Char.isAlphaNum xs
+
+closeParenChars :: (MonadReader env m, Has Dir.Layout env) => m [Char]
+closeParenChars =
+    Lens.view has <&>
+    \case
+    Dir.LeftToRight -> ")]"
+    Dir.RightToLeft -> "(["
+
+closeParenEvent ::
+    (MonadReader env m, Has Dir.Layout env, Functor f) =>
+    [Lens.ALens' env Text] -> f Widget.Id -> m (EventMap (f GuiState.Update))
+closeParenEvent doc action =
+    E.charGroup (Just "Close Paren")
+    <$> (Lens.view id <&> (`E.toDoc` doc))
+    <*> closeParenChars
+    ?? const (action <&> GuiState.updateCursor)
