@@ -94,13 +94,22 @@ make (Ann (Const pl) fragment) =
                     addInferredType mismatchedType shrinkValAnnotationsIfNeeded
                         <&> (lineBelow color animId (spacing * stdFontHeight) .)
             & Element.locallyAugmented ("inner type"::Text)
+
+        let healEventMap =
+                E.keysEventMapMovesCursor healKeys doc action <>
+                E.charGroup (Just "Close Paren") doc healChars
+                (const (action <&> GuiState.updateCursor))
+                where
+                    action = fragment ^. Sugar.fHeal <&> WidgetIds.fromEntityId
+                    doc = fragmentDoc env (has . Texts.heal)
+
         hbox
             [ fragmentExprGui
             , Responsive.fromWithTextPos searchMenu
             ]
             & Widget.widget %~ addInnerType
             & pure & stdWrapParentExpr pl
-            <&> Widget.weakerEvents (healEventMap healKeys healChars env)
+            <&> Widget.weakerEvents healEventMap
     where
         menuId = WidgetIds.fromExprPayload pl & WidgetIds.fragmentHoleId
         lineBelow color animId spacing ann =
@@ -111,13 +120,6 @@ make (Ann (Const pl) fragment) =
                     Anim.coloredRectangle animId color
                     & Anim.scale (M.Vector2 (ann ^. Element.width) spacing)
                     & Anim.translate (M.Vector2 0 (ann ^. Element.height))
-        healEventMap keys chars env =
-            E.keysEventMapMovesCursor keys doc action <>
-            E.charGroup (Just "Close Paren") doc chars
-            (const (action <&> GuiState.updateCursor))
-            where
-                action = fragment ^. Sugar.fHeal <&> WidgetIds.fromEntityId
-                doc = fragmentDoc env (has . Texts.heal)
 
 makeResults ::
     _ =>
