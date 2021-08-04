@@ -30,6 +30,7 @@ import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.GUI.Wrap (stdWrap, stdWrapParentExpr)
 import qualified Lamdu.GUI.Wrap as Wrap
 import qualified Lamdu.I18N.CodeUI as Texts
+import qualified Lamdu.I18N.Navigation as Texts
 import           Lamdu.Name (Name(..))
 import qualified Lamdu.Sugar.Types as Sugar
 
@@ -51,7 +52,7 @@ makeFunc role func =
 makeLabeled :: _ => ExprGui.Expr Sugar.LabeledApply i o -> GuiM env i o (Responsive o)
 makeLabeled (Ann (Const pl) apply) =
     ExprEventMap.add ExprEventMap.defaultOptions pl <*>
-    ( Wrap.parentDelegator (WidgetIds.fromExprPayload pl) <*>
+    ( Wrap.parentDelegator myId <*>
         case apply ^. Sugar.aMOpArgs of
         Nothing -> makeFunc GetVarEdit.Normal func >>= wrap
         Just (Sugar.OperatorArgs l r s) ->
@@ -61,13 +62,20 @@ makeLabeled (Ann (Const pl) apply) =
                         Widget.weakerEvents
                         (E.keysEventMap (env ^. has . keys)
                         (E.toDoc env [has . MomentuTexts.edit, has . Texts.swapOperatorArgs]) s)
+                navigateOut <-
+                    ExprEventMap.closeParenEvent
+                    [has . MomentuTexts.navigation, has . Texts.leaveSubexpression]
+                    (pure myId)
                 (ResponsiveExpr.boxSpacedMDisamb ?? ExprGui.mParensId pl)
                     <*> sequenceA
                     [ GuiM.makeSubexpression l <&> swapAction Config.swapWithRightKeys
-                    , makeOperatorRow (swapAction Config.swapWithLeftKeys) func r >>= wrap
+                    , makeOperatorRow
+                        (Widget.weakerEvents navigateOut . swapAction Config.swapWithLeftKeys) func r
+                        >>= wrap
                     ]
     )
     where
+        myId = WidgetIds.fromExprPayload pl
         wrap x =
             (maybeAddAnnotationPl pl <&> (Widget.widget %~)) <*>
             addArgs apply x
