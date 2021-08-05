@@ -39,7 +39,7 @@ removeUnwanted =
     Lens.view id <&>
     \c ->
     Config.delKeys c -- Delete key has behaviours in various editors like if-else
-    <> c ^.. Config.hasConfig . Config.grid . Lens.folded -- Arrow keys taken by hole is weird
+    <> c ^.. Config.hasConfig . Config.dirKeys . Lens.folded -- Arrow keys taken by hole is weird
     <&> E.KeyEvent ModKey.KeyState'Pressed
     & E.deleteKeys
 
