@@ -106,14 +106,14 @@ prepare fragI (Ann a v) =
     if fragI == a ^. iref
     then
         fragmented ^. hVal & hmap (Proxy @(Recursively Prepare) #> prepareInFragExpr)
-        & Ann (Const ((HealPoint, 0), OnUnify (() <$ DataOps.replace a (fragmented ^. hAnn . iref))))
+        & Ann (Const ((HealPoint, 0), OnUnify (void (DataOps.replace a (fragmented ^. hAnn . iref)))))
     else
         hmap
         ( \case
             HWitness V.W_Term_Term -> prepare fragI
             HWitness V.W_Term_HCompose_Prune_Type -> prepareParamType
         ) v
-        & Ann (Const ((Other, 0), OnNoUnify (() <$ DataOps.applyHoleTo a)))
+        & Ann (Const ((Other, 0), OnNoUnify (void (DataOps.applyHoleTo a))))
     & fixPriorities
     where
         fragmented = v ^?! V._BApp . V.appArg

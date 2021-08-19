@@ -23,12 +23,11 @@ runJS compiledCode =
 
 nodeRepl :: IO Proc.CreateProcess
 nodeRepl =
-    do
-        rtsPath <- Paths.getDataFileName "js/rts.js" <&> fst . splitFileName
-        pure (Proc.proc (NodeJS.nodePath NodeJS.defaultConfig) [])
-            { Proc.std_in = Proc.CreatePipe
-            , Proc.std_out = Proc.CreatePipe
-            , Proc.env =
-                Just [("NODE_PATH", (rtsPath </> "export") ++ ":" ++ rtsPath)]
-            }
-
+    Paths.getDataFileName "js/rts.js" <&> fst . splitFileName <&>
+    \rtsPath ->
+    (Proc.proc (NodeJS.nodePath NodeJS.defaultConfig) [])
+    { Proc.std_in = Proc.CreatePipe
+    , Proc.std_out = Proc.CreatePipe
+    , Proc.env =
+        Just [("NODE_PATH", (rtsPath </> "export") ++ ":" ++ rtsPath)]
+    }
