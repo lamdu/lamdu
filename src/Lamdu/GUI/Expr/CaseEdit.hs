@@ -60,10 +60,13 @@ make (Ann (Const pl) (Sugar.Composite alts punned caseTail addAlt)) =
             Sugar.ClosedComposite actions -> pure . Widget.weakerEvents (closedCaseEventMap env actions)
             Sugar.OpenComposite rest -> makeOpenCase rest (Widget.toAnimId myId)
         let addAltEventMap =
-                addAltId altsId
+                GuiState.updateCursor dst
+                & GuiState.uWidgetStateUpdates . Lens.at dst ?~ mempty
                 & pure
-                & E.keysEventMapMovesCursor (env ^. has . Config.caseAddAltKeys)
+                & E.keyPresses (env ^. has . Config.caseAddAltKeys)
                     (doc env Texts.addAlt)
+                where
+                    dst = addAltId altsId
         header <- grammar (Label.make ".") M./|/ makeCaseLabel
         Styled.addValFrame <*>
             (Options.boxSpaced ?? Options.disambiguationNone ?? [header, altsGui])
