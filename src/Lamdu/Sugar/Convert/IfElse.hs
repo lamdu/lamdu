@@ -6,6 +6,7 @@ module Lamdu.Sugar.Convert.IfElse (convertIfElse) where
 import qualified Control.Lens as Lens
 import           Control.Monad.Once (OnceT)
 import           Lamdu.Builtins.Anchors (boolTid, trueTag, falseTag)
+import qualified Lamdu.Data.Ops as DataOps
 import           Lamdu.Expr.IRef (ValI, iref)
 import           Lamdu.Expr.UniqueId (ToUUID(..))
 import qualified Lamdu.Sugar.Convert.Input as Input
@@ -19,7 +20,7 @@ import           Lamdu.Prelude
 type T = Transaction
 
 convertIfElse ::
-    Functor m =>
+    Monad m =>
     (ValI m -> T m (ValI m)) ->
     PostfixApply v InternalName (OnceT (T m)) (T m) # Annotated (ConvertPayload m a) ->
     Maybe (IfElse v InternalName (OnceT (T m)) (T m) # Annotated (ConvertPayload m a))
@@ -30,12 +31,15 @@ convertIfElse setToVal postApp =
             pArg . hVal . _BodyPostfixApply .
             Lens.filteredBy (pFunc . hVal . _PfFromNom . tidTId . Lens.only boolTid) .
             pArg
+            <&> Lens.filteredBy (hVal . _BodyLeaf . _LeafHole) . annotation .
+                pActions . delete .~ deleteWholeIf
         case postApp ^. pFunc . hVal . _PfCase . cItems of
             [alt0, alt1]
                 | tagOf alt0 == trueTag && tagOf alt1 == falseTag -> convIfElse cond alt0 alt1
                 | tagOf alt1 == trueTag && tagOf alt0 == falseTag -> convIfElse cond alt1 alt0
             _ -> Nothing
     where
+        deleteWholeIf = DataOps.newHole >>= setToVal <&> EntityId.ofValI & Delete
         tagOf alt = alt ^. ciTag . tagRefTag . tagVal
         convIfElse cond altTrue altFalse =
             Just IfElse
