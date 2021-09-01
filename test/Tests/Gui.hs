@@ -492,6 +492,7 @@ charEvent :: Char -> Event
 charEvent ' ' = EventKey (KeyEvent GLFW.Key'Space 0 GLFW.KeyState'Pressed mempty)
 charEvent '\n' = EventKey (KeyEvent GLFW.Key'Enter 0 GLFW.KeyState'Pressed mempty)
 charEvent '\t' = EventKey (KeyEvent GLFW.Key'Tab 0 GLFW.KeyState'Pressed mempty)
+charEvent '⌫' = EventKey (KeyEvent GLFW.Key'Backspace 0 GLFW.KeyState'Pressed mempty)
 charEvent x = EventChar x
 
 applyActions :: HasCallStack => String -> Env.Env -> OnceT (T ViewM) Env.Env
@@ -534,4 +535,6 @@ testWYTIWYS =
     , wytiwys "let {val 1\trec.val\n" "1" -- "let " jumps straight to value of let
 
     , wytiwys "1..10.sort lhs>rhs)).item 2" "7" -- Close parens get out of lambda
+
+    , wytiwys "if ⌫1+2" "3" -- Backspace after "if " deletes it
     ]
