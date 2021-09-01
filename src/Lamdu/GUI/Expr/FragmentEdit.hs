@@ -61,8 +61,7 @@ make (Ann (Const pl) fragment) =
         let delHealsEventMap =
                 E.keysEventMapMovesCursor (Config.delKeys env) healDoc healAction
         let healEventMap =
-                ( E.keysEventMapMovesCursor (env ^. has . Config.healKeys) healDoc healAction
-                ) <>
+                E.keysEventMapMovesCursor (env ^. has . Config.healKeys) healDoc healAction <>
                 ExprEventMap.closeParenEvent editFragmentHeal healAction env
 
         searchMenu <-

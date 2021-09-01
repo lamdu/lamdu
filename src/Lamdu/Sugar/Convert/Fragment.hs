@@ -315,7 +315,7 @@ makeGetDef top arg v t =
     t ^? _Pure . T._TFun & Lens._Just %%~
     \f ->
     case f ^. funcIn of
-    Pure (T.TRecord r @ (Pure T.RExtend{})) ->
+    Pure (T.TRecord r@(Pure T.RExtend{})) ->
         do
             e <- emplaceTag flat v
             let ext rest x =

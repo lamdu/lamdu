@@ -149,9 +149,8 @@ suggestTopLevelVal t =
     case t ^. _Pure of
     T.TFun (FuncType (Pure (T.TInst n)) _) ->
         Load.nominal tid <&> (^.. Lens._Just)
-        >>= traverse %%~
+        <&> Lens.mapped %~
         \s ->
-        pure
         ( mempty & depsNominals . Lens.at tid ?~ s
         , _Pure . V._BLeaf . V._LFromNom # tid
         )

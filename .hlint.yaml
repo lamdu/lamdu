@@ -74,6 +74,7 @@
     - warn: {lhs: "a ^.. (b . Control.Lens.withIndex)", rhs: "a ^@.. b"}
     - error: {lhs: "(^. Control.Lens.folded) . fmap a", rhs: "foldMap a"}
     - error: {lhs: "(a <&> b) ^. Control.Lens.folded", rhs: "foldMap b a"}
+    - error: {lhs: "a %%~ \\b -> pure c", rhs: "pure (a %~ \\b -> c)"}
     - error: {lhs: "Control.Lens.has c (a ^. b)", rhs: "Control.Lens.has (b . c) a"}
     - error: {lhs: "Control.Lens.has (Control.Lens.at a)", rhs: "True"}
     - error: {lhs: "Control.Lens.has (a . Control.Lens.at b)", rhs: "Control.Lens.has a"}
