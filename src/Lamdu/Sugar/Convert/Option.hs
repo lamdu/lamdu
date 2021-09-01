@@ -26,7 +26,7 @@ import           Hyper
 import           Hyper.Recurse
 import           Hyper.Infer
 import           Hyper.Syntax (FuncType(..), funcIn, funcOut)
-import           Hyper.Syntax.Nominal (nId, nScheme)
+import           Hyper.Syntax.Nominal (NominalInst, nId, nScheme)
 import           Hyper.Syntax.Row (RowExtend(..), freExtends)
 import           Hyper.Syntax.Scheme (sTyp)
 import           Hyper.Type.Functor (_F)
@@ -146,22 +146,20 @@ matchResult query result
 -- so may suggest multiple expressions.
 suggestTopLevelVal :: Monad m => Pure # T.Type -> T m [(Deps, Pure # V.Term)]
 suggestTopLevelVal t =
-    case t ^. _Pure of
-    T.TFun (FuncType (Pure (T.TInst n)) _) ->
-        Load.nominal tid <&> (^.. Lens._Just)
-        <&> Lens.mapped %~
-        \s ->
-        ( mempty & depsNominals . Lens.at tid ?~ s
-        , _Pure . V._BLeaf . V._LFromNom # tid
-        )
-        where
-            tid = n ^. nId
-    T.TVariant r -> suggestVariantValues r <&> Lens.mapped %~ (,) mempty
-    _ ->
-        suggestVal t
+    (t ^.. _Pure . T._TFun . funcIn . _Pure . T._TInst & foldMap suggestFromNom) <>
+    (t ^.. _Pure . T._TVariant & foldMap suggestVariantValues <&> Lens.mapped %~ (,) mempty) <>
+    ( suggestVal t
         <&> (^? Lens.filtered (Lens.nullOf (_Pure . V._BLeaf . V._LHole)))
         <&> Lens._Just %~ (,) mempty
         <&> (^.. Lens._Just)
+    )
+
+suggestFromNom :: Monad m => NominalInst NominalId T.Types # Pure -> Transaction m [(Deps, Pure # V.Term)]
+suggestFromNom n =
+    Load.nominal tid <&> (^.. Lens._Just) <&> Lens.mapped %~
+    \s -> (mempty & depsNominals . Lens.at tid ?~ s, _Pure . V._BLeaf . V._LFromNom # tid)
+    where
+        tid = n ^. nId
 
 suggestVariantValues :: Monad m => Pure # T.Row -> T m [Pure # V.Term]
 suggestVariantValues t =
