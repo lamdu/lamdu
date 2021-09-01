@@ -62,10 +62,10 @@ convertIfElse setToVal postApp =
             }
             where
                 mkElseDel CannotDelete =
-                    delTarget altTrue & setToVal <&> EntityId.ofValI & Delete
+                    thenBody ^. pInput . Input.stored . iref & setToVal
+                    <&> EntityId.ofValI & Delete
                 mkElseDel x = x
-                delTarget alt =
-                    alt ^? ciExpr . hVal . _BodyLam . lamFunc . fBody
+                thenBody =
+                    altTrue ^? ciExpr . hVal . _BodyLam . lamFunc . fBody
                     . Lens.filteredBy (hVal . _BinderTerm) . annotation
-                    & fromMaybe (alt ^. ciExpr . annotation)
-                    & (^. pInput . Input.stored . iref)
+                    & fromMaybe (altTrue ^. ciExpr . annotation)
