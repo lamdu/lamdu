@@ -1197,8 +1197,8 @@
         "tagOrder": 0,
         "tag": "789149212fc64d8296c3f7a68e5ff6e6",
         "names": {
-            "english": "zip",
-            "hebrew": "הצלב"
+            "hebrew": "הצלב",
+            "english": "zip"
         }
     },
     {
@@ -1834,6 +1834,13 @@
     },
     {
         "tagOrder": 0,
+        "tag": "e846410bd0cb44ea957300529dfa7c08",
+        "names": {
+            "english": "fix"
+        }
+    },
+    {
+        "tagOrder": 0,
         "tag": "ee3dd1c9a98b2601b8b99733fd32e57f",
         "names": {
             "hebrew": "קלט_פלט",
@@ -2167,6 +2174,10 @@
         "nom": "6be65ada2aed47ebbda4cb4118df3659"
     },
     {
+        "tag": null,
+        "lamVar": "0069c79fe6df4b34bf6c29fa759fc566"
+    },
+    {
         "tag": "1b6990743fcc77560fdb139d1ac01a2c",
         "lamVar": "00caba5b384244f288e31388f463dbfa"
     },
@@ -2237,6 +2248,10 @@
     {
         "tag": null,
         "lamVar": "160ec67981071ac4763ff9560403ea4a"
+    },
+    {
+        "tag": null,
+        "lamVar": "17c422e812d24df493b5c72914b13173"
     },
     {
         "tag": null,
@@ -5132,6 +5147,84 @@
                 "funcResult": {
                     "nomId": "42493a666c6f61740000000000000000"
                 }
+            }
+        }
+    },
+    {
+        "tag": "e846410bd0cb44ea957300529dfa7c08",
+        "defPresentationMode": "Verbose",
+        "def": "13eb5d3317bd44f485f5d50f831528a5",
+        "typ": {
+            "schemeType": {
+                "funcParam": {
+                    "funcParam": {
+                        "funcParam": {
+                            "typeVar": "7430"
+                        },
+                        "funcResult": {
+                            "typeVar": "7431"
+                        }
+                    },
+                    "funcResult": {
+                        "funcParam": {
+                            "typeVar": "7430"
+                        },
+                        "funcResult": {
+                            "typeVar": "7431"
+                        }
+                    }
+                },
+                "funcResult": {
+                    "funcParam": {
+                        "typeVar": "7430"
+                    },
+                    "funcResult": {
+                        "typeVar": "7431"
+                    }
+                }
+            },
+            "typeVars": [
+                "7430",
+                "7431"
+            ]
+        },
+        "val": {
+            "lamParamType": {
+                "id": "08a2bddd-097b-4277-b9ca-aca9647dc993"
+            },
+            "lamVar": "17c422e812d24df493b5c72914b13173",
+            "id": "2dfdfd63-b0ef-4bc0-a75b-f74faff53091",
+            "lamBody": {
+                "applyFunc": {
+                    "var": "17c422e812d24df493b5c72914b13173",
+                    "id": "69d5ba3e-91ca-417e-8f69-d6009304a8c4"
+                },
+                "applyArg": {
+                    "lamParamType": {
+                        "id": "98cfca2a-3686-49ab-ae5a-c3d34ad998c8"
+                    },
+                    "lamVar": "0069c79fe6df4b34bf6c29fa759fc566",
+                    "id": "3a2ca0a4-5b7b-4d31-9820-24f354746593",
+                    "lamBody": {
+                        "applyFunc": {
+                            "applyFunc": {
+                                "var": "13eb5d3317bd44f485f5d50f831528a5",
+                                "id": "946c7b97-a05b-4933-b21a-1aa92f686dd2"
+                            },
+                            "applyArg": {
+                                "var": "17c422e812d24df493b5c72914b13173",
+                                "id": "75113bd2-a80a-41f7-9684-78a0fc2ada89"
+                            },
+                            "id": "5fa9aa40-1739-460b-8c48-0ee52cef437c"
+                        },
+                        "applyArg": {
+                            "var": "0069c79fe6df4b34bf6c29fa759fc566",
+                            "id": "6b6702ab-52e8-40a8-80be-780f1482a7a9"
+                        },
+                        "id": "5678a862-bb74-43e9-bf92-1dcc69bf96c2"
+                    }
+                },
+                "id": "f389c0e0-633c-4545-afb9-d1205d62ebfc"
             }
         }
     },
