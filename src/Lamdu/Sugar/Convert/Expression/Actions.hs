@@ -155,7 +155,7 @@ makeActions exprPl =
             Lens.view (ConvertM.scScopeInfo . ConvertM.siMOuter)
             <&> (^? Lens._Just . ConvertM.osiPos)
         setToLit <- makeSetToLiteral exprPl
-        apply <- makeApply exprPl
+        apply <- makeApply stored
         pure NodeActions
             { _detach = DataOps.applyHoleTo stored <* postProcess <&> EntityId.ofValI & DetachAction
             , _delete = DataOps.setToHole stored <* postProcess <&> EntityId.ofValI & SetToHole
@@ -168,8 +168,8 @@ makeActions exprPl =
     where
         stored = exprPl ^. Input.stored
 
-makeApply :: forall m a. Monad m => Input.Payload m a # V.Term -> ConvertM m (T m EntityId)
-makeApply pl =
+makeApply :: forall m. Monad m => ExprIRef.HRef m # V.Term -> ConvertM m (T m EntityId)
+makeApply stored =
     Lens.view ConvertM.scPostProcessRoot
     <&> \checkOk ->
     do
@@ -195,7 +195,6 @@ makeApply pl =
         noop = pure
         wrap :: ExprIRef.ValI m -> T m (ExprIRef.ValI m)
         wrap iref = V.App <$> DataOps.newHole ?? iref <&> V.BApp >>= ExprIRef.newValI
-        stored = pl ^. Input.stored
 
 fragmentAnnIndex ::
     (Applicative f, Lens.Indexable j p) =>
