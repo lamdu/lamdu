@@ -104,7 +104,7 @@ filterResults order res query
     | "" == query ^. qSearchTerm = groups (gForType <> gLocals <> gSyntax) <&> (^. traverse)
     | "." `Text.isPrefixOf` (query ^. qSearchTerm) =
         groups (gForType <> gSyntax <> gDefs <> gFromNoms <> gGetFields) <&> (^. traverse)
-    | "'" `Text.isPrefixOf` (query ^. qSearchTerm) = groups (gToNoms <> gInjects) <&> (^. traverse)
+    | "'" `Text.isPrefixOf` (query ^. qSearchTerm) = groups (gForType <> gToNoms <> gInjects) <&> (^. traverse)
     | "{" `Text.isPrefixOf` (query ^. qSearchTerm) =
         groups (gForType <> gSyntax <> gWrapInRecs) <&> (^. traverse)
     | otherwise =
@@ -153,6 +153,7 @@ suggestTopLevelVal t =
         <&> Lens._Just %~ (,) mempty
         <&> (^.. Lens._Just)
     )
+    <&> (<> (t ^.. _Pure . T._TFun . funcOut . _Pure . T._TVariant >>= suggestInjects <&> (,) mempty))
 
 suggestFromNom :: Monad m => NominalInst NominalId T.Types # Pure -> Transaction m [(Deps, Pure # V.Term)]
 suggestFromNom n =
@@ -160,6 +161,12 @@ suggestFromNom n =
     \s -> (mempty & depsNominals . Lens.at tid ?~ s, _Pure . V._BLeaf . V._LFromNom # tid)
     where
         tid = n ^. nId
+
+suggestInjects :: Pure # T.Row -> [Pure # V.Term]
+suggestInjects t =
+    case t ^. _Pure of
+    T.RExtend (RowExtend tag _ rest) -> Pure (V.BLeaf (V.LInject tag)) : suggestInjects rest
+    _ -> []
 
 suggestVariantValues :: Monad m => Pure # T.Row -> T m [Pure # V.Term]
 suggestVariantValues t =
@@ -292,6 +299,7 @@ makeForType t =
             V.BCase{} -> pure caseTexts
             V.BLeaf V.LAbsurd -> pure caseTexts
             V.BLeaf (V.LFromNom nomId) -> symTexts "." nomId
+            V.BLeaf (V.LInject tag) -> symTexts "'" tag
             V.BApp (V.App (Pure (V.BLeaf (V.LInject tag))) _) -> symTexts "'" tag
             _ -> pure (const [])
 
