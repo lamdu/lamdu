@@ -2,7 +2,7 @@
 
 module Lamdu.Sugar.Convert.Expression.Actions
     ( subexprPayloads, addActionsWith, addActions, makeActions
-    , makeTypeAnnotation, convertPayload
+    , makeTypeAnnotation, convertPayload, makeApply
     ) where
 
 import           Control.Applicative ((<|>))

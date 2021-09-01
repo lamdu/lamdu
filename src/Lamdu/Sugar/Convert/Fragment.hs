@@ -113,6 +113,10 @@ convertAppliedHole app@(V.App funcI argI) exprPl argS =
                         & traverse ConvertM.convertOnce
                 <&> filterResults (\outerMatch innerMatch -> (innerMatch, outerMatch))
                 & ConvertM.convertOnce
+            apply <-
+                argI ^. hAnn . Input.stored
+                & ExprIRef.setIref .~ exprPl ^. Input.stored . ExprIRef.setIref
+                & Actions.makeApply
             BodyFragment Fragment
                 { _fExpr =
                     argS
@@ -120,6 +124,7 @@ convertAppliedHole app@(V.App funcI argI) exprPl argS =
                     & annotation . pActions . delete .~
                         SetToHole
                         (DataOps.setToHole stored <* postProcess <&> EntityId.ofValI)
+                    & annotation . pActions . mApply ?~ apply
                 , _fHeal =
                     ( if isTypeMatch
                         then DataOps.replace stored argIRef <* postProcess
