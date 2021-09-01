@@ -56,6 +56,15 @@ make (Ann (Const pl) fragment) =
     do
         fragmentExprGui <- fragment ^. Sugar.fExpr & GuiM.makeSubexpression
 
+        env <- Lens.view id
+        let healDoc = E.toDoc env editFragmentHeal
+        let delHealsEventMap =
+                E.keysEventMapMovesCursor (Config.delKeys env) healDoc healAction
+        let healEventMap =
+                ( E.keysEventMapMovesCursor (env ^. has . Config.healKeys) healDoc healAction
+                ) <>
+                ExprEventMap.closeParenEvent editFragmentHeal healAction env
+
         searchMenu <-
             SearchMenu.make
             (SearchMenu.searchTermEdit menuId (pure . allowedSearchTerm))
@@ -64,7 +73,7 @@ make (Ann (Const pl) fragment) =
             & local (has . SearchMenu.emptyStrings . Lens.mapped .~ "?")
             -- Space goes to next hole in target (not necessarily visible)
             & local (has . Menu.configKeysPickOptionAndGotoNext <>~ [noMods ModKey.Key'Space])
-
+            <&> Lens.mapped %~ Widget.weakerEventsWithoutPreevents delHealsEventMap
         hbox <- ResponsiveExpr.boxSpacedMDisamb ?? ExprGui.mParensId pl
 
         addInnerType <-
@@ -81,23 +90,15 @@ make (Ann (Const pl) fragment) =
                         <&> (lineBelow color animId (spacing * stdFontHeight) .)
             & Element.locallyAugmented ("inner type"::Text)
 
-        healEventMap <-
-            ( Lens.view id <&>
-                \env ->
-                E.keysEventMapMovesCursor (env ^. has . Config.healKeys)
-                (E.toDoc env healDoc) healAction
-            ) <>
-            ExprEventMap.closeParenEvent healDoc healAction
-
         hbox
             [ fragmentExprGui
             , Responsive.fromWithTextPos searchMenu
             ]
             & Widget.widget %~ addInnerType
             & pure & stdWrapParentExpr pl
-            <&> Widget.weakerEvents healEventMap
+            <&> Widget.weakerEventsWithoutPreevents healEventMap
     where
-        healDoc = [has . MomentuTexts.edit, has . Texts.fragment, has . Texts.heal]
+        editFragmentHeal = [has . MomentuTexts.edit, has . Texts.fragment, has . Texts.heal]
         healAction = fragment ^. Sugar.fHeal <&> WidgetIds.fromEntityId
         menuId = WidgetIds.fromExprPayload pl & WidgetIds.fragmentHoleId
         lineBelow color animId spacing ann =
