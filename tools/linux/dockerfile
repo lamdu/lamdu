@@ -1,0 +1,5 @@
+FROM ubuntu:latest
+RUN apt-get -y update
+RUN apt-get -y install xauth libgl1
+
+EXPOSE 8887
