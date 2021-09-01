@@ -159,6 +159,8 @@ instance (MonadTransaction m o, MonadTransaction m i) => Order i (Sugar.Term v n
     order (Sugar.BodyPostfixFunc f) = order f <&> Sugar.BodyPostfixFunc
     order (Sugar.BodyFragment a) =
         a
+        & Sugar.fOptions . Lens.mapped . Lens.mapped
+            %~ (>>= (traverse . Sugar.optionExpr) orderNode)
         & Sugar.fExpr orderNode
         <&> Sugar.BodyFragment
     order (Sugar.BodyIfElse x) = order x <&> Sugar.BodyIfElse
@@ -172,6 +174,8 @@ instance (MonadTransaction m o, MonadTransaction m i) => Order i (Sugar.Term v n
             %~ (>>= (traverse . Sugar.optionExpr) orderNode)
         & Sugar.BodyLeaf
         & pure
+
+instance (MonadTransaction m o, MonadTransaction m i) => Order i (Sugar.FragOpt v name i o)
 
 orderNode ::
     (MonadTransaction m i, Order i f) =>

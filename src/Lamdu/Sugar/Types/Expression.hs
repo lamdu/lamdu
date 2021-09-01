@@ -111,7 +111,7 @@ data Fragment v name i o k = Fragment
     } deriving Generic
 
 data FragOpt v name i o k
-    = FragPostfix [k :# PostfixFunc v name i o]
+    = FragPostfix [k :# PostfixFunc v name i o] -- a single option can suggest chaining of multiple post-fix applications
     | FragInject (TagRef name i o)
     | FragWrapInRec (TagRef name i o)
     | FragGetVar (GetVar name o)
