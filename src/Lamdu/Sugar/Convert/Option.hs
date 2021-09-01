@@ -141,11 +141,15 @@ matchResult query result
         q = query <&> Text.toLower
         s = q ^. qSearchTerm
 
-suggestTopLevelVal :: Monad m => Pure # T.Type -> T m (Maybe (Deps, Pure # V.Term))
+-- Suggest expression to fit a type.
+-- Not used for subexpressions of suggested expression,
+-- so may suggest multiple expressions.
+suggestTopLevelVal :: Monad m => Pure # T.Type -> T m [(Deps, Pure # V.Term)]
 suggestTopLevelVal t =
-    case t ^? _Pure . T._TFun . funcIn . _Pure . T._TInst of
-    Just n ->
-        Load.nominal tid >>= Lens._Just %%~
+    case t ^. _Pure of
+    T.TFun (FuncType (Pure (T.TInst n)) _) ->
+        Load.nominal tid <&> (^.. Lens._Just)
+        >>= traverse %%~
         \s ->
         pure
         ( mempty & depsNominals . Lens.at tid ?~ s
@@ -153,11 +157,24 @@ suggestTopLevelVal t =
         )
         where
             tid = n ^. nId
-    Nothing ->
+    T.TVariant r -> suggestVariantValues r <&> Lens.mapped %~ (,) mempty
+    _ ->
         suggestVal t
         <&> (^? Lens.filtered (Lens.nullOf (_Pure . V._BLeaf . V._LHole)))
         <&> Lens._Just %~ (,) mempty
+        <&> (^.. Lens._Just)
 
+suggestVariantValues :: Monad m => Pure # T.Row -> T m [Pure # V.Term]
+suggestVariantValues t =
+    case t ^. _Pure of
+    T.RExtend (RowExtend tag val rest) ->
+        (:)
+        <$> (suggestVal val <&> Pure . V.BApp . V.App (Pure (V.BLeaf (V.LInject tag))))
+        <*> suggestVariantValues rest
+    _ -> pure []
+
+-- Suggest an expression to fit a type.
+-- Used in suggested sub-expressions, so does not suggest to-noms.
 suggestVal :: Monad m => Pure # T.Type -> T m (Pure # V.Term)
 suggestVal t =
     case t ^. _Pure of
@@ -266,10 +283,10 @@ getListing anchor =
     >>= transaction . getP . anchor
     <&> (^.. Lens.folded)
 
-makeForType :: Monad m => Pure # T.Type -> T m (Maybe (Result (Pure # V.Term)))
+makeForType :: Monad m => Pure # T.Type -> T m [Result (Pure # V.Term)]
 makeForType t =
     suggestTopLevelVal t
-    >>= Lens._Just %%~ \(deps, v) -> mkTexts v <&> Result deps v
+    >>= traverse (\(deps, v) -> mkTexts v <&> Result deps v)
     where
         mkTexts v =
             case v ^. _Pure of
@@ -278,6 +295,7 @@ makeForType t =
             V.BCase{} -> pure caseTexts
             V.BLeaf V.LAbsurd -> pure caseTexts
             V.BLeaf (V.LFromNom nomId) -> symTexts "." nomId
+            V.BApp (V.App (Pure (V.BLeaf (V.LInject tag))) _) -> symTexts "'" tag
             _ -> pure (const [])
 
 tagTexts :: Tag.Tag -> QueryLangInfo Text -> [Text]

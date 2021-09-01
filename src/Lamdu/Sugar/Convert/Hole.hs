@@ -43,12 +43,14 @@ convert posInfo holePl =
             { gSyntax = makeResultsSyntax posInfo & transaction <&> filtForType
             , gDefs = makeGlobals makeGetDef
             , gLocals = makeLocals (const pure) (holePl ^. Input.inferScope)
-            , gInjects = makeTagRes "'" ((^. hPlain) . (`V.BAppP` V.BLeafP V.LRecEmpty) . V.BLeafP . V.LInject)
+            , gInjects =
+                makeTagRes "'" ((^. hPlain) . (`V.BAppP` V.BLeafP V.LRecEmpty) . V.BLeafP . V.LInject)
+                <&> filtForType
             , gToNoms = makeNoms [] "" makeToNoms
             , gFromNoms =
                 makeNoms [] "." (\_ x -> pure [Result mempty (_Pure . V._BLeaf . V._LFromNom # x) mempty])
                 <&> filtForType
-            , gForType = forType ^.. Lens._Just & pure
+            , gForType = pure forType
             , gGetFields = makeTagRes "." (Pure . V.BLeaf . V.LGetField)
             , gWrapInRecs = pure [] -- Only used in fragments
             }

@@ -92,9 +92,9 @@ convertAppliedHole app@(V.App funcI argI) exprPl argS =
                         , gInjects = makeTagRes "'" (Pure . V.BLeaf . V.LInject) <&> funcOpt
                         , gToNoms = makeNoms [] "" (makeToNom argI <&> Lens.mapped . Lens.mapped %~ (:[]) . (Result mempty ?? mempty))
                         , gFromNoms =
-                            makeNoms (forType ^.. Lens._Just . _1 . Lens._Just)
+                            makeNoms (forType ^.. Lens.folded . _1 . Lens._Just)
                             "." (makeFromNom exprPl argI <&> Lens.mapped . Lens.mapped %~ (:[]))
-                        , gForType = forType ^.. Lens._Just . _2 & pure
+                        , gForType = forType ^.. Lens.folded . _2 & pure
                         , gGetFields = makeTagRes "." (Pure . V.BLeaf . V.LGetField) <&> funcOpt
                         , gSyntax = makeResultsSyntax topRef argI & transaction
                         , gWrapInRecs =
@@ -168,7 +168,7 @@ writeNew = wrap (const (Ann WriteNew))
 transformArg ::
     Monad m =>
     Input.Payload m a # V.Term -> Ann (Input.Payload m a) # V.Term ->
-    T m (Maybe (Maybe T.NominalId, Result [(TypeMatch, Ann (Write m) # V.Term)]))
+    T m [(Maybe T.NominalId, Result [(TypeMatch, Ann (Write m) # V.Term)])]
 transformArg topPl arg =
     case arg ^? hAnn . Input.inferredType . _Pure . T._TInst . nId of
     Just tid ->
@@ -177,8 +177,8 @@ transformArg topPl arg =
         \case
         Nothing -> replaceFunc
         Just s ->
-            s ^? _Pure . nScheme . sTyp . _Pure . T._TVariant
-            & Lens._Just %%~
+            s ^.. _Pure . nScheme . sTyp . _Pure . T._TVariant
+            & Lens.traverse %%~
             \r ->
             Result (mempty & depsNominals . Lens.at tid ?~ s)
             <$> ( suggestCase r topType <&>
@@ -195,7 +195,7 @@ transformArg topPl arg =
         topType = topPl ^. Input.inferredType
         replaceFunc =
             makeForType (_Pure . T._TFun # FuncType (arg ^. hAnn . Input.inferredType) topType)
-            <&> Lens._Just . rExpr %~
+            <&> Lens.mapped . rExpr %~
             \f ->
             emplaceArg arg
             <&> _2 %~ Ann (ExistingRef (topPl ^. Input.stored . ExprIRef.iref)) . V.BApp . App (writeNew f)
