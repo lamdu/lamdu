@@ -242,7 +242,10 @@ emplaceTag r v =
     Verbose ->
         r ^.. freExtends . Lens.itraversed . Lens.asIndex
         & traverse (\x -> ExprIRef.readTagData x <&> \t -> (t ^. tagOrder, x))
-        <&> snd . minimum
+        <&> snd . minimum . assertNotEmpty
+    where
+        assertNotEmpty [] = error "empty list!"
+        assertNotEmpty x = x
 
 emplaceArg :: Ann (Input.Payload m a) # V.Term -> [(TypeMatch, Ann (Write m) # V.Term)]
 emplaceArg arg =
@@ -307,7 +310,7 @@ makeGetDef top arg v t =
     t ^? _Pure . T._TFun & Lens._Just %%~
     \f ->
     case f ^. funcIn of
-    Pure (T.TRecord r) ->
+    Pure (T.TRecord r @ (Pure T.RExtend{})) ->
         do
             e <- emplaceTag flat v
             let ext rest x =
