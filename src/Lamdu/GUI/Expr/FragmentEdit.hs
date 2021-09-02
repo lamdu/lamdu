@@ -5,6 +5,7 @@ module Lamdu.GUI.Expr.FragmentEdit
 import qualified Control.Lens as Lens
 import qualified GUI.Momentu as M
 import qualified GUI.Momentu.Animation as Anim
+import qualified GUI.Momentu.Direction as Dir
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.I18N as MomentuTexts
@@ -42,14 +43,16 @@ import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
 
-allowedSearchTerm :: Text -> Bool
-allowedSearchTerm x =
-    ExprEventMap.allowedSearchTerm x || isWrapInRec
-    where
-        isWrapInRec =
-            case x ^? Lens._Cons of
-            Nothing -> False
-            Just (p, r) -> p `elem` ['{', '}'] && ExprEventMap.isAlphaNumericName r
+allowedSearchTerm :: (MonadReader env m, Has Dir.Layout env) => m (Text -> Bool)
+allowedSearchTerm =
+    do
+        as <- ExprEventMap.allowedSearchTerm
+        recordOpener <- ExprEventMap.recordOpener
+        let isWrapInRec x =
+                case x ^? Lens._Cons of
+                Nothing -> False
+                Just (p, r) -> p == recordOpener && ExprEventMap.isAlphaNumericName r
+        pure (\x -> as x || isWrapInRec x)
 
 make :: _ => ExprGui.Expr Sugar.Fragment i o -> GuiM env i o (Responsive o)
 make (Ann (Const pl) fragment) =
@@ -64,9 +67,10 @@ make (Ann (Const pl) fragment) =
                 E.keysEventMapMovesCursor (env ^. has . Config.healKeys) healDoc healAction <>
                 ExprEventMap.closeParenEvent editFragmentHeal healAction env
 
+        as <- allowedSearchTerm
         searchMenu <-
             SearchMenu.make
-            (SearchMenu.searchTermEdit menuId (pure . allowedSearchTerm))
+            (SearchMenu.searchTermEdit menuId (pure . as))
             (makeResults (fragment ^. Sugar.fOptions)) M.empty menuId
             ?? Menu.AnyPlace
             & local (has . SearchMenu.emptyStrings . Lens.mapped .~ "?")

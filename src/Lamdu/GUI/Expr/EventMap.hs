@@ -5,7 +5,7 @@ module Lamdu.GUI.Expr.EventMap
     , addLetEventMap
     , makeLiteralNumberEventMap
     , makeLiteralEventMap
-    , allowedSearchTerm, isAlphaNumericName
+    , allowedSearchTerm, isAlphaNumericName, recordOpener
     , parenKeysEvent
     , closeParenEvent
     ) where
@@ -168,7 +168,7 @@ transformSearchTerm =
         transform c =
             do
                 guard (c `notElem` Chars.operator)
-                guard (allowedSearchTerm (Text.singleton c))
+                guard (allowedSearchTerm env (Text.singleton c))
                 pure (Text.singleton c)
         searchStrRemainder = eventCtx ^. Widget.ePrevTextRemainder
         acceptOp = (>= exprInfoMinOpPrec exprInfo) . precedence
@@ -271,12 +271,21 @@ makeLiteralEventMap =
     makeLiteralCommon Nothing "#" Texts.literalText (const (Sugar.LiteralBytes (Identity ""))) <>
     makeLiteralNumberEventMap ""
 
-allowedSearchTerm :: Text -> Bool
-allowedSearchTerm searchTerm =
+recordOpener :: (MonadReader env m, Has Dir.Layout env) => m Char
+recordOpener =
+    Lens.view has <&>
+    \case
+    Dir.LeftToRight -> '{'
+    Dir.RightToLeft -> '}'
+
+allowedSearchTerm :: (MonadReader env m, Has Dir.Layout env) => m (Text -> Bool)
+allowedSearchTerm =
+    recordOpener <&>
+    \r searchTerm ->
     any (searchTerm &)
     [ Text.all (`elem` Chars.operator)
     , isNameOrPrefixed
-    , (`elem` ["\\", "{", "}"])
+    , (`elem` ["\\", Text.singleton r])
     ]
 
 isNameOrPrefixed :: Text -> Bool
