@@ -538,6 +538,7 @@ testWYTIWYS =
     , wytiwys "1..10.sort lhs>rhs)).item 2" "7" -- Close parens get out of lambda
 
     , wytiwys "{a 7,b 5}.a\n" "7"
+    , wytiwys "{a 7,b 5}.a+2" "9"
 
     , wytiwys "if ⌫1+2" "3" -- Backspace after "if " deletes it
     ]
