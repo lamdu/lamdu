@@ -10,7 +10,6 @@ import qualified System.Directory as Dir
 import qualified System.Environment as Env
 import           System.FilePath ((</>), takeFileName, takeDirectory)
 import qualified System.Info as SysInfo
-import qualified System.NodeJS.Path as NodeJS
 import           System.Process (readProcess, callProcess)
 
 import           Prelude
@@ -141,11 +140,16 @@ parseLamduVersion info =
     (["Lamdu", result]:_) -> result
     _ -> error "failed parsing version number"
 
+whichCmd :: String
+whichCmd
+    | isWindows = "where"
+    | otherwise = "which"
+
 main :: IO ()
 main =
     do
-        nodePath <- NodeJS.path
         [lamduExec] <- Env.getArgs
+        nodePath <- readProcess whichCmd ["node"] "" <&> takeWhile (`notElem` "\r\n")
         when isMacOS $
             do
                 nodeDeps <- findDeps nodePath
