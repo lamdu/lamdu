@@ -212,16 +212,19 @@ makeLocal top arg typ val =
     where
         r = Ann (ExistingRef top) . V.BApp . App (writeNew val)
 
-toFragOpt :: Annotated a # Binder v name i o -> Annotated a # FragOpt v name i o
+toFragOpt :: Annotated (Payload a m) # Binder v name i o -> Annotated (Payload a m) # FragOpt v name i o
 toFragOpt o =
     case o ^. hVal of
     BinderTerm (BodyPostfixApply (PostfixApply a f)) ->
-        reverse (f : match a) & FragPostfix & Ann (Const (f ^. annotation))
+        reverse (f : match a)
+        <&> annotation . plActions . detach .~ o ^. annotation . plActions . detach
+        & FragPostfix & Ann (Const (f ^. annotation))
         where
             match (Ann _ (BodyPostfixApply (PostfixApply a' f'))) = f' : match a'
             match _ = []
     BinderTerm (BodySimpleApply a) ->
-        a ^. appFunc & annValue %~
+        a ^. appFunc
+        & annValue %~
         \case
         BodyLeaf (LeafInject x) -> FragInject x
         BodyLeaf (LeafGetVar x) -> FragGetVar x
@@ -238,6 +241,12 @@ toFragOpt o =
         r ^?! cItems . traverse . ciTag & FragWrapInRec & Ann (Const (o ^. annotation))
     BinderTerm x -> error ("unexpected result in fragment result: " <> show (gconIndex x))
     BinderLet{} -> error "let in fragment result"
+    & fixActions
+    where
+        -- HACK: The options represent the function or transformation used,
+        -- But we want actions (at least fragment) to represent the whole transformed expression.
+        -- Not really clear that this is the clean way to do it..
+        fixActions = annotation . plActions . detach .~ o ^. annotation . plActions . detach
 
 emplaceTag :: Monad m => FlatRowExtends T.Tag a b # h -> V.Var -> T m T.Tag
 emplaceTag r v =
