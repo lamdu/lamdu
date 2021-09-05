@@ -153,7 +153,12 @@ suggestTopLevelVal t =
         <&> Lens._Just %~ (,) mempty
         <&> (^.. Lens._Just)
     )
-    <&> (<> (t ^.. _Pure . T._TFun . funcOut . _Pure . T._TVariant >>= suggestInjects <&> (,) mempty))
+    <&>
+    (<> ((t ^.. _Pure . T._TFun . funcOut . _Pure . T._TVariant >>= suggestInjectOrGetFields V.LInject)
+            <> (t ^.. _Pure . T._TFun . funcIn . _Pure . T._TRecord >>= suggestInjectOrGetFields V.LGetField)
+            <&> (,) mempty
+        )
+    )
 
 suggestFromNom :: Monad m => NominalInst NominalId T.Types # Pure -> Transaction m [(Deps, Pure # V.Term)]
 suggestFromNom n =
@@ -162,10 +167,10 @@ suggestFromNom n =
     where
         tid = n ^. nId
 
-suggestInjects :: Pure # T.Row -> [Pure # V.Term]
-suggestInjects t =
+suggestInjectOrGetFields :: (T.Tag -> V.Leaf) -> Pure # T.Row -> [Pure # V.Term]
+suggestInjectOrGetFields o t =
     case t ^. _Pure of
-    T.RExtend (RowExtend tag _ rest) -> Pure (V.BLeaf (V.LInject tag)) : suggestInjects rest
+    T.RExtend (RowExtend tag _ rest) -> Pure (V.BLeaf (o tag)) : suggestInjectOrGetFields o rest
     _ -> []
 
 suggestVariantValues :: Monad m => Pure # T.Row -> T m [Pure # V.Term]
@@ -299,6 +304,7 @@ makeForType t =
             V.BCase{} -> pure caseTexts
             V.BLeaf V.LAbsurd -> pure caseTexts
             V.BLeaf (V.LFromNom nomId) -> symTexts "." nomId
+            V.BLeaf (V.LGetField tag) -> symTexts "." tag
             V.BLeaf (V.LInject tag) -> symTexts "'" tag
             V.BApp (V.App (Pure (V.BLeaf (V.LInject tag))) _) -> symTexts "'" tag
             _ -> pure (const [])
