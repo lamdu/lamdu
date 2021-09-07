@@ -25,6 +25,23 @@ interestingLibs =
     , "libbz2"
     , "libbsd"
     , "libGLEW"
+    , "libGLU"
+    , "libXi"
+    , "libXrandr"
+    , "libXcursor"
+    , "libXinerama"
+    , "libXrender"
+
+    -- for linux/node:
+    , "libnode"
+    , "libuv"
+    , "libcares"
+    , "libnghttp2"
+    , "libcrypto"
+    , "libssl"
+    , "libicui18n"
+    , "libicuuc"
+    , "libicudata"
 
     -- for macOS:
     , "libtcmalloc"
@@ -150,22 +167,21 @@ main =
     do
         [lamduExec] <- Env.getArgs
         nodePath <- readProcess whichCmd ["node"] "" <&> takeWhile (`notElem` "\r\n")
+        nodeDeps <- findDeps nodePath
         when isMacOS $
             do
-                nodeDeps <- findDeps nodePath
-                when (nodeDeps /= []) (fail "nodejs not statically linked!")
+                when (not (null nodeDeps)) $ fail "nodejs not statically linked!"
                 minos <- otoolMinMacosVersion lamduExec
                 when (minos > 10.9) (fail "Lamdu executable only runs on new macOS versions")
-        version <-
-            readProcess lamduExec ["--version"] ""
-            <&> parseLamduVersion
-        dependencies <- findDeps lamduExec
+        version <- readProcess lamduExec ["--version"] "" <&> parseLamduVersion
+        lamduDeps <- findDeps lamduExec
+        let allDeps = nodeDeps <> lamduDeps
         bracket_ (Dir.createDirectory pkgDir) (unless isMacOS (Dir.removeDirectoryRecursive pkgDir)) $
             do
                 toPackageWith lamduExec destPath
                 toPackageWith "data" dataDir
                 toPackageWith nodePath (dataDir </> "bin/node.exe")
-                traverse_ libToPackage dependencies
+                traverse_ libToPackage allDeps
                 when isWindows $
                     callProcess "C:\\Program Files (x86)\\Inno Setup 5\\iscc.exe" ["/Flamdu-" ++ version ++ "-win-setup", "tools\\data\\lamdu.iss"]
                 when isLinux $
@@ -175,7 +191,7 @@ main =
                 when isMacOS $
                     do
                         toPackage "tools/data/Info.plist"
-                        traverse_ fixDylibPaths ("lamdu" : (dependencies <&> takeFileName))
+                        traverse_ fixDylibPaths ("lamdu" : (allDeps <&> takeFileName))
                         callProcess "sh"
                             [ "tools/data/macos_icon.sh"
                             , "data/Lamdu.png"
