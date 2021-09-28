@@ -12,6 +12,7 @@ import qualified Data.Map as Map
 import           Data.Property (Property)
 import qualified Data.Property as Property
 import qualified GUI.Momentu as M
+import qualified GUI.Momentu.Direction as Dir
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.FocusDirection as Direction
@@ -35,12 +36,12 @@ import qualified Lamdu.Config.Theme as Theme
 import           Lamdu.Config.Theme.TextColors (TextColors)
 import qualified Lamdu.Config.Theme.TextColors as TextColors
 import qualified Lamdu.Data.Meta as Meta
-import qualified Lamdu.GUI.Expr.TagEdit as TagEdit
 import qualified Lamdu.GUI.Annotation as Annotation
-import qualified Lamdu.GUI.ParamEdit as ParamEdit
-import qualified Lamdu.GUI.PresentationModeEdit as PresentationModeEdit
+import qualified Lamdu.GUI.Expr.TagEdit as TagEdit
 import           Lamdu.GUI.Monad (GuiM)
 import qualified Lamdu.GUI.Monad as GuiM
+import qualified Lamdu.GUI.ParamEdit as ParamEdit
+import qualified Lamdu.GUI.PresentationModeEdit as PresentationModeEdit
 import           Lamdu.GUI.Styled (grammar, label)
 import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.GUI.Types as ExprGui
@@ -111,11 +112,11 @@ mkChosenScopeCursor func =
 
 makeScopeEventMap ::
     _ =>
-    env -> [ModKey] -> [ModKey] -> ScopeCursor -> (Sugar.BinderParamScopeId -> o ()) ->
+    env -> ScopeCursor -> (Sugar.BinderParamScopeId -> o ()) -> [ModKey] -> [ModKey] ->
     EventMap (o M.Update)
-makeScopeEventMap env prevKey nextKey cursor setter =
-    mkEventMap (sMPrevParamScope, prevKey, Texts.prev) ++
-    mkEventMap (sMNextParamScope, nextKey, Texts.next)
+makeScopeEventMap env cursor setter prevKeys nextKeys =
+    mkEventMap (sMPrevParamScope, prevKeys, Texts.prev) ++
+    mkEventMap (sMNextParamScope, nextKeys, Texts.next)
     & mconcat
     where
         mkEventMap (cursorField, key, lens) =
@@ -182,13 +183,18 @@ makeScopeNavEdit func myId curCursor =
                 (mempty <$) .
                 Property.set chosenScopeProp . Just
         env <- Lens.view id
-        let mkScopeEventMap l r = makeScopeEventMap env l r curCursor (void . setScope)
+        let mkScopeEventMap = makeScopeEventMap env curCursor (void . setScope)
         let scopes :: [(Text, Maybe Sugar.BinderParamScopeId)]
             scopes =
                 [ (env ^. has . Texts.prevScopeArrow, sMPrevParamScope curCursor)
                 , (" ", Nothing)
                 , (env ^. has . Texts.nextScopeArrow, sMNextParamScope curCursor)
                 ]
+        (prevKeys, nextKeys) <-
+            Lens.view has <&>
+            \case
+            Dir.LeftToRight -> (leftKeys, rightKeys)
+            Dir.RightToLeft -> (rightKeys, leftKeys)
         Lens.view (has . Settings.sAnnotationMode)
             >>= \case
             Annotations.Evaluation ->
@@ -197,7 +203,7 @@ makeScopeNavEdit func myId curCursor =
                         <&> (^. M.tValue)
                     )
                 <&> Widget.weakerEvents
-                    (mkScopeEventMap leftKeys rightKeys <> blockEventMap env)
+                    (mkScopeEventMap prevKeys nextKeys <> blockEventMap env)
                 <&> Just
                 <&> (,) (mkScopeEventMap
                          (evalConfig ^. Config.prevScopeKeys)
