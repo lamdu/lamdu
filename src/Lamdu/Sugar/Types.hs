@@ -112,10 +112,6 @@ data WorkArea v name i o a = WorkArea
     , _waGlobals :: i [NameRef name o]
     } deriving (Functor, Foldable, Traversable, Generic)
 
-Lens.makeLenses ''Definition
-Lens.makeLenses ''DefinitionBuiltin
-Lens.makeLenses ''Pane
-Lens.makeLenses ''TagPane
-Lens.makeLenses ''WorkArea
+traverse Lens.makeLenses [''Definition, ''DefinitionBuiltin, ''Pane, ''TagPane, ''WorkArea] <&> concat
 Lens.makePrisms ''DefinitionBody
 Lens.makePrisms ''PaneBody
