@@ -170,7 +170,7 @@ main =
         nodeDeps <- findDeps nodePath
         when isMacOS $
             do
-                when (not (null nodeDeps)) $ fail "nodejs not statically linked!"
+                unless (null nodeDeps) $ fail "nodejs not statically linked!"
                 minos <- otoolMinMacosVersion lamduExec
                 when (minos > 10.9) (fail "Lamdu executable only runs on new macOS versions")
         version <- readProcess lamduExec ["--version"] "" <&> parseLamduVersion
