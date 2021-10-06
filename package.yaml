@@ -118,8 +118,6 @@ library:
   - cryptohash-sha256
   - executable-path
   when:
-  - condition: os(darwin)
-    ld-options: -mmacosx-version-min=10.9
   - condition: flag(ekg)
     cpp-options: -DWITH_EKG
     dependencies: ekg
@@ -150,6 +148,8 @@ executables:
     ghc-prof-options:
     - -rtsopts
     when:
+    - condition: os(darwin)
+      ld-options: -mmacosx-version-min=10.9
     - condition: flag(ekg)
       ghc-options: -with-rtsopts=-T
     - condition: flag(dev)
