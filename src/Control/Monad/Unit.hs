@@ -9,7 +9,7 @@ module Control.Monad.Unit
 import Lamdu.Prelude
 
 data Unit a = Unit
-    deriving stock (Generic, Generic1, Functor, Foldable, Traversable)
+    deriving stock (Generic, Generic1, Functor, Foldable, Traversable, Eq, Ord, Show)
     deriving Semigroup via Generically (Unit a)
     deriving Applicative via Generically1 Unit
 

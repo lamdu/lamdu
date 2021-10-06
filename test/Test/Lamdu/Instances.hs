@@ -125,7 +125,6 @@ instance NFData key => NFData (TextEdit.Keys key)
 instance NFData key => NFData (VcGuiConfig.Config key)
 instance NFData key => NFData (Zoom.Config key)
 
-instance Eq (Unit a) where _ == _ = True
 instance Eq (a -> Unit b) where _ == _ = True
 instance Eq a => Eq (Property Unit a) where
     Property x _ == Property y _ = x == y
