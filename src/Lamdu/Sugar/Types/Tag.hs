@@ -21,7 +21,7 @@ data Tag name = Tag
 data TagOption name o a = TagOption
     { _toInfo :: Tag name
     , _toPick :: o a
-    } deriving (Functor, Foldable, Traversable)
+    } deriving (Functor, Foldable, Traversable, Generic)
 
 data TagChoice name i o a = TagChoice
     { _tcOptions :: i [TagOption name o a]

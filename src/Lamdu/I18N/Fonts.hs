@@ -42,10 +42,10 @@ class Choice s where
     type Options s :: * -> *
     choice :: Functor f => s -> Lens.LensLike' f (Options s a) a
 
-data ProportionalOrMonospace = Proportional | Monospace deriving Eq
-data SansOrSerif = Sans | Serif                         deriving Eq
-data RomanOrItalic = Roman | Italic                     deriving Eq
-data LightOrBold = Light | Bold                         deriving Eq
+data ProportionalOrMonospace = Proportional | Monospace deriving (Eq, Generic)
+data SansOrSerif = Sans | Serif                         deriving (Eq, Generic)
+data RomanOrItalic = Roman | Italic                     deriving (Eq, Generic)
+data LightOrBold = Light | Bold                         deriving (Eq, Generic)
 
 traverse (JsonTH.deriveJSON Aeson.defaultOptions)
     [''ProportionalOrMonospace, ''SansOrSerif, ''RomanOrItalic, ''LightOrBold]

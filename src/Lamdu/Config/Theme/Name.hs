@@ -13,7 +13,7 @@ data Name = Name
     { _tagCollisionSuffixBGColor :: Draw.Color
     , _textCollisionSuffixBGColor :: Draw.Color
     , _collisionSuffixScaleFactor :: Vector2 Double
-    } deriving (Eq, Show)
+    } deriving (Eq, Show, Generic)
 JsonTH.derivePrefixed "_" ''Name
 
 Lens.makeLenses ''Name

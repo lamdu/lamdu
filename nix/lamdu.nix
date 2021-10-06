@@ -8,7 +8,7 @@
 , inline-js-core, OpenGL, optparse-applicative, pretty, process
 , random, safe-exceptions, split, StateVar, stb-image, hypertypes
 , template-haskell, temporary, test-framework, test-framework-hunit
-, text, time, timeit, transformers
+, text, time, timeit, transformers, generic-constraints
 , unicode-properties, unordered-containers, uuid, uuid-types, vector, yaml
 , zip-archive, lib, gitMinimal
 }:
@@ -49,7 +49,7 @@ mkDerivation {
     inline-js-core OpenGL optparse-applicative pretty process random
     safe-exceptions split StateVar stb-image hypertypes temporary text time timeit
     transformers unicode-properties unordered-containers uuid uuid-types vector
-    zip-archive
+    zip-archive generic-constraints
   ];
   buildDepends = [ gitMinimal ];
   executableHaskellDepends = [

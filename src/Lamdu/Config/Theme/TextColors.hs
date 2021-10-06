@@ -32,7 +32,7 @@ data TextColors = TextColors
     , _recordTagColor :: Draw.Color
     , _caseTagColor :: Draw.Color
     , _argTagColor :: Draw.Color
-    } deriving (Eq, Show)
+    } deriving (Eq, Show, Generic)
 JsonTH.derivePrefixed "_" ''TextColors
 
 Lens.makeLenses ''TextColors

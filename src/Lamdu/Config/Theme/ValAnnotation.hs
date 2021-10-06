@@ -18,7 +18,7 @@ data ValAnnotation = ValAnnotation
     , _valAnnotationWidthExpansionLimit :: Double
     , _valAnnotationShrinkAtLeast :: Double
     , _valAnnotationMaxHeight :: Double
-    } deriving (Eq, Show)
+    } deriving (Eq, Show, Generic)
 deriveJSON Aeson.defaultOptions
     { Aeson.fieldLabelModifier
         = (Lens.taking 2 traverse %~ toLower)

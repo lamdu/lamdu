@@ -193,6 +193,7 @@ tests:
     - deepseq
     - directory
     - filepath
+    - generic-constraints
     - GLFW-b
     - HUnit
     - hypertypes

@@ -54,7 +54,7 @@ data Help = Help
     , _helpBGColor :: Draw.Color
     , _helpTint :: Draw.Color
     , _helpSrcLocColor :: Maybe Draw.Color
-    } deriving Eq
+    } deriving (Eq, Generic)
 JsonTH.derivePrefixed "_help" ''Help
 
 Lens.makeLenses ''Help
@@ -63,7 +63,7 @@ data Eval = Eval
     { _neighborsScaleFactor :: Vector2 Double
     , _neighborsPadding :: Vector2 Double
     , _staleResultTint :: Draw.Color
-    } deriving Eq
+    } deriving (Eq, Generic)
 JsonTH.derivePrefixed "_" ''Eval
 
 Lens.makeLenses ''Eval
@@ -71,7 +71,7 @@ Lens.makeLenses ''Eval
 data ToolTip = ToolTip
     { _tooltipFgColor :: Draw.Color
     , _tooltipBgColor :: Draw.Color
-    } deriving Eq
+    } deriving (Eq, Generic)
 JsonTH.derivePrefixed "_tooltip" ''ToolTip
 
 Lens.makeLenses ''ToolTip
@@ -79,7 +79,7 @@ Lens.makeLenses ''ToolTip
 data StatusBar = StatusBar
     { _statusBarBGColor :: Draw.Color
     , _statusBarHSpaces :: Double
-    } deriving Eq
+    } deriving (Eq, Generic)
 deriveJSON Aeson.defaultOptions
     { Aeson.fieldLabelModifier
         = (Lens.taking 2 traverse %~ toLower)
@@ -93,7 +93,7 @@ data Deleted = Deleted
     { _deletedDefTint :: Draw.Color
     , _deletedDefDiagonalWidth :: Double
     , _deletedUseDiagonalWidth :: Double
-    } deriving Eq
+    } deriving (Eq, Generic)
 JsonTH.derivePrefixed "_deleted" ''Deleted
 
 Lens.makeLenses ''Deleted
@@ -103,7 +103,7 @@ data FontSel = FontSel
     , _fontSelStyle  :: I18N.Fonts.SansOrSerif
     , _fontSelSlant  :: I18N.Fonts.RomanOrItalic
     , _fontSelWeight :: I18N.Fonts.LightOrBold
-    } deriving Eq
+    } deriving (Eq, Generic)
 JsonTH.derivePrefixed "_fontSel" ''FontSel
 
 Lens.makeLenses ''FontSel
@@ -161,7 +161,7 @@ data Theme = Theme
     , _disabledColor :: Draw.Color
     , _presentationChoiceScaleFactor :: Vector2 Double
     , _evaluatedPathBGColor :: Draw.Color
-    } deriving Eq
+    } deriving (Eq, Generic)
 JsonTH.derivePrefixed "_" ''Theme
 
 Lens.makeLenses ''Theme
