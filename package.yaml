@@ -61,7 +61,6 @@ library:
   - TypeOperators
   ghc-options:
   - -O2
-  - -Wall
   dependencies:
   - aeson >= 1.1
   - aeson-diff
