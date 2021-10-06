@@ -117,7 +117,7 @@ convertWorkArea ::
         (Sugar.Payload (Annotation (EvaluationScopes Name (OnceT (T ViewM))) Name) (T ViewM))
     )
 convertWorkArea env =
-    (sugarWorkArea env codeAnchors >>= \x -> x (Tag.getTagName env) env)
+    (sugarWorkArea env >>= \x -> x (Tag.getTagName env) env)
     >>= lift . validate
 
 testProgramH :: FilePath -> OnceT (T ViewM) a -> IO a

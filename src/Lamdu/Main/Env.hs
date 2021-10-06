@@ -41,6 +41,7 @@ import qualified Lamdu.Config as Config
 import           Lamdu.Config.Theme (Theme(..))
 import qualified Lamdu.Config.Theme as Theme
 import           Lamdu.Config.Theme.Sprites (Sprites(..))
+import qualified Lamdu.Data.Anchors as Anchors
 import           Lamdu.Data.Db.Layout (ViewM)
 import qualified Lamdu.Debug as Debug
 import qualified Lamdu.GUI.Main as GUIMain
@@ -68,9 +69,11 @@ data Env = Env
     , _debugMonitors :: Debug.Monitors
     , _cachedFunctions :: Cache.Functions
     , _language :: Language
+    , _codeAnchors :: Anchors.CodeAnchors ViewM
     }
 Lens.makeLenses ''Env
 
+instance Anchors.HasCodeAnchors Env ViewM where codeAnchors = codeAnchors
 instance Element.HasAnimIdPrefix Env where animIdPrefix = animIdPrefix
 instance GuiState.HasCursor Env
 instance Has (GUIMain.ExportActions ViewM) Env where has = exportActions

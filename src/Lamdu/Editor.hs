@@ -200,6 +200,7 @@ mkEnv cachedFunctions monitors fonts evaluator configSampler mainEnv settings =
             , _debugMonitors = monitors
             , _cachedFunctions = cachedFunctions
             , _language = sample ^. sLanguageData
+            , _codeAnchors = DbLayout.codeAnchors
             }
 
 runMainLoop ::
@@ -297,7 +298,7 @@ initCache db env cacheRef =
             _ ->
                 do
                     (x, s) <-
-                        sugarWorkArea env DbLayout.codeAnchors & once
+                        sugarWorkArea env & once
                         & runOnceT mempty
                         & VersionControl.runAction
                         & DbLayout.runDbTransaction db

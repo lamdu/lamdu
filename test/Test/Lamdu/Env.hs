@@ -32,6 +32,8 @@ import qualified Lamdu.Config.Folder as Folder
 import           Lamdu.Config.Theme (Theme, baseTextSize, fonts)
 import qualified Lamdu.Config.Theme as Theme
 import           Lamdu.Config.Theme.Sprites (Sprites)
+import qualified Lamdu.Data.Anchors as Anchors
+import qualified Lamdu.Data.Db.Layout as DbLayout
 import qualified Lamdu.Debug as Debug
 import qualified Lamdu.Eval.Results as EvalResults
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
@@ -68,8 +70,11 @@ data Env =
     , _eTextEditStyle :: TextEdit.Style
     , _eDirLayout :: Dir.Layout
     , _eLanguage :: Language
+    , _eCodeAnchors :: Anchors.CodeAnchors DbLayout.ViewM
     }
 Lens.makeLenses ''Env
+
+instance Anchors.HasCodeAnchors Env DbLayout.ViewM where codeAnchors = eCodeAnchors
 instance Has Theme Env where has = eTheme
 instance HasStdSpacing Env where stdSpacing = eSpacing
 instance Has TextView.Style Env where has = has @TextEdit.Style . has
@@ -156,4 +161,5 @@ make =
             , _eAnimIdPrefix = []
             , _eDirLayout = Dir.LeftToRight
             , _eLanguage = testLang
+            , _eCodeAnchors = DbLayout.codeAnchors
             }

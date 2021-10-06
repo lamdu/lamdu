@@ -88,12 +88,13 @@ convertInferDefExpr ::
     ( HasCallStack, Monad m, Typeable m
     , Has Debug.Monitors env
     , Has Config env, Has Cache.Functions env
+    , Anchors.HasCodeAnchors env m
     ) =>
-    env -> Anchors.CodeAnchors m ->
+    env ->
     Pure # T.Scheme -> Definition.Expr (Ann (HRef m) # V.Term) -> DefI m ->
     OnceT (T m)
     (DefinitionBody EvalPrep InternalName (OnceT (T m)) (T m) (ConvertPayload m [EntityId]))
-convertInferDefExpr env cp defType defExpr defI =
+convertInferDefExpr env defType defExpr defI =
     do
         outdatedDefinitions <-
             OutdatedDefs.scan entityId defExpr setDefExpr postProcess
@@ -103,7 +104,7 @@ convertInferDefExpr env cp defType defExpr defI =
                 Context
                 { _scInferContext = newInferContext
                 , _scConfig = env ^. has
-                , _scCodeAnchors = cp
+                , _scCodeAnchors = env ^. Anchors.codeAnchors
                 , _scScopeInfo =
                     emptyScopeInfo
                     ( Just RecursiveRef
@@ -143,26 +144,28 @@ convertDefBody ::
     ( HasCallStack, Monad m, Typeable m
     , Has Debug.Monitors env
     , Has Config env, Has Cache.Functions env
+    , Anchors.HasCodeAnchors env m
     ) =>
-    env -> Anchors.CodeAnchors m ->
+    env ->
     Definition.Definition (Ann (HRef m) # V.Term) (DefI m) ->
     OnceT (T m)
     (DefinitionBody EvalPrep InternalName (OnceT (T m)) (T m) (ConvertPayload m [EntityId]))
-convertDefBody env cp (Definition.Definition bod defType defI) =
+convertDefBody env (Definition.Definition bod defType defI) =
     case bod of
     Definition.BodyBuiltin builtin -> convertDefIBuiltin defType builtin defI & lift
     Definition.BodyExpr defExpr ->
-        convertInferDefExpr env cp defType defExpr defI
+        convertInferDefExpr env defType defExpr defI
 
 convertRepl ::
     ( HasCallStack, Monad m, Typeable m
     , Has Debug.Monitors env
     , Has Config env, Has Cache.Functions env
+    , Anchors.HasCodeAnchors env m
     ) =>
-    env -> Anchors.CodeAnchors m ->
+    env ->
     OnceT (T m)
     (Repl EvalPrep InternalName (OnceT (T m)) (T m) (ConvertPayload m [EntityId]))
-convertRepl env cp =
+convertRepl env =
     do
         defExpr <- ExprLoad.defExpr prop & lift
         entityId <- Property.getP prop & lift <&> (^. Definition.expr) <&> EntityId.ofValI
@@ -175,7 +178,7 @@ convertRepl env cp =
                 Context
                 { _scInferContext = newInferContext
                 , _scConfig = env ^. has
-                , _scCodeAnchors = cp
+                , _scCodeAnchors = env ^. Anchors.codeAnchors
                 , _scScopeInfo = emptyScopeInfo Nothing
                 , _scDebugMonitors = env ^. has
                 , _scCacheFunctions = env ^. has
@@ -200,7 +203,7 @@ convertRepl env cp =
     where
         cachedInfer = Cache.infer (env ^. has)
         postProcess = PostProcess.expr cachedInfer (env ^. has) prop
-        prop = Anchors.repl cp
+        prop = Anchors.repl (env ^. Anchors.codeAnchors)
         setFrozenDeps deps =
             prop ^. Property.mkProperty
             >>= (`Property.pureModify` (Definition.exprFrozenDeps .~ deps))
@@ -209,11 +212,12 @@ convertPaneBody ::
     ( Monad m, Typeable m
     , Has Debug.Monitors env
     , Has Config env, Has Cache.Functions env
+    , Anchors.HasCodeAnchors env m
     ) =>
-    env -> Anchors.CodeAnchors m -> Anchors.Pane m ->
+    env -> Anchors.Pane m ->
     OnceT (T m)
     (PaneBody EvalPrep InternalName (OnceT (T m)) (T m) (ConvertPayload m [EntityId]))
-convertPaneBody _ _ (Anchors.PaneTag tagId) =
+convertPaneBody _ (Anchors.PaneTag tagId) =
     ExprIRef.readTagData tagId & lift <&>
     \tagData ->
     PaneTag TagPane
@@ -231,12 +235,12 @@ convertPaneBody _ _ (Anchors.PaneTag tagId) =
     }
     where
         writeTag = Transaction.writeIRef (ExprIRef.tagI tagId)
-convertPaneBody env cp (Anchors.PaneDefinition defI) =
+convertPaneBody env (Anchors.PaneDefinition defI) =
     do
         bodyS <-
             ExprLoad.def defI & lift <&> Definition.defPayload .~ defI
-            >>= convertDefBody env cp
-        tag <- ConvertTag.taggedEntityWith cp Nothing defVar & join
+            >>= convertDefBody env
+        tag <- ConvertTag.taggedEntityWith (env ^. Anchors.codeAnchors) Nothing defVar & join
         defState <- Anchors.assocDefinitionState defI ^. Property.mkProperty & lift
         OrderTags.orderDef Definition
             { _drEntityId = EntityId.ofIRef defI
@@ -256,14 +260,15 @@ convertPane ::
     ( Monad m, Typeable m
     , Has Debug.Monitors env
     , Has Config env, Has Cache.Functions env
+    , Anchors.HasCodeAnchors env m
     ) =>
-    env -> Anchors.CodeAnchors m -> EntityId ->
+    env -> EntityId ->
     Property (T m) [Anchors.Pane dummy] ->
     Int -> Anchors.Pane m ->
     OnceT (T m)
     (Pane EvalPrep InternalName (OnceT (T m)) (T m) (ConvertPayload m [EntityId]))
-convertPane env cp replEntityId (Property panes setPanes) i pane =
-    convertPaneBody env cp pane
+convertPane env replEntityId (Property panes setPanes) i pane =
+    convertPaneBody env pane
     <&> \body -> Pane
     { _paneBody = body
     , _paneClose = mkDelPane
@@ -296,28 +301,30 @@ loadPanes ::
     ( Monad m, Typeable m
     , Has Debug.Monitors env
     , Has Config env, Has Cache.Functions env
+    , Anchors.HasCodeAnchors env m
     ) =>
-    env -> Anchors.CodeAnchors m -> EntityId ->
+    env -> EntityId ->
     OnceT (T m) [Pane EvalPrep InternalName (OnceT (T m)) (T m) (ConvertPayload m [EntityId])]
-loadPanes env cp replEntityId =
+loadPanes env replEntityId =
     do
-        prop <- Anchors.panes cp ^. Property.mkProperty & lift
+        prop <- Anchors.panes (env ^. Anchors.codeAnchors) ^. Property.mkProperty & lift
         Property.value prop
-            & Lens.itraversed %%@~ convertPane env cp replEntityId prop
+            & Lens.itraversed %%@~ convertPane env replEntityId prop
 
 loadWorkArea ::
     ( HasCallStack, Monad m, Typeable m
     , Has Debug.Monitors env
     , Has Config env, Has Cache.Functions env
+    , Anchors.HasCodeAnchors env m
     ) =>
-    env -> Anchors.CodeAnchors m ->
+    env ->
     OnceT (T m) (WorkArea EvalPrep InternalName (OnceT (T m)) (T m) (ConvertPayload m [EntityId]))
-loadWorkArea env cp =
+loadWorkArea env =
     do
-        repl <- convertRepl env cp
+        repl <- convertRepl env
         panes <-
             repl ^. replExpr . SugarLens.binderResultExpr . pInput . Input.entityId
-            & loadPanes env cp
+            & loadPanes env
         pure WorkArea
             { _waRepl = repl
             , _waPanes = panes
@@ -325,3 +332,5 @@ loadWorkArea env cp =
                 Anchors.globals cp & Property.getP & lift <&> (^.. Lens.folded)
                 >>= traverse (ConvertGetVar.globalNameRef cp)
             }
+    where
+        cp = env ^. Anchors.codeAnchors

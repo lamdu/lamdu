@@ -83,20 +83,21 @@ sugarWorkArea ::
     , Has Debug.Monitors env0
     , Has SugarConfig.Config env0
     , Has Cache.Functions env0
+    , Anchors.HasCodeAnchors env0 m
     , Has Annotations.Mode env1
     , Has (Texts.Name Text) env1
     , Has (Texts.Code Text) env1
     , Has (CurAndPrev EvalResults) env1
     , Monad m, Typeable m
     ) =>
-    env0 -> Anchors.CodeAnchors m ->
+    env0 ->
     OnceT (T m)
     ( (Tag -> (IsOperator, TextsInLang)) -> env1 ->
         OnceT (T m) (Sugar.WorkArea (Sugar.Annotation (Sugar.EvaluationScopes Name (OnceT (T m))) Name) Name (OnceT (T m)) (T m)
             (Sugar.Payload (Sugar.Annotation (Sugar.EvaluationScopes Name (OnceT (T m))) Name) (T m)))
     )
-sugarWorkArea env0 cp =
-    SugarConvert.loadWorkArea env0 cp
+sugarWorkArea env0 =
+    SugarConvert.loadWorkArea env0
     <&>
     \workArea getTagName env1 ->
     let strippedLams = workArea ^.. traverse . pLambdas . traverse
@@ -104,7 +105,7 @@ sugarWorkArea env0 cp =
     markAnnotations workArea
     <&> initAnnotationEvalPrep
     & SugarLens.annotations (makeAnnotation (env1 ^. has))
-    >>= lift . addEvaluationResults cp (env1 ^. has <&> redirectLams strippedLams)
+    >>= lift . addEvaluationResults (env0 ^. Anchors.codeAnchors) (env1 ^. has <&> redirectLams strippedLams)
     >>= report . AddNames.addToWorkArea env1 (fmap getTagName . lift . ExprIRef.readTagData)
     <&> AddParens.addToWorkArea
     <&> Lens.mapped %~
