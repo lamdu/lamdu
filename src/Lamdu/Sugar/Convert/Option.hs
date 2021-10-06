@@ -445,12 +445,12 @@ makeLocals f scope =
             ) ^?! Lens._Right . _1
             -- Avoid unit variables (like those hidden in pipe syntax)
             & filter (Lens.hasn't (_2 . _Pure . T._TRecord . _Pure . T._REmpty))
-            & traverse mkVar & transaction
+            & traverse mkVar
             <&> (<> fieldParams)
     where
         mkVar (var, typ) =
             Result mempty
-            <$> f typ (_Pure . V._BLeaf . V._LVar # var)
+            <$> transaction (f typ (_Pure . V._BLeaf . V._LVar # var))
             <*> localName typ var
         mkGetField ctx (tag, var) =
             Result mempty
@@ -463,12 +463,14 @@ makeLocals f scope =
                     ^?! Lens._Right . _1 . _Pure . T._TRecord . T.flatRow . freExtends . Lens.ix tag
 
  -- Duplicate name-gen behaviour for locals
-localName :: Monad m => Pure # T.Type -> V.Var -> T m (QueryLangInfo Text -> [Text])
+localName ::
+    MonadTransaction n m =>
+    Pure # T.Type -> V.Var -> m (QueryLangInfo Text -> [Text])
 localName typ var =
     do
-        tag <- Anchors.assocTag var & getP
+        tag <- Anchors.assocTag var & getP & transaction
         if tag == Anchors.anonTag
             then mkVarInfo typ <&> autoName
             else pure tag
-    >>= ExprIRef.readTagData
+    >>= transaction . ExprIRef.readTagData
     <&> tagTexts
