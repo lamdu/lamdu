@@ -6,6 +6,7 @@
 *.i_o
 *.dyn_hi
 *.dyn_o
+*.cabal
 .DS_Store
 /stack.yaml.lock
 /lamdu

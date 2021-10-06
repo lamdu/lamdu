@@ -1,0 +1,215 @@
+name: Lamdu
+version: 0.8
+synopsis: "A next generation IDE"
+description: "Lamdu functional programming editor"
+github: "lamdu/lamdu"
+license: GPL
+author: "Eyal Lotem, Yair Chuchem"
+homepage: http://www.lamdu.org
+maintainer:
+- eyal.lotem@gmail.com
+- yairchu@gmail.com
+
+flags:
+  ekg:
+    description: Enable ekg support in Lamdu
+    default: false
+    manual: true
+  dev:
+    description: Build a dev version (faster build, no version output support)
+    default: false
+    manual: true
+
+data-dir: data
+data-files:
+- "*"
+- "**/*"
+
+dependencies:
+- base >= 4.12
+
+default-extensions:
+- NoImplicitPrelude
+- OverloadedStrings
+- LambdaCase
+
+ghc-options:
+- -Wall
+- -Wno-partial-type-signatures
+- -Widentities
+- -Wimplicit-prelude
+- -Wmissing-home-modules
+- -Wincomplete-patterns
+- -Wnoncanonical-monad-instances
+- -Wsemigroup
+- -Wincomplete-record-updates
+- -Wredundant-constraints
+
+ghc-prof-options:
+- -fprof-auto
+- -fprof-cafs
+
+library:
+  source-dirs: src
+  default-extensions:
+  - PartialTypeSignatures
+  - DeriveTraversable
+  - DeriveGeneric
+  - DeriveAnyClass
+  - DerivingStrategies
+  - FlexibleContexts
+  - TypeOperators
+  ghc-options:
+  - -O2
+  - -Wall
+  dependencies:
+  - aeson >= 1.1
+  - aeson-diff
+  - aeson-pretty
+  - ansi-wl-pprint
+  - base-compat >= 0.8.2 && < 0.12
+  - base16-bytestring >=1
+  - binary >= 0.7
+  - bitmap
+  - bytestring
+  - containers >= 0.4
+  - constraints
+  - data-default >= 0.5
+  - deepseq
+  - directory >= 1.0.1.1
+  - ekg-core
+  - filepath >= 1.1
+  - edit-distance
+  - generic-data >= 0.7
+  - GLFW-b >= 3.3.0.0 && < 3.4
+  - graphics-drawingcombinators >= 1.7.1
+  - hashable
+  - lamdu-calculus >= 0.2
+  - language-ecmascript >= 0.18
+  - lattices
+  - lens >= 4.18
+  - lens-aeson
+  - leveldb-haskell >= 0.6
+  - List >= 0.5.1
+  - momentu
+  - mtl >= 2.2
+  - inline-js-core
+  - OpenGL
+  - optparse-applicative >= 0.12
+  - pretty >=1.1.2 && <1.2
+  - process
+  - random >= 1.0.0
+  - safe-exceptions >= 0.1.4
+  - split
+  - StateVar
+  - stb-image
+  - hypertypes
+  - template-haskell
+  - temporary
+  - text
+  - time >= 1.2
+  - timeit
+  - transformers >= 0.4.3
+  - unicode-properties
+  - unordered-containers
+  - uuid >= 1.3
+  - uuid-types >= 1.0
+  - vector
+  - zip-archive
+  - cryptohash-sha256
+  - executable-path
+  when:
+  - condition: os(darwin)
+    ld-options: -mmacosx-version-min=10.9
+  - condition: flag(ekg)
+    cpp-options: -DWITH_EKG
+    dependencies: ekg
+
+executables:
+  lamdu:
+    main: Lamdu/Main.hs
+    source-dirs: src/main
+    default-extensions:
+    - PartialTypeSignatures
+    - DeriveTraversable
+    - DeriveGeneric
+    - DeriveAnyClass
+    - DerivingStrategies
+    - FlexibleContexts
+    dependencies:
+    - Lamdu
+    - directory
+    - process
+    - template-haskell
+    - time
+    - base-compat
+    ghc-options:
+    - -rtsopts
+    - -with-rtsopts=-A128M
+    - -O2
+    - -threaded
+    ghc-prof-options:
+    - -rtsopts
+    when:
+    - condition: flag(ekg)
+      ghc-options: -with-rtsopts=-T
+    - condition: flag(dev)
+      cpp-options: -DDEV_BUILD
+  migrate:
+    main: tools/migrate.hs
+    dependencies:
+    - Lamdu
+    - aeson
+    - aeson-pretty
+    - bytestring
+    - directory
+    - filepath
+    - optparse-applicative >= 0.12
+
+tests:
+  Tests:
+    main: Tests.hs
+    source-dirs: test
+    default-extensions:
+    - PartialTypeSignatures
+    - DeriveTraversable
+    - DeriveGeneric
+    - DeriveAnyClass
+    - DerivingStrategies
+    - FlexibleContexts
+    - TypeOperators
+    ghc-options:
+    - -O0
+    - -threaded
+    ghc-prof-options:
+    - -rtsopts
+    dependencies:
+    - Lamdu
+    - aeson
+    - aeson-diff
+    - aeson-pretty
+    - bytestring
+    - Cabal
+    - containers
+    - deepseq
+    - directory
+    - filepath
+    - GLFW-b
+    - HUnit
+    - hypertypes
+    - inline-js-core
+    - lamdu-calculus
+    - lens
+    - lens-aeson
+    - List
+    - momentu
+    - mtl
+    - pretty
+    - process
+    - random
+    - split
+    - test-framework
+    - test-framework-hunit
+    - text
+    - uuid-types
+    - yaml

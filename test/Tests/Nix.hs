@@ -121,7 +121,7 @@ parseCabalDeps cabal =
         processLine (isDeps, _) line
             | buildDepsPrefix `isPrefixOf` line =
                 (True, parseDeps (drop (length buildDepsPrefix) line))
-            | ":" `isInfixOf` line = (False, mempty)
+            | ":" `isInfixOf` line || " if " `isInfixOf` line = (False, mempty)
             | isDeps = (True, parseDeps line)
             | otherwise = (False, mempty)
         parseDeps line =

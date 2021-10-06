@@ -1,5 +1,7 @@
 module Tests.Version (test) where
 
+import Data.List (isPrefixOf)
+
 import Test.Lamdu.Prelude
 
 test :: Test
@@ -9,7 +11,7 @@ test =
             readFile "src/main/Lamdu/Version.hs"
             <&> read . head . tail . dropWhile (/= "#else") . lines
         readFile "Lamdu.cabal"
-            <&> last . words . head . tail . lines
+            <&> last . words . head . filter ("version:" `isPrefixOf`) . lines
             >>= assertEqual "cabal version" ver
         readFile "tools/data/Info.plist"
             <&> head . tail . dropWhile (/= "  <key>CFBundleShortVersionString</key>") . lines
