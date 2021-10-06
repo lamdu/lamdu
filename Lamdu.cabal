@@ -117,6 +117,7 @@ Test-Suite Tests
                , Tests.Readme
                , Tests.Stdlib
                , Tests.Sugar
+               , Tests.Version
   build-depends:
       base, HUnit, aeson-diff, deepseq, lens-aeson, split, yaml
     , Lamdu, lamdu-calculus, momentu, hypertypes
