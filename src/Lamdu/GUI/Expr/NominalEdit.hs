@@ -59,10 +59,10 @@ makeToNom (Ann (Const pl) (Sugar.Nominal tid binder)) =
         myId = WidgetIds.fromExprPayload pl
         nameId = Widget.joinId myId ["name"]
 
-makeFromNom :: _ => Sugar.TId Name -> GuiM env i o (Responsive o)
+makeFromNom :: _ => Sugar.TId Name o -> GuiM env i o (Responsive o)
 makeFromNom nom = Styled.grammar (Label.make ".") M./|/ label nom <&> Responsive.fromTextView
 
-label :: _ => Sugar.TId Name -> GuiM env i o (M.WithTextPos M.View)
+label :: _ => Sugar.TId Name o -> GuiM env i o (M.WithTextPos M.View)
 label tid =
     do
         nomColor <- Lens.view (has . Theme.textColors . TextColors.nomColor)

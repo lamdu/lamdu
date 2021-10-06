@@ -134,4 +134,5 @@ makeInstances [''NFData]
     , ''ShowAnnotation, ''LangId, ''EntityId
     , ''Name, ''Name.Collision, ''Name.TagName, ''Name.TagText
     , ''Tag.TextsInLang, ''Def.FFIName, ''Tag.DirOp, ''Tag.Symbol, ''Tag.Tag, ''CurAndPrev
+    , ''Unit
     ]

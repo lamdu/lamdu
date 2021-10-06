@@ -288,7 +288,7 @@ instance Recursive GetParam where
 instance GetParam (Const (BinderVarRef InternalName o))
 instance GetParam (Const (TagChoice InternalName i o EntityId))
 instance GetParam (Const (TagRef InternalName i o))
-instance GetParam (Const (TId name))
+instance GetParam (Const (TId name o))
 instance GetParam (Else v InternalName i o)
 instance GetParam (Function v InternalName i o)
 instance GetParam (PostfixFunc v InternalName i o)

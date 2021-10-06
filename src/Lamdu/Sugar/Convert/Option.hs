@@ -464,7 +464,7 @@ makeLocals f scope =
 
  -- Duplicate name-gen behaviour for locals
 localName ::
-    MonadTransaction n m =>
+    (MonadTransaction n m, MonadReader env m, Anchors.HasCodeAnchors env n) =>
     Pure # T.Type -> V.Var -> m (QueryLangInfo Text -> [Text])
 localName typ var =
     do

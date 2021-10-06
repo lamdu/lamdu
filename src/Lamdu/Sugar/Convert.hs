@@ -5,6 +5,7 @@ module Lamdu.Sugar.Convert
 import           Control.Applicative ((<|>))
 import qualified Control.Lens as Lens
 import           Control.Monad.Once (OnceT, Typeable)
+import           Control.Monad.Reader (ReaderT(..))
 import           Control.Monad.Transaction (MonadTransaction)
 import           Data.CurAndPrev (CurAndPrev(..))
 import           Data.List.Extended (insertAt, removeAt)
@@ -49,7 +50,7 @@ import           Lamdu.Prelude
 type T = Transaction
 
 convertDefIBuiltin ::
-    (MonadTransaction n m, Monad f) =>
+    (MonadTransaction n m, Monad f, MonadReader env m, Anchors.HasCodeAnchors env n) =>
     Pure # T.Scheme -> Definition.FFIName -> DefI f ->
     m (DefinitionBody v InternalName i (T f) a)
 convertDefIBuiltin scheme name defI =
@@ -98,6 +99,7 @@ convertInferDefExpr env defType defExpr defI =
     do
         outdatedDefinitions <-
             OutdatedDefs.scan entityId defExpr setDefExpr postProcess
+            & (`runReaderT` env)
             & lift
             <&> Lens.mapped . defTypeUseCurrent %~ (<* postProcess)
         let context =
@@ -152,7 +154,10 @@ convertDefBody ::
     (DefinitionBody EvalPrep InternalName (OnceT (T m)) (T m) (ConvertPayload m [EntityId]))
 convertDefBody env (Definition.Definition bod defType defI) =
     case bod of
-    Definition.BodyBuiltin builtin -> convertDefIBuiltin defType builtin defI & lift
+    Definition.BodyBuiltin builtin ->
+        convertDefIBuiltin defType builtin defI
+        & (`runReaderT` env)
+        & lift
     Definition.BodyExpr defExpr ->
         convertInferDefExpr env defType defExpr defI
 
@@ -173,7 +178,9 @@ convertRepl env =
                 Load.inferDefExpr cachedInfer (env ^. has) defExpr
                 & assertInferSuccess
         outdatedDefinitions <-
-            OutdatedDefs.scan entityId defExpr (Property.setP prop) postProcess & lift
+            OutdatedDefs.scan entityId defExpr (Property.setP prop) postProcess
+            & (`runReaderT` env)
+            & lift
         let context =
                 Context
                 { _scInferContext = newInferContext
@@ -194,7 +201,7 @@ convertRepl env =
             convertBinder valInferred
             & ConvertM.run context
             >>= OrderTags.orderNode
-        vinfo <- mkVarInfo typ
+        vinfo <- runReaderT (mkVarInfo typ) env
         pure Repl
             { _replExpr = expr
             , _replVarInfo = vinfo
@@ -251,9 +258,11 @@ convertPaneBody env (Anchors.PaneDefinition defI) =
             } <&> PaneDefinition
     where
         defVar = ExprIRef.globalId defI
+convertPaneBody _ Anchors.PaneNominal{} = undefined
 
 paneEntityId :: Anchors.Pane dummy -> EntityId
 paneEntityId (Anchors.PaneDefinition defI) = EntityId.ofIRef defI
+paneEntityId (Anchors.PaneNominal tid) = EntityId.ofNominalPane tid
 paneEntityId (Anchors.PaneTag tag) = EntityId.ofTagPane tag
 
 convertPane ::

@@ -20,9 +20,9 @@ import           Test.Lamdu.Prelude
 
 infixr 1 ~>
 (~>) ::
-    Annotated Sugar.EntityId # Sugar.Type name ->
-    Annotated Sugar.EntityId # Sugar.Type name ->
-    Annotated Sugar.EntityId # Sugar.Type name
+    Annotated Sugar.EntityId # Sugar.Type name o ->
+    Annotated Sugar.EntityId # Sugar.Type name o ->
+    Annotated Sugar.EntityId # Sugar.Type name o
 param ~> res = FuncType param res & Sugar.TFun & Ann (Const "dummy")
 
 nameRef :: name -> Sugar.NameRef name Unit
@@ -126,7 +126,7 @@ mkTag var tag =
     }
 
 def ::
-    Annotated Sugar.EntityId # Sugar.Type InternalName ->
+    Annotated Sugar.EntityId # Sugar.Type InternalName Unit ->
     UUID -> T.Tag ->
     Annotated expr # Sugar.Assignment v InternalName Identity Unit ->
     Sugar.Definition v InternalName Identity Unit expr
@@ -202,9 +202,9 @@ expr ::
     Sugar.Expr Sugar.Term (Sugar.Annotation v InternalName) InternalName Identity Unit
 expr = node
 
-numType :: Annotated Sugar.EntityId # Sugar.Type InternalName
+numType :: Annotated Sugar.EntityId # Sugar.Type InternalName Unit
 numType =
-    Sugar.TInst (Sugar.TId (taggedEntityName "numTid" "num") "num") mempty
+    Sugar.TInst (Sugar.TId (taggedEntityName "numTid" "num") "num" Unit) mempty
     & Ann (Const "dummy")
 
 payload :: (Sugar.Payload (Sugar.Annotation v InternalName) Unit)

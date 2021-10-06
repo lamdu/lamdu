@@ -7,6 +7,7 @@ module Lamdu.Sugar
 
 import qualified Control.Lens as Lens
 import           Control.Monad.Once (OnceT, Typeable)
+import           Control.Monad.Reader (ReaderT(..))
 import           Control.Monad.Transaction (MonadTransaction)
 import           Data.CurAndPrev (CurAndPrev(..))
 import qualified Data.Map as Map
@@ -49,12 +50,14 @@ markAnnotations workArea =
     , Sugar._waRepl = workArea ^. Sugar.waRepl & Sugar.replExpr %~ markNodeAnnotations
     }
 
-typeAnnotationFromEvalRes :: MonadTransaction n f => EvalPrep -> f (Sugar.Annotation v AddNames.InternalName)
+typeAnnotationFromEvalRes ::
+    (MonadTransaction n f, MonadReader env f, Anchors.HasCodeAnchors env n) =>
+    EvalPrep -> f (Sugar.Annotation v AddNames.InternalName)
 typeAnnotationFromEvalRes x =
     makeTypeAnnotation (x ^. eEvalId) (x ^. eType) <&> Sugar.AnnotationType
 
 makeAnnotation ::
-    MonadTransaction n m =>
+    (MonadTransaction n m, MonadReader env m, Anchors.HasCodeAnchors env n) =>
     Annotations.Mode ->
     (ShowAnnotation, EvalPrep) ->
     m (Sugar.Annotation EvalPrep AddNames.InternalName)
@@ -105,6 +108,7 @@ sugarWorkArea env0 =
     markAnnotations workArea
     <&> initAnnotationEvalPrep
     & SugarLens.annotations (makeAnnotation (env1 ^. has))
+    & (`runReaderT` env0)
     >>= lift . addEvaluationResults (env0 ^. Anchors.codeAnchors) (env1 ^. has <&> redirectLams strippedLams)
     >>= report . AddNames.addToWorkArea env1 (fmap getTagName . lift . ExprIRef.readTagData)
     <&> AddParens.addToWorkArea

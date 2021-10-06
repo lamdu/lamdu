@@ -268,7 +268,7 @@ panesEventMap theExportActions cp gp replVarInfo =
               & E.keysEventMap (exportConfig ^. Config.importKeys)
                 (collaborationDoc [Texts.collaboration, Texts.importReplFromJSON])
             , case replVarInfo of
-                Sugar.VarNominal (Sugar.TId _ tid) | tid == Builtins.mutTid ->
+                Sugar.VarNominal (Sugar.TId _ tid _) | tid == Builtins.mutTid ->
                     E.keysEventMap (exportConfig ^. Config.executeKeys)
                     (E.toDoc (env ^. has) [Texts.execRepl])
                     (IOTrans.liftIO executeRepl)

@@ -1,5 +1,5 @@
 {-# LANGUAGE Rank2Types, TemplateHaskell, GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE MultiParamTypeClasses, FlexibleInstances #-}
 module Lamdu.Data.Anchors
     ( Gui(..), onGui
     , Code(..), onCode
@@ -40,6 +40,7 @@ type T = Transaction
 
 data Pane m
     = PaneDefinition (DefI m)
+    | PaneNominal T.NominalId
     | PaneTag T.Tag
     deriving (Eq, Show, Generic)
     deriving anyclass Binary
@@ -84,6 +85,8 @@ type RevisionProps m = Revision (MkProperty' (T m)) m
 
 class HasCodeAnchors env m where
     codeAnchors :: Lens' env (CodeAnchors m)
+
+instance HasCodeAnchors (Code (MkProperty (T m) (T m)) m) m where codeAnchors = id
 
 assocBranchNameRef :: Monad m => Branch m -> MkProperty' (T m) Text
 assocBranchNameRef = Transaction.assocDataRefDef "" "Name" . UniqueId.toUUID

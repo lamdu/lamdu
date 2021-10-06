@@ -44,19 +44,19 @@ orderByTag toTag =
 
 orderComposite ::
     MonadTransaction m i =>
-    OrderT i (Sugar.CompositeFields name (Ann a # Sugar.Type name))
+    OrderT i (Sugar.CompositeFields name (Ann a # Sugar.Type name o))
 orderComposite = Sugar.compositeFields (orderByTag fst >=> (traverse . _2) orderType)
 
 orderTBody ::
     MonadTransaction m i =>
-    OrderT i (Sugar.Type name # Ann a)
+    OrderT i (Sugar.Type name o # Ann a)
 orderTBody t =
     t
     & Sugar._TRecord %%~ orderComposite
     >>= Sugar._TVariant %%~ orderComposite
     >>= htraverse1 orderType
 
-orderType :: MonadTransaction m i => OrderT i (Ann a # Sugar.Type name)
+orderType :: MonadTransaction m i => OrderT i (Ann a # Sugar.Type name o)
 orderType = hVal orderTBody
 
 instance (MonadTransaction m o, MonadTransaction m i) => Order i (Sugar.Composite v name i o) where

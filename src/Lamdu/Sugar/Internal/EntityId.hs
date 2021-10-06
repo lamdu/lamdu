@@ -2,7 +2,7 @@
 module Lamdu.Sugar.Internal.EntityId
     ( EntityId(..)
     , bs
-    , ofValI, ofIRef
+    , ofValI, ofIRef, ofNominalPane
     , ofBinder
     , ofTag, ofTagPane
     , ofTaggedEntity
@@ -52,6 +52,9 @@ ofBinder = fromUniqueId
 ofTaggedEntity :: UniqueId.ToUUID a => a -> T.Tag -> EntityId
 ofTaggedEntity v p =
     EntityId $ UUIDUtils.combine (UniqueId.toUUID v) (UniqueId.toUUID p)
+
+ofNominalPane :: T.NominalId -> EntityId
+ofNominalPane = fromUniqueId
 
 ofTagPane :: T.Tag -> EntityId
 ofTagPane = fromUniqueId

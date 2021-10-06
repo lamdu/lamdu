@@ -6,13 +6,14 @@ module Lamdu.Sugar.Convert.Type
     ) where
 
 import qualified Control.Lens as Lens
+import           Control.Monad.Unit (Unit(..))
 import           Control.Monad.Transaction (MonadTransaction)
 import           Hyper.Syntax (FuncType(..))
 import           Hyper.Syntax.Nominal (NominalInst(..))
 import           Hyper.Syntax.Row (RowExtend(..))
 import qualified Hyper.Syntax.Scheme as S
 import qualified Lamdu.Calc.Type as T
-import           Lamdu.Data.Anchors (anonTag)
+import           Lamdu.Data.Anchors (HasCodeAnchors, anonTag)
 import qualified Lamdu.Sugar.Convert.TId as ConvertTId
 import qualified Lamdu.Sugar.Convert.Tag as ConvertTag
 import           Lamdu.Sugar.Internal
@@ -23,9 +24,9 @@ import           Lamdu.Sugar.Types
 import           Lamdu.Prelude
 
 convertComposite ::
-    MonadTransaction n m =>
+    (MonadTransaction n m, MonadReader env m, HasCodeAnchors env n) =>
     EntityId -> Pure # T.Row ->
-    m (CompositeFields InternalName (Annotated EntityId # Type InternalName))
+    m (CompositeFields InternalName (Annotated EntityId # Type InternalName Unit))
 convertComposite entityId (Pure (T.RExtend (RowExtend tag typ rest))) =
     do
         typS <- convertType (EntityId.ofTypeOf entityId) typ
@@ -39,8 +40,8 @@ convertComposite _ (Pure (T.RVar v)) =
 convertComposite _ (Pure T.REmpty) = CompositeFields mempty Nothing & pure
 
 convertType ::
-    MonadTransaction n m =>
-    EntityId -> Pure # T.Type -> m (Annotated EntityId # Type InternalName)
+    (MonadTransaction n m, MonadReader env m, HasCodeAnchors env n) =>
+    EntityId -> Pure # T.Type -> m (Annotated EntityId # Type InternalName Unit)
 convertType entityId typ =
     case typ ^. _Pure of
     T.TVar tv -> nameWithContext Nothing tv anonTag & TVar & pure
@@ -53,7 +54,7 @@ convertType entityId typ =
         | Lens.has traverse rParams -> error "Currently row-params are unsupported"
         | otherwise ->
             TInst
-            <$> ConvertTId.convert tid
+            <$> (ConvertTId.convert tid <&> tidGotoDefinition .~ Unit)
             <*> traverse convertTypeParam (tParams ^@.. Lens.itraversed)
         where
             T.Types (S.QVarInstances tParams) (S.QVarInstances rParams) = args
@@ -65,6 +66,8 @@ convertType entityId typ =
     T.TVariant composite -> TVariant <$> convertComposite entityId composite
     <&> Ann (Const entityId)
 
-convertScheme :: MonadTransaction n m => EntityId -> Pure # T.Scheme -> m (Scheme InternalName)
+convertScheme ::
+    (MonadTransaction n m, MonadReader env m, HasCodeAnchors env n) =>
+    EntityId -> Pure # T.Scheme -> m (Scheme InternalName Unit)
 convertScheme entityId (Pure (S.Scheme tvs typ)) =
     Scheme tvs <$> convertType entityId typ

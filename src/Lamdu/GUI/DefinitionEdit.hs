@@ -3,6 +3,7 @@ module Lamdu.GUI.DefinitionEdit
     ) where
 
 import qualified Control.Lens as Lens
+import           Control.Monad.Unit (Unit)
 import qualified Data.Property as Property
 import qualified GUI.Momentu as M
 import qualified GUI.Momentu.Element as Element
@@ -114,7 +115,7 @@ make defEventMap def =
         defStateProp = def ^. Sugar.drDefinitionState
         myId = def ^. Sugar.drEntityId & WidgetIds.fromEntityId
 
-topLevelSchemeTypeView :: _ => Sugar.Scheme Name -> GuiM env i o (M.WithTextPos M.View)
+topLevelSchemeTypeView :: _ => Sugar.Scheme Name Unit -> GuiM env i o (M.WithTextPos M.View)
 topLevelSchemeTypeView scheme =
     -- At the definition-level, Schemes can be shown as ordinary
     -- types to avoid confusing forall's:

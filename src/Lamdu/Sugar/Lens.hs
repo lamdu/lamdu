@@ -16,6 +16,7 @@ module Lamdu.Sugar.Lens
 
 import           Control.Lens (Traversal)
 import qualified Control.Lens as Lens
+import           Control.Monad.Unit (Unit)
 import           Hyper
 import           Hyper.Class.Morph
 import           Hyper.Recurse (Recursive(..), proxyArgument)
@@ -57,7 +58,7 @@ instance Recursive SugarExpr where
     recurse = sugarExprRecursive . proxyArgument
 
 instance SugarExpr (Const (GetVar name o))
-instance SugarExpr (Const (TId name))
+instance SugarExpr (Const (TId name o))
 instance SugarExpr (Const (TagChoice name i o EntityId))
 instance SugarExpr (Const (TagRef name i o))
 instance SugarExpr (PostfixFunc v name i o)
@@ -102,7 +103,7 @@ bodyUnfinished =
     & Lens.failing (_BodyLeaf . _LeafGetVar . _GetBinder . binderVarRefUnfinished)
     & Lens.failing (_BodyLabeledApply . aFunc . hVal . Lens._Wrapped . binderVarRefUnfinished)
 
-defBodySchemes :: Lens.Traversal' (DefinitionBody v name i o expr) (Scheme name)
+defBodySchemes :: Lens.Traversal' (DefinitionBody v name i o expr) (Scheme name Unit)
 defBodySchemes f (DefinitionBodyBuiltin b) =
     b & biType %%~ f
     <&> DefinitionBodyBuiltin
@@ -110,7 +111,7 @@ defBodySchemes f (DefinitionBodyExpression de) =
     de & deType %%~ f
     <&> DefinitionBodyExpression
 
-defSchemes :: Lens.Traversal' (Definition v name i o expr) (Scheme name)
+defSchemes :: Lens.Traversal' (Definition v name i o expr) (Scheme name Unit)
 defSchemes = drBody . defBodySchemes
 
 binderFuncParamActions ::

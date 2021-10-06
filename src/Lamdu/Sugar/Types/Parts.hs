@@ -32,6 +32,7 @@ module Lamdu.Sugar.Types.Parts
     ) where
 
 import qualified Control.Lens as Lens
+import           Control.Monad.Unit (Unit)
 import           Hyper (makeHTraversableAndBases, makeHMorph)
 import qualified Lamdu.Calc.Type as T
 import           Lamdu.Sugar.Internal.EntityId (EntityId)
@@ -47,7 +48,7 @@ data FuncApplyLimit = UnlimitedFuncApply | AtMostOneFuncApply
     deriving (Eq, Ord, Generic)
 
 data Annotation v name
-    = AnnotationType (Annotated EntityId # Type name)
+    = AnnotationType (Annotated EntityId # Type name Unit)
     | AnnotationVal v
     | AnnotationNone
     deriving Generic
@@ -130,7 +131,7 @@ data BinderParams v name i o
 -- * Differentiating Mut actions so UI can suggest executing them
 -- * Name pass giving parameters names according to types
 data VarInfo
-    = VarNominal (TId T.Tag)
+    = VarNominal (TId T.Tag Unit)
     | VarGeneric | VarFunction | VarRecord | VarUnit | VarVariant | VarVoid
     deriving (Generic, Eq)
 

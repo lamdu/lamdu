@@ -8,6 +8,7 @@ module Lamdu.Sugar.Convert.Expression.Actions
 import           Control.Applicative ((<|>))
 import qualified Control.Lens.Extended as Lens
 import           Control.Monad.Once (OnceT)
+import           Control.Monad.Unit (Unit)
 import           Control.Monad.Trans.Maybe (MaybeT(..))
 import           Control.Monad.Transaction (MonadTransaction)
 import qualified Data.Map as Map
@@ -320,8 +321,8 @@ addActions subexprs exprPl bodyS =
     exprPl bodyS
 
 makeTypeAnnotation ::
-    MonadTransaction n m =>
-    EntityId -> Pure # T.Type -> m (Annotated EntityId # Type InternalName)
+    (MonadTransaction n m, MonadReader env m, Anchors.HasCodeAnchors env n) =>
+    EntityId -> Pure # T.Type -> m (Annotated EntityId # Type InternalName Unit)
 makeTypeAnnotation = convertType . EntityId.ofTypeOf
 
 mkEvalPrep :: ConvertPayload m a -> EvalPrep

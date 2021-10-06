@@ -15,6 +15,7 @@ module Lamdu.GUI.Annotation
     ) where
 
 import qualified Control.Lens as Lens
+import           Control.Monad.Unit (Unit)
 import           Data.CurAndPrev (CurAndPrev(..), CurPrevTag(..), curPrevTag, fallbackToPrev)
 import qualified GUI.Momentu as M
 import qualified GUI.Momentu.Align as Align
@@ -196,7 +197,7 @@ addAnnotationH f postProcess =
 
 addInferredType ::
     _ =>
-    Annotated Sugar.EntityId # Sugar.Type Name -> PostProcessAnnotation m ->
+    Annotated Sugar.EntityId # Sugar.Type Name Unit -> PostProcessAnnotation m ->
     m (M.Widget f -> M.Widget f)
 addInferredType typ postProcess =
     addAnnotationH (TypeView.make typ) (postProcess TypeAnnotation)

@@ -1,5 +1,6 @@
 module Tests.AnimIdClash (test) where
 
+import           Control.Monad.Unit (Unit(..))
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.View as View
 import           Hyper
@@ -35,8 +36,8 @@ testTypeView =
         nullType entityId = recType entityId []
         recType ::
             Sugar.EntityId ->
-            [(Sugar.Tag Name.Name, Annotated Sugar.EntityId # Sugar.Type Name.Name)] ->
-            Annotated Sugar.EntityId # Sugar.Type Name.Name
+            [(Sugar.Tag Name.Name, Annotated Sugar.EntityId # Sugar.Type Name.Name Unit)] ->
+            Annotated Sugar.EntityId # Sugar.Type Name.Name Unit
         recType entityId fields =
             Sugar.CompositeFields
             { Sugar._compositeFields = fields

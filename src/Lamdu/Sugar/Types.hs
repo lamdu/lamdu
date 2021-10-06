@@ -16,6 +16,7 @@ module Lamdu.Sugar.Types
     ) where
 
 import qualified Control.Lens as Lens
+import           Control.Monad.Unit (Unit)
 import           Data.Property (Property)
 import           Hyper
 import qualified Lamdu.Calc.Term as V
@@ -34,7 +35,7 @@ import           Lamdu.Sugar.Types.Type as Exported
 import           Lamdu.Prelude
 
 data DefinitionExpression v name i o a = DefinitionExpression
-    { _deType :: Scheme name
+    { _deType :: Scheme name Unit
     , _dePresentationMode :: Maybe (i (Property o Meta.PresentationMode))
     , _deContent :: Annotated a # Assignment v name i o
     } deriving Generic
@@ -53,7 +54,7 @@ instance Traversable (DefinitionExpression v name i o) where
 data DefinitionBuiltin name o = DefinitionBuiltin
     { _biName :: Definition.FFIName
     , _biSetName :: Definition.FFIName -> o ()
-    , _biType :: Scheme name
+    , _biType :: Scheme name Unit
     } deriving Generic
 
 data DefinitionBody v name i o a
