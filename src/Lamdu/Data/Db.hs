@@ -5,7 +5,6 @@ module Lamdu.Data.Db
 import           Control.Exception (onException)
 import qualified Lamdu.Data.Db.Init as DbInit
 import           Lamdu.Data.Db.Layout (DbM(..), ViewM, curDbSchemaVersion)
-import           Lamdu.Data.Db.Migration (migration)
 import           Lamdu.Data.Export.JSON (fileImportAll)
 import qualified Lamdu.Paths as Paths
 import qualified Revision.Deltum.Db as Db
@@ -41,11 +40,9 @@ withDB lamduDir implicitFreshDb body =
             \ioDb ->
             do
                 let db = Transaction.onStoreM DbM ioDb
-                if alreadyExist
-                    then migration db
-                    else
-                    (importFreshDb implicitFreshDb >>= DbInit.initDb db)
-                    `onException` Directory.removeDirectoryRecursive dbPath
+                let dbInit = importFreshDb implicitFreshDb >>= DbInit.initDb db
+                dbInit `onException` Directory.removeDirectoryRecursive dbPath
+                    & when (not alreadyExist)
                 body db
     where
         dbPath = lamduDir </> "schema-" <> show curDbSchemaVersion <> ".db"
