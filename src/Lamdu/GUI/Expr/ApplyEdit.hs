@@ -151,9 +151,11 @@ makePostfixFunc (Ann (Const pl) b) =
     (ResponsiveExpr.boxSpacedMDisamb ?? ExprGui.mParensId pl) <*>
     ( case b of
         Sugar.PfCase x -> CaseEdit.make (Ann (Const pl) x)
-        Sugar.PfFromNom x -> NominalEdit.makeFromNom x & stdWrapParentExpr pl
+        Sugar.PfFromNom x -> NominalEdit.makeFromNom myId x & stdWrapParentExpr pl
         Sugar.PfGetField x -> GetFieldEdit.make x & stdWrapParentExpr pl
         <&> (:[]))
     -- Without adjusting anim-ids there is clash in fragment results such as
     -- ".Maybe .case"
     & local (M.animIdPrefix .~ Widget.toAnimId (WidgetIds.fromExprPayload pl))
+    where
+        myId = WidgetIds.fromExprPayload pl

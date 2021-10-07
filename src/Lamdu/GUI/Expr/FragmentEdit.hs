@@ -139,7 +139,7 @@ makeFragOpt (Ann (Const a) b) =
     Sugar.FragInject x -> InjectEdit.make (Ann (Const a) (Const x))
     Sugar.FragGetVar x -> GetVarEdit.make (Ann (Const a) (Const x))
     Sugar.FragOp x -> makeFragOperator x
-    Sugar.FragToNom x -> NominalEdit.label x & fromView
+    Sugar.FragToNom x -> NominalEdit.makeTIdView x & fromView
     Sugar.FragIf t ->
         (grammar (label Texts.if_) M./|/ grammar (Label.make ":")) M./|/
         Spacer.stdHSpace M./|/ GuiM.makeSubexpression t
