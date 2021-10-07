@@ -4,7 +4,7 @@ module Lamdu.Data.Db
 
 import           Control.Exception (onException)
 import qualified Lamdu.Data.Db.Init as DbInit
-import           Lamdu.Data.Db.Layout (DbM(..), ViewM)
+import           Lamdu.Data.Db.Layout (DbM(..), ViewM, curDbSchemaVersion)
 import           Lamdu.Data.Db.Migration (migration)
 import           Lamdu.Data.Export.JSON (fileImportAll)
 import qualified Lamdu.Paths as Paths
@@ -48,4 +48,4 @@ withDB lamduDir implicitFreshDb body =
                     `onException` Directory.removeDirectoryRecursive dbPath
                 body db
     where
-        dbPath = lamduDir </> "codeedit.db"
+        dbPath = lamduDir </> "schema-" <> show curDbSchemaVersion <> ".db"
