@@ -8,6 +8,9 @@ module Lamdu.Sugar.Types
     , Repl(..), replExpr, replVarInfo, replResult
     , WorkArea(..), waPanes, waRepl, waGlobals
     , Globals(..), allGlobals, globalDefs, globalNominals, globalTags
+    , NominalTypeBody(..), nominalType, nominalParams
+    , NominalPaneBody(..), _NominalPaneOpaque, _NominalPaneType
+    , NominalPane(..), npName, npNominalId, npEntityId, npBody
     , Definition(..), drName, drBody, drDefI
     , DefinitionBody(..), _DefinitionBodyExpression, _DefinitionBodyBuiltin
     , DefinitionExpression(..), deContent, dePresentationMode, deType
@@ -79,9 +82,27 @@ data TagPane o = TagPane
     , _tpSetOrder :: Int -> o ()
     } deriving Generic
 
+data NominalTypeBody name o = NominalTypeBody
+    { _nominalType :: Scheme name o
+    , _nominalParams :: () -- TODO: (what is sugared 'NomVarTypes typ # QVars')?
+    } deriving Generic
+
+data NominalPaneBody name o
+    = NominalPaneOpaque
+    | NominalPaneType (NominalTypeBody name o)
+    deriving Generic
+
+data NominalPane name i o = NominalPane
+    { _npName :: TagRef name i o
+    , _npNominalId :: T.NominalId
+    , _npEntityId :: EntityId
+    , _npBody :: NominalPaneBody name o
+    } deriving Generic
+
 data PaneBody v name i o a
     = PaneDefinition (Definition v name i o a)
     | PaneTag (TagPane o)
+    | PaneNominal (NominalPane name i o)
     deriving (Functor, Foldable, Traversable, Generic)
 
 data Pane v name i o a = Pane
@@ -128,7 +149,7 @@ data WorkArea v name i o a = WorkArea
     } deriving (Functor, Foldable, Traversable, Generic)
 
 traverse Lens.makeLenses
-    [''Definition, ''DefinitionBuiltin, ''Pane, ''TagPane, ''Globals, ''WorkArea]
+    [''Definition, ''DefinitionBuiltin, ''Pane, ''TagPane, ''Globals, ''WorkArea
+    , ''NominalPane, ''NominalTypeBody]
     <&> concat
-Lens.makePrisms ''DefinitionBody
-Lens.makePrisms ''PaneBody
+traverse Lens.makePrisms [''NominalPaneBody, ''DefinitionBody, ''PaneBody] <&> concat

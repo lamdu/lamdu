@@ -2,7 +2,9 @@
 
 module Lamdu.Sugar.Convert.Type
     ( convertType
+    , convertTypeWith -- ^ a type with goto Nom
     , convertScheme
+    , convertSchemeWith -- ^ a type with goto Nom action
     ) where
 
 import qualified Control.Lens as Lens
@@ -23,51 +25,61 @@ import           Lamdu.Sugar.Types
 
 import           Lamdu.Prelude
 
-convertComposite ::
+convertCompositeWith ::
     (MonadTransaction n m, MonadReader env m, HasCodeAnchors env n) =>
-    EntityId -> Pure # T.Row ->
-    m (CompositeFields InternalName (Annotated EntityId # Type InternalName Unit))
-convertComposite entityId (Pure (T.RExtend (RowExtend tag typ rest))) =
+    _ -> EntityId -> Pure # T.Row ->
+    m (CompositeFields InternalName (Annotated EntityId # Type InternalName o))
+convertCompositeWith gotoNom entityId (Pure (T.RExtend (RowExtend tag typ rest))) =
     do
-        typS <- convertType (EntityId.ofTypeOf entityId) typ
-        convertComposite (EntityId.ofRestOfComposite entityId) rest
+        typS <- convertTypeWith gotoNom (EntityId.ofTypeOf entityId) typ
+        convertCompositeWith gotoNom (EntityId.ofRestOfComposite entityId) rest
             <&> compositeFields %~ ((tagS, typS): )
     where
         tagS = ConvertTag.withoutContext entityId tag
 
-convertComposite _ (Pure (T.RVar v)) =
+convertCompositeWith _ _ (Pure (T.RVar v)) =
     CompositeFields mempty (Just (nameWithContext Nothing v anonTag)) & pure
-convertComposite _ (Pure T.REmpty) = CompositeFields mempty Nothing & pure
+convertCompositeWith _ _ (Pure T.REmpty) = CompositeFields mempty Nothing & pure
 
 convertType ::
     (MonadTransaction n m, MonadReader env m, HasCodeAnchors env n) =>
     EntityId -> Pure # T.Type -> m (Annotated EntityId # Type InternalName Unit)
-convertType entityId typ =
+convertType = convertTypeWith (const Unit)
+
+convertTypeWith ::
+    (MonadTransaction n m, MonadReader env m, HasCodeAnchors env n) =>
+    _ -> EntityId -> Pure # T.Type -> m (Annotated EntityId # Type InternalName o)
+convertTypeWith gotoNom entityId typ =
     case typ ^. _Pure of
     T.TVar tv -> nameWithContext Nothing tv anonTag & TVar & pure
     T.TFun (FuncType param res) ->
         FuncType
-        <$> convertType (ofFunParam entityId) param
-        <*> convertType (ofFunResult entityId) res
+        <$> convertTypeWith gotoNom (ofFunParam entityId) param
+        <*> convertTypeWith gotoNom (ofFunResult entityId) res
         <&> TFun
     T.TInst (NominalInst tid args)
         | Lens.has traverse rParams -> error "Currently row-params are unsupported"
         | otherwise ->
             TInst
-            <$> (ConvertTId.convert tid <&> tidGotoDefinition .~ Unit)
+            <$> (ConvertTId.convert tid <&> tidGotoDefinition .~ gotoNom tid)
             <*> traverse convertTypeParam (tParams ^@.. Lens.itraversed)
         where
             T.Types (S.QVarInstances tParams) (S.QVarInstances rParams) = args
             convertTypeParam (tv, val) =
                 (,)
                 <$> taggedName Nothing tv
-                <*> convertType (EntityId.ofTInstParam tv entityId) val
-    T.TRecord composite -> TRecord <$> convertComposite entityId composite
-    T.TVariant composite -> TVariant <$> convertComposite entityId composite
+                <*> convertTypeWith gotoNom (EntityId.ofTInstParam tv entityId) val
+    T.TRecord composite -> TRecord <$> convertCompositeWith gotoNom entityId composite
+    T.TVariant composite -> TVariant <$> convertCompositeWith gotoNom entityId composite
     <&> Ann (Const entityId)
 
 convertScheme ::
     (MonadTransaction n m, MonadReader env m, HasCodeAnchors env n) =>
     EntityId -> Pure # T.Scheme -> m (Scheme InternalName Unit)
-convertScheme entityId (Pure (S.Scheme tvs typ)) =
-    Scheme tvs <$> convertType entityId typ
+convertScheme = convertSchemeWith (const Unit)
+
+convertSchemeWith ::
+    (MonadTransaction n m, MonadReader env m, HasCodeAnchors env n) =>
+    _ -> EntityId -> Pure # T.Scheme -> m (Scheme InternalName o)
+convertSchemeWith gotoNom entityId (Pure (S.Scheme tvs typ)) =
+    Scheme tvs <$> convertTypeWith gotoNom entityId typ

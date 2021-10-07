@@ -18,7 +18,7 @@ module Lamdu.Data.Anchors
 import qualified Control.Lens as Lens
 import           Data.ByteString.Char8 ()
 import           Data.Property (MkProperty, MkProperty')
-import           Data.UUID.Types (UUID, nil)
+import           Data.UUID.Types (nil)
 import           GUI.Momentu.State (GUIState)
 import qualified GUI.Momentu.Widget.Id as WidgetId
 import qualified Lamdu.Calc.Term as V
@@ -104,9 +104,9 @@ assocPresentationMode :: Monad m => V.Var -> MkProperty' (T m) PresentationMode
 assocPresentationMode =
     Transaction.assocDataRefDef Verbose "PresentationMode" . UniqueId.toUUID
 
-assocDefinitionState :: Monad m => UUID -> MkProperty' (T m) DefinitionState
+assocDefinitionState :: (Monad m, UniqueId.ToUUID a) => a -> MkProperty' (T m) DefinitionState
 assocDefinitionState =
-    Transaction.assocDataRefDef LiveDefinition "DefinitionState"
+    Transaction.assocDataRefDef LiveDefinition "DefinitionState" . UniqueId.toUUID
 
 Lens.makeLenses ''BinderParamScopeId
 Lens.makePrisms ''Pane

@@ -1,10 +1,9 @@
 {-# LANGUAGE TemplateHaskell, TupleSections #-}
 module Lamdu.GUI.TypeView
-    ( make, makeScheme
+    ( make, makeScheme, addTypeBG
     ) where
 
 import qualified Control.Lens as Lens
-import           Control.Monad.Unit (Unit)
 import qualified Data.ByteString.Char8 as BS8
 import qualified Data.Text as Text
 import           Data.Vector.Vector2 (Vector2(..))
@@ -22,6 +21,7 @@ import qualified GUI.Momentu.Widgets.GridView as GridView
 import qualified GUI.Momentu.Widgets.Label as Label
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import           Hyper.Syntax (FuncType(..))
+import           Lamdu.Config.Theme (Theme)
 import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.Config.Theme.TextColors as TextColors
 import qualified Lamdu.GUI.NameView as NameView
@@ -29,6 +29,7 @@ import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.GUI.TagView as TagView
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.I18N.Code as Texts
+import qualified Lamdu.I18N.Name as Texts
 import           Lamdu.Name (Name)
 import qualified Lamdu.Sugar.Types as Sugar
 
@@ -75,10 +76,12 @@ parens parent my view
     | otherwise = pure view
 
 makeTFun ::
-    _ =>
+    ( MonadReader env m, Has Dir.Layout env, Element.HasAnimIdPrefix env, Has Theme env
+    , Spacer.HasStdSpacing env, Has (Texts.Name Text) env, Has (Texts.Code Text) env
+    ) =>
     Prec ->
-    Annotated Sugar.EntityId # Sugar.Type Name Unit ->
-    Annotated Sugar.EntityId # Sugar.Type Name Unit ->
+    Annotated Sugar.EntityId # Sugar.Type Name o ->
+    Annotated Sugar.EntityId # Sugar.Type Name o ->
     m (WithTextPos View)
 makeTFun parentPrecedence a b =
     Glue.hbox <*>
@@ -97,8 +100,8 @@ makeTFun parentPrecedence a b =
 
 makeTInst ::
     (MonadReader env m, _) =>
-    Prec -> Sugar.TId Name Unit ->
-    [(Name, Annotated Sugar.EntityId # Sugar.Type Name Unit)] ->
+    Prec -> Sugar.TId Name o ->
+    [(Name, Annotated Sugar.EntityId # Sugar.Type Name o)] ->
     m (WithTextPos View)
 makeTInst parentPrecedence tid typeParams =
     do
@@ -146,7 +149,7 @@ makeEmptyComposite = grammar "Ø"
 
 makeField ::
     _ =>
-    (Sugar.Tag Name, Annotated Sugar.EntityId # Sugar.Type Name Unit) ->
+    (Sugar.Tag Name, Annotated Sugar.EntityId # Sugar.Type Name o) ->
     m (WithTextPos View, WithTextPos View)
 makeField (tag, fieldType) =
     (,)
@@ -155,7 +158,7 @@ makeField (tag, fieldType) =
 
 makeVariantField ::
     _ =>
-    (Sugar.Tag Name, Annotated Sugar.EntityId # Sugar.Type Name Unit) ->
+    (Sugar.Tag Name, Annotated Sugar.EntityId # Sugar.Type Name o) ->
     m (WithTextPos View, WithTextPos View)
 makeVariantField (tag, Ann _ (Sugar.TRecord (Sugar.CompositeFields [] Nothing))) =
     TagView.make tag <&> (, Element.empty)
@@ -173,9 +176,9 @@ gridViewTopLeftAlign =
 makeComposite ::
     _ =>
     m (WithTextPos View) -> m (WithTextPos View) -> m (WithTextPos View) ->
-    ((Sugar.Tag Name, Annotated Sugar.EntityId # Sugar.Type Name Unit) ->
+    ((Sugar.Tag Name, Annotated Sugar.EntityId # Sugar.Type Name o) ->
          m (WithTextPos View, WithTextPos View)) ->
-    Sugar.CompositeFields Name (Annotated Sugar.EntityId # Sugar.Type Name Unit) ->
+    Sugar.CompositeFields Name (Annotated Sugar.EntityId # Sugar.Type Name o) ->
     m (WithTextPos View)
 makeComposite mkOpener mkPre mkPost mkField composite =
     case composite of
@@ -219,7 +222,7 @@ makeComposite mkOpener mkPre mkPost mkField composite =
                     | v ^. Align.tValue . Element.width == 0 = pure Element.empty
                     | otherwise = Spacer.stdHSpace <&> WithTextPos 0
 
-makeInternal :: _ => Prec -> Annotated Sugar.EntityId # Sugar.Type Name Unit -> m (WithTextPos View)
+makeInternal :: _ => Prec -> Annotated Sugar.EntityId # Sugar.Type Name o -> m (WithTextPos View)
 makeInternal parentPrecedence (Ann (Const entityId) tbody) =
     case tbody of
     Sugar.TVar var -> NameView.make var
@@ -237,8 +240,8 @@ makeInternal parentPrecedence (Ann (Const entityId) tbody) =
     where
         animId = WidgetIds.fromEntityId entityId & Widget.toAnimId
 
-make :: _ => Annotated Sugar.EntityId # Sugar.Type Name Unit -> m (WithTextPos View)
+make :: _ => Annotated Sugar.EntityId # Sugar.Type Name o -> m (WithTextPos View)
 make t = makeInternal (Prec 0) t & Styled.withColor TextColors.typeTextColor
 
-makeScheme :: _ => Sugar.Scheme Name Unit -> m (WithTextPos View)
+makeScheme :: _ => Sugar.Scheme Name o -> m (WithTextPos View)
 makeScheme s = make (s ^. Sugar.schemeType)

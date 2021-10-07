@@ -21,6 +21,7 @@ import           Hyper
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Expr.IRef as ExprIRef
+import           Lamdu.Expr.UniqueId (ToUUID)
 import qualified Lamdu.Expr.UniqueId as UniqueId
 import           Revision.Deltum.IRef (IRef)
 
@@ -29,6 +30,8 @@ import           Lamdu.Prelude
 newtype EntityId = EntityId UUID
     deriving stock (Generic, Show)
     deriving newtype (Eq, Ord, Hashable)
+
+instance ToUUID EntityId where toUUID (EntityId uuid) = uuid
 
 bs :: EntityId -> ByteString
 bs (EntityId uuid) = UUIDUtils.toSBS16 uuid

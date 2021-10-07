@@ -31,6 +31,7 @@
             "collaboration": "שיתוף",
             "exportDefToJSON": "ייצא הגדרה לקובץ שיתוף",
             "exportTagToJSON": "ייצא תג לקובץ שיתוף",
+            "exportNominalToJSON": "ייצא נומינלי לקובץ שיתוף",
             "exportEverythingToJSON": "ייצא הכל לקובץ שיתוף",
             "exportReplToJSON": "ייצא שורת פקודה לקובץ שיתוף",
             "exportReplToJS": "ייצא שורת פקודה לג'אווהסקריפט",
@@ -151,7 +152,8 @@
             "directionalSymbol": "סימן כיווני",
             "leftToRightSymbol": "משמאל לימין",
             "rightToLeftSymbol": "מימין לשמאל",
-            "typeOperatorHere": "הזן סימן כאן"
+            "typeOperatorHere": "הזן סימן כאן",
+            "opaque": "אטום"
         },
         "statusBar": {
             "statusBar": "סרגל מצב",

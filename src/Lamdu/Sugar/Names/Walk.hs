@@ -447,11 +447,27 @@ instance
             _drBody <- walk _drBody
             pure def{_drName, _drBody}
 
+instance (a ~ OldName m, b ~ NewName m) => Walk m (NominalTypeBody a o) (NominalTypeBody b o) where
+    walk (NominalTypeBody scheme params) =
+        NominalTypeBody <$> walk scheme <*> pure params
+
+instance (a ~ OldName m, b ~ NewName m) => Walk m (NominalPaneBody a o) (NominalPaneBody b o) where
+    walk NominalPaneOpaque = pure NominalPaneOpaque
+    walk (NominalPaneType x) = walk x <&> NominalPaneType
+
+instance (a ~ OldName m, b ~ NewName m, i ~ IM m) => Walk m (NominalPane a i o) (NominalPane b i o) where
+    walk nomPane@NominalPane{_npName, _npBody} =
+        do
+            _npName <- toTagRefOf TaggedNominal _npName
+            _npBody <- walk _npBody
+            pure nomPane{_npName, _npBody}
+
 instance
     (a ~ OldName m, b ~ NewName m, i ~ IM m, Walk m pa pb) =>
     Walk m (Top PaneBody a i o pa) (Top PaneBody b i o pb) where
     walk (PaneDefinition def) = walk def <&> PaneDefinition
     walk (PaneTag x) = PaneTag x & pure
+    walk (PaneNominal x) = walk x <&> PaneNominal
 
 instance
     (a ~ OldName m, b ~ NewName m, i ~ IM m) =>

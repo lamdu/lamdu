@@ -124,13 +124,14 @@ instance Eq (Sugar.TagPane f) where
     , ''Sugar.DefinitionBuiltin, ''Sugar.DefinitionForm, ''Sugar.FuncParamActions
     , ''Sugar.GetVar, ''Sugar.Leaf, ''Sugar.NameRef, ''Sugar.ParamInfo, ''Sugar.ParamRef
     , ''Sugar.ResVal, ''Sugar.Scheme, ''Sugar.TagRef, ''Sugar.TagChoice, ''Sugar.TagOption
+    , ''Sugar.NominalPane, ''Sugar.NominalPaneBody, ''Sugar.NominalTypeBody
     ] & sequenceA <&> concat
 
 makeInstances [''NFData]
-    [ ''Sugar.TId, ''Sugar.Tag, ''Sugar.TagPane, ''Sugar.ParamsRecordVarRef, ''Sugar.ScopeId
-    , ''Sugar.DefinitionState, ''Sugar.ParenInfo, ''Sugar.VarInfo, ''Sugar.BinderMode
-    , ''Sugar.BinderParamScopeId, ''Sugar.FuncApplyLimit, ''Sugar.Error, ''Sugar.CompiledErrorType
-    , ''ShowAnnotation, ''LangId, ''EntityId
+    [ ''Sugar.TId, ''Sugar.Tag, ''Sugar.TagPane, ''Sugar.ParamsRecordVarRef
+    , ''Sugar.ScopeId, ''Sugar.DefinitionState, ''Sugar.ParenInfo, ''Sugar.VarInfo
+    , ''Sugar.BinderMode, ''Sugar.BinderParamScopeId, ''Sugar.FuncApplyLimit, ''Sugar.Error
+    , ''Sugar.CompiledErrorType, ''ShowAnnotation, ''LangId, ''EntityId
     , ''Name, ''Name.Collision, ''Name.TagName, ''Name.TagText
     , ''Tag.TextsInLang, ''Def.FFIName, ''Tag.DirOp, ''Tag.Symbol, ''Tag.Tag, ''CurAndPrev
     , ''Unit

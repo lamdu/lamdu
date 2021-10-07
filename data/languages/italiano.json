@@ -30,6 +30,7 @@
             "collaboration": "Collaborazione",
             "exportDefToJSON": "Esporta definizione in JSON",
             "exportTagToJSON": "Esporta tag in JSON",
+            "exportNominalToJSON": "Esporta nominale in JSON",
             "exportEverythingToJSON": "Esporta tutto in JSON",
             "exportReplToJSON": "Esporta repl in un file JSON",
             "exportReplToJS": "Esporta repl come JS",
@@ -150,7 +151,8 @@
             "directionalSymbol": "Simbolo direzionale",
             "leftToRightSymbol": "Da sinistra a destra",
             "rightToLeftSymbol": "Da destra a sinistra",
-            "typeOperatorHere": "Operatore tipo qui"
+            "typeOperatorHere": "Operatore tipo qui",
+            "opaque": "opaco"
         },
         "name": {
             "unnamed": "Senza nome",

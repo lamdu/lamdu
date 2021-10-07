@@ -30,6 +30,7 @@
             "collaboration": "Collaboration",
             "exportDefToJSON": "Export definition to JSON",
             "exportTagToJSON": "Export tag to JSON",
+            "exportNominalToJSON": "Export nominal to JSON",
             "exportEverythingToJSON": "Export everything to JSON",
             "exportReplToJSON": "Export repl to JSON file",
             "exportReplToJS": "Export repl as JS",
@@ -150,7 +151,8 @@
             "directionalSymbol": "Directional Symbol",
             "leftToRightSymbol": "Left to Right",
             "rightToLeftSymbol": "Right to left",
-            "typeOperatorHere": "Type operator here"
+            "typeOperatorHere": "Type operator here",
+            "opaque": "Opaque"
         },
         "name": {
             "unnamed": "Unnamed",

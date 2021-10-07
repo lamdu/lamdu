@@ -12,6 +12,7 @@ data Collaboration a = Collaboration
     { _collaboration :: a
     , _exportDefToJSON :: a
     , _exportTagToJSON :: a
+    , _exportNominalToJSON :: a
     , _exportEverythingToJSON :: a
     , _exportReplToJSON :: a
     , _exportReplToJS :: a

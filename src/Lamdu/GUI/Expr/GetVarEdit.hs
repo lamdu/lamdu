@@ -159,8 +159,7 @@ definitionTypeChangeBox info getVarId =
     where
         update = info ^. Sugar.defTypeUseCurrent <&> WidgetIds.fromEntityId
         mkTypeView idSuffix scheme =
-            TypeView.makeScheme scheme
-            & local (M.animIdPrefix .~ animId ++ [idSuffix])
+            TypeView.makeScheme scheme & local (M.animIdPrefix .~ animId ++ [idSuffix])
         myId = Widget.joinId getVarId ["type change"]
         animId = Widget.toAnimId myId
 
