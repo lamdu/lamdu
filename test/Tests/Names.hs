@@ -91,7 +91,7 @@ workArea396 =
             & Stub.def lamType "def" "def"
             & Stub.pane
         ]
-    , Sugar._waGlobals = pure []
+    , Sugar._waGlobals = Sugar.Globals (pure []) (pure []) (pure [])
     } & testWorkArea assertNoCollisions
     where
         lamType = Stub.numType ~> Stub.numType
@@ -112,7 +112,7 @@ workAreaGlobals =
         [ Stub.def Stub.numType "def1" "def" trivialBinder & Stub.pane
         , Stub.def Stub.numType "def2" "def" trivialBinder & Stub.pane
         ]
-    , Sugar._waGlobals = pure []
+    , Sugar._waGlobals = Sugar.Globals (pure []) (pure []) (pure [])
     } & testWorkArea verifyName
     where
         verifyName name =

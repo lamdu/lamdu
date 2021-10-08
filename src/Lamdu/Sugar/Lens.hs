@@ -189,11 +189,11 @@ instance Annotations a b (Payload a o) (Payload b o) where
     annotations = plAnnotation
 
 instance Annotations a b s t => Annotations a b (WorkArea a n i o s) (WorkArea b n i o t) where
-    annotations f w =
+    annotations f (WorkArea panes repl globals) =
         WorkArea
-        <$> (traverse . paneBinder . hAnnotations) f (w ^. waPanes)
-        <*> (replExpr . hAnnotations) f (w ^. waRepl)
-        ?? w ^. waGlobals
+        <$> (traverse . paneBinder . hAnnotations) f panes
+        <*> (replExpr . hAnnotations) f repl
+        ?? globals
 
 instance HAnnotations a b p0 p1 => HAnnotations a b (Ann p0) (Ann p1) where
     hAnnotations f (Ann p x) = Ann <$> hAnnotations f p <*> hAnnotations f x

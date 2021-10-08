@@ -15,6 +15,7 @@ import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Expr.UniqueId as UniqueId
+import           Lamdu.Sugar.Convert.NameRef (jumpToTag)
 import           Lamdu.Sugar.Internal hiding (replaceWith)
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import           Lamdu.Sugar.Types
@@ -73,9 +74,7 @@ refWith cp tag name forbiddenTags allowAnon mkInstance setTag tagsProp =
     , _tagRefJumpTo =
         if tag == Anchors.anonTag
         then Nothing
-        else Just
-             (EntityId.ofTagPane tag
-                 <$ DataOps.newPane cp (Anchors.PaneTag tag))
+        else jumpToTag cp tag & Just
     }
 
 replace ::

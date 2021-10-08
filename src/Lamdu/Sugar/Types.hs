@@ -7,6 +7,7 @@ module Lamdu.Sugar.Types
     , TagPane(..), tpTag, tpTagData, tpSetTexts, tpSetSymbol, tpSetOrder
     , Repl(..), replExpr, replVarInfo, replResult
     , WorkArea(..), waPanes, waRepl, waGlobals
+    , Globals(..), globalDefs, globalNominals, globalTags
     , Definition(..), drName, drBody, drDefI
     , DefinitionBody(..), _DefinitionBodyExpression, _DefinitionBodyBuiltin
     , DefinitionExpression(..), deContent, dePresentationMode, deType
@@ -109,12 +110,20 @@ instance Foldable (Repl v name i o) where
 instance Traversable (Repl v name i o) where
     traverse f = replExpr (htraverseFlipped (\_ -> Lens._Wrapped f))
 
+data Globals name i o = Globals
+    { _globalDefs     :: i [NameRef name o]
+    , _globalNominals :: i [NameRef name o]
+    , _globalTags     :: i [NameRef name o]
+    } deriving Generic
+
 data WorkArea v name i o a = WorkArea
     { _waPanes :: [Pane v name i o a]
     , _waRepl :: Repl v name i o a
-    , _waGlobals :: i [NameRef name o]
+    , _waGlobals :: Globals name i o
     } deriving (Functor, Foldable, Traversable, Generic)
 
-traverse Lens.makeLenses [''Definition, ''DefinitionBuiltin, ''Pane, ''TagPane, ''WorkArea] <&> concat
+traverse Lens.makeLenses
+    [''Definition, ''DefinitionBuiltin, ''Pane, ''TagPane, ''Globals, ''WorkArea]
+    <&> concat
 Lens.makePrisms ''DefinitionBody
 Lens.makePrisms ''PaneBody

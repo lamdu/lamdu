@@ -189,7 +189,7 @@ addEvaluationResults ::
     T m (
         WorkArea (Annotation (EvaluationScopes InternalName i) n) n i (T m)
         (ConvertPayload m (Annotation (EvaluationScopes InternalName i) n, a)))
-addEvaluationResults cp r wa@(WorkArea panes repl listGlobals) =
+addEvaluationResults cp r wa@(WorkArea panes repl globals) =
     makeNominalsMap
     ( wa ^..
         SugarLens.annotations @(Annotation EvalPrep n)
@@ -204,4 +204,4 @@ addEvaluationResults cp r wa@(WorkArea panes repl listGlobals) =
         & replExpr %~ addToNode ctx
         & replResult .~ (r <&> (^. erCompleted) & ConvertEval.completion cp)
         )
-    listGlobals
+    globals

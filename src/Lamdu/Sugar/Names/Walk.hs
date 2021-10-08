@@ -454,17 +454,23 @@ instance
     walk (PaneTag x) = PaneTag x & pure
 
 instance
+    (a ~ OldName m, b ~ NewName m, i ~ IM m) =>
+    Walk m (Globals a i o) (Globals b i o) where
+    walk (Globals d n t) =
+        do
+            run <- opRun
+            let toGlobals x nameType =
+                    x >>= run . (traverse . nrName) (opGetName Nothing MayBeAmbiguous nameType)
+            Globals (toGlobals d GlobalDef) (toGlobals n TaggedNominal) (toGlobals t Tag) & pure
+
+instance
     (a ~ OldName m, b ~ NewName m, i ~ IM m, Walk m pa pb) =>
     Walk m (Top WorkArea a i o pa) (Top WorkArea b i o pb) where
     walk WorkArea { _waPanes, _waRepl, _waGlobals } =
         do
-            run <- opRun
             panes <- (traverse . paneBody) walk _waPanes
             repl <- replExpr (toNode toBody) _waRepl
-            let globals = _waGlobals >>= run . toGlobals
-            WorkArea panes repl globals & pure
-        where
-            toGlobals = (traverse . nrName) (opGetName Nothing MayBeAmbiguous GlobalDef)
+            WorkArea panes repl <$> walk _waGlobals
 
 instance Walk m a b => Walk m (ConvertPayload n a) (ConvertPayload n b) where
     walk = (pInput . userData) walk

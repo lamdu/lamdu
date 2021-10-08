@@ -317,6 +317,19 @@ loadPanes env replEntityId =
         Property.value prop
             & Lens.itraversed %%@~ convertPane env replEntityId prop
 
+globals ::
+    Monad m =>
+    Anchors.Code (Property.MkProperty (T m) (T m)) m -> Globals InternalName (OnceT (T m)) (T m)
+globals cp =
+    Globals
+    { _globalDefs = globalNameRefs Anchors.globals ConvertNameRef.makeForDefinition
+    , _globalNominals = globalNameRefs Anchors.tids ConvertNameRef.makeForNominal
+    , _globalTags = globalNameRefs Anchors.tags ConvertNameRef.makeForTag
+    }
+    where
+        globalNameRefs globs makeNameRef =
+            Property.getP (globs cp) & lift <&> (^.. Lens.folded) >>= traverse (makeNameRef cp)
+
 loadWorkArea ::
     ( HasCallStack, Monad m, Typeable m
     , Has Debug.Monitors env
@@ -334,9 +347,7 @@ loadWorkArea env =
         pure WorkArea
             { _waRepl = repl
             , _waPanes = panes
-            , _waGlobals =
-                Anchors.globals cp & Property.getP & lift <&> (^.. Lens.folded)
-                >>= traverse (ConvertNameRef.makeForDefinition cp)
+            , _waGlobals = globals cp
             }
     where
         cp = env ^. Anchors.codeAnchors
