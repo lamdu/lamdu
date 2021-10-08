@@ -3,11 +3,11 @@ module Lamdu.Sugar.Types
     ( module Exported
     , EntityId
     , PaneBody(..), _PaneDefinition
-    , Pane(..), paneBody, paneClose, paneMoveDown, paneMoveUp, paneEntityId
+    , Pane(..), paneBody, paneClose, paneMoveDown, paneMoveUp, paneEntityId, paneDefinitionState
     , TagPane(..), tpTag, tpTagData, tpSetTexts, tpSetSymbol, tpSetOrder
     , Repl(..), replExpr, replVarInfo, replResult
     , WorkArea(..), waPanes, waRepl, waGlobals
-    , Definition(..), drDefinitionState, drName, drBody, drDefI
+    , Definition(..), drName, drBody, drDefI
     , DefinitionBody(..), _DefinitionBodyExpression, _DefinitionBodyBuiltin
     , DefinitionExpression(..), deContent, dePresentationMode, deType
     , Meta.SpecialArgs(..), Meta.PresentationMode
@@ -67,7 +67,6 @@ data DefinitionBody v name i o a
 data Definition v name i o a = Definition
     { _drName :: TagRef name i o
     , _drDefI :: V.Var
-    , _drDefinitionState :: Property o Meta.DefinitionState
     , _drBody :: DefinitionBody v name i o a
     } deriving (Functor, Foldable, Traversable, Generic)
 
@@ -87,6 +86,7 @@ data PaneBody v name i o a
 data Pane v name i o a = Pane
     { _paneBody :: PaneBody v name i o a
     , _paneEntityId :: EntityId
+    , _paneDefinitionState :: Property o Meta.DefinitionState
     , _paneClose :: o EntityId
     , _paneMoveDown :: Maybe (o ())
     , _paneMoveUp :: Maybe (o ())

@@ -243,11 +243,9 @@ convertPaneBody env (Anchors.PaneDefinition defI) =
             ExprLoad.def defI & lift <&> Definition.defPayload .~ defI
             >>= convertDefBody env
         tag <- ConvertTag.taggedEntityWith (env ^. Anchors.codeAnchors) Nothing defVar & join
-        defState <- Anchors.assocDefinitionState defI ^. Property.mkProperty & lift
         OrderTags.orderDef Definition
             { _drName = tag
             , _drBody = bodyS
-            , _drDefinitionState = defState
             , _drDefI = defVar
             } <&> PaneDefinition
     where
@@ -271,15 +269,19 @@ convertPane ::
     OnceT (T m)
     (Pane EvalPrep InternalName (OnceT (T m)) (T m) (ConvertPayload m [EntityId]))
 convertPane env replEntityId (Property panes setPanes) i pane =
-    convertPaneBody env pane
-    <&> \body -> Pane
-    { _paneBody = body
-    , _paneEntityId = mkPaneEntityId pane
-    , _paneClose = mkDelPane
-    , _paneMoveDown = mkMMovePaneDown
-    , _paneMoveUp = mkMMovePaneUp
-    }
+    do
+        body <- convertPaneBody env pane
+        defState <- Anchors.assocDefinitionState uuid ^. Property.mkProperty & lift
+        pure Pane
+            { _paneBody = body
+            , _paneEntityId = myEntityId
+            , _paneDefinitionState = defState
+            , _paneClose = mkDelPane
+            , _paneMoveDown = mkMMovePaneDown
+            , _paneMoveUp = mkMMovePaneUp
+            }
     where
+        myEntityId@(EntityId.EntityId uuid) = mkPaneEntityId pane
         mkDelPane =
             entityId <$ setPanes newPanes
             where

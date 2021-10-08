@@ -17,11 +17,13 @@ import           Control.Monad.Trans.Reader (ReaderT)
 import           Control.Monad.Transaction (MonadTransaction(..))
 import           Data.CurAndPrev (CurAndPrev(..))
 import qualified Data.Property as Property
+import qualified GUI.Momentu as M
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.I18N as MomentuTexts
+import           GUI.Momentu.Rect (Rect(..))
 import           GUI.Momentu.Responsive (Responsive)
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.State as GuiState
@@ -166,12 +168,33 @@ makePaneBodyEdit :: _ => ExprGui.Top Sugar.Pane i o -> GuiM env i o (Responsive 
 makePaneBodyEdit pane =
     case pane ^. Sugar.paneBody of
     Sugar.PaneTag tag -> TagPaneEdit.make tag myId <&> Responsive.fromWidget
-    Sugar.PaneDefinition def ->
-        do
-            eventMap <- deleteAndClosePaneEventMap pane (def ^. Sugar.drDefinitionState)
-            DefinitionEdit.make eventMap def myId
+    Sugar.PaneDefinition def -> DefinitionEdit.make def myId
     where
         myId = pane ^. Sugar.paneEntityId & WidgetIds.fromEntityId
+
+undeleteButton :: _ => o Widget.Id -> GuiM env i o (M.TextWidget o)
+undeleteButton undelete =
+    do
+        actionId <- Element.subAnimId ?? ["Undelete"] <&> Widget.Id
+        toDoc <- Lens.view id <&> E.toDoc
+        let doc =
+                toDoc
+                [ has . MomentuTexts.edit
+                , has . Texts.def
+                , has . Texts.undelete
+                ]
+        Styled.actionable actionId Texts.undeleteButton
+            doc undelete
+
+wholeFocused :: Widget.Size -> Widget.Focused a -> Widget.Focused a
+wholeFocused size f =
+    Widget.Focused
+    { Widget._fFocalAreas = [Rect 0 size]
+    , Widget._fEventMap = mempty
+    , Widget._fPreEvents = mempty
+    , Widget._fMEnterPoint = Nothing
+    , Widget._fLayers = f ^. Widget.fLayers
+    }
 
 makePaneEdit ::
     _ =>
@@ -202,7 +225,24 @@ makePaneEdit theExportActions pane =
                 , exportPaneEventMap env theExportActions (pane ^. Sugar.paneBody)
                 ] & mconcat
             paneConfig = env ^. has . Config.pane
-        makePaneBodyEdit pane
+        bodyGui <- makePaneBodyEdit pane
+        case pane ^. Sugar.paneDefinitionState . Property.pVal of
+            Sugar.LiveDefinition ->
+                deleteAndClosePaneEventMap pane (pane ^. Sugar.paneDefinitionState)
+                <&> (`Widget.weakerEvents` bodyGui)
+            Sugar.DeletedDefinition ->
+                do
+                    buttonGui <-
+                        WidgetIds.fromEntityId (pane ^. Sugar.paneEntityId)
+                        <$ (pane ^. Sugar.paneDefinitionState . Property.pSet) Sugar.LiveDefinition
+                        & undeleteButton <&> Responsive.fromWithTextPos
+                    style <- Styled.deletedDef
+                    Responsive.vbox ??
+                        [ buttonGui
+                        , bodyGui
+                            & Responsive.alignedWidget . M.tValue .> Widget.wFocused %@~ wholeFocused
+                            & style
+                        ]
             <&> Widget.updates %~ IOTrans.liftTrans
             <&> Widget.weakerEvents paneEventMap
 

@@ -24,6 +24,7 @@ import qualified Lamdu.Data.Definition as Def
 import qualified Lamdu.Data.Ops as DataOps
 import           Lamdu.Expr.IRef (DefI, HRef)
 import qualified Lamdu.Expr.IRef as ExprIRef
+import qualified Lamdu.Expr.UniqueId as UniqueId
 import           Lamdu.Sugar.Convert.Binder.Params (mkVarInfo)
 import           Lamdu.Sugar.Convert.Expression.Actions (addActions)
 import qualified Lamdu.Sugar.Convert.Input as Input
@@ -64,7 +65,7 @@ inlineDef globalId dest =
                             , S._sTyp = _Pure # T.TVar "a"
                             }
                         & Transaction.writeIRef defI
-                    setP (Anchors.assocDefinitionState defI) DeletedDefinition
+                    setP (Anchors.assocDefinitionState (UniqueId.toUUID defI)) DeletedDefinition
                     postProcess
                     defExpr ^. Def.expr & EntityId.ofValI & pure
         def <- Transaction.readIRef defI
@@ -114,7 +115,7 @@ convertGlobal var exprPl =
     do
         ctx <- Lens.view id
         notElem var (exprPl ^. Input.localsInScope <&> fst) & guard
-        lifeState <- Anchors.assocDefinitionState defI & getP
+        lifeState <- Anchors.assocDefinitionState (UniqueId.toUUID defI) & getP
         let defForm =
                 case lifeState of
                 DeletedDefinition -> DefDeleted
