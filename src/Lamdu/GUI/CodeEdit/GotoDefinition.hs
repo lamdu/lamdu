@@ -46,8 +46,8 @@ nameSearchTerm name =
         collisionText Name.UnknownCollision = "?"
 
 makeOptions ::
-    _ => m [Sugar.NameRef Name o] -> SearchMenu.ResultsContext -> m (Menu.OptionList (Menu.Option m o))
-makeOptions readGlobals (SearchMenu.ResultsContext searchTerm prefix)
+    _ => Sugar.Globals Name m o -> SearchMenu.ResultsContext -> m (Menu.OptionList (Menu.Option m o))
+makeOptions globals (SearchMenu.ResultsContext searchTerm prefix)
     | Text.null searchTerm = pure Menu.OptionList { Menu._olIsTruncated = False, Menu._olOptions = [] }
     | otherwise =
         do
@@ -72,7 +72,7 @@ makeOptions readGlobals (SearchMenu.ResultsContext searchTerm prefix)
                     where
                         name = nameRef ^. Sugar.nrName
                         optId = prefix `Widget.joinId` [BS8.pack (show idx)]
-            readGlobals <&> zip [0::Int ..]
+            globals ^. Sugar.globalDefs <&> zip [0::Int ..]
                 >>= traverse withText
                 <&> (Fuzzy.memoableMake fuzzyMaker ?? searchTerm)
                 <&> map (makeOption . snd)
@@ -89,12 +89,12 @@ makeOptions readGlobals (SearchMenu.ResultsContext searchTerm prefix)
             }
         toPickResult x = Menu.PickResult x (Just x)
 
-make :: _ => m [Sugar.NameRef Name o] -> m (StatusBar.StatusWidget o)
-make readGlobals =
+make :: _ => Sugar.Globals Name m o -> m (StatusBar.StatusWidget o)
+make globals =
     do
         goto <- Lens.view (has . Navigation.goto)
         SearchMenu.make (SearchMenu.searchTermEdit myId (pure . allowSearchTerm))
-            (makeOptions readGlobals) M.empty myId ?? Menu.Below
+            (makeOptions globals) M.empty myId ?? Menu.Below
             & local (has . Theme.searchTerm %~ onTermStyle goto)
             <&> \searchWidget -> StatusBar.StatusWidget
             { StatusBar._widget = searchWidget

@@ -95,7 +95,7 @@ make cp gp width mkWorkArea =
         env <- Lens.view id
         workArea <- mkWorkArea >>= (\x -> x (getTagName env) env) & lift
         gotoDefinition <-
-            GotoDefinition.make (workArea ^. Sugar.waGlobals . Sugar.globalDefs & lift)
+            GotoDefinition.make (workArea ^. Sugar.waGlobals & Sugar.allGlobals %~ lift)
             <&> StatusBar.hoist IOTrans.liftTrans
         assocTagName <- DataOps.assocTagName
         do
