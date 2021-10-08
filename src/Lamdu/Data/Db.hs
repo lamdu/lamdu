@@ -42,7 +42,7 @@ withDB lamduDir implicitFreshDb body =
                 let db = Transaction.onStoreM DbM ioDb
                 let dbInit = importFreshDb implicitFreshDb >>= DbInit.initDb db
                 dbInit `onException` Directory.removeDirectoryRecursive dbPath
-                    & when (not alreadyExist)
+                    & unless alreadyExist
                 body db
     where
         dbPath = lamduDir </> "schema-" <> show curDbSchemaVersion <> ".db"
