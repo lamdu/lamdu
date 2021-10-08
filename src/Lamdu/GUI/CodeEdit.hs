@@ -165,11 +165,13 @@ deleteAndClosePaneEventMap pane defState =
 makePaneBodyEdit :: _ => ExprGui.Top Sugar.Pane i o -> GuiM env i o (Responsive o)
 makePaneBodyEdit pane =
     case pane ^. Sugar.paneBody of
-    Sugar.PaneTag tag -> TagPaneEdit.make tag <&> Responsive.fromWidget
+    Sugar.PaneTag tag -> TagPaneEdit.make tag myId <&> Responsive.fromWidget
     Sugar.PaneDefinition def ->
         do
             eventMap <- deleteAndClosePaneEventMap pane (def ^. Sugar.drDefinitionState)
-            DefinitionEdit.make eventMap def
+            DefinitionEdit.make eventMap def myId
+    where
+        myId = pane ^. Sugar.paneEntityId & WidgetIds.fromEntityId
 
 makePaneEdit ::
     _ =>

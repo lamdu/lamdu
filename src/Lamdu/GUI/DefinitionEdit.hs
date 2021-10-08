@@ -49,22 +49,22 @@ makeExprDefinition ::
     _ =>
     ExprGui.Top Sugar.Definition i o ->
     ExprGui.Top Sugar.DefinitionExpression i o ->
+    M.WidgetId ->
     GuiM env i o (Responsive o)
-makeExprDefinition def bodyExpr =
+makeExprDefinition def bodyExpr myId =
     AssignmentEdit.make (bodyExpr ^. Sugar.dePresentationMode)
     (def ^. Sugar.drName) TextColors.definitionColor
     (bodyExpr ^. Sugar.deContent)
     & GuiState.assignCursor myId
         (WidgetIds.fromEntityId (def ^. Sugar.drName . Sugar.tagRefTag . Sugar.tagInstance))
-    where
-        myId = def ^. Sugar.drEntityId & WidgetIds.fromEntityId
 
 makeBuiltinDefinition ::
     _ =>
     Sugar.Definition v Name i o (Sugar.Payload v o) ->
     Sugar.DefinitionBuiltin Name o ->
+    M.WidgetId ->
     GuiM env i o (M.TextWidget o)
-makeBuiltinDefinition def builtin =
+makeBuiltinDefinition def builtin myId =
     TagEdit.makeBinderTagEdit TextColors.definitionColor name
     M./|/ Label.make " = "
     M./|/ BuiltinEdit.make builtin myId
@@ -74,7 +74,6 @@ makeBuiltinDefinition def builtin =
     where
         name = def ^. Sugar.drName
         animId = myId & Widget.toAnimId
-        myId = def ^. Sugar.drEntityId & WidgetIds.fromEntityId
 
 wholeFocused :: Widget.Size -> Widget.Focused a -> Widget.Focused a
 wholeFocused size f =
@@ -87,15 +86,19 @@ wholeFocused size f =
     }
 
 make ::
-    _ => EventMap (o GuiState.Update) -> ExprGui.Top Sugar.Definition i o -> GuiM env i o (Responsive o)
-make defEventMap def =
+    _ =>
+    EventMap (o GuiState.Update) ->
+    ExprGui.Top Sugar.Definition i o ->
+    M.WidgetId ->
+    GuiM env i o (Responsive o)
+make defEventMap def myId =
     do
         defGui <-
             case def ^. Sugar.drBody of
             Sugar.DefinitionBodyExpression bodyExpr ->
-                makeExprDefinition def bodyExpr
+                makeExprDefinition def bodyExpr myId
             Sugar.DefinitionBodyBuiltin builtin ->
-                makeBuiltinDefinition def builtin <&> Responsive.fromWithTextPos
+                makeBuiltinDefinition def builtin myId <&> Responsive.fromWithTextPos
             <&> Widget.weakerEvents defEventMap
         case defStateProp ^. Property.pVal of
             Sugar.LiveDefinition -> pure defGui
@@ -113,7 +116,6 @@ make defEventMap def =
     & local (M.animIdPrefix .~ Widget.toAnimId myId)
     where
         defStateProp = def ^. Sugar.drDefinitionState
-        myId = def ^. Sugar.drEntityId & WidgetIds.fromEntityId
 
 topLevelSchemeTypeView :: _ => Sugar.Scheme Name Unit -> GuiM env i o (M.WithTextPos M.View)
 topLevelSchemeTypeView scheme =

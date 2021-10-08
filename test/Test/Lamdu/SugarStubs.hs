@@ -104,6 +104,7 @@ pane ::
 pane body =
     Sugar.Pane
     { Sugar._paneBody = Sugar.PaneDefinition body
+    , Sugar._paneEntityId = "dummy"
     , Sugar._paneClose = Unit
     , Sugar._paneMoveDown = Nothing
     , Sugar._paneMoveUp = Nothing
@@ -135,7 +136,6 @@ def typ var tag body =
     { Sugar._drName = mkTag (Just var) tag
     , Sugar._drDefI = "def"
     , Sugar._drDefinitionState = prop Sugar.LiveDefinition
-    , Sugar._drEntityId = "dummy"
     , Sugar._drBody =
         Sugar.DefinitionBodyExpression Sugar.DefinitionExpression
         { Sugar._deType =

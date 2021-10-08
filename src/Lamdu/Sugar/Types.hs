@@ -3,11 +3,11 @@ module Lamdu.Sugar.Types
     ( module Exported
     , EntityId
     , PaneBody(..), _PaneDefinition
-    , Pane(..), paneBody, paneClose, paneMoveDown, paneMoveUp
-    , TagPane(..), tpTag, tpTagData, tpSetTexts, tpSetSymbol, tpSetOrder, tpEntityId
+    , Pane(..), paneBody, paneClose, paneMoveDown, paneMoveUp, paneEntityId
+    , TagPane(..), tpTag, tpTagData, tpSetTexts, tpSetSymbol, tpSetOrder
     , Repl(..), replExpr, replVarInfo, replResult
     , WorkArea(..), waPanes, waRepl, waGlobals
-    , Definition(..), drDefinitionState, drEntityId, drName, drBody, drDefI
+    , Definition(..), drDefinitionState, drName, drBody, drDefI
     , DefinitionBody(..), _DefinitionBodyExpression, _DefinitionBodyBuiltin
     , DefinitionExpression(..), deContent, dePresentationMode, deType
     , Meta.SpecialArgs(..), Meta.PresentationMode
@@ -68,13 +68,11 @@ data Definition v name i o a = Definition
     { _drName :: TagRef name i o
     , _drDefI :: V.Var
     , _drDefinitionState :: Property o Meta.DefinitionState
-    , _drEntityId :: EntityId
     , _drBody :: DefinitionBody v name i o a
     } deriving (Functor, Foldable, Traversable, Generic)
 
 data TagPane o = TagPane
     { _tpTag :: T.Tag
-    , _tpEntityId :: EntityId
     , _tpTagData :: DataTag.Tag
     , _tpSetSymbol :: DataTag.Symbol -> o ()
     , _tpSetTexts :: LangId -> DataTag.TextsInLang -> o ()
@@ -88,6 +86,7 @@ data PaneBody v name i o a
 
 data Pane v name i o a = Pane
     { _paneBody :: PaneBody v name i o a
+    , _paneEntityId :: EntityId
     , _paneClose :: o EntityId
     , _paneMoveDown :: Maybe (o ())
     , _paneMoveUp :: Maybe (o ())

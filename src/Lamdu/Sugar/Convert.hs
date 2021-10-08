@@ -229,7 +229,6 @@ convertPaneBody _ (Anchors.PaneTag tagId) =
     \tagData ->
     PaneTag TagPane
     { _tpTag = tagId
-    , _tpEntityId = EntityId.ofTagPane tagId
     , _tpTagData = tagData
     , _tpSetSymbol = \sym -> tagData & Tag.tagSymbol .~ sym & writeTag
     , _tpSetOrder = \order -> tagData & Tag.tagOrder .~ order & writeTag
@@ -246,8 +245,7 @@ convertPaneBody env (Anchors.PaneDefinition defI) =
         tag <- ConvertTag.taggedEntityWith (env ^. Anchors.codeAnchors) Nothing defVar & join
         defState <- Anchors.assocDefinitionState defI ^. Property.mkProperty & lift
         OrderTags.orderDef Definition
-            { _drEntityId = EntityId.ofIRef defI
-            , _drName = tag
+            { _drName = tag
             , _drBody = bodyS
             , _drDefinitionState = defState
             , _drDefI = defVar
@@ -256,10 +254,10 @@ convertPaneBody env (Anchors.PaneDefinition defI) =
         defVar = ExprIRef.globalId defI
 convertPaneBody _ Anchors.PaneNominal{} = undefined
 
-paneEntityId :: Anchors.Pane dummy -> EntityId
-paneEntityId (Anchors.PaneDefinition defI) = EntityId.ofIRef defI
-paneEntityId (Anchors.PaneNominal tid) = EntityId.ofNominalPane tid
-paneEntityId (Anchors.PaneTag tag) = EntityId.ofTagPane tag
+mkPaneEntityId :: Anchors.Pane dummy -> EntityId
+mkPaneEntityId (Anchors.PaneDefinition defI) = EntityId.ofIRef defI
+mkPaneEntityId (Anchors.PaneNominal tid) = EntityId.ofNominalPane tid
+mkPaneEntityId (Anchors.PaneTag tag) = EntityId.ofTagPane tag
 
 convertPane ::
     ( Monad m, Typeable m
@@ -276,6 +274,7 @@ convertPane env replEntityId (Property panes setPanes) i pane =
     convertPaneBody env pane
     <&> \body -> Pane
     { _paneBody = body
+    , _paneEntityId = mkPaneEntityId pane
     , _paneClose = mkDelPane
     , _paneMoveDown = mkMMovePaneDown
     , _paneMoveUp = mkMMovePaneUp
@@ -287,7 +286,7 @@ convertPane env replEntityId (Property panes setPanes) i pane =
                 entityId =
                     newPanes ^? Lens.ix i
                     <|> newPanes ^? Lens.ix (i-1)
-                    <&> paneEntityId
+                    <&> mkPaneEntityId
                     & fromMaybe replEntityId
                 newPanes = removeAt i panes
         movePane oldIndex newIndex =
