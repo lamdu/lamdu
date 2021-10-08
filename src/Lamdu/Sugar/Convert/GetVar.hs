@@ -1,7 +1,7 @@
 {-# LANGUAGE PolyKinds #-}
 
 module Lamdu.Sugar.Convert.GetVar
-    ( convert, globalNameRef
+    ( convert
     ) where
 
 import qualified Control.Lens as Lens
@@ -22,7 +22,7 @@ import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Definition as Def
 import qualified Lamdu.Data.Ops as DataOps
-import           Lamdu.Expr.IRef (DefI, HRef)
+import           Lamdu.Expr.IRef (HRef)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.UniqueId as UniqueId
 import           Lamdu.Sugar.Convert.Binder.Params (mkVarInfo)
@@ -30,6 +30,7 @@ import           Lamdu.Sugar.Convert.Expression.Actions (addActions)
 import qualified Lamdu.Sugar.Convert.Input as Input
 import           Lamdu.Sugar.Convert.Monad (ConvertM, siTagParamInfos, tpiFromParameters)
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
+import qualified Lamdu.Sugar.Convert.NameRef as NameRef
 import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import           Lamdu.Sugar.Types
@@ -39,11 +40,6 @@ import           Lamdu.Prelude
 
 type T = Transaction
 
-jumpToDefI ::
-    Monad m => Anchors.CodeAnchors m -> DefI m -> T m EntityId
-jumpToDefI cp defI =
-    EntityId.ofIRef defI <$ DataOps.newPane cp (Anchors.PaneDefinition defI)
-
 inlineDef :: Monad m => V.Var -> HRef m # V.Term -> ConvertM m (T m EntityId)
 inlineDef globalId dest =
     (,)
@@ -52,7 +48,7 @@ inlineDef globalId dest =
     <&>
     \(ctx, postProcess) ->
     do
-        let gotoDef = jumpToDefI (ctx ^. Anchors.codeAnchors) defI
+        let gotoDef = NameRef.jumpToDefinition (ctx ^. Anchors.codeAnchors) defI
         let doInline def defExpr =
                 do
                     (dest ^. ExprIRef.setIref) (defExpr ^. Def.expr)
@@ -85,17 +81,6 @@ inlineDef globalId dest =
     where
         defI = ExprIRef.defI globalId
 
-globalNameRef ::
-    (MonadTransaction n m, Monad f) =>
-    Anchors.CodeAnchors f -> DefI f -> m (NameRef InternalName (T f))
-globalNameRef cp defI =
-    taggedName Nothing defI <&>
-    \name ->
-    NameRef
-    { _nrName = name
-    , _nrGotoDefinition = jumpToDefI cp defI
-    }
-
 inlineableDefinition :: ConvertM.Context m -> V.Var -> EntityId -> Bool
 inlineableDefinition ctx var entityId =
     Lens.nullOf
@@ -123,7 +108,7 @@ convertGlobal var exprPl =
                     ctx ^. ConvertM.scOutdatedDefinitions . Lens.at var
                     <&> Lens.mapped .~ exprPl ^. Input.entityId
                     & maybe DefUpToDate DefTypeChanged
-        nameRef <- globalNameRef (ctx ^. Anchors.codeAnchors) defI & lift
+        nameRef <- NameRef.makeForDefinition (ctx ^. Anchors.codeAnchors) defI & lift
         inline <-
             case defForm of
             DefUpToDate

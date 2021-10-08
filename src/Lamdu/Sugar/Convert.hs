@@ -28,11 +28,11 @@ import           Lamdu.Sugar.Convert.Binder.Params (mkVarInfo)
 import qualified Lamdu.Sugar.Convert.DefExpr as ConvertDefExpr
 import qualified Lamdu.Sugar.Convert.DefExpr.OutdatedDefs as OutdatedDefs
 import qualified Lamdu.Sugar.Convert.Expression as ConvertExpr
-import qualified Lamdu.Sugar.Convert.GetVar as ConvertGetVar
 import qualified Lamdu.Sugar.Convert.Input as Input
 import qualified Lamdu.Sugar.Convert.Load as Load
 import           Lamdu.Sugar.Convert.Monad (Context(..), ScopeInfo(..), RecursiveRef(..))
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
+import qualified Lamdu.Sugar.Convert.NameRef as ConvertNameRef
 import qualified Lamdu.Sugar.Convert.PostProcess as PostProcess
 import qualified Lamdu.Sugar.Convert.Tag as ConvertTag
 import qualified Lamdu.Sugar.Convert.Type as ConvertType
@@ -336,7 +336,7 @@ loadWorkArea env =
             , _waPanes = panes
             , _waGlobals =
                 Anchors.globals cp & Property.getP & lift <&> (^.. Lens.folded)
-                >>= traverse (ConvertGetVar.globalNameRef cp)
+                >>= traverse (ConvertNameRef.makeForDefinition cp)
             }
     where
         cp = env ^. Anchors.codeAnchors
