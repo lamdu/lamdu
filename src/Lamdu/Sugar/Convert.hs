@@ -250,7 +250,7 @@ convertPaneBody env (Anchors.PaneDefinition defI) =
             } <&> PaneDefinition
     where
         defVar = ExprIRef.globalId defI
-convertPaneBody _ Anchors.PaneNominal{} = undefined
+convertPaneBody _ Anchors.PaneNominal{} = todo "Anchors.PaneNominal"
 
 mkPaneEntityId :: Anchors.Pane dummy -> EntityId
 mkPaneEntityId (Anchors.PaneDefinition defI) = EntityId.ofIRef defI
