@@ -7,7 +7,7 @@ module Lamdu.Sugar.Types
     , TagPane(..), tpTag, tpTagData, tpSetTexts, tpSetSymbol, tpSetOrder
     , Repl(..), replExpr, replVarInfo, replResult
     , WorkArea(..), waPanes, waRepl, waGlobals
-    , Globals(..), globalDefs, globalNominals, globalTags
+    , Globals(..), allGlobals, globalDefs, globalNominals, globalTags
     , Definition(..), drName, drBody, drDefI
     , DefinitionBody(..), _DefinitionBodyExpression, _DefinitionBodyBuiltin
     , DefinitionExpression(..), deContent, dePresentationMode, deType
@@ -115,6 +115,11 @@ data Globals name i o = Globals
     , _globalNominals :: i [NameRef name o]
     , _globalTags     :: i [NameRef name o]
     } deriving Generic
+
+-- In the future, maybe the different NameRefs will have different
+-- types, but for now they're traversable
+allGlobals :: Lens.Traversal (Globals name i o) (Globals name' i' o') (i [NameRef name o]) (i' [NameRef name' o'])
+allGlobals f (Globals x y z) = Globals <$> f x <*> f y <*> f z
 
 data WorkArea v name i o a = WorkArea
     { _waPanes :: [Pane v name i o a]
