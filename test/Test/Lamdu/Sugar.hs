@@ -60,6 +60,7 @@ validateHiddenEntityIds workArea
 data PaneLowLevel
     = PaneDefLowLevel (Def.Definition (Ann (HRef ViewM) # V.Term) (DefI ViewM))
     | PaneTagLowLevel T.Tag
+    | PaneNominalLowLevel T.NominalId
 
 Lens.makePrisms ''PaneLowLevel
 
@@ -79,6 +80,7 @@ workAreaLowLevelEntityIds (WorkAreaLowLevel r p) =
 loadPane :: Anchors.Pane ViewM -> T ViewM PaneLowLevel
 loadPane (Anchors.PaneDefinition def) = ExprLoad.def def <&> PaneDefLowLevel
 loadPane (Anchors.PaneTag tag) = PaneTagLowLevel tag & pure
+loadPane (Anchors.PaneNominal nom) = PaneNominalLowLevel nom & pure
 
 workAreaLowLevelLoad :: T ViewM WorkAreaLowLevel
 workAreaLowLevelLoad =
