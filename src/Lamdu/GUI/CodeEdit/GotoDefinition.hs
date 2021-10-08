@@ -35,8 +35,8 @@ allowSearchTerm = Name.isValidText
 fuzzyMaker :: [(Text, Int)] -> Fuzzy (Set Int)
 fuzzyMaker = memo Fuzzy.make
 
-nameSearchTerm :: _ => Name -> m Text
-nameSearchTerm name =
+nameToText :: _ => Name -> m Text
+nameToText name =
     Name.visible name <&>
     \(Name.TagText text textCol, tagCol) ->
     text <> collisionText textCol <> collisionText tagCol
@@ -48,7 +48,8 @@ nameSearchTerm name =
 makeOptions ::
     _ => Sugar.Globals Name m o -> SearchMenu.ResultsContext -> m (Menu.OptionList (Menu.Option m o))
 makeOptions globals (SearchMenu.ResultsContext searchTerm prefix)
-    | Text.null searchTerm = pure Menu.OptionList { Menu._olIsTruncated = False, Menu._olOptions = [] }
+    | Text.null searchTerm =
+        pure Menu.OptionList { Menu._olIsTruncated = False, Menu._olOptions = [] }
     | otherwise =
         do
             goto <- Lens.view (has . Navigation.goto)
@@ -64,29 +65,31 @@ makeOptions globals (SearchMenu.ResultsContext searchTerm prefix)
                         , Widget._pTextRemainder = ""
                         }
                     }
-            let makeOption (idx, nameRef) =
-                    GetVarEdit.makeSimpleView TextColors.definitionColor name optId
-                    <&> toRenderedOption nameRef
-                    & local (M.animIdPrefix .~ Widget.toAnimId optId)
-                    & wrapOption optId
+            let makeOption color (idx, nameRef) =
+                    Menu.Option
+                    { Menu._oId = optId
+                    , Menu._oRender =
+                        GetVarEdit.makeSimpleView color name optId
+                        <&> toRenderedOption nameRef
+                        & local (M.animIdPrefix .~ Widget.toAnimId optId)
+                    , Menu._oSubmenuWidgets = Menu.SubmenuEmpty
+                    }
                     where
                         name = nameRef ^. Sugar.nrName
                         optId = prefix `Widget.joinId` [BS8.pack (show idx)]
-            globals ^. Sugar.globalDefs <&> zip [0::Int ..]
-                >>= traverse withText
-                <&> (Fuzzy.memoableMake fuzzyMaker ?? searchTerm)
-                <&> map (makeOption . snd)
+            let globalOpts color lens =
+                    globals ^. lens <&> zip [0::Int ..]
+                    >>= traverse withText
+                    <&> (Fuzzy.memoableMake fuzzyMaker ?? searchTerm)
+                    <&> map (makeOption color . snd)
+            (<>)
+                <$> globalOpts TextColors.definitionColor Sugar.globalDefs
+                <*> globalOpts TextColors.nomColor Sugar.globalNominals
                 <&> Menu.OptionList isTruncated
     where
         isTruncated = False
         withText (idx, nameRef) =
-            nameSearchTerm (nameRef ^. Sugar.nrName) <&> \x -> (x, (idx, nameRef))
-        wrapOption optId mkRenedered =
-            Menu.Option
-            { Menu._oId = optId
-            , Menu._oRender = mkRenedered
-            , Menu._oSubmenuWidgets = Menu.SubmenuEmpty
-            }
+            nameToText (nameRef ^. Sugar.nrName) <&> \x -> (x, (idx, nameRef))
         toPickResult x = Menu.PickResult x (Just x)
 
 make :: _ => Sugar.Globals Name m o -> m (StatusBar.StatusWidget o)
