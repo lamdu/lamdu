@@ -144,24 +144,31 @@ exportPaneEventMap env theExportActions paneBody =
             & E.keysEventMap exportKeys
             (E.toDoc (env ^. has) [Texts.collaboration, docLens])
 
+deleteAndClosePaneEventMap ::
+    _ =>
+    Sugar.Pane v name i0 o a -> _ ->
+    GuiM env i1 o (EventMap _)
+deleteAndClosePaneEventMap pane defState =
+    Lens.view id
+    <&> \env ->
+    do
+        (defState ^. Property.pSet) Sugar.DeletedDefinition
+        pane ^. Sugar.paneClose
+    <&> WidgetIds.fromEntityId
+    & E.keysEventMapMovesCursor (Config.delKeys env)
+    (E.toDoc env
+        [ has . MomentuTexts.edit
+        , has . Texts.def
+        , has . MomentuTexts.delete
+        ])
+
 makePaneBodyEdit :: _ => ExprGui.Top Sugar.Pane i o -> GuiM env i o (Responsive o)
 makePaneBodyEdit pane =
     case pane ^. Sugar.paneBody of
     Sugar.PaneTag tag -> TagPaneEdit.make tag <&> Responsive.fromWidget
     Sugar.PaneDefinition def ->
         do
-            env <- Lens.view id
-            let eventMap =
-                    do
-                        (def ^. Sugar.drDefinitionState . Property.pSet) Sugar.DeletedDefinition
-                        pane ^. Sugar.paneClose
-                    <&> WidgetIds.fromEntityId
-                    & E.keysEventMapMovesCursor (Config.delKeys env)
-                    (E.toDoc env
-                        [ has . MomentuTexts.edit
-                        , has . Texts.def
-                        , has . MomentuTexts.delete
-                        ])
+            eventMap <- deleteAndClosePaneEventMap pane (def ^. Sugar.drDefinitionState)
             DefinitionEdit.make eventMap def
 
 makePaneEdit ::
