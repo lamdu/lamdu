@@ -1,7 +1,6 @@
 {-# LANGUAGE TemplateHaskell #-}
 module Lamdu.Sugar.Types.GetVar
-    ( NameRef(..), nrName, nrGotoDefinition
-    , ParamRef(..), pNameRef, pBinderMode
+    ( ParamRef(..), pNameRef, pBinderMode
     , BinderVarForm(..), _GetDefinition, _GetLet
     , DefinitionForm(..), _DefUpToDate, _DefDeleted, _DefTypeChanged
     , DefinitionOutdatedType(..), defTypeWhenUsed, defTypeCurrent, defTypeUseCurrent
@@ -17,16 +16,12 @@ import           Control.Monad.Unit (Unit)
 import qualified Lamdu.Calc.Term as V
 import           Lamdu.Sugar.Internal.EntityId (EntityId)
 import           Lamdu.Sugar.Types.Type
+import           Lamdu.Sugar.Types.NameRef (NameRef)
 
 import           Lamdu.Prelude
 
 data BinderMode = NormalBinder | LightLambda
     deriving (Generic, Eq)
-
-data NameRef name o = NameRef
-    { _nrName :: name
-    , _nrGotoDefinition :: o EntityId
-    } deriving Generic
 
 data ParamRef name o = ParamRef
     { _pNameRef :: NameRef name o
@@ -75,6 +70,6 @@ data GetVar name o
     deriving Generic
 
 traverse Lens.makeLenses
-    [''BinderVarRef, ''DefinitionOutdatedType, ''NameRef, ''ParamRef, ''ParamsRecordVarRef] <&> concat
+    [''BinderVarRef, ''DefinitionOutdatedType, ''ParamRef, ''ParamsRecordVarRef] <&> concat
 traverse Lens.makePrisms
     [''BinderMode, ''BinderVarForm, ''BinderVarInline, ''DefinitionForm, ''GetVar] <&> concat
