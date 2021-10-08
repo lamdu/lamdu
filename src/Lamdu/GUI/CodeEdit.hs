@@ -136,7 +136,7 @@ exportPaneEventMap env theExportActions paneBody =
     Sugar.PaneDefinition def ->
         exportEventMap exportDef (def ^. Sugar.drDefI) Texts.exportDefToJSON
     Sugar.PaneTag tag ->
-        exportEventMap exportTag (tag ^. Sugar.tpTag . Sugar.tagVal) Texts.exportTagToJSON
+        exportEventMap exportTag (tag ^. Sugar.tpTag) Texts.exportTagToJSON
     where
         exportKeys = env ^. has . Config.export . Config.exportKeys
         exportEventMap act arg docLens =

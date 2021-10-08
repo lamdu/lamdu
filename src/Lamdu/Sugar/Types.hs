@@ -4,7 +4,7 @@ module Lamdu.Sugar.Types
     , EntityId
     , PaneBody(..), _PaneDefinition
     , Pane(..), paneBody, paneClose, paneMoveDown, paneMoveUp
-    , TagPane(..), tpTag, tpTagData, tpSetTexts, tpSetSymbol, tpSetOrder
+    , TagPane(..), tpTag, tpTagData, tpSetTexts, tpSetSymbol, tpSetOrder, tpEntityId
     , Repl(..), replExpr, replVarInfo, replResult
     , WorkArea(..), waPanes, waRepl, waGlobals
     , Definition(..), drDefinitionState, drEntityId, drName, drBody, drDefI
@@ -20,6 +20,7 @@ import           Control.Monad.Unit (Unit)
 import           Data.Property (Property)
 import           Hyper
 import qualified Lamdu.Calc.Term as V
+import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Data.Meta as Meta
 import qualified Lamdu.Data.Tag as DataTag
@@ -71,8 +72,9 @@ data Definition v name i o a = Definition
     , _drBody :: DefinitionBody v name i o a
     } deriving (Functor, Foldable, Traversable, Generic)
 
-data TagPane name o = TagPane
-    { _tpTag :: Tag name
+data TagPane o = TagPane
+    { _tpTag :: T.Tag
+    , _tpEntityId :: EntityId
     , _tpTagData :: DataTag.Tag
     , _tpSetSymbol :: DataTag.Symbol -> o ()
     , _tpSetTexts :: LangId -> DataTag.TextsInLang -> o ()
@@ -81,7 +83,7 @@ data TagPane name o = TagPane
 
 data PaneBody v name i o a
     = PaneDefinition (Definition v name i o a)
-    | PaneTag (TagPane name o)
+    | PaneTag (TagPane o)
     deriving (Functor, Foldable, Traversable, Generic)
 
 data Pane v name i o a = Pane

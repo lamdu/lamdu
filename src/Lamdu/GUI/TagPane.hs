@@ -38,7 +38,6 @@ import           Lamdu.GUI.Styled (addValFrame, label, info, withColor)
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.I18N.CodeUI as Texts
 import           Lamdu.I18N.LangId (LangId(..), _LangId)
-import           Lamdu.Name (Name(..))
 import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
@@ -297,7 +296,7 @@ makeOrderEdit tagPaneId prop =
         orderEditId = tagPaneId `Widget.joinId` ["tagOrder"]
 
 
-make :: _ => Sugar.TagPane Name o -> m (Widget o)
+make :: _ => Sugar.TagPane o -> m (Widget o)
 make tagPane =
     Lens.view has
     >>= \lang ->
@@ -323,4 +322,4 @@ make tagPane =
             (tagPane ^. setterLens)
         orderProp  = prop Tag.tagOrder  Sugar.tpSetOrder
         symbolProp = prop Tag.tagSymbol Sugar.tpSetSymbol
-        myId = tagPane ^. Sugar.tpTag . Sugar.tagInstance & WidgetIds.fromEntityId
+        myId = tagPane ^. Sugar.tpEntityId & WidgetIds.fromEntityId

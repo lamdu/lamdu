@@ -228,12 +228,8 @@ convertPaneBody _ (Anchors.PaneTag tagId) =
     ExprIRef.readTagData tagId & lift <&>
     \tagData ->
     PaneTag TagPane
-    { _tpTag =
-        Tag
-        { _tagName = nameWithoutContext tagId
-        , _tagInstance = EntityId.ofTagPane tagId
-        , _tagVal = tagId
-        }
+    { _tpTag = tagId
+    , _tpEntityId = EntityId.ofTagPane tagId
     , _tpTagData = tagData
     , _tpSetSymbol = \sym -> tagData & Tag.tagSymbol .~ sym & writeTag
     , _tpSetOrder = \order -> tagData & Tag.tagOrder .~ order & writeTag

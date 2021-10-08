@@ -447,14 +447,11 @@ instance
             _drBody <- walk _drBody
             pure def{_drName, _drBody}
 
-instance (a ~ OldName m, b ~ NewName m) => Walk m (TagPane a o) (TagPane b o) where
-    walk = Sugar.tpTag (toTagOf Tag)
-
 instance
     (a ~ OldName m, b ~ NewName m, i ~ IM m, Walk m pa pb) =>
     Walk m (Top PaneBody a i o pa) (Top PaneBody b i o pb) where
     walk (PaneDefinition def) = walk def <&> PaneDefinition
-    walk (PaneTag x) = walk x <&> PaneTag
+    walk (PaneTag x) = PaneTag x & pure
 
 instance
     (a ~ OldName m, b ~ NewName m, i ~ IM m, Walk m pa pb) =>

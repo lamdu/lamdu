@@ -103,9 +103,8 @@ instance NFData a => NFData (Property m a) where rnf (Property x _) = rnf x -- C
 instance Eq (a -> Unit b) where _ == _ = True
 instance Eq a => Eq (Property Unit a) where
     Property x _ == Property y _ = x == y
-instance Eq n => Eq (Sugar.TagPane n Unit) where
-    Sugar.TagPane t0 n0 _ _ _ == Sugar.TagPane t1 n1 _ _ _ =
-        t0 == t1 && n0 == n1
+instance Eq (Sugar.TagPane f) where
+    x == y = x ^. Sugar.tpTag == y ^. Sugar.tpTag
 
 [makeDerivings [''Eq], makeInstances [''NFData]] ??
     [ ''Sugar.Annotation, ''Sugar.BinderParams, ''Sugar.CompositeFields
