@@ -15,9 +15,9 @@ import           Lamdu.Prelude
 
 type T = Transaction
 
-gotoToNominalDef ::
+gotoNominalDef ::
     Monad m => Anchors.CodeAnchors m -> T.NominalId -> T m EntityId
-gotoToNominalDef cp tid =
+gotoNominalDef cp tid =
     EntityId.ofNominalPane tid <$ DataOps.newPane cp (Anchors.PaneNominal tid)
 
 convert ::
@@ -27,4 +27,4 @@ convert tid =
     TId
     <$> taggedName Nothing tid
     <*> pure tid
-    <*> (Lens.view Anchors.codeAnchors <&> (`gotoToNominalDef` tid))
+    <*> (Lens.view Anchors.codeAnchors <&> (`gotoNominalDef` tid))
