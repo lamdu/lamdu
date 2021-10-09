@@ -1,4 +1,5 @@
 -- | A goto-definition widget
+{-# LANGUAGE TemplateHaskell #-}
 module Lamdu.GUI.CodeEdit.GotoDefinition
     ( make
     ) where
@@ -15,6 +16,7 @@ import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import qualified GUI.Momentu.Widgets.TextView as TextView
 import           Lamdu.Config.Theme (Theme)
 import qualified Lamdu.Config.Theme as Theme
+import           Lamdu.Config.Theme.TextColors (TextColors)
 import qualified Lamdu.Config.Theme.TextColors as TextColors
 import           Lamdu.Fuzzy (Fuzzy)
 import qualified Lamdu.Fuzzy as Fuzzy
@@ -28,6 +30,13 @@ import qualified Lamdu.Name as Name
 import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
+
+data Global o = Global
+    { _globalIdx :: !Int
+    , _globalColor :: Lens.ALens' TextColors M.Color
+    , _globalNameRef :: Sugar.NameRef Name o
+    }
+Lens.makeLenses ''Global
 
 myId :: Widget.Id
 myId = Widget.Id ["goto-def"]
@@ -48,6 +57,9 @@ nameToText name =
         collisionText Name.NoCollision = ""
         collisionText (Name.Collision i) = Text.pack (show i)
         collisionText Name.UnknownCollision = "?"
+
+toGlobal :: Int -> (Lens.ALens' TextColors M.Color, Sugar.NameRef Name o) -> Global o
+toGlobal idx (color, nameRef) = Global idx color nameRef
 
 makeOptions ::
     ( MonadReader env m, Has (Texts.Navigation Text) env, Has (Texts.Name Text) env
@@ -74,31 +86,30 @@ makeOptions globals (SearchMenu.ResultsContext searchTerm prefix)
                         , Widget._pTextRemainder = ""
                         }
                     }
-            let makeOption color (idx, nameRef) =
+            let makeOption global =
                     Menu.Option
                     { Menu._oId = optId
                     , Menu._oRender =
-                        GetVarEdit.makeSimpleView color name optId
-                        <&> toRenderedOption nameRef
+                        GetVarEdit.makeSimpleView (global ^. globalColor) name optId
+                        <&> toRenderedOption (global ^. globalNameRef)
                         & local (M.animIdPrefix .~ Widget.toAnimId optId)
                     , Menu._oSubmenuWidgets = Menu.SubmenuEmpty
                     }
                     where
-                        name = nameRef ^. Sugar.nrName
+                        name = global ^. globalNameRef . Sugar.nrName
+                        idx = global ^. globalIdx
                         optId = prefix `Widget.joinId` [BS8.pack (show idx)]
-            let globalOpts color lens =
-                    globals ^. lens <&> zip [0::Int ..]
-                    >>= traverse withText
-                    <&> (Fuzzy.memoableMake fuzzyMaker ?? searchTerm)
-                    <&> map (makeOption color . snd)
-            (<>)
-                <$> globalOpts TextColors.definitionColor Sugar.globalDefs
-                <*> globalOpts TextColors.nomColor Sugar.globalNominals
+            defs <- globals ^. Sugar.globalDefs <&> map ((,) TextColors.definitionColor)
+            noms <- globals ^. Sugar.globalNominals <&> map ((,) TextColors.nomColor)
+            zipWith toGlobal [0..] (defs <> noms)
+                & traverse withText
+                <&> (Fuzzy.memoableMake fuzzyMaker ?? searchTerm)
+                <&> map (makeOption . snd)
                 <&> Menu.OptionList isTruncated
     where
         isTruncated = False
-        withText (idx, nameRef) =
-            nameToText (nameRef ^. Sugar.nrName) <&> \x -> (x, (idx, nameRef))
+        withText global =
+            nameToText (global ^. globalNameRef . Sugar.nrName) <&> \text -> (text, global)
         toPickResult x = Menu.PickResult x (Just x)
 
 make :: _ => Sugar.Globals Name m o -> m (StatusBar.StatusWidget o)
