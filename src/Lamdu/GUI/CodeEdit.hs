@@ -26,7 +26,6 @@ import qualified GUI.Momentu.I18N as MomentuTexts
 import           GUI.Momentu.Rect (Rect(..))
 import           GUI.Momentu.Responsive (Responsive)
 import qualified GUI.Momentu.Responsive as Responsive
-import qualified GUI.Momentu.Responsive.Options as ResponsiveOptions
 import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
@@ -35,7 +34,6 @@ import qualified Lamdu.Builtins.Anchors as Builtins
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Config as Config
-import qualified Lamdu.Config.Theme.TextColors as TextColors
 import qualified Lamdu.Data.Anchors as Anchors
 import           Lamdu.Data.Definition (Definition(..))
 import qualified Lamdu.Data.Definition as Definition
@@ -46,19 +44,17 @@ import qualified Lamdu.GUI.CodeEdit.GotoDefinition as GotoDefinition
 import qualified Lamdu.GUI.DefinitionEdit as DefinitionEdit
 import qualified Lamdu.GUI.Expr as ExpressionEdit
 import qualified Lamdu.GUI.Expr.BinderEdit as BinderEdit
-import qualified Lamdu.GUI.Expr.TagEdit as TagEdit
 import           Lamdu.GUI.IOTrans (IOTrans(..))
 import qualified Lamdu.GUI.IOTrans as IOTrans
+import qualified Lamdu.GUI.NominalPane as NominalPane
 import           Lamdu.GUI.Monad (GuiM)
 import qualified Lamdu.GUI.Monad as GuiM
 import qualified Lamdu.GUI.ReplEdit as ReplEdit
 import qualified Lamdu.GUI.StatusBar.Common as StatusBar
 import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.GUI.TagPane as TagPaneEdit
-import qualified Lamdu.GUI.TypeView as TypeView
 import qualified Lamdu.GUI.Types as ExprGui
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
-import qualified Lamdu.I18N.Code as Texts
 import qualified Lamdu.I18N.CodeUI as Texts
 import qualified Lamdu.I18N.Collaboration as Texts
 import qualified Lamdu.I18N.Definitions as Texts
@@ -172,38 +168,12 @@ deleteAndClosePaneEventMap pane defState =
         , has . MomentuTexts.delete
         ])
 
-makeNominalPane :: _ => Sugar.NominalPane Name i o -> GuiM env i o (Responsive o)
-makeNominalPane nom =
-    do
-        nameEdit <-
-            TagEdit.makeBinderTagEdit TextColors.nomColor (nom ^. Sugar.npName)
-            <&> Responsive.fromWithTextPos
-        equals <- Styled.grammar (Styled.label Texts.assign)
-        hbox <- ResponsiveOptions.boxSpaced ?? ResponsiveOptions.disambiguationNone
-        bodyEdit <- makeNominalPaneBody (nom ^. Sugar.npBody)
-        hbox [ hbox [nameEdit, Responsive.fromTextView equals], bodyEdit]
-            & pure
-        & local (M.animIdPrefix .~ Widget.toAnimId myId)
-        & GuiState.assignCursor myId nameEditId
-    where
-        myId = nom ^. Sugar.npEntityId & WidgetIds.fromEntityId
-        nameEditId =
-            nom ^. Sugar.npName . Sugar.tagRefTag . Sugar.tagInstance
-            & WidgetIds.fromEntityId
-
-makeNominalPaneBody :: _ => Sugar.NominalPaneBody Name o -> f (Responsive a)
-makeNominalPaneBody Sugar.NominalPaneOpaque =
-    Styled.grammar (Styled.focusableLabel Texts.opaque)
-    <&> Responsive.fromWithTextPos
-makeNominalPaneBody (Sugar.NominalPaneType (Sugar.NominalTypeBody scheme ())) =
-    TypeView.makeScheme scheme >>= TypeView.addTypeBG <&> Responsive.fromTextView
-
 makePaneBodyEdit :: _ => ExprGui.Top Sugar.Pane i o -> GuiM env i o (Responsive o)
 makePaneBodyEdit pane =
     case pane ^. Sugar.paneBody of
     Sugar.PaneTag tag -> TagPaneEdit.make tag myId <&> Responsive.fromWidget
     Sugar.PaneDefinition def -> DefinitionEdit.make def myId
-    Sugar.PaneNominal nom -> makeNominalPane nom
+    Sugar.PaneNominal nom -> NominalPane.make nom
     where
         myId = pane ^. Sugar.paneEntityId & WidgetIds.fromEntityId
 
