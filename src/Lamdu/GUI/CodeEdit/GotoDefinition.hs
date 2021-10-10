@@ -33,8 +33,8 @@ import           Lamdu.Prelude
 
 data Global o = Global
     { _globalIdx :: !Int
-    , _globalColor :: Lens.ALens' TextColors M.Color
-    , _globalNameRef :: Sugar.NameRef Name o
+    , _globalColor :: !(Lens.ALens' TextColors M.Color)
+    , _globalNameRef :: !(Sugar.NameRef Name o)
     }
 Lens.makeLenses ''Global
 
