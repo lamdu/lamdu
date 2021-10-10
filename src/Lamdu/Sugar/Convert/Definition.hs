@@ -59,7 +59,7 @@ emptyScopeInfo recursiveRef =
     }
 
 convertDefIBuiltin ::
-    (MonadTransaction n m, Monad f, MonadReader env m, Anchors.HasCodeAnchors env n) =>
+    (MonadTransaction n m, Monad f) =>
     Pure # T.Scheme -> Definition.FFIName -> DefI f ->
     m (DefinitionBody v InternalName i (T f) a)
 convertDefIBuiltin scheme name defI =

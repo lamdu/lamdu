@@ -13,7 +13,6 @@ module Lamdu.Sugar.Convert.Binder.Params
 
 import qualified Control.Lens.Extended as Lens
 import           Control.Monad.Once (OnceT)
-import           Control.Monad.Unit (Unit(..))
 import           Control.Monad.Transaction (MonadTransaction, getP, setP)
 import qualified Data.List.Extended as List
 import qualified Data.Map as Map
@@ -585,9 +584,7 @@ makeNonRecordParamActions binderKind storedLam =
     where
         param = storedLam ^. slLam . V.tlIn
 
-mkVarInfo ::
-    (MonadTransaction n m, MonadReader env m, Anchors.HasCodeAnchors env n) =>
-    Pure # T.Type -> m VarInfo
+mkVarInfo :: MonadTransaction n m => Pure # T.Type -> m VarInfo
 mkVarInfo (Pure T.TFun{}) = pure VarFunction
 mkVarInfo (Pure T.TVar{}) = pure VarGeneric
 mkVarInfo (Pure (T.TRecord (Pure T.REmpty))) = pure VarUnit
@@ -596,7 +593,7 @@ mkVarInfo (Pure (T.TVariant (Pure T.REmpty))) = pure VarVoid
 mkVarInfo (Pure T.TVariant{}) = pure VarVariant
 mkVarInfo (Pure (T.TInst (NominalInst tid _))) =
     ConvertTId.convert tid
-    <&> VarNominal . (tidName %~ (^. inTag)) . (tidGotoDefinition .~ Unit)
+    <&> VarNominal . (tidName %~ (^. inTag))
 
 mkFuncParam ::
     Monad m =>

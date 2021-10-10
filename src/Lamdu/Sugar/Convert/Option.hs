@@ -463,9 +463,7 @@ makeLocals f scope =
                     ^?! Lens._Right . _1 . _Pure . T._TRecord . T.flatRow . freExtends . Lens.ix tag
 
  -- Duplicate name-gen behaviour for locals
-localName ::
-    (MonadTransaction n m, MonadReader env m, Anchors.HasCodeAnchors env n) =>
-    Pure # T.Type -> V.Var -> m (QueryLangInfo Text -> [Text])
+localName :: MonadTransaction n m => Pure # T.Type -> V.Var -> m (QueryLangInfo Text -> [Text])
 localName typ var =
     do
         tag <- Anchors.assocTag var & getP & transaction

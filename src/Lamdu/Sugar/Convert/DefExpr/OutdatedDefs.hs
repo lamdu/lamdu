@@ -19,7 +19,6 @@ import           Lamdu.Calc.Infer (alphaEq)
 import qualified Lamdu.Calc.Lens as ExprLens
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
-import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Definition as Def
 import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Data.Ops.Subexprs as SubExprs
@@ -238,7 +237,7 @@ updateDefType prevType newType usedDefVar defExpr setDefExpr typeCheck =
             PostProcess.BadExpr{} -> fixDefExpr prevType newType usedDefVar (defExpr ^. Def.expr)
 
 scan ::
-    (MonadTransaction n m, MonadReader env m, Anchors.HasCodeAnchors env n) =>
+    MonadTransaction n m =>
     EntityId -> Def.Expr (Ann (HRef n) # V.Term) ->
     (Def.Expr (ValI n) -> T n ()) ->
     T n PostProcess.Result ->

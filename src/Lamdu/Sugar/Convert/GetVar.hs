@@ -171,7 +171,7 @@ convertLocalNameRef varInfo param =
     }
 
 convertParam ::
-    (MonadTransaction u m, Applicative n, MonadReader env m, Anchors.HasCodeAnchors env u) =>
+    (MonadTransaction u m, Applicative n) =>
     V.Var -> Input.Payload u a # V.Term -> m (GetVar InternalName n)
 convertParam param exprPl =
     mkVarInfo (exprPl ^. Input.inferredType)

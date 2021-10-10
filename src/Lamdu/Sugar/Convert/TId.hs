@@ -1,8 +1,12 @@
+{-# LANGUAGE MultiParamTypeClasses, FlexibleInstances, UndecidableInstances #-}
+
 module Lamdu.Sugar.Convert.TId
-    ( convert
+    ( JumpToNominal(..)
+    , convert
     ) where
 
 import qualified Control.Lens as Lens
+import           Control.Monad.Unit (Unit(..))
 import           Control.Monad.Transaction (Transaction, MonadTransaction)
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Data.Anchors as Anchors
@@ -12,13 +16,17 @@ import           Lamdu.Sugar.Types
 
 import           Lamdu.Prelude
 
-type T = Transaction
+class JumpToNominal m o where
+    jumpToNom :: m (T.NominalId -> o EntityId)
 
-convert ::
-    (MonadTransaction n m, MonadReader env m, Anchors.HasCodeAnchors env n) =>
-    T.NominalId -> m (TId InternalName (T n))
+instance Applicative m => JumpToNominal m Unit where
+    jumpToNom = pure (pure Unit)
+
+instance (MonadReader env m, Anchors.HasCodeAnchors env n, Monad n) => JumpToNominal m (Transaction n) where
+    jumpToNom = Lens.view Anchors.codeAnchors <&> jumpToNominal
+
+convert :: (MonadTransaction n m, JumpToNominal m o) => T.NominalId -> m (TId InternalName o)
 convert tid =
-    TId
+    (TId ?? tid)
     <$> taggedName Nothing tid
-    <*> pure tid
-    <*> (Lens.view Anchors.codeAnchors <&> (`jumpToNominal` tid))
+    <*> (jumpToNom ?? tid)

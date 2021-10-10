@@ -321,7 +321,7 @@ addActions subexprs exprPl bodyS =
     exprPl bodyS
 
 makeTypeAnnotation ::
-    (MonadTransaction n m, MonadReader env m, Anchors.HasCodeAnchors env n) =>
+    MonadTransaction n m =>
     EntityId -> Pure # T.Type -> m (Annotated EntityId # Type InternalName Unit)
 makeTypeAnnotation = convertType . EntityId.ofTypeOf
 

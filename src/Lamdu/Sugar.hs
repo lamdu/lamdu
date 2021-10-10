@@ -51,13 +51,12 @@ markAnnotations workArea =
     }
 
 typeAnnotationFromEvalRes ::
-    (MonadTransaction n f, MonadReader env f, Anchors.HasCodeAnchors env n) =>
-    EvalPrep -> f (Sugar.Annotation v AddNames.InternalName)
+    MonadTransaction n f => EvalPrep -> f (Sugar.Annotation v AddNames.InternalName)
 typeAnnotationFromEvalRes x =
     makeTypeAnnotation (x ^. eEvalId) (x ^. eType) <&> Sugar.AnnotationType
 
 makeAnnotation ::
-    (MonadTransaction n m, MonadReader env m, Anchors.HasCodeAnchors env n) =>
+    MonadTransaction n m =>
     Annotations.Mode ->
     (ShowAnnotation, EvalPrep) ->
     m (Sugar.Annotation EvalPrep AddNames.InternalName)
