@@ -8,8 +8,10 @@ import qualified Control.Lens as Lens
 import qualified Data.ByteString.Char8 as BS8
 import           Data.MRUMemo (memo)
 import qualified Data.Text as Text
+import           GUI.Momentu ((/|/))
 import qualified GUI.Momentu as M
 import qualified GUI.Momentu.Direction as Dir
+import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Menu as Menu
 import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
@@ -33,6 +35,7 @@ import           Lamdu.Prelude
 
 data Global o = Global
     { _globalIdx :: !Int
+    , _globalPrefix :: !Text
     , _globalColor :: !(Lens.ALens' TextColors M.Color)
     , _globalNameRef :: !(Sugar.NameRef Name o)
     }
@@ -41,8 +44,15 @@ Lens.makeLenses ''Global
 myId :: Widget.Id
 myId = Widget.Id ["goto-def"]
 
+-- TODO: This is redundant to injectSymbol, hard-code it and remove from languages json?
+getTagPrefix :: Text -> Maybe Char
+getTagPrefix searchTerm = searchTerm ^? Lens.ix 0 . Lens.filtered (`elem` ['\'', '.'])
+
 allowSearchTerm :: Text -> Bool
-allowSearchTerm = Name.isValidText
+allowSearchTerm text =
+    Text.drop prefixLength text & Name.isValidText
+    where
+        prefixLength = length (getTagPrefix text)
 
 {-# NOINLINE fuzzyMaker #-}
 fuzzyMaker :: [(Text, Int)] -> Fuzzy (Set Int)
@@ -58,8 +68,8 @@ nameToText name =
         collisionText (Name.Collision i) = Text.pack (show i)
         collisionText Name.UnknownCollision = "?"
 
-toGlobal :: Int -> (Lens.ALens' TextColors M.Color, Sugar.NameRef Name o) -> Global o
-toGlobal idx (color, nameRef) = Global idx color nameRef
+toGlobal :: Int -> (Text, Lens.ALens' TextColors M.Color, Sugar.NameRef Name o) -> Global o
+toGlobal idx (prefix, color, nameRef) = Global idx prefix color nameRef
 
 makeOptions ::
     ( MonadReader env m, Has (Texts.Navigation Text) env, Has (Texts.Name Text) env
@@ -73,13 +83,13 @@ makeOptions globals (SearchMenu.ResultsContext searchTerm prefix)
         pure Menu.OptionList { Menu._olIsTruncated = False, Menu._olOptions = [] }
     | otherwise =
         do
-            goto <- Lens.view (has . Texts.goto)
+            env <- Lens.view id
             let toRenderedOption nameRef widget =
                     Menu.RenderedOption
                     { Menu._rWidget = widget
                     , Menu._rPick =
                         Widget.PreEvent
-                        { Widget._pDesc = goto
+                        { Widget._pDesc = env ^. has . Texts.goto
                         , Widget._pAction =
                             nameRef ^. Sugar.nrGotoDefinition
                             <&> WidgetIds.fromEntityId <&> toPickResult
@@ -90,6 +100,9 @@ makeOptions globals (SearchMenu.ResultsContext searchTerm prefix)
                     Menu.Option
                     { Menu._oId = optId
                     , Menu._oRender =
+                        ((TextView.make ?? global ^. globalPrefix)
+                            <*> (Element.subAnimId ?? ["."]))
+                        /|/
                         GetVarEdit.makeSimpleView (global ^. globalColor) name optId
                         <&> toRenderedOption (global ^. globalNameRef)
                         & local (M.animIdPrefix .~ Widget.toAnimId optId)
@@ -99,32 +112,39 @@ makeOptions globals (SearchMenu.ResultsContext searchTerm prefix)
                         name = global ^. globalNameRef . Sugar.nrName
                         idx = global ^. globalIdx
                         optId = prefix `Widget.joinId` [BS8.pack (show idx)]
-            defs <- globals ^. Sugar.globalDefs <&> map ((,) TextColors.definitionColor)
-            noms <- globals ^. Sugar.globalNominals <&> map ((,) TextColors.nomColor)
-            zipWith toGlobal [0..] (defs <> noms)
+            globs <-
+                case mTagPrefix of
+                Just tagPrefix ->
+                    globals ^. Sugar.globalTags <&> map ((,,) (Text.singleton tagPrefix) TextColors.baseColor)
+                Nothing ->
+                    (<>)
+                    <$> (globals ^. Sugar.globalDefs <&> map ((,,) "" TextColors.definitionColor))
+                    <*> (globals ^. Sugar.globalNominals <&> map ((,,) "" TextColors.nomColor))
+            zipWith toGlobal [0..] globs
                 & traverse withText
                 <&> (Fuzzy.memoableMake fuzzyMaker ?? searchTerm)
                 <&> map (makeOption . snd)
                 <&> Menu.OptionList isTruncated
     where
+        mTagPrefix = getTagPrefix searchTerm
         isTruncated = False
         withText global =
-            nameToText (global ^. globalNameRef . Sugar.nrName) <&> \text -> (text, global)
+            nameToText (global ^. globalNameRef . Sugar.nrName) <&>
+            \text -> (maybe id Text.cons mTagPrefix text, global)
         toPickResult x = Menu.PickResult x (Just x)
 
 make :: _ => Sugar.Globals Name m o -> m (StatusBar.StatusWidget o)
 make globals =
     do
         goto <- Lens.view (has . Texts.goto)
+        let onTermStyle x =
+                x
+                & SearchMenu.emptyStrings . Lens.mapped .~ goto
+                & SearchMenu.bgColors . Lens.mapped .~ M.Color 0 0 0 0
         SearchMenu.make (SearchMenu.searchTermEdit myId (pure . allowSearchTerm))
             (makeOptions globals) M.empty myId ?? Menu.Below
-            & local (has . Theme.searchTerm %~ onTermStyle goto)
+            & local (has . Theme.searchTerm %~ onTermStyle)
             <&> \searchWidget -> StatusBar.StatusWidget
             { StatusBar._widget = searchWidget
             , StatusBar._globalEventMap = mempty
             }
-    where
-        onTermStyle goto x =
-            x
-            & SearchMenu.emptyStrings . Lens.mapped .~ goto
-            & SearchMenu.bgColors . Lens.mapped .~ M.Color 0 0 0 0
