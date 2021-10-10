@@ -12,12 +12,9 @@ import           Data.List.Extended (insertAt, removeAt)
 import           Data.Property (Property(Property))
 import qualified Data.Property as Property
 import           Hyper
-import qualified Hyper.Syntax.Nominal as Nominal
-import qualified Hyper.Syntax.Scheme as HyperScheme
 import qualified Lamdu.Cache as Cache
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
-import           Lamdu.Data.Anchors (HasCodeAnchors)
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Data.Tag as Tag
@@ -36,6 +33,7 @@ import qualified Lamdu.Sugar.Convert.Load as Load
 import           Lamdu.Sugar.Convert.Monad (Context(..), ScopeInfo(..), RecursiveRef(..))
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
 import qualified Lamdu.Sugar.Convert.NameRef as ConvertNameRef
+import qualified Lamdu.Sugar.Convert.Nominal as ConvertNominal
 import qualified Lamdu.Sugar.Convert.PostProcess as PostProcess
 import qualified Lamdu.Sugar.Convert.Tag as ConvertTag
 import qualified Lamdu.Sugar.Convert.Type as ConvertType
@@ -218,21 +216,6 @@ convertRepl env =
             prop ^. Property.mkProperty
             >>= (`Property.pureModify` (Definition.exprFrozenDeps .~ deps))
 
-convertNominalTypeBody ::
-    (Monad m, HasCodeAnchors env m) =>
-    env -> EntityId -> T.Types # HyperScheme.QVars -> HyperScheme.Scheme _ _ # Pure ->
-    T m (NominalTypeBody InternalName (T m))
-convertNominalTypeBody env entityId _params scheme =
-    ConvertType.convertSchemeWith gotoNom (EntityId.currentTypeOf entityId) (Pure scheme)
-    & (`runReaderT` env)
-    <&> \schemeS ->
-    NominalTypeBody
-    { _nominalType = schemeS
-    , _nominalParams = () -- TODO
-    }
-    where
-        gotoNom = ConvertNameRef.jumpToNominal (env ^. Anchors.codeAnchors)
-
 convertPaneBody ::
     ( Monad m, Typeable m
     , Has Debug.Monitors env
@@ -268,21 +251,7 @@ convertPaneBody env (Anchors.PaneDefinition defI) =
             } <&> PaneDefinition
     where
         defVar = ExprIRef.globalId defI
-convertPaneBody env (Anchors.PaneNominal nomId) =
-    do
-        nom <- ExprLoad.nominal nomId & lift
-        tag <- ConvertTag.taggedEntityWith (env ^. Anchors.codeAnchors) Nothing nomId & join
-        let entityId = EntityId.ofNominalPane nomId
-        body <- case nom of
-            Nothing -> pure NominalPaneOpaque
-            Just (Pure (Nominal.NominalDecl params scheme)) ->
-                convertNominalTypeBody env entityId params scheme <&> NominalPaneType & lift
-        PaneNominal NominalPane
-            { _npName = tag
-            , _npEntityId = entityId
-            , _npBody = body
-            , _npNominalId = nomId
-            } & pure
+convertPaneBody env (Anchors.PaneNominal nomId) = ConvertNominal.pane env nomId
 
 mkPaneEntityId :: Anchors.Pane dummy -> EntityId
 mkPaneEntityId (Anchors.PaneDefinition defI) = EntityId.ofIRef defI

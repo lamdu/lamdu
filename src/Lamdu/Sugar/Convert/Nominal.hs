@@ -1,21 +1,36 @@
 module Lamdu.Sugar.Convert.Nominal
-    ( convertToNom, convertFromNom
+    ( convertToNom, convertFromNom, pane
     ) where
 
+import           Control.Monad.Once (OnceT)
+import           Control.Monad.Reader (ReaderT(..))
 import           Control.Monad.Trans.Except.Extended (runMatcherT, justToLeft)
 import           Hyper (_ANode)
 import           Hyper.Syntax.Nominal (ToNom(..))
+import qualified Hyper.Syntax.Nominal as Nominal
+import qualified Hyper.Syntax.Scheme as HyperScheme
 import qualified Lamdu.Calc.Term as V
+import qualified Lamdu.Calc.Type as T
+import           Lamdu.Data.Anchors (HasCodeAnchors)
+import qualified Lamdu.Data.Anchors as Anchors
+import qualified Lamdu.Expr.Load as ExprLoad
 import qualified Lamdu.Sugar.Convert.Binder as ConvertBinder
 import           Lamdu.Sugar.Convert.Expression.Actions (addActions)
 import qualified Lamdu.Sugar.Convert.Input as Input
 import           Lamdu.Sugar.Convert.Monad (ConvertM)
+import qualified Lamdu.Sugar.Convert.NameRef as ConvertNameRef
 import qualified Lamdu.Sugar.Convert.TId as ConvertTId
+import qualified Lamdu.Sugar.Convert.Tag as ConvertTag
 import qualified Lamdu.Sugar.Convert.Text as ConvertText
+import qualified Lamdu.Sugar.Convert.Type as ConvertType
 import           Lamdu.Sugar.Internal
+import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import           Lamdu.Sugar.Types
+import           Revision.Deltum.Transaction (Transaction)
 
 import           Lamdu.Prelude
+
+type T = Transaction
 
 convertToNom ::
     (Monad m, Monoid a) =>
@@ -40,3 +55,37 @@ convertFromNom ::
     ConvertM m (ExpressionU v m a)
 convertFromNom tid pl =
     ConvertTId.convert tid <&> PfFromNom <&> BodyPostfixFunc >>= addActions (Const ()) pl
+
+convertNominalTypeBody ::
+    (Monad m, HasCodeAnchors env m) =>
+    env -> EntityId -> T.Types # HyperScheme.QVars -> HyperScheme.Scheme _ _ # Pure ->
+    T m (NominalTypeBody InternalName (T m))
+convertNominalTypeBody env entityId _params scheme =
+    ConvertType.convertSchemeWith gotoNom (EntityId.currentTypeOf entityId) (Pure scheme)
+    & (`runReaderT` env)
+    <&> \schemeS ->
+    NominalTypeBody
+    { _nominalType = schemeS
+    , _nominalParams = () -- TODO
+    }
+    where
+        gotoNom = ConvertNameRef.jumpToNominal (env ^. Anchors.codeAnchors)
+
+pane ::
+    (Monad m, HasCodeAnchors env m) =>
+    env -> NominalId -> OnceT (T m) (PaneBody v InternalName (OnceT (T m)) (T m) a)
+pane env nomId =
+    do
+        nom <- ExprLoad.nominal nomId & lift
+        tag <- ConvertTag.taggedEntityWith (env ^. Anchors.codeAnchors) Nothing nomId & join
+        let entityId = EntityId.ofNominalPane nomId
+        body <- case nom of
+            Nothing -> pure NominalPaneOpaque
+            Just (Pure (Nominal.NominalDecl params scheme)) ->
+                convertNominalTypeBody env entityId params scheme <&> NominalPaneType & lift
+        PaneNominal NominalPane
+            { _npName = tag
+            , _npEntityId = entityId
+            , _npBody = body
+            , _npNominalId = nomId
+            } & pure
