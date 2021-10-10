@@ -58,14 +58,14 @@ convertFromNom tid pl =
 convertNominalTypeBody ::
     (Monad m, HasCodeAnchors env m) =>
     env -> EntityId -> T.Types # HyperScheme.QVars -> HyperScheme.Scheme _ _ # Pure ->
-    T m (NominalTypeBody InternalName (T m))
+    T m (NominalTypeBody InternalName (OnceT (T m)) (T m))
 convertNominalTypeBody env entityId _params scheme =
     ConvertType.convertScheme (EntityId.currentTypeOf entityId) (Pure scheme)
     & (`runReaderT` env)
     <&> \schemeS ->
     NominalTypeBody
     { _nominalType = schemeS
-    , _nominalParams = () -- TODO
+    , _nominalParams = [] -- TODO
     }
 
 pane ::

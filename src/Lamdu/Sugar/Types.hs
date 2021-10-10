@@ -8,6 +8,8 @@ module Lamdu.Sugar.Types
     , Repl(..), replExpr, replVarInfo, replResult
     , WorkArea(..), waPanes, waRepl, waGlobals
     , Globals(..), allGlobals, globalDefs, globalNominals, globalTags
+    , ParamKind(..), _TypeParam, _RowParam
+    , NominalParam(..), pName, pKind
     , NominalTypeBody(..), nominalType, nominalParams
     , NominalPaneBody(..), _NominalPaneOpaque, _NominalPaneType
     , NominalPane(..), npName, npNominalId, npEntityId, npBody
@@ -82,21 +84,28 @@ data TagPane o = TagPane
     , _tpSetOrder :: Int -> o ()
     } deriving Generic
 
-data NominalTypeBody name o = NominalTypeBody
-    { _nominalType :: Scheme name o
-    , _nominalParams :: () -- TODO: (what is sugared 'NomVarTypes typ # QVars')?
+data ParamKind = TypeParam | RowParam deriving Generic
+
+data NominalParam name i o = NominalTypeParams
+    { _pName :: TagRef name i o
+    , _pKind :: ParamKind -- TODO: Support changing kind
     } deriving Generic
 
-data NominalPaneBody name o
+data NominalTypeBody name i o = NominalTypeBody
+    { _nominalType :: Scheme name o
+    , _nominalParams :: [NominalParam name i o]
+    } deriving Generic
+
+data NominalPaneBody name i o
     = NominalPaneOpaque
-    | NominalPaneType (NominalTypeBody name o)
+    | NominalPaneType (NominalTypeBody name i o)
     deriving Generic
 
 data NominalPane name i o = NominalPane
     { _npName :: TagRef name i o
     , _npNominalId :: T.NominalId
     , _npEntityId :: EntityId
-    , _npBody :: NominalPaneBody name o
+    , _npBody :: NominalPaneBody name i o
     } deriving Generic
 
 data PaneBody v name i o a
@@ -150,6 +159,6 @@ data WorkArea v name i o a = WorkArea
 
 traverse Lens.makeLenses
     [''Definition, ''DefinitionBuiltin, ''Pane, ''TagPane, ''Globals, ''WorkArea
-    , ''NominalPane, ''NominalTypeBody]
+    , ''NominalPane, ''NominalTypeBody, ''NominalParam]
     <&> concat
-traverse Lens.makePrisms [''NominalPaneBody, ''DefinitionBody, ''PaneBody] <&> concat
+traverse Lens.makePrisms [''NominalPaneBody, ''DefinitionBody, ''PaneBody, ''ParamKind] <&> concat

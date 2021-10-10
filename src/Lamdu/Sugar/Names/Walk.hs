@@ -447,11 +447,14 @@ instance
             _drBody <- walk _drBody
             pure def{_drName, _drBody}
 
-instance (a ~ OldName m, b ~ NewName m) => Walk m (NominalTypeBody a o) (NominalTypeBody b o) where
-    walk (NominalTypeBody scheme params) =
-        NominalTypeBody <$> walk scheme <*> pure params
+instance (a ~ OldName m, b ~ NewName m, IM m ~ i) => Walk m (NominalParam a i o) (NominalParam b i o) where
+    walk = pName walk
 
-instance (a ~ OldName m, b ~ NewName m) => Walk m (NominalPaneBody a o) (NominalPaneBody b o) where
+instance (a ~ OldName m, b ~ NewName m, IM m ~ i) => Walk m (NominalTypeBody a i o) (NominalTypeBody b i o) where
+    walk (NominalTypeBody scheme params) =
+        NominalTypeBody <$> walk scheme <*> traverse walk params
+
+instance (a ~ OldName m, b ~ NewName m, IM m ~ i) => Walk m (NominalPaneBody a i o) (NominalPaneBody b i o) where
     walk NominalPaneOpaque = pure NominalPaneOpaque
     walk (NominalPaneType x) = walk x <&> NominalPaneType
 
