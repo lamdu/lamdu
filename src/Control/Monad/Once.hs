@@ -1,4 +1,4 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving, ScopedTypeVariables, TemplateHaskell, TypeApplications #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving, ScopedTypeVariables, TemplateHaskell, TypeApplications, DerivingVia #-}
 
 module Control.Monad.Once
     ( MonadOnce(..)
@@ -14,6 +14,7 @@ import           Control.Monad.ListT (ListT(..))
 import           Control.Monad.Trans.Class
 import           Control.Monad.Trans.State
 import           Data.Dynamic (Dynamic, toDyn, fromDynamic)
+import qualified Data.Monoid as Monoid
 import qualified Data.List.Class as ListClass
 import           Data.Typeable (Typeable, typeRep)
 import           Data.IORef
@@ -42,9 +43,7 @@ type OnceState = Sequence.Seq Dynamic
 
 newtype OnceT m a = OnceT (StateT OnceState m a)
     deriving newtype (Functor, Applicative, Monad, MonadTrans)
-
-instance (Semigroup a, Monad m) => Semigroup (OnceT m a) where
-    a <> b = (<>) <$> a <*> b
+    deriving (Semigroup, Monoid) via Monoid.Ap (OnceT m) a
 
 Lens.makePrisms ''OnceT
 
