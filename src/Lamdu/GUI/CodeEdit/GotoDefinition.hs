@@ -120,7 +120,7 @@ makeOptions globals (SearchMenu.ResultsContext searchTerm prefix)
                     (<>)
                     <$> (globals ^. Sugar.globalDefs <&> map ((,,) "" TextColors.definitionColor))
                     <*> (globals ^. Sugar.globalNominals <&> map ((,,) "" TextColors.nomColor))
-            zipWith toGlobal [0..] globs
+            Lens.imap toGlobal globs
                 & traverse withText
                 <&> (Fuzzy.memoableMake fuzzyMaker ?? searchTerm)
                 <&> map (makeOption . snd)

@@ -2,9 +2,9 @@
 
 module Lamdu.Sugar.Convert.Type
     ( convertType
-    , convertTypeWith -- ^ a type with goto Nom
+    , convertTypeWith -- a type with goto Nom
     , convertScheme
-    , convertSchemeWith -- ^ a type with goto Nom action
+    , convertSchemeWith -- a type with goto Nom action
     ) where
 
 import qualified Control.Lens as Lens
