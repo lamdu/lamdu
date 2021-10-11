@@ -86,7 +86,7 @@ data TagPane o = TagPane
 
 data ParamKind = TypeParam | RowParam deriving Generic
 
-data NominalParam name i o = NominalTypeParams
+data NominalParam name i o = NominalParam
     { _pName :: TagRef name i o
     , _pKind :: ParamKind -- TODO: Support changing kind
     } deriving Generic
