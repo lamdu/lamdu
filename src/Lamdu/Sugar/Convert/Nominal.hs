@@ -8,9 +8,7 @@ import           Control.Monad.Trans.Except.Extended (runMatcherT, justToLeft)
 import           Hyper (_ANode)
 import           Hyper.Syntax.Nominal (ToNom(..))
 import qualified Hyper.Syntax.Nominal as Nominal
-import qualified Hyper.Syntax.Scheme as HyperScheme
 import qualified Lamdu.Calc.Term as V
-import qualified Lamdu.Calc.Type as T
 import           Lamdu.Data.Anchors (HasCodeAnchors)
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Expr.Load as ExprLoad
@@ -55,14 +53,6 @@ convertFromNom ::
 convertFromNom tid pl =
     ConvertTId.convert tid <&> PfFromNom <&> BodyPostfixFunc >>= addActions (Const ()) pl
 
-convertNominalTypeBody ::
-    (Monad m, HasCodeAnchors env m) =>
-    env -> EntityId -> HyperScheme.Scheme T.Types T.Type # Pure ->
-    T m (Scheme InternalName (T m))
-convertNominalTypeBody env entityId scheme =
-    ConvertType.convertScheme (EntityId.currentTypeOf entityId) (Pure scheme)
-    & (`runReaderT` env)
-
 pane ::
     (Monad m, HasCodeAnchors env m) =>
     env -> NominalId -> OnceT (T m) (PaneBody v InternalName (OnceT (T m)) (T m) a)
@@ -74,7 +64,8 @@ pane env nomId =
         body <- case nom of
             Nothing -> pure Nothing
             Just (Pure (Nominal.NominalDecl _params scheme)) ->
-                convertNominalTypeBody env entityId scheme <&> Just & lift
+                ConvertType.convertScheme (EntityId.currentTypeOf entityId) (Pure scheme)
+                & (`runReaderT` env) <&> Just & lift
         PaneNominal NominalPane
             { _npName = tag
             , _npParams = [] -- TODO
