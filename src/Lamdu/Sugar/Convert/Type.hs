@@ -7,10 +7,12 @@ module Lamdu.Sugar.Convert.Type
 
 import qualified Control.Lens as Lens
 import           Control.Monad.Transaction (MonadTransaction)
+import qualified Data.ByteString as BS
 import           Hyper.Syntax (FuncType(..))
 import           Hyper.Syntax.Nominal (NominalInst(..))
 import           Hyper.Syntax.Row (RowExtend(..))
 import qualified Hyper.Syntax.Scheme as S
+import           Lamdu.Calc.Identifier (Identifier(..))
 import qualified Lamdu.Calc.Type as T
 import           Lamdu.Data.Anchors (anonTag)
 import qualified Lamdu.Sugar.Convert.TId as ConvertTId
@@ -43,7 +45,11 @@ convertType ::
     EntityId -> Pure # T.Type -> m (Annotated EntityId # Type InternalName o)
 convertType entityId typ =
     case typ ^. _Pure of
-    T.TVar tv -> nameWithContext Nothing tv anonTag & TVar & pure
+    T.TVar tv
+        | isTag tv -> nameWithoutContext (T.Tag (tv ^. T._Var)) & TVar & pure
+        | otherwise -> nameWithContext Nothing tv anonTag & TVar & pure
+        where
+            isTag (T.Var (Identifier i)) = BS.length i == 16
     T.TFun (FuncType param res) ->
         FuncType
         <$> convertType (ofFunParam entityId) param
