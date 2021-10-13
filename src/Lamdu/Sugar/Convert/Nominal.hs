@@ -57,9 +57,9 @@ convertFromNom tid pl =
 
 convertNominalTypeBody ::
     (Monad m, HasCodeAnchors env m) =>
-    env -> EntityId -> T.Types # HyperScheme.QVars -> HyperScheme.Scheme T.Types T.Type # Pure ->
+    env -> EntityId -> HyperScheme.Scheme T.Types T.Type # Pure ->
     T m (Scheme InternalName (T m))
-convertNominalTypeBody env entityId _params scheme =
+convertNominalTypeBody env entityId scheme =
     ConvertType.convertScheme (EntityId.currentTypeOf entityId) (Pure scheme)
     & (`runReaderT` env)
 
@@ -73,8 +73,8 @@ pane env nomId =
         let entityId = EntityId.ofNominalPane nomId
         body <- case nom of
             Nothing -> pure Nothing
-            Just (Pure (Nominal.NominalDecl params scheme)) ->
-                convertNominalTypeBody env entityId params scheme <&> Just & lift
+            Just (Pure (Nominal.NominalDecl _params scheme)) ->
+                convertNominalTypeBody env entityId scheme <&> Just & lift
         PaneNominal NominalPane
             { _npName = tag
             , _npParams = [] -- TODO
