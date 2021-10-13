@@ -184,6 +184,7 @@ makeComposite mkOpener mkPre mkPost mkField composite =
     case composite of
     Sugar.CompositeFields [] Nothing -> makeEmptyComposite
     Sugar.CompositeFields fields extension ->
+        Styled.addValFrame <*>
         do
             opener <- Styled.grammar mkOpener
             closer <- Styled.label Texts.recordCloser & Styled.grammar

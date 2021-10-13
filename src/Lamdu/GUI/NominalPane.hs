@@ -44,5 +44,4 @@ makeNominalPaneBody :: _ => Maybe (Sugar.Scheme Name o) -> f (Responsive a)
 makeNominalPaneBody Nothing =
     Styled.grammar (Styled.focusableLabel Texts.opaque)
     <&> Responsive.fromWithTextPos
-makeNominalPaneBody (Just scheme) =
-    TypeView.makeScheme scheme >>= TypeView.addTypeBG <&> Responsive.fromTextView
+makeNominalPaneBody (Just scheme) = TypeView.makeScheme scheme <&> Responsive.fromTextView
