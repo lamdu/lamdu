@@ -4,7 +4,6 @@ import qualified Control.Lens as Lens
 import           Control.Lens.Extended ((~~>))
 import qualified Data.Aeson as Aeson
 import           Data.Aeson.Lens (_Object)
-import           Data.HashMap.Strict (HashMap)
 import qualified Data.UUID.Utils as UUIDUtils
 import           Lamdu.Data.Export.JSON.Migration.Common (migrateToVer)
 
@@ -28,7 +27,7 @@ migrateTerm (Aeson.Object x) =
     <&> Aeson.Object
 migrateTerm x = Right x
 
-migrateObj :: HashMap Text Aeson.Value -> Either Text (HashMap Text Aeson.Value)
+migrateObj :: Aeson.Object -> Either Text Aeson.Object
 migrateObj x =
     x
     & Lens.ix "val" migrateTerm
