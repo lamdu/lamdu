@@ -167,7 +167,7 @@ convertItem cons stored inst forbiddenTags exprS extendVal =
                 where
                     valI = stored ^. ExprIRef.iref
         tagS <-
-            ConvertTag.ref tag nameWithoutContext forbiddenTags (EntityId.ofTag inst) setTag
+            ConvertTag.ref tag Nothing forbiddenTags (EntityId.ofTag inst) setTag
             >>= ConvertM . lift
         pure CompositeItem
             { _ciTag = tagS

@@ -1,8 +1,10 @@
+{-# LANGUAGE TemplateHaskell #-}
 module Lamdu.Sugar.Convert.Tag
     ( ref, replace, withoutContext
     , taggedEntity
     , taggedEntityWith
     , AllowAnonTag(..)
+    , NameContext(..), ncMVarInfo, ncUuid
     ) where
 
 import qualified Control.Lens as Lens
@@ -11,6 +13,7 @@ import           Control.Monad.Transaction (MonadTransaction, getP, setP)
 import           Data.Property (MkProperty')
 import qualified Data.Property as Property
 import qualified Data.Set as Set
+import           Data.UUID (UUID)
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Ops as DataOps
@@ -26,6 +29,13 @@ import           Lamdu.Prelude
 type T = Transaction
 
 data AllowAnonTag = AllowAnon | RequireTag
+
+data NameContext = NameContext
+    { _ncMVarInfo :: Maybe VarInfo
+    , _ncUuid :: UUID
+    }
+
+Lens.makeLenses ''NameContext
 
 getTagsProp ::
     Anchors.HasCodeAnchors env m => env -> MkProperty' (T m) (Set T.Tag)
@@ -44,15 +54,18 @@ withoutContext entityId tag =
 -- allowed, generating ordinary type errors
 ref ::
     (MonadTransaction n m, MonadReader env m, Anchors.HasCodeAnchors env n) =>
-    T.Tag -> (T.Tag -> name) -> Set T.Tag -> (T.Tag -> EntityId) ->
+    T.Tag -> Maybe NameContext -> Set T.Tag -> (T.Tag -> EntityId) ->
     (T.Tag -> T n ()) ->
-    m (OnceT (T n) (TagRef name (OnceT (T n)) (T n)))
-ref tag name forbiddenTags mkInstance setTag =
+    m (OnceT (T n) (TagRef InternalName (OnceT (T n)) (T n)))
+ref tag nameCtx forbiddenTags mkInstance setTag =
     Lens.view id
     <&> \env ->
     getTagsProp env
     & refWith (env ^. Anchors.codeAnchors) tag name forbiddenTags RequireTag
     mkInstance setTag
+    where
+        withContext (NameContext varInfo var) = nameWithContext varInfo var
+        name = maybe nameWithoutContext withContext nameCtx
 
 refWith ::
     Monad m =>

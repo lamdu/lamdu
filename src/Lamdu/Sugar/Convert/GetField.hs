@@ -52,7 +52,7 @@ convert tag exprPl =
                 do
                     V.LGetField newTag & V.BLeaf & ExprIRef.writeValI valI
                     protectedSetToVal (exprPl ^. Input.stored) valI & void
-        ConvertTag.ref tag nameWithoutContext mempty
+        ConvertTag.ref tag Nothing mempty
             (EntityId.ofTag (exprPl ^. Input.entityId)) setTag
             >>= ConvertM . lift
     <&> PfGetField <&> BodyPostfixFunc

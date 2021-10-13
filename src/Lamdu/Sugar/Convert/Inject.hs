@@ -34,7 +34,7 @@ convert c tag exprPl =
                 do
                     V.LInject newTag & V.BLeaf & ExprIRef.writeValI valI
                     void typeProtect
-        ConvertTag.ref tag nameWithoutContext mempty (EntityId.ofTag entityId) setTag
+        ConvertTag.ref tag Nothing mempty (EntityId.ofTag entityId) setTag
             >>= ConvertM . lift
     <&> c
     >>= addActions (Const ()) exprPl

@@ -34,13 +34,14 @@ import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Data.Ops.Subexprs as SubExprs
 import           Lamdu.Expr.IRef (ValI, HRef)
 import qualified Lamdu.Expr.IRef as ExprIRef
+import qualified Lamdu.Expr.UniqueId as UniqueId
 import qualified Lamdu.Sugar.Config as Config
 import           Lamdu.Sugar.Convert.Binder.Types (BinderKind(..))
 import qualified Lamdu.Sugar.Convert.Input as Input
 import           Lamdu.Sugar.Convert.Monad (ConvertM(..))
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
-import qualified Lamdu.Sugar.Convert.Tag as ConvertTag
 import qualified Lamdu.Sugar.Convert.TId as ConvertTId
+import qualified Lamdu.Sugar.Convert.Tag as ConvertTag
 import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import           Lamdu.Sugar.Lens as SugarLens
@@ -423,7 +424,7 @@ convertRecordParams mPresMode binderKind fieldParams lam@(V.TypedLam param _ _) 
                 paramInfo <-
                     ParamInfo
                     <$> ( setFieldParamTag mPresMode binderKind storedLam tagList tag
-                            >>= ConvertTag.ref tag (nameWithContext Nothing param)
+                            >>= ConvertTag.ref tag (Just (ConvertTag.NameContext Nothing (UniqueId.toUUID param)))
                                 (Set.delete tag (Set.fromList tagList))
                                 (EntityId.ofTaggedEntity param)
                             >>= ConvertM . lift
