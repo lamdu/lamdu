@@ -27,10 +27,13 @@ make nom =
         nameEdit <-
             TagEdit.makeBinderTagEdit TextColors.nomColor (nom ^. Sugar.npName)
             <&> Responsive.fromWithTextPos
-        equals <- Styled.grammar (Styled.label Texts.assign)
         hbox <- ResponsiveOptions.boxSpaced ?? ResponsiveOptions.disambiguationNone
+        paramEdits <-
+            nom ^. Sugar.npParams & traverse (TagEdit.makeRecordTag . (^. Sugar.pName))
+            <&> map Responsive.fromWithTextPos
+        equals <- Styled.grammar (Styled.label Texts.assign) <&> Responsive.fromTextView
         bodyEdit <- makeNominalPaneBody (nom ^. Sugar.npBody)
-        hbox [ hbox [nameEdit, Responsive.fromTextView equals], bodyEdit]
+        hbox [hbox ((nameEdit : paramEdits) <> [equals]), bodyEdit]
             & pure
         & local (M.animIdPrefix .~ Widget.toAnimId myId)
         & GuiState.assignCursor myId nameEditId
