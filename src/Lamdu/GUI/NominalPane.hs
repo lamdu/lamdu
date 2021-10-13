@@ -40,9 +40,9 @@ make nom =
             nom ^. Sugar.npName . Sugar.tagRefTag . Sugar.tagInstance
             & WidgetIds.fromEntityId
 
-makeNominalPaneBody :: _ => Sugar.NominalPaneBody Name i o -> f (Responsive a)
-makeNominalPaneBody Sugar.NominalPaneOpaque =
+makeNominalPaneBody :: _ => Maybe (Sugar.Scheme Name o) -> f (Responsive a)
+makeNominalPaneBody Nothing =
     Styled.grammar (Styled.focusableLabel Texts.opaque)
     <&> Responsive.fromWithTextPos
-makeNominalPaneBody (Sugar.NominalPaneType (Sugar.NominalTypeBody scheme _)) =
+makeNominalPaneBody (Just scheme) =
     TypeView.makeScheme scheme >>= TypeView.addTypeBG <&> Responsive.fromTextView

@@ -450,20 +450,13 @@ instance
 instance (a ~ OldName m, b ~ NewName m, IM m ~ i) => Walk m (NominalParam a i o) (NominalParam b i o) where
     walk = pName walk
 
-instance (a ~ OldName m, b ~ NewName m, IM m ~ i) => Walk m (NominalTypeBody a i o) (NominalTypeBody b i o) where
-    walk (NominalTypeBody scheme params) =
-        NominalTypeBody <$> walk scheme <*> traverse walk params
-
-instance (a ~ OldName m, b ~ NewName m, IM m ~ i) => Walk m (NominalPaneBody a i o) (NominalPaneBody b i o) where
-    walk NominalPaneOpaque = pure NominalPaneOpaque
-    walk (NominalPaneType x) = walk x <&> NominalPaneType
-
 instance (a ~ OldName m, b ~ NewName m, i ~ IM m) => Walk m (NominalPane a i o) (NominalPane b i o) where
-    walk nomPane@NominalPane{_npName, _npBody} =
+    walk nomPane@NominalPane{_npName, _npParams, _npBody} =
         do
             _npName <- toTagRefOf TaggedNominal _npName
-            _npBody <- walk _npBody
-            pure nomPane{_npName, _npBody}
+            _npParams <- traverse walk _npParams
+            _npBody <- Lens._Just walk _npBody
+            pure nomPane{_npName, _npParams, _npBody}
 
 instance
     (a ~ OldName m, b ~ NewName m, i ~ IM m, Walk m pa pb) =>

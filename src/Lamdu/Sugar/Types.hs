@@ -10,9 +10,7 @@ module Lamdu.Sugar.Types
     , Globals(..), allGlobals, globalDefs, globalNominals, globalTags
     , ParamKind(..), _TypeParam, _RowParam
     , NominalParam(..), pName, pKind
-    , NominalTypeBody(..), nominalType, nominalParams
-    , NominalPaneBody(..), _NominalPaneOpaque, _NominalPaneType
-    , NominalPane(..), npName, npNominalId, npEntityId, npBody
+    , NominalPane(..), npName, npParams, npNominalId, npEntityId, npBody
     , Definition(..), drName, drBody, drDefI
     , DefinitionBody(..), _DefinitionBodyExpression, _DefinitionBodyBuiltin
     , DefinitionExpression(..), deContent, dePresentationMode, deType
@@ -91,21 +89,12 @@ data NominalParam name i o = NominalParam
     , _pKind :: ParamKind -- TODO: Support changing kind
     } deriving Generic
 
-data NominalTypeBody name i o = NominalTypeBody
-    { _nominalType :: Scheme name o
-    , _nominalParams :: [NominalParam name i o]
-    } deriving Generic
-
-data NominalPaneBody name i o
-    = NominalPaneOpaque
-    | NominalPaneType (NominalTypeBody name i o)
-    deriving Generic
-
 data NominalPane name i o = NominalPane
     { _npName :: TagRef name i o
     , _npNominalId :: T.NominalId
     , _npEntityId :: EntityId
-    , _npBody :: NominalPaneBody name i o
+    , _npParams :: [NominalParam name i o]
+    , _npBody :: Maybe (Scheme name o)
     } deriving Generic
 
 data PaneBody v name i o a
@@ -159,6 +148,6 @@ data WorkArea v name i o a = WorkArea
 
 traverse Lens.makeLenses
     [''Definition, ''DefinitionBuiltin, ''Pane, ''TagPane, ''Globals, ''WorkArea
-    , ''NominalPane, ''NominalTypeBody, ''NominalParam]
+    , ''NominalPane, ''NominalParam]
     <&> concat
-traverse Lens.makePrisms [''NominalPaneBody, ''DefinitionBody, ''PaneBody, ''ParamKind] <&> concat
+traverse Lens.makePrisms [''DefinitionBody, ''PaneBody, ''ParamKind] <&> concat
