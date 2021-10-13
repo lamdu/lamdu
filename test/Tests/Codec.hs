@@ -32,7 +32,7 @@ reExportTest :: FilePath -> Test
 reExportTest name =
     do
         src <- LBS.readFile path <&> Aeson.eitherDecode >>= either fail pure
-        dst <- withDB path (runDbTransaction ?? runAction JsonFormat.jsonExportRepl)
+        dst <- withDB [path] (runDbTransaction ?? runAction JsonFormat.jsonExportRepl)
         if src == dst
             then pure ()
             else

@@ -52,7 +52,7 @@ data Entity
     | EntityRepl (Definition.Expr (Val UUID))
     | EntityDef (Definition (Val UUID) (Meta.PresentationMode, T.Tag, V.Var))
     | EntityTag T.Tag Tag
-    | EntityNominal T.Tag T.NominalId (Maybe (Pure # NominalDecl T.Type))
+    | EntityNominal T.Tag T.NominalId (Either (T.Types # QVars) (Pure # NominalDecl T.Type))
     | EntityLamVar T.Tag V.Var
 Lens.makePrisms ''Entity
 
@@ -632,21 +632,21 @@ decodeTaggedLamVar json =
     <&> \((tag, ident), ()) ->
     (tag, V.Var ident)
 
-encodeTaggedNominal :: Encoder ((T.Tag, T.NominalId), Maybe (Pure # NominalDecl T.Type))
-encodeTaggedNominal ((tag, T.NominalId nomId), mNom) =
-    foldMap encodeNominal mNom
+encodeTaggedNominal :: Encoder ((T.Tag, T.NominalId), Either (T.Types # QVars) (Pure # NominalDecl T.Type))
+encodeTaggedNominal ((tag, T.NominalId nomId), nom) =
+    either encodeTypeVars encodeNominal nom
     & Lens.at "nom" ?~ encodeIdent nomId
     & Lens.at "tag" ?~ encodeTagId tag
     & Aeson.Object
 
-decodeTaggedNominal :: Aeson.Object -> AesonTypes.Parser ((T.Tag, T.NominalId), Maybe (Pure # NominalDecl T.Type))
+decodeTaggedNominal :: Aeson.Object -> AesonTypes.Parser ((T.Tag, T.NominalId), Either (T.Types # QVars) (Pure # NominalDecl T.Type))
 decodeTaggedNominal json =
     decodeTagged "nom" decodeMNom json <&> _1 . _2 %~ T.NominalId
     where
         decodeMNom x =
             jsum
-            [ decodeNominal x <&> Just
-            , pure Nothing
+            [ decodeNominal x <&> Right
+            , decodeTypeVars x <&> Left
             ]
 
 encodeSchemaVersion :: Encoder Version

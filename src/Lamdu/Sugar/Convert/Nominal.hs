@@ -106,19 +106,21 @@ pane env nomId =
         nom <- ExprLoad.nominal nomId & lift
         tag <- ConvertTag.taggedEntityWith (env ^. Anchors.codeAnchors) Nothing nomId & join
         let entityId = EntityId.ofNominalPane nomId
-        (body, params) <-
+        (params, body) <-
             case nom of
-            Nothing -> pure (Nothing, [])
-            Just (Pure (Nominal.NominalDecl params scheme)) ->
-                (,)
-                <$> (ConvertType.convertScheme (EntityId.currentTypeOf entityId) (Pure scheme) <&> Just)
-                <*> hfoldMap (Proxy @NominalParamKind #> convertNominalParams entityId tagList) params
+            Left params -> pure (params, Nothing)
+            Right (Pure (Nominal.NominalDecl params scheme)) ->
+                ConvertType.convertScheme (EntityId.currentTypeOf entityId) (Pure scheme)
+                <&> Just
+                <&> (,) params
                 & (`runReaderT` env)
-                where
-                    tagList = hfoldMap (Proxy @NominalParamKind #> (^.. qvars)) params & Set.fromList
+        let tagList = hfoldMap (Proxy @NominalParamKind #> (^.. qvars)) params & Set.fromList
+        paramsS <-
+            hfoldMap (Proxy @NominalParamKind #> convertNominalParams entityId tagList) params
+            & (`runReaderT` env)
         PaneNominal NominalPane
             { _npName = tag
-            , _npParams = params
+            , _npParams = paramsS
             , _npEntityId = entityId
             , _npBody = body
             , _npNominalId = nomId

@@ -6,6 +6,7 @@ module Lamdu.Expr.Load
 import qualified Data.Property as Property
 import           Hyper
 import           Hyper.Syntax.Nominal (NominalDecl)
+import           Hyper.Syntax.Scheme (QVars)
 import           Lamdu.Calc.Term (Term)
 import qualified Lamdu.Calc.Type as T
 import           Lamdu.Data.Definition (Definition(..))
@@ -56,12 +57,5 @@ def defI =
 
 nominal ::
     Monad m =>
-    T.NominalId -> T m (Maybe (Pure # NominalDecl T.Type))
-nominal tid =
-    Transaction.irefExists iref
-    >>=
-    \case
-    False -> pure Nothing -- Opaque nominal
-    True -> Transaction.readIRef iref <&> Just
-    where
-        iref = ExprIRef.nominalI tid
+    T.NominalId -> T m (Either (T.Types # QVars) (Pure # NominalDecl T.Type))
+nominal = Transaction.readIRef . ExprIRef.nominalI

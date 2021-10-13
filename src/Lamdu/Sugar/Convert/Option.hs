@@ -162,7 +162,7 @@ suggestTopLevelVal t =
 
 suggestFromNom :: Monad m => NominalInst NominalId T.Types # Pure -> Transaction m [(Deps, Pure # V.Term)]
 suggestFromNom n =
-    Load.nominal tid <&> (^.. Lens._Just) <&> Lens.mapped %~
+    Load.nominal tid <&> (^.. Lens._Right) <&> Lens.mapped %~
     \s -> (mempty & depsNominals . Lens.at tid ?~ s, _Pure . V._BLeaf . V._LFromNom # tid)
     where
         tid = n ^. nId
@@ -250,7 +250,7 @@ makeNoms avoid prefix f =
         mk tid
             | tid `elem` avoid = pure Nothing
             | otherwise =
-                Load.nominal tid >>= Lens._Just %%~
+                Load.nominal tid <&> (^? Lens._Right) >>= Lens._Just %%~
                 \d ->
                 do
                     texts <- symTexts prefix tid

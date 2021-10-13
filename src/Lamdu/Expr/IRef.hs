@@ -19,6 +19,7 @@ module Lamdu.Expr.IRef
 import qualified Data.UUID.Utils as UUIDUtils
 import           Hyper
 import           Hyper.Syntax.Nominal (NominalDecl)
+import           Hyper.Syntax.Scheme (QVars)
 import           Hyper.Type.Functor (F(..), _F)
 import           Hyper.Type.Prune (Prune)
 import           Lamdu.Calc.Identifier (Identifier(..))
@@ -48,7 +49,7 @@ defI (V.Var (Identifier bs)) = IRef.unsafeFromUUID $ UUIDUtils.fromSBS16 bs
 tagI :: T.Tag -> IRef m Tag
 tagI (T.Tag (Identifier bs)) = IRef.unsafeFromUUID $ UUIDUtils.fromSBS16 bs
 
-nominalI :: T.NominalId -> IRef m (Pure # NominalDecl T.Type)
+nominalI :: T.NominalId -> IRef m (Either (T.Types # QVars) (Pure # NominalDecl T.Type))
 nominalI (T.NominalId (Identifier bs)) =
     UUIDUtils.fromSBS16 bs & IRef.unsafeFromUUID
 

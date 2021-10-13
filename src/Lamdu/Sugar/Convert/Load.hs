@@ -88,8 +88,8 @@ makeNominalsMap tids =
                 unless (Map.member tid loaded) $
                     do
                         nom <- ExprLoad.nominal tid & lift
-                        Map.insert tid nom loaded & State.put
-                        nom ^.. Lens._Just . _Pure . nScheme . sTyp . ExprLens.tIds
+                        Map.insert tid (nom ^? Lens._Right) loaded & State.put
+                        nom ^.. Lens._Right . _Pure . nScheme . sTyp . ExprLens.tIds
                             & traverse_ loadForTid
 
 readValAndAddProperties ::

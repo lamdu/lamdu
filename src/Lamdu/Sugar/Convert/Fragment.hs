@@ -175,8 +175,8 @@ transformArg topPl arg =
         Load.nominal tid
         >>=
         \case
-        Nothing -> replaceFunc
-        Just s ->
+        Left _params -> replaceFunc
+        Right s ->
             s ^.. _Pure . nScheme . sTyp . _Pure . T._TVariant
             & Lens.traverse %%~
             \r ->

@@ -24,6 +24,7 @@ import           Data.UUID.Types (UUID)
 import           Hyper
 import           Hyper.Recurse (unwrapM, (##>>))
 import           Hyper.Syntax.Nominal (NominalDecl)
+import           Hyper.Syntax.Scheme (QVars)
 import           Hyper.Type.Functor (_F)
 import           Hyper.Type.Prune (Prune)
 import           Lamdu.Calc.Identifier (Identifier)
@@ -261,11 +262,11 @@ importLamVar :: Monad m => T.Tag -> V.Var -> T m ()
 importLamVar tag var =
     Property.setP (Anchors.assocTag var) tag
 
-importNominal :: T.Tag -> T.NominalId -> Maybe (Pure # NominalDecl T.Type) -> T ViewM ()
+importNominal :: T.Tag -> T.NominalId -> Either (T.Types # QVars) (Pure # NominalDecl T.Type) -> T ViewM ()
 importNominal tag nomId nominal =
     do
         Property.setP (Anchors.assocTag nomId) tag
-        traverse_ (Transaction.writeIRef (ExprIRef.nominalI nomId)) nominal
+        Transaction.writeIRef (ExprIRef.nominalI nomId) nominal
         nomId `insertTo` DbLayout.tids
 
 importOne :: Codec.Entity -> T ViewM ()

@@ -27,7 +27,7 @@ test =
 
 compile :: FilePath -> IO String
 compile program =
-    withDB ("test/programs" </> program) $
+    withDB ["test/programs" </> program] $
     \db -> runDbTransaction db $ runAction $ readRepl >>= ExportJS.compile
 
 run :: FilePath -> IO ByteString

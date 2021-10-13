@@ -13,12 +13,12 @@ import           System.Random (randomIO)
 
 import           Test.Lamdu.Prelude
 
-initFreshDb :: FilePath -> Transaction.Store DbM -> IO ()
-initFreshDb path db = fileImportAll path <&> snd >>= DbInit.initDb db
+initFreshDb :: [FilePath] -> Transaction.Store DbM -> IO ()
+initFreshDb paths db = traverse fileImportAll paths <&> (^. traverse . Lens._2) >>= DbInit.initDb db
 
 -- | Like Lamdu.Db.withDB but in RAM
-withDB :: FilePath -> (Transaction.Store DbM -> IO a) -> IO a
-withDB path body =
+withDB :: [FilePath] -> (Transaction.Store DbM -> IO a) -> IO a
+withDB paths body =
     do
         db <- newIORef Map.empty
         let store =
@@ -29,7 +29,7 @@ withDB path body =
                     \updates ->
                     updates <&> updateKey & foldr (.) id & modifyIORef db
                 }
-        initFreshDb path store
+        initFreshDb paths store
         body store
     where
         updateKey (k, v) = Lens.at k .~ v

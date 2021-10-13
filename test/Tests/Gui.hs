@@ -486,6 +486,7 @@ testPrograms =
               -- This program, saved with an old codec (the first version),
               -- is not compatible with that
               "old-codec-factorial.json"
+            , "builtins.json"
             ]
 
 charEvent :: Char -> Event
