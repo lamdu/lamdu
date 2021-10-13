@@ -17,15 +17,13 @@ import           Control.Applicative ((<|>))
 import           Control.Concurrent.Extended (forkIO, killThread, withForkedIO)
 import           Control.Concurrent.MVar
 import qualified Control.Lens as Lens
-import           Control.Monad (foldM, msum)
+import           Control.Monad (msum)
 import           Control.Monad.Cont (ContT(..))
 import           Control.Monad.Trans.State (State, runState)
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Types as Json
 import qualified Data.ByteString.Extended as BS
 import           Data.Either (fromRight)
-import           Data.HashMap.Strict (HashMap)
-import qualified Data.HashMap.Strict as HashMap
 import           Data.IORef
 import           Data.IntMap (IntMap)
 import qualified Data.Map.Strict as Map
@@ -118,12 +116,12 @@ parseHexNameBs t =
 parseUUID :: Text -> UUID
 parseUUID = UUIDUtils.fromSBS16 . parseHexNameBs
 
-parseRecord :: HashMap Text Json.Value -> Parse (ER.Val ())
-parseRecord obj =
-    HashMap.toList obj & foldM step (Ann (Const ()) ER.RRecEmpty)
+parseRecord :: Json.Object -> Parse (ER.Val ())
+parseRecord =
+    Lens.ifoldlM step (Ann (Const ()) ER.RRecEmpty)
     where
-        step r ("cacheId", _) = pure r -- TODO: Explain/fix this
-        step r (k, v) =
+        step "cacheId" r _ = pure r -- TODO: Explain/fix this
+        step k r v =
             parseResult v
             <&> \pv ->
             ER.RRecExtend RowExtend
