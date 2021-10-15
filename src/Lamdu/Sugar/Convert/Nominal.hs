@@ -1,4 +1,4 @@
-{-# LANGUAGE TypeApplications, ScopedTypeVariables #-}
+{-# LANGUAGE GADTs, TypeApplications, ScopedTypeVariables #-}
 
 module Lamdu.Sugar.Convert.Nominal
     ( convertToNom, convertFromNom, pane
@@ -16,6 +16,7 @@ import qualified Hyper.Syntax.Nominal as Nominal
 import qualified Hyper.Syntax.Scheme as HyperScheme
 import           Hyper.Unify.QuantifiedVar (QVar)
 import           Lamdu.Calc.Identifier (Identifier(..))
+import qualified Lamdu.Calc.Lens as ExprLens
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
 import           Lamdu.Data.Anchors (HasCodeAnchors)
@@ -76,16 +77,17 @@ instance NominalParamKind T.Type where
 convertNominalParams ::
     forall m env p.
     (Monad m, HasCodeAnchors env m, NominalParamKind p) =>
-    EntityId -> Set T.Tag -> HyperScheme.QVars # p ->
+    (Identifier -> Identifier -> T m ()) -> EntityId -> Set T.Tag -> HyperScheme.QVars # p ->
     ReaderT env (OnceT (T m)) [NominalParam InternalName (OnceT (T m)) (T m)]
-convertNominalParams entityId tagList =
+convertNominalParams replaceTypeVars entityId tagList =
     traverse (convParam (kindOf (Proxy @p))) . (^.. qvars)
     where
-        replaceTag = todo "replace tag for nominal param"
+        replaceNominalParamAsTag (T.Tag oldIdentifier) (T.Tag newIdentifier) =
+            replaceTypeVars oldIdentifier newIdentifier
         convParam kind t =
             ConvertTag.ref t Nothing (tagList & Lens.contains t .~ False)
             (EntityId.ofTag entityId)
-            replaceTag
+            (replaceNominalParamAsTag t)
             >>= lift
             <&> \tagRef -> NominalParam
             { _pName = tagRef
@@ -98,6 +100,19 @@ qvars ::
     Lens.Fold (HyperScheme.QVars # t) T.Tag
 qvars = HyperScheme._QVars . Lens.ifolded . Lens.asIndex . Lens.cloneIso (qvarIdentifier (Proxy @t)) . Lens.to T.Tag
 
+replaceInScheme :: Identifier -> Identifier -> T.Scheme # Pure -> T.Scheme # Pure
+replaceInScheme oldId newId old@(HyperScheme.Scheme forAlls typ)
+    | isShadowed = old
+    | otherwise = HyperScheme.Scheme forAlls (typ & ExprLens.qVarIds . Lens.filteredBy (Lens.only oldId) .~ newId)
+    where
+        isShadowed = oldId `elem` hfoldMap (Proxy @ExprLens.HasQVar #> (^.. schemeVars)) forAlls
+
+schemeVars :: forall n. ExprLens.HasQVar n => Lens.Fold (HyperScheme.QVars # n) Identifier
+schemeVars = HyperScheme._QVars . Lens.ifolded . Lens.asIndex . ExprLens.qvarId (Proxy @n)
+
+qvarssIdentifiers :: Lens.Traversal' (T.Types # HyperScheme.QVars) Identifier
+qvarssIdentifiers f = htraverse (Proxy @ExprLens.HasQVar #> ExprLens.qvarsQVarIds f)
+
 pane ::
     (Monad m, HasCodeAnchors env m) =>
     env -> NominalId -> OnceT (T m) (PaneBody v InternalName (OnceT (T m)) (T m) a)
@@ -106,6 +121,7 @@ pane env nomId =
         nom <- ExprLoad.nominal nomId & lift
         tag <- ConvertTag.taggedEntityWith (env ^. Anchors.codeAnchors) Nothing nomId & join
         let entityId = EntityId.ofNominalPane nomId
+        let replaceInParams oldId newId = qvarssIdentifiers . Lens.filteredBy (Lens.only oldId) .~ newId
         (params, body) <-
             case nom of
             Left params -> pure (params, Nothing)
@@ -115,8 +131,14 @@ pane env nomId =
                 <&> (,) params
                 & (`runReaderT` env)
         let tagList = hfoldMap (Proxy @NominalParamKind #> (^.. qvars)) params & Set.fromList
+        let writeReplacedTypeVarById oldId newId =
+                Lens.bimap (replaceInParams oldId newId)
+                ( _Pure %~
+                    (Nominal.nParams %~ replaceInParams oldId newId) . (Nominal.nScheme %~ replaceInScheme oldId newId)
+                ) nom & ExprLoad.writeNominal nomId
         paramsS <-
-            hfoldMap (Proxy @NominalParamKind #> convertNominalParams entityId tagList) params
+            hfoldMap (Proxy @NominalParamKind #> convertNominalParams writeReplacedTypeVarById entityId tagList)
+            params
             & (`runReaderT` env)
         PaneNominal NominalPane
             { _npName = tag

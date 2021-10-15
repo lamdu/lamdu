@@ -1,6 +1,6 @@
 {-# LANGUAGE TypeFamilies #-}
 module Lamdu.Expr.Load
-    ( def, defExpr, expr, nominal
+    ( def, defExpr, expr, nominal, writeNominal
     ) where
 
 import qualified Data.Property as Property
@@ -59,3 +59,10 @@ nominal ::
     Monad m =>
     T.NominalId -> T m (Either (T.Types # QVars) (Pure # NominalDecl T.Type))
 nominal = Transaction.readIRef . ExprIRef.nominalI
+
+-- TODO: Remove this, and when Nominal becomes IRef-based like the
+-- rest of the code, use a loader with properties as annotations
+writeNominal ::
+    Monad m =>
+    T.NominalId -> Either (T.Types # QVars) (Pure # NominalDecl T.Type) -> T m ()
+writeNominal = Transaction.writeIRef . ExprIRef.nominalI
