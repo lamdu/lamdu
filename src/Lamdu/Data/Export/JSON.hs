@@ -23,7 +23,7 @@ import qualified Data.Set as Set
 import           Data.UUID.Types (UUID)
 import           Hyper
 import           Hyper.Recurse (unwrapM, (##>>))
-import           Hyper.Syntax.Nominal (NominalDecl)
+import           Hyper.Syntax.Nominal (NominalDecl, nParams)
 import           Hyper.Syntax.Scheme (QVars)
 import           Hyper.Type.Functor (_F)
 import           Hyper.Type.Prune (Prune)
@@ -117,6 +117,11 @@ exportNominal :: Monad m => T.NominalId -> Export m ()
 exportNominal nomId =
     do
         nominal <- trans (Load.nominal nomId)
+        either id (^. _Pure . nParams) nominal
+            & htraverse_
+                ( Proxy @ExprLens.HasQVar #>
+                    traverse_ (exportTag . T.Tag) . (^.. ExprLens.qvarsQVarIds)
+                )
         tag <- readAssocTag nomId & trans
         Codec.EntityNominal tag nomId nominal & tell
         & withVisited visitedNominals nomId
