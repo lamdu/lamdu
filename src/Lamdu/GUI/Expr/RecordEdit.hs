@@ -189,8 +189,8 @@ makeAddFieldRow addField pl =
             , Menu._pickMNextEntry = WidgetIds.fromEntityId dst & Just
             }
 
-makeFieldRow :: _ => ExprGui.Body Sugar.CompositeItem i o -> GuiM env i o (TaggedItem o)
-makeFieldRow (Sugar.CompositeItem delete tag fieldExpr) =
+makeFieldRow :: _ => ExprGui.Body (Sugar.TaggedItem Sugar.Term) i o -> GuiM env i o (TaggedItem o)
+makeFieldRow (Sugar.TaggedItem tag delete fieldExpr) =
     do
         itemEventMap <- recordDelEventMap delete
         fieldGui <- GuiM.makeSubexpression fieldExpr

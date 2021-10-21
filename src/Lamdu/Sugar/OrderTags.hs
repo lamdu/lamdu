@@ -62,8 +62,8 @@ orderType = hVal orderTBody
 instance (MonadTransaction m o, MonadTransaction m i) => Order i (Sugar.Composite v name i o) where
     order (Sugar.Composite items punned tail_ addItem) =
         Sugar.Composite
-        <$> (orderByTag (^. Sugar.ciTag . Sugar.tagRefTag) items
-            >>= (traverse . Sugar.ciExpr) orderNode)
+        <$> (orderByTag (^. Sugar.tiTag . Sugar.tagRefTag) items
+            >>= (traverse . Sugar.tiValue) orderNode)
         <*> pure punned
         <*> Sugar._OpenComposite orderNode tail_
         <*> pure addItem

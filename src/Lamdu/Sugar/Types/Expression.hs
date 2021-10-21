@@ -37,8 +37,8 @@ module Lamdu.Sugar.Types.Expression
     , IfElse(..), iIf, iThen, iElse
     , Else(..), _SimpleElse, _ElseIf
     -- Record & Cases
+    , TaggedItem(..), tiTag, tiDelete, tiValue
     , Composite(..), cItems, cPunnedItems, cAddItem, cTail
-    , CompositeItem(..), ciDelete, ciTag, ciExpr
     , CompositeTail(..), _OpenComposite, _ClosedComposite
     , PunnedVar(..), pvVar, pvTagEntityId
 
@@ -171,11 +171,11 @@ data IfElse v name i o k = IfElse
     , _iElse :: k :# Else v name i o
     } deriving Generic
 
-data CompositeItem v name i o k = CompositeItem
-    { _ciDelete :: o EntityId
-    , _ciTag :: TagRef name i o
-    , _ciExpr :: k :# Term v name i o
-    } deriving Generic
+data TaggedItem h v name i o k = TaggedItem
+    { _tiTag :: TagRef name i o
+    , _tiDelete :: o EntityId
+    , _tiValue :: k :# h v name i o
+    } deriving (Generic)
 
 data CompositeTail v name i o k
     = OpenComposite (k :# Term v name i o)
@@ -183,7 +183,7 @@ data CompositeTail v name i o k
     deriving Generic
 
 data Composite v name i o k = Composite
-    { _cItems :: [CompositeItem v name i o k]
+    { _cItems :: [TaggedItem Term v name i o k]
     , -- Punned items are like Haskell's NamedFieldPuns
       _cPunnedItems :: [PunnedVar name o k]
     , _cTail :: CompositeTail v name i o k
@@ -262,7 +262,7 @@ data Assignment v name i o f
 
 traverse Lens.makeLenses
     [ ''AnnotatedArg, ''AssignPlain
-    , ''Composite, ''CompositeItem, ''Fragment, ''FragOperator
+    , ''Composite, ''TaggedItem, ''Fragment, ''FragOperator
     , ''Function, ''Hole, ''Option, ''Query, ''QueryLangInfo
     , ''IfElse, ''LabeledApply, ''Lambda, ''Let
     , ''Nominal, ''OperatorArgs, ''PostfixApply
@@ -272,7 +272,7 @@ traverse Lens.makePrisms
 
 traverse makeHTraversableAndBases
     [ ''AnnotatedArg, ''Assignment, ''AssignPlain, ''Binder
-    , ''Composite, ''CompositeItem, ''CompositeTail, ''Else
+    , ''Composite, ''TaggedItem, ''CompositeTail, ''Else
     , ''Fragment, ''FragOperator, ''FragOpt, ''Function, ''IfElse
     , ''LabeledApply, ''Lambda, ''Let, ''Nominal
     , ''OperatorArgs, ''PostfixApply, ''PostfixFunc, ''Term

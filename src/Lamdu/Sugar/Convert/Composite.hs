@@ -85,13 +85,13 @@ convertExtend cons extendOp valS exprPl extendV restC =
         let addItem =
                 do
                     guard punSugar
-                    getVar <- itemS ^? ciExpr . hVal . _BodyLeaf . _LeafGetVar
+                    getVar <- itemS ^? tiValue . hVal . _BodyLeaf . _LeafGetVar
                     name <- getVar ^? SugarLens.getVarName
-                    _ <- internalNameMatch (itemS ^. ciTag . tagRefTag . tagName) name
+                    _ <- internalNameMatch (itemS ^. tiTag . tagRefTag . tagName) name
                     let punned =
                             PunnedVar
-                            { _pvVar = Ann (Const (itemS ^. ciExpr . annotation)) (Const getVar)
-                            , _pvTagEntityId = itemS ^. ciTag . tagRefTag . tagInstance
+                            { _pvVar = Ann (Const (itemS ^. tiValue . annotation)) (Const getVar)
+                            , _pvTagEntityId = itemS ^. tiTag . tagRefTag . tagInstance
                             }
                     Just (cPunnedItems %~ (punned :))
                 & fromMaybe (cItems %~ (itemS :))
@@ -100,7 +100,7 @@ convertExtend cons extendOp valS exprPl extendV restC =
             & cAddItem .~ addItemAction
             & pure
     where
-        restTags = restC ^.. cItems . traverse . ciTag . tagRefTag . tagVal
+        restTags = restC ^.. cItems . traverse . tiTag . tagRefTag . tagVal
 
 convertOneItemOpenComposite ::
     Monad m =>
@@ -155,7 +155,7 @@ convertItem ::
     h # Term v InternalName (OnceT (T m)) (T m) ->
     -- Using tuple in place of shared RecExtend/Case structure (no such in lamdu-calculus)
     ExtendVal m (ValI m) ->
-    ConvertM m (CompositeItem v InternalName (OnceT (T m)) (T m) # h)
+    ConvertM m (TaggedItem Term v InternalName (OnceT (T m)) (T m) # h)
 convertItem cons stored inst forbiddenTags exprS extendVal =
     do
         delItem <- deleteItem stored restI
@@ -169,10 +169,10 @@ convertItem cons stored inst forbiddenTags exprS extendVal =
         tagS <-
             ConvertTag.ref tag Nothing forbiddenTags (EntityId.ofTag inst) setTag
             >>= ConvertM . lift
-        pure CompositeItem
-            { _ciTag = tagS
-            , _ciExpr = exprS
-            , _ciDelete = delItem
+        pure TaggedItem
+            { _tiTag = tagS
+            , _tiValue = exprS
+            , _tiDelete = delItem
             }
     where
         ExtendVal tag exprI restI = extendVal

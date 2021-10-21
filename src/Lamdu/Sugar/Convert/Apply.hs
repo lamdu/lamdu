@@ -84,7 +84,7 @@ defParamsMatchArgs var record frozenDeps =
         defArgs ^? freRest . _Pure . T._REmpty
         let sFields =
                 record ^..
-                ( cItems . traverse . ciTag . tagRefTag . tagVal
+                ( cItems . traverse . tiTag . tagRefTag . tagVal
                     <> cPunnedItems . traverse . pvVar . hVal . Lens._Wrapped . getVarName . inTag
                 ) & Set.fromList
         guard (sFields == Map.keysSet (defArgs ^. freExtends))
@@ -159,8 +159,8 @@ convertLabeled subexprs funcS argS exprPl =
             || defParamsMatchArgs var record frozenDeps & guard
         let getArg field =
                 AnnotatedArg
-                    { _aaTag = field ^. ciTag . tagRefTag
-                    , _aaExpr = field ^. ciExpr
+                    { _aaTag = field ^. tiTag . tagRefTag
+                    , _aaExpr = field ^. tiValue
                     }
         bod <-
             PresentationModes.makeLabeledApply

@@ -326,7 +326,7 @@ testInsistSubsets =
             waPanes . traverse . SugarLens.paneBinder .
             hVal . _BodyFunction . fBody .
             hVal . _BinderTerm . _BodyPostfixApply . pFunc .
-            hVal . _PfCase . cItems . Lens.ix 1 . ciExpr .
+            hVal . _PfCase . cItems . Lens.ix 1 . tiValue .
             hVal . _BodyLam . lamFunc . fBody .
             hVal . _BinderTerm . _BodyLabeledApply . aMOpArgs . Lens._Just
         insist =
@@ -523,7 +523,7 @@ testPunnedIso =
     Env.make >>= testProgram "punned-fields.json" . convertWorkArea
     <&> (^? replBinder . _BinderLet . lBody . hVal . _BinderLet . lBody . hVal . _BinderTerm . _BodyRecord . cItems)
     <&> Lens.mapped . Lens.mapped %~
-        (\x -> (x ^. ciTag . tagRefTag . tagName, x ^? ciExpr . hVal . _BodyLeaf . _LeafGetVar . _GetBinder . bvNameRef . nrName))
+        (\x -> (x ^. tiTag . tagRefTag . tagName, x ^? tiValue . hVal . _BodyLeaf . _LeafGetVar . _GetBinder . bvNameRef . nrName))
     >>= assertEqual "Record items expected to be punned" (Just [])
 
 testNullParamUnused :: Test

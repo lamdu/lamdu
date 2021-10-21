@@ -81,8 +81,8 @@ make (Ann (Const pl) (Sugar.Composite alts punned caseTail addAlt)) =
             <*> grammar (label Texts.case_)
             <&> Responsive.fromWithTextPos
 
-makeAltRow :: _ => ExprGui.Body Sugar.CompositeItem i o -> GuiM env i o (TaggedItem o)
-makeAltRow (Sugar.CompositeItem delete tag altExpr) =
+makeAltRow :: _ => ExprGui.Body (Sugar.TaggedItem Sugar.Term) i o -> GuiM env i o (TaggedItem o)
+makeAltRow (Sugar.TaggedItem tag delete altExpr) =
     do
         env <- Lens.view id
         let itemEventMap = caseDelEventMap env delete
@@ -103,7 +103,7 @@ makeAltRow (Sugar.CompositeItem delete tag altExpr) =
 
 makeAltsWidget ::
     _ =>
-    [ExprGui.Body Sugar.CompositeItem i o] ->
+    [ExprGui.Body (Sugar.TaggedItem Sugar.Term) i o] ->
     [Sugar.PunnedVar Name o # Annotated (ExprGui.Payload i o)] ->
     Sugar.TagChoice Name i o Sugar.EntityId ->
     Widget.Id ->

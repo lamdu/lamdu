@@ -304,11 +304,12 @@ instance ToBody FragOperator where
         <$> toNode (Lens._Wrapped (toBinderVarRef Nothing)) f
         <*> toExpression a
 
-instance ToBody CompositeItem where
-    toBody (CompositeItem del tag e) =
-        CompositeItem del
-        <$> toTagRefOf Tag tag
-        <*> toExpression e
+instance ToBody h => ToBody (TaggedItem h) where
+    toBody ti@TaggedItem{_tiTag, _tiValue} =
+        (,)
+        <$> toTagRefOf Tag _tiTag
+        <*> toExpression _tiValue
+        <&> \(_tiTag, _tiValue) -> ti{_tiTag,_tiValue}
 
 instance ToBody Composite where
     toBody (Composite items punned tail_ addItem) =

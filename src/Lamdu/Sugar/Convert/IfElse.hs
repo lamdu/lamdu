@@ -40,29 +40,29 @@ convertIfElse setToVal postApp =
             _ -> Nothing
     where
         deleteWholeIf = DataOps.newHole >>= setToVal <&> EntityId.ofValI & Delete
-        tagOf alt = alt ^. ciTag . tagRefTag . tagVal
+        tagOf alt = alt ^. tiTag . tagRefTag . tagVal
         convIfElse cond altTrue altFalse =
             Just IfElse
             { _iIf = cond
-            , _iThen = altTrue ^. ciExpr
+            , _iThen = altTrue ^. tiValue
             , _iElse =
                 case altFalse ^?
-                     ciExpr . hVal . _BodyLam . lamFunc .
+                     tiValue . hVal . _BodyLam . lamFunc .
                      fBody . hVal . _BinderTerm . _BodyIfElse
                 of
                 Just innerIfElse ->
                     Ann
                     { _hVal = ElseIf innerIfElse
                     , _hAnn =
-                        altFalse ^. ciExpr . annotation
-                        & pLambdas .~ [altFalse ^. ciExpr . hAnn . Lens._Wrapped . pInput . Input.stored . iref & toUUID]
+                        altFalse ^. tiValue . annotation
+                        & pLambdas .~ [altFalse ^. tiValue . hAnn . Lens._Wrapped . pInput . Input.stored . iref & toUUID]
                         & Const
                     }
                 Nothing ->
-                    altFalse ^. ciExpr . hVal
+                    altFalse ^. tiValue . hVal
                     & _BodyLam . lamFunc . fBody . annotation . pActions . delete %~ mkElseDel
                     & SimpleElse
-                    & Ann (Const (altFalse ^. ciExpr . annotation & pActions . delete %~ mkElseDel))
+                    & Ann (Const (altFalse ^. tiValue . annotation & pActions . delete %~ mkElseDel))
             }
             where
                 mkElseDel CannotDelete =
@@ -70,6 +70,6 @@ convertIfElse setToVal postApp =
                     <&> EntityId.ofValI & Delete
                 mkElseDel x = x
                 thenBody =
-                    altTrue ^? ciExpr . hVal . _BodyLam . lamFunc . fBody
+                    altTrue ^? tiValue . hVal . _BodyLam . lamFunc . fBody
                     . Lens.filteredBy (hVal . _BinderTerm) . annotation
-                    & fromMaybe (altTrue ^. ciExpr . annotation)
+                    & fromMaybe (altTrue ^. tiValue . annotation)
