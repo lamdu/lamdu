@@ -83,20 +83,18 @@ convertExtend cons extendOp valS exprPl extendV restC =
             (extendV ^. extendRest . Input.entityId) (Set.fromList restTags) valS
             (extendV & extendRest %~ (^. Input.stored . ExprIRef.iref))
         punSugar <- Lens.view (ConvertM.scConfig . Config.sugarsEnabled . Config.fieldPuns)
-        let addItem =
-                do
-                    guard punSugar
-                    getVar <- itemS ^? tiValue . hVal . _BodyLeaf . _LeafGetVar
-                    name <- getVar ^? SugarLens.getVarName
-                    _ <- internalNameMatch (itemS ^. tiTag . tagRefTag . tagName) name
-                    let punned =
-                            PunnedVar
-                            { _pvVar = Ann (Const (itemS ^. tiValue . annotation)) (Const getVar)
-                            , _pvTagEntityId = itemS ^. tiTag . tagRefTag . tagInstance
-                            }
-                    Just (cPunnedItems %~ (punned :))
-                & fromMaybe (cList . tlItems %~ (itemS :))
-        addItem restC
+        do
+            guard punSugar
+            getVar <- itemS ^? tiValue . hVal . _BodyLeaf . _LeafGetVar
+            name <- getVar ^? SugarLens.getVarName
+            _ <- internalNameMatch (itemS ^. tiTag . tagRefTag . tagName) name
+            let punned =
+                    PunnedVar
+                    { _pvVar = Ann (Const (itemS ^. tiValue . annotation)) (Const getVar)
+                    , _pvTagEntityId = itemS ^. tiTag . tagRefTag . tagInstance
+                    }
+            Just (restC & cPunnedItems %~ (punned :))
+            & fromMaybe (restC & cList . tlItems %~ (itemS :))
             & cList . tlAddFirst .~ addItemAction
             & pure
     where
