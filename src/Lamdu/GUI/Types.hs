@@ -11,12 +11,14 @@ import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
 
-type Expr t i o = Sugar.Expr t (Sugar.Annotation (Sugar.EvaluationScopes Name i) Name) Name i o
-type Body t i o = Sugar.Body t (Sugar.Annotation (Sugar.EvaluationScopes Name i) Name) Name i o
+type AnnEval i = Sugar.Annotation (Sugar.EvaluationScopes Name i) Name
 
-type Payload i o = Sugar.Payload (Sugar.Annotation (Sugar.EvaluationScopes Name i) Name) o
+type Expr t i o = Sugar.Expr t (AnnEval i) Name i o
+type Body t i o = Sugar.Body t (AnnEval i) Name i o
 
-type Top t i o = t (Sugar.Annotation (Sugar.EvaluationScopes Name i) Name) Name i o (Payload i o)
+type Payload i o = Sugar.Payload (AnnEval i) o
+
+type Top t i o = t (AnnEval i) Name i o (Payload i o)
 
 -- | Just myId or Nothing depending on whether parens are needed
 mParensId :: Sugar.Payload v o -> Maybe AnimId
