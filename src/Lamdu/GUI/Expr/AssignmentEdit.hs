@@ -252,18 +252,14 @@ makeParamsEdit ::
 makeParamsEdit annotationOpts delVarBackwardsId lhsId rhsId params =
     case params of
     Sugar.NullParam p ->
-        do
-            nullParamGui <-
-                (Widget.makeFocusableView ?? nullParamId <&> (M.tValue %~))
-                <*> grammar (label Texts.defer)
-            fromParamList delVarBackwardsId rhsId
-                [p & _2 %~ nullParamEditInfo lhsId nullParamGui]
+        (Widget.makeFocusableView ?? nullParamId <&> (M.tValue %~))
+        <*> grammar (label Texts.defer)
+        <&> \nullParamGui -> [p & _2 %~ nullParamEditInfo lhsId nullParamGui]
         where
             nullParamId = Widget.joinId lhsId ["param"]
     Sugar.Params ps ->
         ps
         & traverse . _2 %%~ onFpInfo
-        >>= fromParamList delVarBackwardsId rhsId
         where
             onFpInfo x =
                 TagEdit.makeParamTag (x ^. Sugar.piTag)
@@ -271,6 +267,7 @@ makeParamsEdit annotationOpts delVarBackwardsId lhsId rhsId params =
                 where
                     widgetId =
                         x ^. Sugar.piTag . Sugar.tagRefTag . Sugar.tagInstance & WidgetIds.fromEntityId
+    >>= fromParamList delVarBackwardsId rhsId
     & local (has . Menu.configKeysPickOptionAndGotoNext <>~ [noMods M.Key'Space])
     where
         fromParamList delDestFirst delDestLast paramList =
