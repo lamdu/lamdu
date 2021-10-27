@@ -102,7 +102,7 @@ convertEmptyInject subexprs funcS argS applyPl =
         r ^. hVal . cList . tlItems & null & guard
         r ^. hVal . cPunnedItems & null & guard
         Lens.has (hVal . cTail . _ClosedComposite) r & guard
-        r & annValue %~ (^. cList . tlAddItem . Lens._Unwrapped)
+        r & annValue %~ (^. cList . tlAddFirst . Lens._Unwrapped)
             & NullaryInject inject & BodyNullaryInject
             & addActions subexprs applyPl & lift
 

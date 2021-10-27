@@ -74,8 +74,8 @@ instance (MonadTransaction m o, MonadTransaction m i) => Order i (Sugar.LabeledA
         >>= htraverse (Proxy @(Order i) #> orderNode)
 
 instance MonadTransaction m i => Order i (Sugar.TaggedList h v name i o) where
-    order (Sugar.TaggedList addItem items) =
-        Sugar.TaggedList addItem
+    order (Sugar.TaggedList addFirst items) =
+        Sugar.TaggedList addFirst
         <$> orderByTag (^. Sugar.tiTag . Sugar.tagRefTag) items
 
 instance (MonadTransaction m i, Order i (h v name i o)) =>

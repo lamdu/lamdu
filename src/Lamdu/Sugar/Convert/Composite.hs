@@ -97,7 +97,7 @@ convertExtend cons extendOp valS exprPl extendV restC =
                 & fromMaybe (cList . tlItems %~ (itemS :))
         addItemAction <- convertAddItem extendOp (Set.fromList (extendV ^. extendTag : restTags)) exprPl
         addItem restC
-            & cList . tlAddItem .~ addItemAction
+            & cList . tlAddFirst .~ addItemAction
             & pure
     where
         restTags = restC ^.. cList . tlItems . traverse . tiTag . tagRefTag . tagVal
