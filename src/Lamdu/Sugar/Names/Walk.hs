@@ -312,11 +312,15 @@ instance ToBody h => ToBody (TaggedItem h) where
         <*> toExpression _tiValue
         <&> \(_tiTag, _tiAddAfter, _tiValue) -> ti{_tiTag,_tiValue,_tiAddAfter}
 
+instance ToBody h => ToBody (TaggedListBody h) where
+    toBody (TaggedListBody hd tl) =
+        TaggedListBody <$> toBody hd <*> (traverse . tsiItem) toBody tl
+
 instance ToBody h => ToBody (TaggedList h) where
     toBody (TaggedList add items) =
         TaggedList
         <$> walk add
-        <*> traverse toBody items
+        <*> Lens._Just toBody items
 
 instance ToBody Composite where
     toBody (Composite items punned tail_) =

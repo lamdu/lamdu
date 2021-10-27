@@ -238,7 +238,7 @@ toFragOpt o =
     BinderTerm (BodyIfElse i) -> i ^. iThen & FragIf & Ann (Const (o ^. annotation))
     BinderTerm BodyLam{} -> o & annValue .~ FragLam
     BinderTerm (BodyRecord r) ->
-        r ^?! cList . tlItems . traverse . tiTag & FragWrapInRec & Ann (Const (o ^. annotation))
+        r ^?! cList . tlItems . Lens._Just . tlHead . tiTag & FragWrapInRec & Ann (Const (o ^. annotation))
     BinderTerm x -> error ("unexpected result in fragment result: " <> show (gconIndex x))
     BinderLet{} -> error "let in fragment result"
     & fixActions

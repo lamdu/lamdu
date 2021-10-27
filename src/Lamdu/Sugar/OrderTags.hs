@@ -73,10 +73,21 @@ instance (MonadTransaction m o, MonadTransaction m i) => Order i (Sugar.LabeledA
         <*> pure punned
         >>= htraverse (Proxy @(Order i) #> orderNode)
 
-instance MonadTransaction m i => Order i (Sugar.TaggedList h v name i o) where
+instance (Applicative o, MonadTransaction m i) => Order i (Sugar.TaggedList h v name i o) where
     order (Sugar.TaggedList addFirst items) =
-        Sugar.TaggedList addFirst
-        <$> orderByTag (^. Sugar.tiTag . Sugar.tagRefTag) items
+        Sugar.TaggedList addFirst <$> Lens._Just order items
+
+instance
+    (Applicative o, MonadTransaction m i) =>
+    Order i (Sugar.TaggedListBody h v name i o) where
+    order (Sugar.TaggedListBody hd tl) =
+        orderByTag (^. Sugar.tiTag . Sugar.tagRefTag) items
+        <&> \case
+        ~(newHd : newTl) ->
+            newTl <&> (`Sugar.TaggedSwappableItem` pure ())
+            & Sugar.TaggedListBody newHd
+        where
+            items = hd : (tl <&> (^. Sugar.tsiItem))
 
 instance (MonadTransaction m i, Order i (h v name i o)) =>
          Order i (Sugar.TaggedItem h v name i o) where

@@ -83,6 +83,11 @@ convertExtend cons extendOp valS exprPl extendV restC =
             (extendV ^. extendRest . Input.entityId) (Set.fromList restTags) valS
             (extendV & extendRest %~ (^. Input.stored . ExprIRef.iref))
         punSugar <- Lens.view (ConvertM.scConfig . Config.sugarsEnabled . Config.fieldPuns)
+        let addItem items =
+                Just TaggedListBody
+                { _tlHead = itemS
+                , _tlTail = items ^.. Lens._Just . SugarLens.taggedListItems <&> (`TaggedSwappableItem` pure ())
+                }
         do
             guard punSugar
             getVar <- itemS ^? tiValue . hVal . _BodyLeaf . _LeafGetVar
@@ -94,11 +99,14 @@ convertExtend cons extendOp valS exprPl extendV restC =
                     , _pvTagEntityId = itemS ^. tiTag . tagRefTag . tagInstance
                     }
             Just (restC & cPunnedItems %~ (punned :))
-            & fromMaybe (restC & cList . tlItems %~ (itemS :))
+            & fromMaybe (restC & cList . tlItems %~ addItem)
             & cList . tlAddFirst .~ addItemAction
             & pure
     where
-        restTags = restC ^.. cList . tlItems . traverse . tiTag . tagRefTag . tagVal
+        restTags =
+            restC ^..
+            cList . tlItems . Lens._Just . (tlHead <> tlTail . traverse . tsiItem) .
+            tiTag . tagRefTag . tagVal
 
 convertOneItemOpenComposite ::
     Monad m =>
@@ -119,7 +127,7 @@ convertOneItemOpenComposite cons extendOp valS restS exprPl extendV =
         pure Composite
             { _cList = TaggedList
                 { _tlAddFirst = addItem
-                , _tlItems = [item]
+                , _tlItems = Just (TaggedListBody item [])
                 }
             , _cPunnedItems = []
             , _cTail = OpenComposite restS
@@ -146,7 +154,7 @@ convertEmpty extendOp exprPl =
         pure Composite
             { _cList = TaggedList
                 { _tlAddFirst = addItem
-                , _tlItems = []
+                , _tlItems = Nothing
                 }
             , _cPunnedItems = []
             , _cTail = ClosedComposite actions

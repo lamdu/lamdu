@@ -30,7 +30,7 @@ import           Lamdu.Sugar.Convert.Monad (ConvertM)
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
 import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
-import           Lamdu.Sugar.Lens (childPayloads, getVarName)
+import           Lamdu.Sugar.Lens (childPayloads, getVarName, taggedListItems)
 import qualified Lamdu.Sugar.PresentationModes as PresentationModes
 import           Lamdu.Sugar.Types
 import           Revision.Deltum.Transaction (Transaction)
@@ -84,7 +84,7 @@ defParamsMatchArgs var record frozenDeps =
         defArgs ^? freRest . _Pure . T._REmpty
         let sFields =
                 record ^..
-                ( cList . tlItems . traverse . tiTag . tagRefTag . tagVal
+                ( cList . tlItems . Lens._Just . taggedListItems . tiTag . tagRefTag . tagVal
                     <> cPunnedItems . traverse . pvVar . hVal . Lens._Wrapped . getVarName . inTag
                 ) & Set.fromList
         guard (sFields == Map.keysSet (defArgs ^. freExtends))
@@ -148,7 +148,7 @@ convertLabeled subexprs funcS argS exprPl =
         -- that is closed
         Lens.has (cTail . _ClosedComposite) record & guard
         -- with at least 2 fields
-        length (record ^. cList . tlItems) + length (record ^. cPunnedItems) >= 2 & guard
+        length (record ^.. cList . tlItems . Lens._Just . taggedListItems) + length (record ^. cPunnedItems) >= 2 & guard
         frozenDeps <- Lens.view ConvertM.scFrozenDeps <&> Property.value
         let var = funcVar ^. hVal . Lens._Wrapped . bvVar
         -- If it is an external (non-recursive) def (i.e: not in
@@ -159,12 +159,14 @@ convertLabeled subexprs funcS argS exprPl =
             || defParamsMatchArgs var record frozenDeps & guard
         let getArg field =
                 AnnotatedArg
-                    { _aaTag = field ^. tiTag . tagRefTag
-                    , _aaExpr = field ^. tiValue
-                    }
+                { _aaTag = field ^. tiTag . tagRefTag
+                , _aaExpr = field ^. tiValue
+                }
         bod <-
             PresentationModes.makeLabeledApply
-            funcVar (record ^. cList . tlItems <&> getArg) (record ^. cPunnedItems) exprPl
+            funcVar
+            (record ^.. cList . tlItems . Lens._Just . taggedListItems <&> getArg)
+            (record ^. cPunnedItems) exprPl
             <&> BodyLabeledApply & lift
         let userPayload =
                 subexprPayloads subexprs (bod ^.. childPayloads)

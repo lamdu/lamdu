@@ -35,6 +35,7 @@ import           Lamdu.GUI.Wrap (stdWrapParentExpr)
 import qualified Lamdu.I18N.Code as Texts
 import qualified Lamdu.I18N.CodeUI as Texts
 import           Lamdu.Name (Name(..))
+import qualified Lamdu.Sugar.Lens as SugarLens
 import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
@@ -108,8 +109,9 @@ makeAltsWidget altsId (Sugar.TaggedList addAlt alts) punned =
                 GetVarEdit.makePunnedVars punned
                 <&> (\x -> [TaggedItem Nothing x Nothing])
         existingAltWidgets <-
-            traverse makeAltRow alts
-            <&> (++ punnedWidgets)
+            traverse makeAltRow
+            (alts ^.. Lens._Just . SugarLens.taggedListItems)
+            <&> (<> punnedWidgets)
         newAlts <-
             GuiState.isSubCursor ?? addAltId altsId
             <&> guard

@@ -40,6 +40,7 @@ import           Lamdu.Name (Name(..))
 import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
+import qualified Lamdu.Sugar.Lens as SugarLens
 
 doc :: _ => env -> Lens.ALens' (Texts.CodeUI Text) Text -> E.Doc
 doc env lens = E.toDoc env [has . MomentuTexts.edit, has . Texts.record, has . lens]
@@ -99,11 +100,11 @@ makeEmpty (Ann (Const pl) (Const addField)) =
             else makeUnit pl
 
 make :: _ => ExprGui.Expr Sugar.Composite i o -> GuiM env i o (Responsive o)
-make (Ann (Const pl) (Sugar.Composite (Sugar.TaggedList addField []) [] Sugar.ClosedComposite{})) =
+make (Ann (Const pl) (Sugar.Composite (Sugar.TaggedList addField Nothing) [] Sugar.ClosedComposite{})) =
     -- Ignore the ClosedComposite actions - it only has the open
     -- action which is equivalent ot deletion on the unit record
     makeEmpty (Ann (Const pl) (Const addField))
-make (Ann (Const pl) (Sugar.Composite (Sugar.TaggedList addField fields) punned recordTail)) =
+make (Ann (Const pl) (Sugar.Composite (Sugar.TaggedList addField mTlBody) punned recordTail)) =
     do
         addFieldEventMap <- mkAddFieldEventMap (WidgetIds.fromExprPayload pl)
         tailEventMap <-
@@ -135,6 +136,7 @@ make (Ann (Const pl) (Sugar.Composite (Sugar.TaggedList addField fields) punned 
             <&> Widget.weakerEvents (addFieldEventMap <> tailEventMap)
             & stdWrapParentExpr pl
     where
+        fields = mTlBody ^.. Lens._Just . SugarLens.taggedListItems
         postProcess =
             case recordTail of
             Sugar.OpenComposite restExpr -> makeOpenRecord restExpr
