@@ -202,7 +202,7 @@ makeAssignment chosenScopeProp binderKind defVar (Ann pl (V.BLam lam)) =
         funcS <- makeFunction chosenScopeProp convParams (lam ^. V.tlOut)
         nodeActions <- makeActions pl & localNewExtractDestPos pl
         pure
-            ( presMode <$ convParams ^? cpParams . Lens._Just . _Params . Lens.ix 1
+            ( presMode <$ convParams ^? cpParams . Lens._Just . _RecordParams . Lens.ix 1
             , Ann
                 { _hAnn =
                     Const ConvertPayload
@@ -238,7 +238,7 @@ convertLam lam exprPl =
             convParams (lam ^. V.tlOut)
         let paramNames =
                 func ^..
-                fParams . _Params . traverse . _2 . piTag . tagRefTag . tagName
+                fParams . (_RecordParams . traverse . _2 . piTag <> _VarParam . _2 . vpiTag) . tagRefTag . tagName
                 & Set.fromList
         lightLamSugar <- Lens.view (ConvertM.scConfig . Config.sugarsEnabled . Config.lightLambda)
         let lambda

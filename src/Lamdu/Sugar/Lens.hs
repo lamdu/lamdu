@@ -75,7 +75,7 @@ instance SugarExpr (Else v name i o) where
     isUnfinished ElseIf{} = False
 
 instance SugarExpr (Function v name i o) where
-    isForbiddenInLightLam = Lens.has (fParams . _Params)
+    isForbiddenInLightLam = not . Lens.has (fParams . _NullParam)
 
 instance SugarExpr (Binder v name i o) where
     isUnfinished (BinderTerm x) = isUnfinished x
@@ -144,7 +144,8 @@ binderParamsFuncParams ::
     (FuncParam v0)
     (FuncParam v1)
 binderParamsFuncParams f (NullParam x) = _1 f x <&> NullParam
-binderParamsFuncParams f (Params x) = (traverse . _1) f x <&> Params
+binderParamsFuncParams f (RecordParams x) = (traverse . _1) f x <&> RecordParams
+binderParamsFuncParams f (VarParam x) = _1 f x <&> VarParam
 
 paneBinder :: Traversal (Pane v0 n i o a0) (Pane v1 n i o a1) (Annotated a0 # Assignment v0 n i o) (Annotated a1 # Assignment v1 n i o)
 paneBinder = paneBody . _PaneDefinition . drBody . _DefinitionBodyExpression . deContent

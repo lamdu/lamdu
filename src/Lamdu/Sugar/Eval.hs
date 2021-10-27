@@ -102,17 +102,17 @@ instance AddEval i n Function where
                     ConvertEval.param (EntityId.ofEvalOf i) . appliesOfLam
                 , a
                 )
-            Params [(fp, info)] ->
-                Params
-                [( fp & fpAnnotation . _AnnotationVal %~
-                    ConvertEval.param (EntityId.ofEvalOf (info ^. piTag . tagRefTag . tagInstance)) .
+            VarParam (fp, info) ->
+                VarParam
+                ( fp & fpAnnotation . _AnnotationVal %~
+                    ConvertEval.param (EntityId.ofEvalOf (info ^. vpiTag . tagRefTag . tagInstance)) .
                     appliesOfLam
                 , info
-                )]
-            Params ps ->
+                )
+            RecordParams ps ->
                 ps
                 <&> fixParam
-                & Params
+                & RecordParams
                 where
                     fixParam (fp, info) =
                         ( fp & fpAnnotation . _AnnotationVal %~

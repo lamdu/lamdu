@@ -283,7 +283,7 @@ fieldParamInfo ::
     Monad m =>
     BinderKind m -> [T.Tag] -> FieldParam -> StoredLam m ->
     TagRef InternalName (OnceT (T m)) (T m) ->
-    ConvertM m (ParamInfo InternalName (OnceT (T m)) (T m))
+    ConvertM m (RecordParamInfo InternalName (OnceT (T m)) (T m))
 fieldParamInfo binderKind tags fp storedLam tag =
     do
         postProcess <- ConvertM.postProcessAssert
@@ -298,9 +298,9 @@ fieldParamInfo binderKind tags fp storedLam tag =
             (EntityId.ofTaggedEntity param) addParamAfter
             >>= ConvertM . lift
         del <- delFieldParamAndFixCalls binderKind tags fp storedLam
-        pure ParamInfo
+        pure RecordParamInfo
             { _piTag = tag
-            , _piAddNext = AddNext addNext
+            , _piAddNext = addNext
             , _piDelete = del
             , _piMOrderBefore = Nothing
             , _piMOrderAfter = Nothing
@@ -411,7 +411,7 @@ convertRecordParams mPresMode binderKind fieldParams lam@(V.TypedLam param _ _) 
         pure ConventionalParams
             { cpTags = Set.fromList tags
             , _cpParamInfos = fieldParams <&> mkParInfo & mconcat
-            , _cpParams = Params params & Just
+            , _cpParams = RecordParams params & Just
             , _cpAddFirstParam = PrependParam addFirstSelection
             , cpMLamParam = Just (entityId, param)
             }
@@ -553,12 +553,12 @@ lamParamType lamExprPl =
     unsafeUnjust "Lambda value not inferred to a function type?!" $
     lamExprPl ^? Input.inferredType . _Pure . T._TFun . funcIn
 
-makeNonRecordParamInfo ::
+makeVarParamInfo ::
     Monad m =>
     TagRef InternalName (OnceT (T m)) (T m) ->
     BinderKind m -> StoredLam m ->
-    ConvertM m (ParamInfo InternalName (OnceT (T m)) (T m))
-makeNonRecordParamInfo tag binderKind storedLam =
+    ConvertM m (VarParamInfo InternalName (OnceT (T m)) (T m))
+makeVarParamInfo tag binderKind storedLam =
     do
         del <- makeDeleteLambda binderKind storedLam
         postProcess <- ConvertM.postProcessAssert
@@ -576,12 +576,10 @@ makeNonRecordParamInfo tag binderKind storedLam =
                 (EntityId.ofTaggedEntity param) addParamAfter
                 >>= ConvertM . lift
                 <&> AddNext
-        pure ParamInfo
-            { _piTag = tag
-            , _piAddNext = addNext
-            , _piDelete = del
-            , _piMOrderBefore = Nothing
-            , _piMOrderAfter = Nothing
+        pure VarParamInfo
+            { _vpiTag = tag
+            , _vpiAddNext = addNext
+            , _vpiDelete = del
             }
     where
         param = storedLam ^. slLam . V.tlIn
@@ -637,10 +635,9 @@ convertNonRecordParam binderKind lam@(V.TypedLam param _ _) lamExprPl =
             _ ->
                 do
                     tag <- ConvertTag.taggedEntity (Just varInfo) param >>= ConvertM . lift
-                    makeNonRecordParamInfo tag binderKind storedLam
+                    makeVarParamInfo tag binderKind storedLam
                         >>= mkFuncParam (tag ^. tagRefTag . tagInstance) lamExprPl
-                <&> (:[])
-                <&> Params
+                <&> VarParam
         postProcess <- ConvertM.postProcessAssert
         addFirst <-
             convertToRecordParams ?? DataOps.newHole ?? binderKind ?? storedLam
@@ -685,8 +682,10 @@ isParamAlwaysUsedWithGetField (V.TypedLam param _paramTyp bod) =
 -- Post process param delete action
 postProcessActions ::
     Monad m => T m () -> ConventionalParams m -> ConventionalParams m
-postProcessActions post =
-    cpParams . Lens._Just . _Params . traverse . _2 . piDelete %~ (<* post)
+postProcessActions post x =
+    x
+    & cpParams . Lens._Just . _RecordParams . traverse . _2 . piDelete %~ (<* post)
+    & cpParams . Lens._Just . _VarParam . _2 . vpiDelete %~ (<* post)
 
 convertLamParams ::
     Monad m =>

@@ -392,16 +392,27 @@ funcSignature apply =
 toExpression :: (MonadNaming m, Walk m v0 v1, Walk m a0 a1, ToBody e) => WalkExpr e m o v0 v1 a0 a1
 toExpression = toNode toBody
 
-withParamInfo ::
+withRecordParamInfo ::
     MonadNaming m =>
     IsUnambiguous ->
-    ParamInfo (OldName m) (IM m) o ->
-    CPS m (ParamInfo (NewName m) (IM m) o)
-withParamInfo unambig x@ParamInfo{_piTag, _piAddNext} =
+    RecordParamInfo (OldName m) (IM m) o ->
+    CPS m (RecordParamInfo (NewName m) (IM m) o)
+withRecordParamInfo unambig x@RecordParamInfo{_piTag, _piAddNext} =
     (,)
     <$> withTagRef unambig TaggedVar _piTag
-    <*> liftCPS (Sugar._AddNext walk _piAddNext)
+    <*> liftCPS (walk _piAddNext)
     <&> \(_piTag, _piAddNext) -> x{_piTag, _piAddNext}
+
+withVarParamInfo ::
+    MonadNaming m =>
+    IsUnambiguous ->
+    VarParamInfo (OldName m) (IM m) o ->
+    CPS m (VarParamInfo (NewName m) (IM m) o)
+withVarParamInfo unambig x@VarParamInfo{_vpiTag, _vpiAddNext} =
+    (,)
+    <$> withTagRef unambig TaggedVar _vpiTag
+    <*> liftCPS (_AddNext walk _vpiAddNext)
+    <&> \(_vpiTag, _vpiAddNext) -> x{_vpiTag, _vpiAddNext}
 
 withFuncParam ::
     (MonadNaming m, Walk m v0 v1) =>
@@ -422,7 +433,8 @@ withBinderParams ::
     BinderParams v0 (OldName m) (IM m) o ->
     CPS m (BinderParams v1 (NewName m) (IM m) o)
 withBinderParams _ (NullParam x) = withFuncParam pure x <&> NullParam
-withBinderParams u (Params xs) = traverse (withFuncParam (withParamInfo u)) xs <&> Params
+withBinderParams u (RecordParams xs) = traverse (withFuncParam (withRecordParamInfo u)) xs <&> RecordParams
+withBinderParams u (VarParam x) = withFuncParam (withVarParamInfo u) x <&> VarParam
 
 type Top t n i (o :: Type -> Type) p = t (Annotation (EvaluationScopes n i) n) n i o p
 

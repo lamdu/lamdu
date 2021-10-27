@@ -199,14 +199,6 @@ testLambdaDelete =
         _ <- convertWorkArea env1 >>= makeGui "" env1
         pure ()
 
-topLevelLamParamCursor :: Env -> OnceT (T ViewM) WidgetId.Id
-topLevelLamParamCursor env =
-    fromWorkArea env
-    (replExpr . Sugar._BodyLam . Sugar.lamFunc .
-        Sugar.fParams . Sugar._Params . Lens.ix 0 . _2 .
-        Sugar.piTag . Sugar.tagRefTag . Sugar.tagInstance)
-    <&> WidgetIds.fromEntityId
-
 -- | Test for regression in creating new tags when there are tags matching the search string.
 -- (regression introduced at 2020.11.12 in 7bf691ce675f897)
 testNewTag :: HasCallStack => Test
@@ -222,6 +214,14 @@ testNewTag =
         env1 <- applyEvent env0 dummyVirt upEvent
         _ <- convertWorkArea env1 >>= makeGui "" env1
         pure ()
+
+topLevelLamParamCursor :: Env -> OnceT (T ViewM) WidgetId.Id
+topLevelLamParamCursor env =
+    fromWorkArea env
+    (replExpr . Sugar._BodyLam . Sugar.lamFunc .
+        Sugar.fParams . Sugar._VarParam . _2 .
+        Sugar.vpiTag . Sugar.tagRefTag . Sugar.tagInstance)
+    <&> WidgetIds.fromEntityId
 
 -- | Test for issue #410
 -- https://trello.com/c/00mxkLRG/410-navigating-to-fragment-affects-layout

@@ -95,9 +95,9 @@ instance (MonadTransaction m o, MonadTransaction m i) => Order i (Sugar.Lambda v
 instance (MonadTransaction m o, MonadTransaction m i) => Order i (Sugar.Function v name i o) where
     order x =
         x
-        & (Sugar.fParams . Sugar._Params) (orderByTag (^. _2 . Sugar.piTag . Sugar.tagRefTag))
+        & (Sugar.fParams . Sugar._RecordParams) (orderByTag (^. _2 . Sugar.piTag . Sugar.tagRefTag))
         >>= Sugar.fBody orderNode
-        <&> Sugar.fParams . Sugar._Params %~ addReorders
+        <&> Sugar.fParams . Sugar._RecordParams %~ addReorders
 
 tagChoiceOptions ::
     Functor i =>
@@ -112,14 +112,14 @@ tagChoicePick = tagChoiceOptions . Lens.filteredBy (Sugar.toInfo . Sugar.tagVal)
 
 addReorders ::
     (MonadTransaction m o, Functor i) =>
-    [(a, Sugar.ParamInfo n i o)] -> [(a, Sugar.ParamInfo n i o)]
+    [(a, Sugar.RecordParamInfo n i o)] -> [(a, Sugar.RecordParamInfo n i o)]
 addReorders params =
     params & Lens.itraversed <. _2 %@~ addParamActions
     where
         tags = params ^.. traverse . _2 . Sugar.piTag . Sugar.tagRefTag . Sugar.tagVal
         addParamActions ::
             (MonadTransaction m o, Functor i) =>
-            Int -> Sugar.ParamInfo n i o -> Sugar.ParamInfo n i o
+            Int -> Sugar.RecordParamInfo n i o -> Sugar.RecordParamInfo n i o
         addParamActions i a =
             a
             & Sugar.piTag . Sugar.tagRefReplace . tagChoicePick %@~
@@ -127,7 +127,7 @@ addReorders params =
                     (transaction (
                         ExprIRef.readTagData (a ^. Sugar.piTag . Sugar.tagRefTag . Sugar.tagVal)
                         <&> (^. tagOrder) >>= DataOps.setTagOrder t) >>))
-            & Sugar.piAddNext . Sugar._AddNext . tagChoicePick %@~
+            & Sugar.piAddNext . tagChoicePick %@~
                 (\t -> (transaction (Lens.itraverse_ (flip DataOps.setTagOrder) (before <> [t] <> after)) >>))
             & Sugar.piMOrderBefore .~
                 (setOrder ([0..i-1] <> [i, i-1] <> [i+1..length tags-1]) <$ guard (i > 0))
@@ -192,7 +192,7 @@ orderDef def =
     def
     & (SugarLens.defSchemes . Sugar.schemeType) orderType
     >>= (Sugar.drBody . Sugar._DefinitionBodyExpression . Sugar.deContent)
-        (orderNode >=> (hVal . Sugar._BodyFunction . Sugar.fParams . Sugar._Params) processPresentationMode)
+        (orderNode >=> (hVal . Sugar._BodyFunction . Sugar.fParams . Sugar._RecordParams) processPresentationMode)
     where
         processPresentationMode orig =
             Anchors.assocPresentationMode (def ^. Sugar.drDefI) ^. mkProperty & transaction <&>

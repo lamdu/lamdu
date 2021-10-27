@@ -15,10 +15,11 @@ module Lamdu.Sugar.Types.Parts
     , -- Let
       ExtractDestination(..)
     , -- Binders
-      BinderParams(..), _NullParam, _Params
+      BinderParams(..), _NullParam, _VarParam, _RecordParams
     , FuncParam(..), fpAnnotation, fpVarInfo
     , NullParamActions(..), npDeleteLambda
-    , ParamInfo(..), piTag, piAddNext, piDelete, piMOrderBefore, piMOrderAfter
+    , VarParamInfo(..), vpiTag, vpiAddNext, vpiDelete
+    , RecordParamInfo(..), piTag, piAddNext, piDelete, piMOrderBefore, piMOrderAfter
     , AddFirstParam(..), _AddInitialParam, _PrependParam, _NeedToPickTagToAddFirst
     , AddNextParam(..), _AddNext, _NeedToPickTagToAddNext
     , -- Expressions
@@ -63,9 +64,15 @@ newtype NullParamActions o = NullParamActions
     { _npDeleteLambda :: o ()
     } deriving stock Generic
 
-data ParamInfo name i o = ParamInfo
+data VarParamInfo name i o = VarParamInfo
+    { _vpiTag :: TagRef name i o
+    , _vpiAddNext :: AddNextParam name i o
+    , _vpiDelete :: o ()
+    } deriving Generic
+
+data RecordParamInfo name i o = RecordParamInfo
     { _piTag :: TagRef name i o
-    , _piAddNext :: AddNextParam name i o
+    , _piAddNext :: TagChoice name i o ()
     , _piDelete :: o ()
     , _piMOrderBefore :: Maybe (o ())
     , _piMOrderAfter :: Maybe (o ())
@@ -118,7 +125,8 @@ data BinderParams v name i o
       -- to be the empty record.
       -- This is often used to represent "deferred execution"
       NullParam (FuncParam v, NullParamActions o)
-    | Params [(FuncParam v, ParamInfo name i o)]
+    | VarParam (FuncParam v, VarParamInfo name i o)
+    | RecordParams [(FuncParam v, RecordParamInfo name i o)]
     deriving Generic
 
 -- VarInfo is used for:
@@ -165,7 +173,7 @@ data ParenInfo = ParenInfo
 
 traverse Lens.makeLenses
     [ ''ClosedCompositeActions, ''FuncParam, ''NodeActions
-    , ''NullParamActions, ''NullaryInject, ''ParamInfo, ''ParenInfo, ''Payload, ''PunnedVar
+    , ''NullParamActions, ''NullaryInject, ''VarParamInfo, ''RecordParamInfo, ''ParenInfo, ''Payload, ''PunnedVar
     ] <&> concat
 traverse Lens.makePrisms
     [ ''AddFirstParam, ''AddNextParam, ''Annotation, ''BinderParams, ''Delete

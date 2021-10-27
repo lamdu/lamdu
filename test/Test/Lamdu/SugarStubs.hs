@@ -160,16 +160,16 @@ repl (Ann (Const pl) x) =
     , Sugar._replResult = CurAndPrev Nothing Nothing
     }
 
-mkFuncParam ::
-    (UUID, T.Tag) -> (Sugar.FuncParam (Sugar.Annotation v name), Sugar.ParamInfo InternalName Identity Unit)
-mkFuncParam (paramVar, paramTag) =
+mkFuncRecordParam ::
+    (UUID, T.Tag) -> (Sugar.FuncParam (Sugar.Annotation v name), Sugar.RecordParamInfo InternalName Identity Unit)
+mkFuncRecordParam (paramVar, paramTag) =
     ( Sugar.FuncParam
         { Sugar._fpAnnotation = Sugar.AnnotationNone
         , Sugar._fpVarInfo = Sugar.VarGeneric
         }
-    , Sugar.ParamInfo
+    , Sugar.RecordParamInfo
         { Sugar._piTag = mkTag (Just paramVar) paramTag
-        , Sugar._piAddNext = Sugar.AddNext tagRefReplace
+        , Sugar._piAddNext = tagRefReplace
         , Sugar._piDelete = Unit
         , Sugar._piMOrderBefore = Nothing
         , Sugar._piMOrderAfter = Nothing
@@ -184,7 +184,7 @@ funcExpr params (Ann (Const ba) bx) =
     { Sugar._fChosenScopeProp = prop Nothing & pure
     , Sugar._fBodyScopes = mempty
     , Sugar._fAddFirstParam = Sugar.PrependParam tagRefReplace
-    , Sugar._fParams = params <&> mkFuncParam & Sugar.Params
+    , Sugar._fParams = params <&> mkFuncRecordParam & Sugar.RecordParams
     , Sugar._fBody = Ann (Const ba) (Sugar.BinderTerm bx)
     }
 

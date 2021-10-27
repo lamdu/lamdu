@@ -33,7 +33,7 @@ make ::
     Sugar.BinderParams v name i o ->
     Property f Sugar.PresentationMode ->
     m (Align.TextWidget f)
-make myId (Sugar.Params params) prop =
+make myId (Sugar.RecordParams params) prop =
     do
         theme <- Lens.view has
         pairs <-

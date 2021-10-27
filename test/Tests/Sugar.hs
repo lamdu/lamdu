@@ -93,11 +93,6 @@ replBody = replBinder . _BinderTerm
 replLet :: Lens.Traversal' (WorkArea v name i o a) (Let v name i o # Annotated a)
 replLet = replBinder . _BinderLet
 
-lamFirstParam ::
-    Lens.Traversal' (Term v name i o a)
-    (FuncParam v, ParamInfo name i o)
-lamFirstParam = _BodyLam . lamFunc . fParams . _Params . Lens.ix 0
-
 testUnnamed :: Test
 testUnnamed =
     testSugarActions "unnamed.json" [verify]
@@ -119,7 +114,8 @@ testChangeParam =
             workArea ^?!
             replBody . _BodySimpleApply . V.appFunc .
             hVal . _BodySimpleApply . V.appArg .
-            hVal . lamFirstParam . _2 . piTag . tagRefReplace . tcNewTag
+            hVal . _BodyLam . lamFunc . fParams . _RecordParams .
+            Lens.ix 0 . _2 . piTag . tagRefReplace . tcNewTag
             >>= lift . (^. toPick)
 
 -- | Test for issue #373
@@ -200,7 +196,9 @@ paramAnnotations =
     where
         verify workArea =
             unless
-            (Lens.allOf (replBody . lamFirstParam . _1 . fpAnnotation) (Lens.has _AnnotationNone) workArea)
+            (Lens.allOf
+                (replBody . _BodyLam . lamFunc . fParams . _VarParam . _1 . fpAnnotation)
+                (Lens.has _AnnotationNone) workArea)
             (error "parameter should not have type annotation")
 
 delParam :: Test
@@ -208,7 +206,7 @@ delParam =
     testSugarActions "const-five.json" [lift . (^?! action), verify]
     & testCase "del-param"
     where
-        action = replBody . lamFirstParam . _2 . piDelete
+        action = replBody . _BodyLam . lamFunc . fParams . _VarParam . _2 . vpiDelete
         verify workArea
             | Lens.has afterDel workArea = pure ()
             | otherwise = error "Expected 5"
@@ -377,7 +375,7 @@ delDefParam =
         action =
             waPanes . traverse . SugarLens.paneBinder .
             hVal . _BodyFunction .
-            fParams . _Params . traverse .
+            fParams . _RecordParams . traverse .
             _2 . piDelete
 
 updateDef :: Test
@@ -530,7 +528,7 @@ testNullParamUnused :: Test
 testNullParamUnused =
     testCase "null-param-unused" $
     Env.make >>= testProgram "null-param-cond.json" . convertWorkArea
-    <&> Lens.has (replBinder . _BinderLet . lValue . hVal . _BodyFunction . fParams . _Params)
+    <&> Lens.has (replBinder . _BinderLet . lValue . hVal . _BodyFunction . fParams . _VarParam)
     >>= assertBool "Null param only if unused"
 
 -- Test for https://github.com/lamdu/lamdu/issues/123
@@ -571,8 +569,8 @@ testParamsOrder =
                 params2 <- readTags
                 assertEq "params should be same" params0 params2
     where
-        funcParams :: Lens.Traversal' (WorkArea v n i o a) [(FuncParam v, ParamInfo n i o)]
-        funcParams = replBinder . _BinderLet . lValue . hVal . _BodyFunction . fParams . _Params
+        funcParams :: Lens.Traversal' (WorkArea v n i o a) [(FuncParam v, RecordParamInfo n i o)]
+        funcParams = replBinder . _BinderLet . lValue . hVal . _BodyFunction . fParams . _RecordParams
 
 testAddToInferredParamList :: Test
 testAddToInferredParamList =
@@ -584,7 +582,7 @@ testAddToInferredParamList =
             do
                 convertWorkArea env
                     >>= (^?! elseClause . lamBodyParams .
-                            Lens.ix 0 . _2 . piAddNext . _AddNext . tcNewTag)
+                            Lens.ix 0 . _2 . piAddNext . tcNewTag)
                     >>= lift . (^. toPick)
                 convertWorkArea env
         let paramList = workArea ^?! elseClause . _BodyFragment . fExpr . hVal . lamBodyParams
@@ -596,8 +594,8 @@ testAddToInferredParamList =
             hVal . _BinderTerm . _BodyIfElse . iElse .
             hVal . _SimpleElse . _BodyLam . lamFunc . fBody .
             hVal . _BinderTerm
-        lamBodyParams :: Lens.Traversal' (Term v n i o # k) [(FuncParam v, ParamInfo n i o)]
-        lamBodyParams = _BodyLam . lamFunc . fParams . _Params
+        lamBodyParams :: Lens.Traversal' (Term v n i o # k) [(FuncParam v, RecordParamInfo n i o)]
+        lamBodyParams = _BodyLam . lamFunc . fParams . _RecordParams
 
 testInfixWithArgParens :: Test
 testInfixWithArgParens =
