@@ -51,22 +51,14 @@ addAltId :: Widget.Id -> Widget.Id
 addAltId = (`Widget.joinId` ["add alt"])
 
 make :: _ => ExprGui.Expr Sugar.Composite i o -> GuiM env i o (Responsive o)
-make (Ann (Const pl) (Sugar.Composite (Sugar.TaggedList addAlt alts) punned caseTail)) =
+make (Ann (Const pl) (Sugar.Composite alts punned caseTail)) =
     do
         env <- Lens.view id
-        altsGui <-
-            makeAltsWidget alts punned addAlt altsId
-            >>= case caseTail of
+        (addAltEventMap, altsGui) <-
+            makeAltsWidget altsId alts punned
+            >>= _2 %%~ case caseTail of
             Sugar.ClosedComposite actions -> pure . Widget.weakerEvents (closedCaseEventMap env actions)
             Sugar.OpenComposite rest -> makeOpenCase rest (Widget.toAnimId myId)
-        let addAltEventMap =
-                GuiState.updateCursor dst
-                & GuiState.uWidgetStateUpdates . Lens.at dst ?~ mempty
-                & pure
-                & E.keyPresses (env ^. has . Config.caseAddAltKeys)
-                    (doc env Texts.addAlt)
-                where
-                    dst = addAltId altsId
         header <- grammar (Label.make ".") M./|/ makeCaseLabel
         Styled.addValFrame <*>
             (Options.boxSpaced ?? Options.disambiguationNone ?? [header, altsGui])
@@ -103,12 +95,11 @@ makeAltRow (Sugar.TaggedItem tag delete altExpr) =
 
 makeAltsWidget ::
     _ =>
-    [ExprGui.Body (Sugar.TaggedItem Sugar.Term) i o] ->
-    [Sugar.PunnedVar Name o # Annotated (ExprGui.Payload i o)] ->
-    Sugar.TagChoice Name i o Sugar.EntityId ->
     Widget.Id ->
-    GuiM env i o (Responsive o)
-makeAltsWidget alts punned addAlt altsId =
+    ExprGui.Body (Sugar.TaggedList Sugar.Term) i o ->
+    [Sugar.PunnedVar Name o # Annotated (ExprGui.Payload i o)] ->
+    GuiM env i o (EventMap _, Responsive o)
+makeAltsWidget altsId (Sugar.TaggedList addAlt alts) punned =
     do
         punnedWidgets <-
             case punned of
@@ -124,12 +115,22 @@ makeAltsWidget alts punned addAlt altsId =
             <&> guard
             <&> Lens.mapped .~ makeAddAltRow addAlt (addAltId altsId)
             >>= sequenceA
+        env <- Lens.view id
+        let addAltEventMap =
+                GuiState.updateCursor dst
+                & GuiState.uWidgetStateUpdates . Lens.at dst ?~ mempty
+                & pure
+                & E.keyPresses (env ^. has . Config.caseAddAltKeys)
+                    (doc env Texts.addAlt)
+                where
+                    dst = addAltId altsId
         case existingAltWidgets ++ newAlts of
             [] ->
                 (Widget.makeFocusableView ?? Widget.joinId altsId ["Ø"] <&> (M.tValue %~))
                 <*> grammar (label Texts.absurd)
                 <&> Responsive.fromWithTextPos
             altWidgtes -> taggedList ?? altWidgtes
+            <&> (,) addAltEventMap
 
 makeAddAltRow ::
     _ => Sugar.TagChoice Name i o Sugar.EntityId -> Widget.Id -> GuiM env i o (TaggedItem o)
