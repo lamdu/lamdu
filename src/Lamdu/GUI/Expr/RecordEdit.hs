@@ -99,11 +99,11 @@ makeEmpty (Ann (Const pl) (Const addField)) =
             else makeUnit pl
 
 make :: _ => ExprGui.Expr Sugar.Composite i o -> GuiM env i o (Responsive o)
-make (Ann (Const pl) (Sugar.Composite [] [] Sugar.ClosedComposite{} addField)) =
+make (Ann (Const pl) (Sugar.Composite (Sugar.TaggedList addField []) [] Sugar.ClosedComposite{})) =
     -- Ignore the ClosedComposite actions - it only has the open
     -- action which is equivalent ot deletion on the unit record
     makeEmpty (Ann (Const pl) (Const addField))
-make (Ann (Const pl) (Sugar.Composite fields punned recordTail addField)) =
+make (Ann (Const pl) (Sugar.Composite (Sugar.TaggedList addField fields) punned recordTail)) =
     do
         addFieldEventMap <- mkAddFieldEventMap (WidgetIds.fromExprPayload pl)
         tailEventMap <-

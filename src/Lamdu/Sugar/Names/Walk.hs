@@ -311,13 +311,18 @@ instance ToBody h => ToBody (TaggedItem h) where
         <*> toExpression _tiValue
         <&> \(_tiTag, _tiValue) -> ti{_tiTag,_tiValue}
 
+instance ToBody h => ToBody (TaggedList h) where
+    toBody (TaggedList add items) =
+        TaggedList
+        <$> walk add
+        <*> traverse toBody items
+
 instance ToBody Composite where
-    toBody (Composite items punned tail_ addItem) =
+    toBody (Composite items punned tail_) =
         Composite
-        <$> traverse toBody items
+        <$> toBody items
         <*> (traverse . pvVar) (toNode (Lens._Wrapped walk)) punned
         <*> _OpenComposite toExpression tail_
-        <*> walk addItem
 
 instance ToBody Nominal where
     toBody (Nominal t e) = Nominal <$> walk t <*> toExpression e

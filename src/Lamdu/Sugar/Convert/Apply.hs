@@ -84,7 +84,7 @@ defParamsMatchArgs var record frozenDeps =
         defArgs ^? freRest . _Pure . T._REmpty
         let sFields =
                 record ^..
-                ( cItems . traverse . tiTag . tagRefTag . tagVal
+                ( cList . tlItems . traverse . tiTag . tagRefTag . tagVal
                     <> cPunnedItems . traverse . pvVar . hVal . Lens._Wrapped . getVarName . inTag
                 ) & Set.fromList
         guard (sFields == Map.keysSet (defArgs ^. freExtends))
@@ -99,10 +99,10 @@ convertEmptyInject subexprs funcS argS applyPl =
     do
         inject <- annValue (^? _BodyLeaf . _LeafInject . Lens._Unwrapped) funcS & maybeToMPlus
         r <- annValue (^? _BodyRecord) argS & maybeToMPlus
-        r ^. hVal . cItems & null & guard
+        r ^. hVal . cList . tlItems & null & guard
         r ^. hVal . cPunnedItems & null & guard
         Lens.has (hVal . cTail . _ClosedComposite) r & guard
-        r & annValue %~ (^. cAddItem . Lens._Unwrapped)
+        r & annValue %~ (^. cList . tlAddItem . Lens._Unwrapped)
             & NullaryInject inject & BodyNullaryInject
             & addActions subexprs applyPl & lift
 
@@ -148,7 +148,7 @@ convertLabeled subexprs funcS argS exprPl =
         -- that is closed
         Lens.has (cTail . _ClosedComposite) record & guard
         -- with at least 2 fields
-        length (record ^. cItems) + length (record ^. cPunnedItems) >= 2 & guard
+        length (record ^. cList . tlItems) + length (record ^. cPunnedItems) >= 2 & guard
         frozenDeps <- Lens.view ConvertM.scFrozenDeps <&> Property.value
         let var = funcVar ^. hVal . Lens._Wrapped . bvVar
         -- If it is an external (non-recursive) def (i.e: not in
@@ -164,7 +164,7 @@ convertLabeled subexprs funcS argS exprPl =
                     }
         bod <-
             PresentationModes.makeLabeledApply
-            funcVar (record ^. cItems <&> getArg) (record ^. cPunnedItems) exprPl
+            funcVar (record ^. cList . tlItems <&> getArg) (record ^. cPunnedItems) exprPl
             <&> BodyLabeledApply & lift
         let userPayload =
                 subexprPayloads subexprs (bod ^.. childPayloads)

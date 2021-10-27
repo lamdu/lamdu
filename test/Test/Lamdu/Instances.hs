@@ -111,9 +111,10 @@ instance Eq (Sugar.TagPane f) where
     , ''Sugar.DefinitionOutdatedType, ''Sugar.FuncParam, ''Sugar.Type
     , ''Sugar.ResBody, ''Sugar.ResInject, ''Sugar.ResRecord, ''Sugar.ResTable
     , ''Sugar.AnnotatedArg, ''Sugar.AssignPlain, ''Sugar.Assignment, ''Sugar.Binder
-    , ''Sugar.Composite, ''Sugar.TaggedItem, ''Sugar.CompositeTail, ''Sugar.Definition
-    , ''Sugar.DefinitionBody, ''Sugar.DefinitionExpression, ''Sugar.Else, ''Sugar.Fragment
-    , ''Sugar.Function, ''Sugar.IfElse, ''Sugar.LabeledApply, ''Sugar.Lambda, ''Sugar.Let
+    , ''Sugar.Composite, ''Sugar.TaggedItem, ''Sugar.TaggedList, ''Sugar.CompositeTail
+    , ''Sugar.Definition , ''Sugar.DefinitionBody, ''Sugar.DefinitionExpression
+    , ''Sugar.Else, ''Sugar.Fragment, ''Sugar.Function, ''Sugar.IfElse
+    , ''Sugar.LabeledApply, ''Sugar.Lambda, ''Sugar.Let
     , ''Sugar.Nominal, ''Sugar.NullaryInject, ''Sugar.OperatorArgs, ''Sugar.Pane, ''Sugar.PaneBody
     , ''Sugar.PostfixApply, ''Sugar.PostfixFunc, ''Sugar.PunnedVar, ''Sugar.Repl, ''Sugar.Term
     , ''Sugar.WorkArea, ''Sugar.BinderVarInline, ''Sugar.ClosedCompositeActions, ''Sugar.Delete

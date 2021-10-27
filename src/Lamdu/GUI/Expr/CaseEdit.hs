@@ -51,7 +51,7 @@ addAltId :: Widget.Id -> Widget.Id
 addAltId = (`Widget.joinId` ["add alt"])
 
 make :: _ => ExprGui.Expr Sugar.Composite i o -> GuiM env i o (Responsive o)
-make (Ann (Const pl) (Sugar.Composite alts punned caseTail addAlt)) =
+make (Ann (Const pl) (Sugar.Composite (Sugar.TaggedList addAlt alts) punned caseTail)) =
     do
         env <- Lens.view id
         altsGui <-

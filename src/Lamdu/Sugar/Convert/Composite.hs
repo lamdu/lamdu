@@ -94,13 +94,13 @@ convertExtend cons extendOp valS exprPl extendV restC =
                             , _pvTagEntityId = itemS ^. tiTag . tagRefTag . tagInstance
                             }
                     Just (cPunnedItems %~ (punned :))
-                & fromMaybe (cItems %~ (itemS :))
+                & fromMaybe (cList . tlItems %~ (itemS :))
         addItemAction <- convertAddItem extendOp (Set.fromList (extendV ^. extendTag : restTags)) exprPl
         addItem restC
-            & cAddItem .~ addItemAction
+            & cList . tlAddItem .~ addItemAction
             & pure
     where
-        restTags = restC ^.. cItems . traverse . tiTag . tagRefTag . tagVal
+        restTags = restC ^.. cList . tlItems . traverse . tiTag . tagRefTag . tagVal
 
 convertOneItemOpenComposite ::
     Monad m =>
@@ -112,15 +112,17 @@ convertOneItemOpenComposite ::
     ExtendVal m (Input.Payload m a # V.Term) ->
     ConvertM m (Composite v InternalName (OnceT (T m)) (T m) # k)
 convertOneItemOpenComposite cons extendOp valS restS exprPl extendV =
-    Composite
-    <$> ( convertItem cons
+    (Composite <$> convertTaggedList) ?? [] ?? OpenComposite restS
+    where
+        convertTaggedList =
+            TaggedList
+            <$> convertAddItem extendOp (Set.singleton (extendV ^. extendTag)) exprPl
+            <*> convertItems
+        convertItems =
+            convertItem cons
             (exprPl ^. Input.stored) (extendV ^. extendRest . Input.entityId) mempty valS
             (extendV & extendRest %~ (^. Input.stored . ExprIRef.iref))
             <&> (:[])
-        )
-    <*> pure []
-    <*> pure (OpenComposite restS)
-    <*> convertAddItem extendOp (Set.singleton (extendV ^. extendTag)) exprPl
 
 convertEmpty ::
     Monad m =>
@@ -141,10 +143,9 @@ convertEmpty extendOp exprPl =
             }
         addItem <- convertAddItem extendOp mempty exprPl
         pure Composite
-            { _cItems = []
+            { _cList = TaggedList addItem []
             , _cPunnedItems = []
             , _cTail = ClosedComposite actions
-            , _cAddItem = addItem
             }
 
 convertItem ::

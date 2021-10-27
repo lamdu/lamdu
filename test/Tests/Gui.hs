@@ -169,7 +169,7 @@ testTagPanes =
     \baseEnv ->
     testProgram "ab.json" $
     do
-        fromWorkArea baseEnv (replExpr . Sugar._BodyRecord . Sugar.cItems)
+        fromWorkArea baseEnv (replExpr . Sugar._BodyRecord . Sugar.cList . Sugar.tlItems)
             >>= lift . sequence_ . (^.. traverse . Sugar.tiTag . Sugar.tagRefJumpTo . Lens._Just)
         convertWorkArea baseEnv >>= makeFocusedWidget "opened tag panes" baseEnv & void
 
@@ -273,7 +273,9 @@ testPunCursor =
     do
         tagId <-
             fromWorkArea baseEnv
-            (Lens.cloneTraversal waRec . Sugar.cItems . traverse . Sugar.tiTag . Sugar.tagRefTag . Sugar.tagInstance)
+            ( Lens.cloneTraversal waRec . Sugar.cList . Sugar.tlItems . traverse . Sugar.tiTag
+            . Sugar.tagRefTag . Sugar.tagInstance
+            )
         env0 <-
             applyEvent (baseEnv & cursor .~ WidgetIds.tagHoleId (WidgetIds.fromEntityId tagId))
             dummyVirt (EventChar 'x')

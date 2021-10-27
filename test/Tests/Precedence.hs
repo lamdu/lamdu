@@ -58,20 +58,24 @@ testGetFieldOfApply =
 testInjectInRec :: Test
 testInjectInRec =
     expr ^?!
-    hVal . Sugar._BodyRecord . Sugar.cItems . traverse . Sugar.tiValue . annotation . _1 . Sugar.piNeedParens
+    hVal . Sugar._BodyRecord . Sugar.cList . Sugar.tlItems . traverse . Sugar.tiValue .
+    annotation . _1 . Sugar.piNeedParens
     & assertBool "get field should disambiguate compound expression"
     & testCase "inject-in-record"
     where
         expr =
             Sugar.BodyRecord Sugar.Composite
-            { Sugar._cItems =
-                [ Stub.mkTag Nothing "x"
-                    & Sugar.LeafInject & Sugar.BodyLeaf & Stub.node
-                    & Sugar.TaggedItem (Stub.mkTag Nothing "x") Unit
-                ]
+            { Sugar._cList =
+                Sugar.TaggedList
+                { Sugar._tlAddItem = "stub" <$ Stub.tagRefReplace
+                , Sugar._tlItems =
+                    [ Stub.mkTag Nothing "x"
+                        & Sugar.LeafInject & Sugar.BodyLeaf & Stub.node
+                        & Sugar.TaggedItem (Stub.mkTag Nothing "x") Unit
+                    ]
+                }
             , Sugar._cPunnedItems = []
             , Sugar._cTail = Sugar.ClosedComposite (Sugar.ClosedCompositeActions Unit)
-            , Sugar._cAddItem = "stub" <$ Stub.tagRefReplace
             } & Stub.node
             & Parens.addToTopLevel 0
 

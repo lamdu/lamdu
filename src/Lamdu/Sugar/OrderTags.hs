@@ -60,13 +60,11 @@ orderType :: MonadTransaction m i => OrderT i (Ann a # Sugar.Type name o)
 orderType = hVal orderTBody
 
 instance (MonadTransaction m o, MonadTransaction m i) => Order i (Sugar.Composite v name i o) where
-    order (Sugar.Composite items punned tail_ addItem) =
+    order (Sugar.Composite items punned tail_) =
         Sugar.Composite
-        <$> (orderByTag (^. Sugar.tiTag . Sugar.tagRefTag) items
-            >>= (traverse . Sugar.tiValue) orderNode)
+        <$> order items
         <*> pure punned
         <*> Sugar._OpenComposite orderNode tail_
-        <*> pure addItem
 
 instance (MonadTransaction m o, MonadTransaction m i) => Order i (Sugar.LabeledApply v name i o) where
     order (Sugar.LabeledApply func specialArgs annotated punned) =
@@ -74,6 +72,16 @@ instance (MonadTransaction m o, MonadTransaction m i) => Order i (Sugar.LabeledA
         <$> orderByTag (^. Sugar.aaTag) annotated
         <*> pure punned
         >>= htraverse (Proxy @(Order i) #> orderNode)
+
+instance MonadTransaction m i => Order i (Sugar.TaggedList h v name i o) where
+    order (Sugar.TaggedList addItem items) =
+        Sugar.TaggedList addItem
+        <$> orderByTag (^. Sugar.tiTag . Sugar.tagRefTag) items
+
+instance (MonadTransaction m i, Order i (h v name i o)) =>
+         Order i (Sugar.TaggedItem h v name i o) where
+    order (Sugar.TaggedItem tagRef delete val) =
+        Sugar.TaggedItem tagRef delete <$> orderNode val
 
 instance MonadTransaction m i => Order i (Const a)
 instance (MonadTransaction m o, MonadTransaction m i) => Order i (Sugar.Else v name i o)
