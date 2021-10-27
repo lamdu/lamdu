@@ -95,7 +95,7 @@ replLet = replBinder . _BinderLet
 
 lamFirstParam ::
     Lens.Traversal' (Term v name i o a)
-    (FuncParam v name, ParamInfo name i o)
+    (FuncParam v, ParamInfo name i o)
 lamFirstParam = _BodyLam . lamFunc . fParams . _Params . Lens.ix 0
 
 testUnnamed :: Test
@@ -571,7 +571,7 @@ testParamsOrder =
                 params2 <- readTags
                 assertEq "params should be same" params0 params2
     where
-        funcParams :: Lens.Traversal' (WorkArea v n i o a) [(FuncParam v n, ParamInfo n i o)]
+        funcParams :: Lens.Traversal' (WorkArea v n i o a) [(FuncParam v, ParamInfo n i o)]
         funcParams = replBinder . _BinderLet . lValue . hVal . _BodyFunction . fParams . _Params
 
 testAddToInferredParamList :: Test
@@ -596,7 +596,7 @@ testAddToInferredParamList =
             hVal . _BinderTerm . _BodyIfElse . iElse .
             hVal . _SimpleElse . _BodyLam . lamFunc . fBody .
             hVal . _BinderTerm
-        lamBodyParams :: Lens.Traversal' (Term v n i o # k) [(FuncParam v n, ParamInfo n i o)]
+        lamBodyParams :: Lens.Traversal' (Term v n i o # k) [(FuncParam v, ParamInfo n i o)]
         lamBodyParams = _BodyLam . lamFunc . fParams . _Params
 
 testInfixWithArgParens :: Test

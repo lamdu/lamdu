@@ -406,8 +406,8 @@ withParamInfo unambig x@ParamInfo{_piTag, _piAddNext} =
 withFuncParam ::
     (MonadNaming m, Walk m v0 v1) =>
     (a -> CPS m b) ->
-    (FuncParam v0 (OldName m), a) ->
-    CPS m (FuncParam v1 (NewName m), b)
+    (FuncParam v0, a) ->
+    CPS m (FuncParam v1, b)
 withFuncParam f (FuncParam pl varInfo, info) =
     (,)
     <$>

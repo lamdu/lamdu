@@ -141,8 +141,8 @@ binderParamsFuncParams ::
     Traversal
     (BinderParams v0 name i o)
     (BinderParams v1 name i o)
-    (FuncParam v0 name)
-    (FuncParam v1 name)
+    (FuncParam v0)
+    (FuncParam v1)
 binderParamsFuncParams f (NullParam x) = _1 f x <&> NullParam
 binderParamsFuncParams f (Params x) = (traverse . _1) f x <&> Params
 

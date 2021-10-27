@@ -600,7 +600,7 @@ mkVarInfo (Pure (T.TInst (NominalInst tid _))) =
 mkFuncParam ::
     Monad m =>
     EntityId -> Input.Payload m a # V.Term -> info ->
-    ConvertM m (FuncParam EvalPrep InternalName, info)
+    ConvertM m (FuncParam EvalPrep, info)
 mkFuncParam entityId lamExprPl info =
     mkVarInfo typ <&>
     \vinfo ->

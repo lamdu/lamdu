@@ -161,7 +161,7 @@ repl (Ann (Const pl) x) =
     }
 
 mkFuncParam ::
-    (UUID, T.Tag) -> (Sugar.FuncParam (Sugar.Annotation v name) name, Sugar.ParamInfo InternalName Identity Unit)
+    (UUID, T.Tag) -> (Sugar.FuncParam (Sugar.Annotation v name), Sugar.ParamInfo InternalName Identity Unit)
 mkFuncParam (paramVar, paramTag) =
     ( Sugar.FuncParam
         { Sugar._fpAnnotation = Sugar.AnnotationNone

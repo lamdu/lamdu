@@ -71,7 +71,7 @@ data ParamInfo name i o = ParamInfo
     , _piMOrderAfter :: Maybe (o ())
     } deriving Generic
 
-data FuncParam v name = FuncParam
+data FuncParam v = FuncParam
     { _fpAnnotation :: v
     , _fpVarInfo :: VarInfo
     } deriving Generic
@@ -117,8 +117,8 @@ data BinderParams v name i o
     = -- null param represents a lambda whose parameter's type is inferred
       -- to be the empty record.
       -- This is often used to represent "deferred execution"
-      NullParam (FuncParam v name, NullParamActions o)
-    | Params [(FuncParam v name, ParamInfo name i o)]
+      NullParam (FuncParam v, NullParamActions o)
+    | Params [(FuncParam v, ParamInfo name i o)]
     deriving Generic
 
 -- VarInfo is used for:
