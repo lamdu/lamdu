@@ -190,7 +190,7 @@ makeAddFieldRow addField pl =
             }
 
 makeFieldRow :: _ => ExprGui.Body (Sugar.TaggedItem Sugar.Term) i o -> GuiM env i o (TaggedItem o)
-makeFieldRow (Sugar.TaggedItem tag delete fieldExpr) =
+makeFieldRow (Sugar.TaggedItem tag delete _addAfter fieldExpr) =
     do
         itemEventMap <- recordDelEventMap delete
         fieldGui <- GuiM.makeSubexpression fieldExpr

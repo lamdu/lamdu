@@ -71,7 +71,7 @@ testInjectInRec =
                 , Sugar._tlItems =
                     [ Stub.mkTag Nothing "x"
                         & Sugar.LeafInject & Sugar.BodyLeaf & Stub.node
-                        & Sugar.TaggedItem (Stub.mkTag Nothing "x") Unit
+                        & Sugar.TaggedItem (Stub.mkTag Nothing "x") Unit ("stub" <$ Stub.tagRefReplace)
                     ]
                 }
             , Sugar._cPunnedItems = []

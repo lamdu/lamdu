@@ -305,11 +305,12 @@ instance ToBody FragOperator where
         <*> toExpression a
 
 instance ToBody h => ToBody (TaggedItem h) where
-    toBody ti@TaggedItem{_tiTag, _tiValue} =
-        (,)
+    toBody ti@TaggedItem{_tiTag, _tiAddAfter, _tiValue} =
+        (,,)
         <$> toTagRefOf Tag _tiTag
+        <*> walk _tiAddAfter
         <*> toExpression _tiValue
-        <&> \(_tiTag, _tiValue) -> ti{_tiTag,_tiValue}
+        <&> \(_tiTag, _tiAddAfter, _tiValue) -> ti{_tiTag,_tiValue,_tiAddAfter}
 
 instance ToBody h => ToBody (TaggedList h) where
     toBody (TaggedList add items) =

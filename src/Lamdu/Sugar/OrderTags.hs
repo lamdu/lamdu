@@ -80,8 +80,8 @@ instance MonadTransaction m i => Order i (Sugar.TaggedList h v name i o) where
 
 instance (MonadTransaction m i, Order i (h v name i o)) =>
          Order i (Sugar.TaggedItem h v name i o) where
-    order (Sugar.TaggedItem tagRef delete val) =
-        Sugar.TaggedItem tagRef delete <$> orderNode val
+    order (Sugar.TaggedItem tagRef delete addAfter val) =
+        Sugar.TaggedItem tagRef delete addAfter <$> orderNode val
 
 instance MonadTransaction m i => Order i (Const a)
 instance (MonadTransaction m o, MonadTransaction m i) => Order i (Sugar.Else v name i o)

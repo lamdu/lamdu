@@ -74,7 +74,7 @@ make (Ann (Const pl) (Sugar.Composite alts punned caseTail)) =
             <&> Responsive.fromWithTextPos
 
 makeAltRow :: _ => ExprGui.Body (Sugar.TaggedItem Sugar.Term) i o -> GuiM env i o (TaggedItem o)
-makeAltRow (Sugar.TaggedItem tag delete altExpr) =
+makeAltRow (Sugar.TaggedItem tag delete _addAfter altExpr) =
     do
         env <- Lens.view id
         let itemEventMap = caseDelEventMap env delete

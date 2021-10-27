@@ -77,8 +77,9 @@ convertExtend ::
     ConvertM m (Composite v InternalName (OnceT (T m)) (T m) # Annotated b)
 convertExtend cons extendOp valS exprPl extendV restC =
     do
+        addItemAction <- convertAddItem extendOp (Set.fromList (extendV ^. extendTag : restTags)) exprPl
         itemS <-
-            convertItem cons (exprPl ^. Input.stored)
+            convertItem addItemAction cons (exprPl ^. Input.stored)
             (extendV ^. extendRest . Input.entityId) (Set.fromList restTags) valS
             (extendV & extendRest %~ (^. Input.stored . ExprIRef.iref))
         punSugar <- Lens.view (ConvertM.scConfig . Config.sugarsEnabled . Config.fieldPuns)
@@ -95,7 +96,6 @@ convertExtend cons extendOp valS exprPl extendV restC =
                             }
                     Just (cPunnedItems %~ (punned :))
                 & fromMaybe (cList . tlItems %~ (itemS :))
-        addItemAction <- convertAddItem extendOp (Set.fromList (extendV ^. extendTag : restTags)) exprPl
         addItem restC
             & cList . tlAddFirst .~ addItemAction
             & pure
@@ -112,17 +112,17 @@ convertOneItemOpenComposite ::
     ExtendVal m (Input.Payload m a # V.Term) ->
     ConvertM m (Composite v InternalName (OnceT (T m)) (T m) # k)
 convertOneItemOpenComposite cons extendOp valS restS exprPl extendV =
-    (Composite <$> convertTaggedList) ?? [] ?? OpenComposite restS
-    where
-        convertTaggedList =
-            TaggedList
-            <$> convertAddItem extendOp (Set.singleton (extendV ^. extendTag)) exprPl
-            <*> convertItems
-        convertItems =
-            convertItem cons
+    do
+        addItem <- convertAddItem extendOp (Set.singleton (extendV ^. extendTag)) exprPl
+        item <-
+            convertItem addItem cons
             (exprPl ^. Input.stored) (extendV ^. extendRest . Input.entityId) mempty valS
             (extendV & extendRest %~ (^. Input.stored . ExprIRef.iref))
-            <&> (:[])
+        pure Composite
+            { _cList = TaggedList addItem [item]
+            , _cPunnedItems = []
+            , _cTail = OpenComposite restS
+            }
 
 convertEmpty ::
     Monad m =>
@@ -150,6 +150,7 @@ convertEmpty extendOp exprPl =
 
 convertItem ::
     Monad m =>
+    TagChoice InternalName (OnceT (T m)) (T m) EntityId ->
     (T.Tag -> ValI m -> ValI m -> ExprIRef.ValBody m) ->
     HRef m # V.Term ->
     EntityId -> Set T.Tag ->
@@ -157,7 +158,7 @@ convertItem ::
     -- Using tuple in place of shared RecExtend/Case structure (no such in lamdu-calculus)
     ExtendVal m (ValI m) ->
     ConvertM m (TaggedItem Term v InternalName (OnceT (T m)) (T m) # h)
-convertItem cons stored inst forbiddenTags exprS extendVal =
+convertItem addItem cons stored inst forbiddenTags exprS extendVal =
     do
         delItem <- deleteItem stored restI
         protectedSetToVal <- ConvertM.typeProtectedSetToVal
@@ -173,6 +174,7 @@ convertItem cons stored inst forbiddenTags exprS extendVal =
         pure TaggedItem
             { _tiTag = tagS
             , _tiValue = exprS
+            , _tiAddAfter = addItem
             , _tiDelete = delItem
             }
     where

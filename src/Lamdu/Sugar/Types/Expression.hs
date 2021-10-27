@@ -38,7 +38,7 @@ module Lamdu.Sugar.Types.Expression
     , Else(..), _SimpleElse, _ElseIf
     -- Record & Cases
     , TaggedList(..), tlAddFirst, tlItems
-    , TaggedItem(..), tiTag, tiDelete, tiValue
+    , TaggedItem(..), tiTag, tiDelete, tiValue, tiAddAfter
     , Composite(..), cList, cPunnedItems, cTail
     , CompositeTail(..), _OpenComposite, _ClosedComposite
     , PunnedVar(..), pvVar, pvTagEntityId
@@ -175,6 +175,7 @@ data IfElse v name i o k = IfElse
 data TaggedItem h v name i o k = TaggedItem
     { _tiTag :: TagRef name i o
     , _tiDelete :: o EntityId
+    , _tiAddAfter :: TagChoice name i o EntityId
     , _tiValue :: k :# h v name i o
     } deriving (Generic)
 
