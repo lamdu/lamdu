@@ -7,7 +7,6 @@ module Lamdu.Sugar.Lens
     , bodyUnfinished
     , defSchemes
     , assignmentBodyAddFirstParam
-    , binderFuncParamActions
     , binderResultExpr
     , getVarName
     , paneBinder
@@ -113,11 +112,6 @@ defBodySchemes f (DefinitionBodyExpression de) =
 
 defSchemes :: Lens.Traversal' (Definition v name i o expr) (Scheme name Unit)
 defSchemes = drBody . defBodySchemes
-
-binderFuncParamActions ::
-    Lens.Traversal' (BinderParams v name i o) (FuncParamActions name i o)
-binderFuncParamActions _ (NullParam a) = pure (NullParam a)
-binderFuncParamActions f (Params ps) = (traverse . _2 . piActions) f ps <&> Params
 
 binderResultExpr ::
     Lens.IndexedLens' (Term v name i o # Annotated ()) (Annotated a # Binder v name i o) a

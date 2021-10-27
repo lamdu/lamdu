@@ -44,7 +44,6 @@ import qualified Lamdu.Sugar.Convert.TId as ConvertTId
 import qualified Lamdu.Sugar.Convert.Tag as ConvertTag
 import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
-import           Lamdu.Sugar.Lens as SugarLens
 import           Lamdu.Sugar.Types
 import           Revision.Deltum.IRef (IRef)
 import           Revision.Deltum.Transaction (Transaction)
@@ -686,13 +685,11 @@ isParamAlwaysUsedWithGetField (V.TypedLam param _paramTyp bod) =
                 ) x
                 & and
 
--- Post process param add and delete actions to detach lambda.
+-- Post process param delete action
 postProcessActions ::
     Monad m => T m () -> ConventionalParams m -> ConventionalParams m
-postProcessActions post x
-    | Lens.has (cpParams . Lens._Just . _Params) x =
-        x & cpParams . Lens._Just . SugarLens.binderFuncParamActions . fpDelete %~ (<* post)
-    | otherwise = x
+postProcessActions post =
+    cpParams . Lens._Just . _Params . traverse . _2 . piActions . fpDelete %~ (<* post)
 
 convertLamParams ::
     Monad m =>
