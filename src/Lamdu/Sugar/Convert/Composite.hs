@@ -119,7 +119,10 @@ convertOneItemOpenComposite cons extendOp valS restS exprPl extendV =
             (exprPl ^. Input.stored) (extendV ^. extendRest . Input.entityId) mempty valS
             (extendV & extendRest %~ (^. Input.stored . ExprIRef.iref))
         pure Composite
-            { _cList = TaggedList addItem [item]
+            { _cList = TaggedList
+                { _tlAddFirst = addItem
+                , _tlItems = [item]
+                }
             , _cPunnedItems = []
             , _cTail = OpenComposite restS
             }
@@ -143,7 +146,10 @@ convertEmpty extendOp exprPl =
             }
         addItem <- convertAddItem extendOp mempty exprPl
         pure Composite
-            { _cList = TaggedList addItem []
+            { _cList = TaggedList
+                { _tlAddFirst = addItem
+                , _tlItems = []
+                }
             , _cPunnedItems = []
             , _cTail = ClosedComposite actions
             }
