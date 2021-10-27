@@ -127,11 +127,11 @@ addReorders params =
                     (transaction (
                         ExprIRef.readTagData (a ^. Sugar.piTag . Sugar.tagRefTag . Sugar.tagVal)
                         <&> (^. tagOrder) >>= DataOps.setTagOrder t) >>))
-            & Sugar.piActions . Sugar.fpAddNext . Sugar._AddNext . tagChoicePick %@~
+            & Sugar.piAddNext . Sugar._AddNext . tagChoicePick %@~
                 (\t -> (transaction (Lens.itraverse_ (flip DataOps.setTagOrder) (before <> [t] <> after)) >>))
-            & Sugar.piActions . Sugar.fpMOrderBefore .~
+            & Sugar.piMOrderBefore .~
                 (setOrder ([0..i-1] <> [i, i-1] <> [i+1..length tags-1]) <$ guard (i > 0))
-            & Sugar.piActions . Sugar.fpMOrderAfter .~
+            & Sugar.piMOrderAfter .~
                 (setOrder ([0..i] <> [i+1, i] <> [i+2..length tags-1]) <$ guard (i + 1 < length tags))
             where
                 (before, after) = splitAt (i+1) tags
@@ -199,7 +199,7 @@ orderDef def =
             \presModeProp ->
             let
                 setVerboseWhenNeeded c l =
-                    Lens.taking c traverse . _2 . Sugar.piActions . l . Lens._Just %~ (setToVerbose >>)
+                    Lens.taking c traverse . _2 . l . Lens._Just %~ (setToVerbose >>)
                 setToVerbose = (presModeProp ^. pSet) Sugar.Verbose & transaction
                 orderOp x =
                     case presModeProp ^. pVal of
@@ -209,6 +209,6 @@ orderDef def =
                     where
                         fields p = filter (p . (^. _2 . Sugar.piTag . Sugar.tagRefTag . Sugar.tagVal)) x
             in
-            setVerboseWhenNeeded 3 Sugar.fpMOrderBefore orig
-            & setVerboseWhenNeeded 2 Sugar.fpMOrderAfter
+            setVerboseWhenNeeded 3 Sugar.piMOrderBefore orig
+            & setVerboseWhenNeeded 2 Sugar.piMOrderAfter
             & orderOp

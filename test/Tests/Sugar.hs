@@ -208,7 +208,7 @@ delParam =
     testSugarActions "const-five.json" [lift . (^?! action), verify]
     & testCase "del-param"
     where
-        action = replBody . lamFirstParam . _2 . piActions . fpDelete
+        action = replBody . lamFirstParam . _2 . piDelete
         verify workArea
             | Lens.has afterDel workArea = pure ()
             | otherwise = error "Expected 5"
@@ -378,7 +378,7 @@ delDefParam =
             waPanes . traverse . SugarLens.paneBinder .
             hVal . _BodyFunction .
             fParams . _Params . traverse .
-            _2 . piActions . fpDelete
+            _2 . piDelete
 
 updateDef :: Test
 updateDef =
@@ -555,7 +555,7 @@ testParamsOrder =
                 do
                     mOrderBefore <-
                         convertWorkArea env
-                        <&> (^?! funcParams . Lens.ix 1 . _2 . piActions . fpMOrderBefore)
+                        <&> (^?! funcParams . Lens.ix 1 . _2 . piMOrderBefore)
                     case mOrderBefore of
                         Just a -> lift a
                         Nothing -> error ("cant reorder before " <> msg)
@@ -584,7 +584,7 @@ testAddToInferredParamList =
             do
                 convertWorkArea env
                     >>= (^?! elseClause . lamBodyParams .
-                            Lens.ix 0 . _2 . piActions . fpAddNext . _AddNext . tcNewTag)
+                            Lens.ix 0 . _2 . piAddNext . _AddNext . tcNewTag)
                     >>= lift . (^. toPick)
                 convertWorkArea env
         let paramList = workArea ^?! elseClause . _BodyFragment . fExpr . hVal . lamBodyParams

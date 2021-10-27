@@ -230,16 +230,16 @@ nullParamEditInfo widgetId nameEdit mActions =
     }
 
 namedParamEditInfo ::
-    Widget.Id -> Sugar.FuncParamActions Name i o ->
+    Widget.Id -> Sugar.ParamInfo Name i o ->
     M.TextWidget o ->
     ParamEdit.Info i o
-namedParamEditInfo widgetId actions nameEdit =
+namedParamEditInfo widgetId paramInfo nameEdit =
     ParamEdit.Info
     { ParamEdit.iNameEdit = nameEdit
-    , ParamEdit.iAddNext = actions ^. Sugar.fpAddNext & Just
-    , ParamEdit.iMOrderBefore = actions ^. Sugar.fpMOrderBefore
-    , ParamEdit.iMOrderAfter = actions ^. Sugar.fpMOrderAfter
-    , ParamEdit.iDel = actions ^. Sugar.fpDelete
+    , ParamEdit.iAddNext = paramInfo ^. Sugar.piAddNext & Just
+    , ParamEdit.iMOrderBefore = paramInfo ^. Sugar.piMOrderBefore
+    , ParamEdit.iMOrderAfter = paramInfo ^. Sugar.piMOrderAfter
+    , ParamEdit.iDel = paramInfo ^. Sugar.piDelete
     , ParamEdit.iId = widgetId
     }
 
@@ -263,7 +263,7 @@ makeParamsEdit annotationOpts delVarBackwardsId lhsId rhsId params =
         where
             onFpInfo x =
                 TagEdit.makeParamTag (x ^. Sugar.piTag)
-                <&> namedParamEditInfo widgetId (x ^. Sugar.piActions)
+                <&> namedParamEditInfo widgetId x
                 where
                     widgetId =
                         x ^. Sugar.piTag . Sugar.tagRefTag . Sugar.tagInstance & WidgetIds.fromEntityId

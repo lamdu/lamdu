@@ -17,9 +17,8 @@ module Lamdu.Sugar.Types.Parts
     , -- Binders
       BinderParams(..), _NullParam, _Params
     , FuncParam(..), fpAnnotation, fpVarInfo
-    , FuncParamActions(..), fpAddNext, fpDelete, fpMOrderBefore, fpMOrderAfter
     , NullParamActions(..), npDeleteLambda
-    , ParamInfo(..), piActions, piTag
+    , ParamInfo(..), piTag, piAddNext, piDelete, piMOrderBefore, piMOrderAfter
     , AddFirstParam(..), _AddInitialParam, _PrependParam, _NeedToPickTagToAddFirst
     , AddNextParam(..), _AddNext, _NeedToPickTagToAddNext
     , -- Expressions
@@ -60,21 +59,16 @@ data AddNextParam name i o
       NeedToPickTagToAddNext EntityId
     deriving Generic
 
-data FuncParamActions name i o =
-    FuncParamActions
-    { _fpAddNext :: AddNextParam name i o
-    , _fpDelete :: o ()
-    , _fpMOrderBefore :: Maybe (o ())
-    , _fpMOrderAfter :: Maybe (o ())
-    } deriving Generic
-
 newtype NullParamActions o = NullParamActions
     { _npDeleteLambda :: o ()
     } deriving stock Generic
 
 data ParamInfo name i o = ParamInfo
     { _piTag :: TagRef name i o
-    , _piActions :: FuncParamActions name i o
+    , _piAddNext :: AddNextParam name i o
+    , _piDelete :: o ()
+    , _piMOrderBefore :: Maybe (o ())
+    , _piMOrderAfter :: Maybe (o ())
     } deriving Generic
 
 data FuncParam v name = FuncParam
@@ -170,7 +164,7 @@ data ParenInfo = ParenInfo
     } deriving (Eq, Show, Generic)
 
 traverse Lens.makeLenses
-    [ ''ClosedCompositeActions, ''FuncParam, ''FuncParamActions, ''NodeActions
+    [ ''ClosedCompositeActions, ''FuncParam, ''NodeActions
     , ''NullParamActions, ''NullaryInject, ''ParamInfo, ''ParenInfo, ''Payload, ''PunnedVar
     ] <&> concat
 traverse Lens.makePrisms

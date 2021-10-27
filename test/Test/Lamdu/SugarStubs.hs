@@ -169,13 +169,10 @@ mkFuncParam (paramVar, paramTag) =
         }
     , Sugar.ParamInfo
         { Sugar._piTag = mkTag (Just paramVar) paramTag
-        , Sugar._piActions =
-            Sugar.FuncParamActions
-            { Sugar._fpAddNext = Sugar.AddNext tagRefReplace
-            , Sugar._fpDelete = Unit
-            , Sugar._fpMOrderBefore = Nothing
-            , Sugar._fpMOrderAfter = Nothing
-            }
+        , Sugar._piAddNext = Sugar.AddNext tagRefReplace
+        , Sugar._piDelete = Unit
+        , Sugar._piMOrderBefore = Nothing
+        , Sugar._piMOrderAfter = Nothing
         }
     )
 

@@ -397,10 +397,11 @@ withParamInfo ::
     IsUnambiguous ->
     ParamInfo (OldName m) (IM m) o ->
     CPS m (ParamInfo (NewName m) (IM m) o)
-withParamInfo unambig (ParamInfo tag fpActions) =
-    ParamInfo
-    <$> withTagRef unambig TaggedVar tag
-    <*> liftCPS ((fpAddNext . Sugar._AddNext) walk fpActions)
+withParamInfo unambig x@ParamInfo{_piTag, _piAddNext} =
+    (,)
+    <$> withTagRef unambig TaggedVar _piTag
+    <*> liftCPS (Sugar._AddNext walk _piAddNext)
+    <&> \(_piTag, _piAddNext) -> x{_piTag, _piAddNext}
 
 withFuncParam ::
     (MonadNaming m, Walk m v0 v1) =>
