@@ -71,7 +71,7 @@ instance Walk m s t => Walk m (s, x) (t, x) where
     walk = _1 walk
 
 instance (a ~ OldName m, b ~ NewName m) => Walk m (ParamRef a o) (ParamRef b o) where
-    walk p = (pNameRef . nrName) (opGetName Nothing (binderAmiguity (p ^. pBinderMode)) TaggedVar) p
+    walk p = (pNameRef . nrName) (opGetName Nothing (binderAmbiguity (p ^. pBinderMode)) TaggedVar) p
 
 binderVarType :: BinderVarForm name m -> NameType
 binderVarType GetLet = TaggedVar
@@ -344,9 +344,9 @@ instance ToBody PostfixApply where
     toBody (PostfixApply a f) =
         PostfixApply <$> toExpression a <*> toExpression f
 
-binderAmiguity :: BinderMode -> IsUnambiguous
-binderAmiguity LightLambda = Unambiguous
-binderAmiguity _ = MayBeAmbiguous
+binderAmbiguity :: BinderMode -> IsUnambiguous
+binderAmbiguity LightLambda = Unambiguous
+binderAmbiguity _ = MayBeAmbiguous
 
 instance
     (a ~ OldName m, b ~ NewName m, i ~ IM m, Walk m pa pb) =>
@@ -377,7 +377,7 @@ instance ToBody Term where
         BodyLabeledApply x -> x & toBody <&> BodyLabeledApply
         BodyPostfixFunc  x -> x & toBody <&> BodyPostfixFunc
         BodyToNom        x -> x & toBody <&> BodyToNom
-        BodyLam          x -> x & lamFunc (toFunction (binderAmiguity (x ^. lamMode))) <&> BodyLam
+        BodyLam          x -> x & lamFunc (toFunction (binderAmbiguity (x ^. lamMode))) <&> BodyLam
         BodyFragment     x -> x & toBody <&> BodyFragment
         BodyNullaryInject x -> walk x <&> BodyNullaryInject
         BodyLeaf         x -> walk x <&> BodyLeaf
