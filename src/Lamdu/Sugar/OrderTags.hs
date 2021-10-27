@@ -95,7 +95,7 @@ instance (MonadTransaction m o, MonadTransaction m i) => Order i (Sugar.Lambda v
 instance (MonadTransaction m o, MonadTransaction m i) => Order i (Sugar.Function v name i o) where
     order x =
         x
-        & (Sugar.fParams . Sugar._Params) orderParams
+        & (Sugar.fParams . Sugar._Params) (orderByTag (^. _2 . Sugar.piTag . Sugar.tagRefTag))
         >>= Sugar.fBody orderNode
         <&> Sugar.fParams . Sugar._Params %~ addReorders
 
@@ -144,11 +144,6 @@ instance (MonadTransaction m o, MonadTransaction m i) => Order i (Sugar.PostfixF
     order (Sugar.PfCase x) = order x <&> Sugar.PfCase
     order x@Sugar.PfFromNom{} = pure x
     order x@Sugar.PfGetField{} = pure x
-
-orderParams ::
-    MonadTransaction m i =>
-    OrderT i [(Sugar.FuncParam v name, Sugar.ParamInfo name i o)]
-orderParams = orderByTag (^. _2 . Sugar.piTag . Sugar.tagRefTag)
 
 -- Special case assignment and binder to invoke the special cases in expr
 
