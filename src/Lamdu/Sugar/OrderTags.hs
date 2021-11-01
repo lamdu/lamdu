@@ -32,20 +32,19 @@ class Order i t where
         OrderT i (t # Annotated a)
     order = htraverse (Proxy @(Order i) #> orderNode)
 
-orderByTag :: MonadTransaction m i => (a -> Sugar.Tag name) -> OrderT i [a]
-orderByTag toTag =
-    fmap (map fst . sortOn snd) . traverse loadOrder
+orderByTag :: MonadTransaction m i => (a -> Sugar.Tag name) -> (a -> i b) -> [a] -> i [b]
+orderByTag toTag ord =
+    fmap (map fst . sortOn snd) . traverse f
     where
-        loadOrder x =
-            toTag x ^. Sugar.tagVal
-            & ExprIRef.readTagData
-            & transaction
-            <&> (,) x . (^. tagOrder)
+        f x =
+            (,)
+            <$> ord x
+            <*> (toTag x ^. Sugar.tagVal & ExprIRef.readTagData & transaction)
 
 orderComposite ::
     MonadTransaction m i =>
     OrderT i (Sugar.CompositeFields name (Ann a # Sugar.Type name o))
-orderComposite = Sugar.compositeFields (orderByTag fst >=> (traverse . _2) orderType)
+orderComposite = Sugar.compositeFields (orderByTag fst (_2 orderType))
 
 orderTBody ::
     MonadTransaction m i =>
@@ -68,20 +67,22 @@ instance (MonadTransaction m o, MonadTransaction m i) => Order i (Sugar.Composit
 
 instance (MonadTransaction m o, MonadTransaction m i) => Order i (Sugar.LabeledApply v name i o) where
     order (Sugar.LabeledApply func specialArgs annotated punned) =
-        Sugar.LabeledApply func specialArgs
-        <$> orderByTag (^. Sugar.aaTag) annotated
-        <*> pure punned
-        >>= htraverse (Proxy @(Order i) #> orderNode)
+        Sugar.LabeledApply func
+        <$> (Lens._Just . htraverse1) orderNode specialArgs
+        <*> orderByTag (^. Sugar.aaTag) (Sugar.aaExpr orderNode) annotated
+        ?? punned
 
-instance (Applicative o, MonadTransaction m i) => Order i (Sugar.TaggedList h v name i o) where
+instance
+    (Applicative o, MonadTransaction m i, Order i (h v name i o)) =>
+    Order i (Sugar.TaggedList h v name i o) where
     order (Sugar.TaggedList addFirst items) =
         Sugar.TaggedList addFirst <$> Lens._Just order items
 
 instance
-    (Applicative o, MonadTransaction m i) =>
+    (Applicative o, MonadTransaction m i, Order i (h v name i o)) =>
     Order i (Sugar.TaggedListBody h v name i o) where
     order (Sugar.TaggedListBody hd tl) =
-        orderByTag (^. Sugar.tiTag . Sugar.tagRefTag) items
+        orderByTag (^. Sugar.tiTag . Sugar.tagRefTag) order items
         <&> \case
         ~(newHd : newTl) ->
             newTl <&> (`Sugar.TaggedSwappableItem` pure ())
@@ -105,8 +106,7 @@ instance (MonadTransaction m o, MonadTransaction m i) => Order i (Sugar.Lambda v
 
 instance (MonadTransaction m o, MonadTransaction m i) => Order i (Sugar.Function v name i o) where
     order x =
-        x
-        & (Sugar.fParams . Sugar._RecordParams) (orderByTag (^. _2 . Sugar.piTag . Sugar.tagRefTag))
+        (Sugar.fParams . Sugar._RecordParams) (orderByTag (^. _2 . Sugar.piTag . Sugar.tagRefTag) pure) x
         >>= Sugar.fBody orderNode
         <&> Sugar.fParams . Sugar._RecordParams %~ addReorders
 
