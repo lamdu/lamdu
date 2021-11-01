@@ -24,6 +24,7 @@
     , "^Lamdu\\.Data\\.Tag\\.op"
     , "^Lamdu\\.Eval\\.Results\\.error"
     , "^Lamdu\\.Sugar\\.Convert\\.Load\\.ir"
+    , "^Lamdu\\.Sugar\\.Convert\\.Tag\\.nc"
     , "^Lamdu\\.Sugar\\.Types\\.Eval\\.evalException"
     , "^Lamdu\\.Sugar\\.Types\\.Eval\\.r"
     , "^Lamdu\\.Sugar\\.Types\\.GetVar\\.prv"

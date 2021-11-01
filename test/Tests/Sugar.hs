@@ -179,15 +179,6 @@ testInline =
             replBody . _BodyLam . lamFunc . fBody .
             hVal . _BinderTerm . _BodyLeaf . _LeafLiteral . _LiteralNum
 
-findM :: Monad m => (a -> m Bool) -> [a] -> m (Maybe a)
-findM _ [] = pure Nothing
-findM f (x:xs) =
-    do
-        found <- f x
-        if found
-            then Just x & pure
-            else findM f xs
-
 paramAnnotations :: Test
 paramAnnotations =
     Env.make <&> has .~ Annotations.None

@@ -2,8 +2,7 @@
 {-# LANGUAGE TemplateHaskell, TypeApplications, FlexibleInstances #-}
 module Lamdu.Data.Export.JSON
     ( fileExportRepl, jsonExportRepl
-    , fileExportAll, verifyAll
-    , fileExportDef, fileExportTag, fileExportNominal
+    , fileExportAll, fileExportDef, fileExportTag, fileExportNominal
     , fileImportAll, Version(..)
     ) where
 
@@ -207,10 +206,6 @@ exportAll =
         exportSet indexIRef exportFunc =
             indexIRef DbLayout.codeIRefs & Transaction.readIRef & trans
             >>= traverse_ exportFunc
-
--- | Verify that the data in the database is valid
-verifyAll :: T ViewM ()
-verifyAll = runExport exportAll & void
 
 fileExportAll :: FilePath -> T ViewM (IO ())
 fileExportAll = export "all" exportAll
