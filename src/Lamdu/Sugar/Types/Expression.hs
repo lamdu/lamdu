@@ -37,10 +37,6 @@ module Lamdu.Sugar.Types.Expression
     , IfElse(..), iIf, iThen, iElse
     , Else(..), _SimpleElse, _ElseIf
     -- Record & Cases
-    , TaggedList(..), tlAddFirst, tlItems
-    , TaggedSwappableItem(..), tsiItem, tsiSwapWithPrevious
-    , TaggedListBody(..), tlHead, tlTail
-    , TaggedItem(..), tiTag, tiDelete, tiValue, tiAddAfter
     , Composite(..), cList, cPunnedItems, cTail
     , CompositeTail(..), _OpenComposite, _ClosedComposite
     , PunnedVar(..), pvVar, pvTagEntityId
@@ -174,29 +170,6 @@ data IfElse v name i o k = IfElse
     , _iElse :: k :# Else v name i o
     } deriving Generic
 
-data TaggedItem h v name i o k = TaggedItem
-    { _tiTag :: TagRef name i o
-    , _tiDelete :: o EntityId
-    , _tiAddAfter :: TagChoice name i o EntityId
-    , _tiValue :: k :# h v name i o
-    } deriving Generic
-
-data TaggedSwappableItem h v name i o k = TaggedSwappableItem
-    { _tsiItem :: TaggedItem h v name i o k
-    , _tsiSwapWithPrevious :: o ()
-    } deriving Generic
-
-data TaggedListBody h v name i o k = TaggedListBody
-    { _tlHead :: TaggedItem h v name i o k
-        -- The 2nd tagged item onwards can be swapped with their previous item
-    , _tlTail :: [TaggedSwappableItem h v name i o k]
-    } deriving Generic
-
-data TaggedList h v name i o k = TaggedList
-    { _tlAddFirst :: TagChoice name i o EntityId
-    , _tlItems :: Maybe (TaggedListBody h v name i o k)
-    } deriving Generic
-
 data CompositeTail v name i o k
     = OpenComposite (k :# Term v name i o)
     | ClosedComposite (ClosedCompositeActions o)
@@ -281,7 +254,6 @@ data Assignment v name i o f
 
 traverse Lens.makeLenses
     [ ''AnnotatedArg, ''AssignPlain
-    , ''TaggedList, ''TaggedListBody, ''TaggedItem, ''TaggedSwappableItem
     , ''Composite, ''Fragment, ''FragOperator
     , ''Function, ''Hole, ''Option, ''Query, ''QueryLangInfo
     , ''IfElse, ''LabeledApply, ''Lambda, ''Let
@@ -292,7 +264,7 @@ traverse Lens.makePrisms
 
 traverse makeHTraversableAndBases
     [ ''AnnotatedArg, ''Assignment, ''AssignPlain, ''Binder
-    , ''Composite, ''TaggedItem, ''TaggedSwappableItem, ''TaggedListBody, ''TaggedList, ''CompositeTail, ''Else
+    , ''Composite, ''CompositeTail, ''Else
     , ''Fragment, ''FragOperator, ''FragOpt, ''Function, ''IfElse
     , ''LabeledApply, ''Lambda, ''Let, ''Nominal
     , ''OperatorArgs, ''PostfixApply, ''PostfixFunc, ''Term

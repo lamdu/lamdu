@@ -14,6 +14,11 @@ module Lamdu.Sugar.Types.Parts
         , detach, delete, setToLiteral, extract, mReplaceParent, mNewLet, mApply
     , -- Let
       ExtractDestination(..)
+    , -- TaggedList
+      TaggedList(..), tlAddFirst, tlItems
+    , TaggedSwappableItem(..), tsiItem, tsiSwapWithPrevious
+    , TaggedListBody(..), tlHead, tlTail
+    , TaggedItem(..), tiTag, tiDelete, tiValue, tiAddAfter
     , -- Binders
       BinderParams(..), _NullParam, _VarParam, _RecordParams
     , FuncParam(..), fpAnnotation, fpVarInfo
@@ -110,6 +115,29 @@ data NodeActions o = NodeActions
     , _mApply :: Maybe (o EntityId)
     } deriving Generic
 
+data TaggedItem h v name i o k = TaggedItem
+    { _tiTag :: TagRef name i o
+    , _tiDelete :: o EntityId
+    , _tiAddAfter :: TagChoice name i o EntityId
+    , _tiValue :: k :# h v name i o
+    } deriving Generic
+
+data TaggedSwappableItem h v name i o k = TaggedSwappableItem
+    { _tsiItem :: TaggedItem h v name i o k
+    , _tsiSwapWithPrevious :: o ()
+    } deriving Generic
+
+data TaggedListBody h v name i o k = TaggedListBody
+    { _tlHead :: TaggedItem h v name i o k
+        -- The 2nd tagged item onwards can be swapped with their previous item
+    , _tlTail :: [TaggedSwappableItem h v name i o k]
+    } deriving Generic
+
+data TaggedList h v name i o k = TaggedList
+    { _tlAddFirst :: TagChoice name i o EntityId
+    , _tlItems :: Maybe (TaggedListBody h v name i o k)
+    } deriving Generic
+
 data AddFirstParam name i o
     = -- The inital param is created with anon-tag
       AddInitialParam (o EntityId)
@@ -174,11 +202,14 @@ data ParenInfo = ParenInfo
 traverse Lens.makeLenses
     [ ''ClosedCompositeActions, ''FuncParam, ''NodeActions
     , ''NullParamActions, ''NullaryInject, ''VarParamInfo, ''RecordParamInfo, ''ParenInfo, ''Payload, ''PunnedVar
+    , ''TaggedList, ''TaggedListBody, ''TaggedItem, ''TaggedSwappableItem
     ] <&> concat
 traverse Lens.makePrisms
     [ ''AddFirstParam, ''AddNextParam, ''Annotation, ''BinderParams, ''Delete
     , ''DetachAction, ''FuncApplyLimit, ''Literal, ''VarInfo
     ] <&> concat
-makeHTraversableAndBases ''NullaryInject
-makeHTraversableAndBases ''PunnedVar
+traverse makeHTraversableAndBases
+    [ ''TaggedItem, ''TaggedSwappableItem, ''TaggedListBody, ''TaggedList
+    , ''NullaryInject, ''PunnedVar
+    ] <&> concat
 makeHMorph ''NullaryInject
