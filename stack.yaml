@@ -7,7 +7,7 @@ extra-deps:
 - unicode-properties-3.2.0.0
 - language-ecmascript-0.19.1.0
 - github: lamdu/bindings-freetype-gl
-  commit: abcb891cf2ed01edb2d02197ef2b354d6ff43db5
+  commit: 440ee6a7a5f25ebc24e087d0d3ea9f588da6bb93
 - github: lamdu/lamdu-calculus
   commit: 4876da8f515670cefc18e58aa00a0839bf08ff9a
 - github: lamdu/momentu
