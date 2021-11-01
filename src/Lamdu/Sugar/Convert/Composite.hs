@@ -169,7 +169,7 @@ convertItem ::
     h # Term v InternalName (OnceT (T m)) (T m) ->
     -- Using tuple in place of shared RecExtend/Case structure (no such in lamdu-calculus)
     ExtendVal m (ValI m) ->
-    ConvertM m (TaggedItem Term v InternalName (OnceT (T m)) (T m) # h)
+    ConvertM m (TaggedItem InternalName (OnceT (T m)) (T m) (h # Term v InternalName (OnceT (T m)) (T m)))
 convertItem addItem cons stored inst forbiddenTags exprS extendVal =
     do
         delItem <- deleteItem stored restI

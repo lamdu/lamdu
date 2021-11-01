@@ -58,10 +58,25 @@ orderTBody t =
 orderType :: MonadTransaction m i => OrderT i (Ann a # Sugar.Type name o)
 orderType = hVal orderTBody
 
+orderTaggedList ::
+    (MonadTransaction m f, Applicative o) =>
+    (a -> f a) -> Sugar.TaggedList name i o a -> f (Sugar.TaggedList name i o a)
+orderTaggedList orderItem (Sugar.TaggedList addFirst items) =
+    Sugar.TaggedList addFirst <$> Lens._Just (orderTaggedListBody orderItem) items
+
+orderTaggedListBody ::
+    (MonadTransaction m f, Applicative o) =>
+    (a -> f a) -> Sugar.TaggedListBody name i o a -> f (Sugar.TaggedListBody name i o a)
+orderTaggedListBody orderItem tlb =
+    orderByTag (^. Sugar.tiTag . Sugar.tagRefTag) (Sugar.tiValue orderItem) (tlb ^.. SugarLens.taggedListItems) <&>
+    \(newHd : newTl) ->
+    newTl <&> (`Sugar.TaggedSwappableItem` pure ())
+    & Sugar.TaggedListBody newHd
+
 instance (MonadTransaction m o, MonadTransaction m i) => Order i (Sugar.Composite v name i o) where
     order (Sugar.Composite items punned tail_) =
         Sugar.Composite
-        <$> order items
+        <$> orderTaggedList orderNode items
         <*> pure punned
         <*> Sugar._OpenComposite orderNode tail_
 
@@ -71,29 +86,6 @@ instance (MonadTransaction m o, MonadTransaction m i) => Order i (Sugar.LabeledA
         <$> (Lens._Just . htraverse1) orderNode specialArgs
         <*> orderByTag (^. Sugar.aaTag) (Sugar.aaExpr orderNode) annotated
         ?? punned
-
-instance
-    (Applicative o, MonadTransaction m i, Order i (h v name i o)) =>
-    Order i (Sugar.TaggedList h v name i o) where
-    order (Sugar.TaggedList addFirst items) =
-        Sugar.TaggedList addFirst <$> Lens._Just order items
-
-instance
-    (Applicative o, MonadTransaction m i, Order i (h v name i o)) =>
-    Order i (Sugar.TaggedListBody h v name i o) where
-    order (Sugar.TaggedListBody hd tl) =
-        orderByTag (^. Sugar.tiTag . Sugar.tagRefTag) order items
-        <&> \case
-        ~(newHd : newTl) ->
-            newTl <&> (`Sugar.TaggedSwappableItem` pure ())
-            & Sugar.TaggedListBody newHd
-        where
-            items = hd : (tl <&> (^. Sugar.tsiItem))
-
-instance (MonadTransaction m i, Order i (h v name i o)) =>
-         Order i (Sugar.TaggedItem h v name i o) where
-    order (Sugar.TaggedItem tagRef delete addAfter val) =
-        Sugar.TaggedItem tagRef delete addAfter <$> orderNode val
 
 instance MonadTransaction m i => Order i (Const a)
 instance (MonadTransaction m o, MonadTransaction m i) => Order i (Sugar.Else v name i o)

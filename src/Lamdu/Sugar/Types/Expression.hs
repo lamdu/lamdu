@@ -176,7 +176,7 @@ data CompositeTail v name i o k
     deriving Generic
 
 data Composite v name i o k = Composite
-    { _cList :: TaggedList Term v name i o k
+    { _cList :: TaggedList name i o (k :# Term v name i o)
     , -- Punned items are like Haskell's NamedFieldPuns
       _cPunnedItems :: [PunnedVar name o k]
     , _cTail :: CompositeTail v name i o k

@@ -304,28 +304,33 @@ instance ToBody FragOperator where
         <$> toNode (Lens._Wrapped (toBinderVarRef Nothing)) f
         <*> toExpression a
 
-instance ToBody h => ToBody (TaggedItem h) where
-    toBody ti@TaggedItem{_tiTag, _tiAddAfter, _tiValue} =
+instance
+    (Walk m v0 v1, Walk m p0 p1, i ~ IM m, a ~ OldName m, b ~ NewName m) =>
+    Walk m (Ann (Const p0) # Term v0 a i o) (Ann (Const p1) # Term v1 b i o) where
+    walk = toExpression
+
+instance (Walk m pa pb, i ~ IM m, a ~ OldName m, b ~ NewName m) => Walk m (TaggedItem a i o pa) (TaggedItem b i o pb) where
+    walk ti@TaggedItem{_tiTag, _tiAddAfter, _tiValue} =
         (,,)
         <$> toTagRefOf Tag _tiTag
         <*> walk _tiAddAfter
-        <*> toExpression _tiValue
+        <*> walk _tiValue
         <&> \(_tiTag, _tiAddAfter, _tiValue) -> ti{_tiTag,_tiValue,_tiAddAfter}
 
-instance ToBody h => ToBody (TaggedListBody h) where
-    toBody (TaggedListBody hd tl) =
-        TaggedListBody <$> toBody hd <*> (traverse . tsiItem) toBody tl
+instance (Walk m pa pb, i ~ IM m, a ~ OldName m, b ~ NewName m) => Walk m (TaggedListBody a i o pa) (TaggedListBody b i o pb) where
+    walk (TaggedListBody hd tl) =
+        TaggedListBody <$> walk hd <*> (traverse . tsiItem) walk tl
 
-instance ToBody h => ToBody (TaggedList h) where
-    toBody (TaggedList add items) =
+instance (Walk m pa pb, i ~ IM m, a ~ OldName m, b ~ NewName m) => Walk m (TaggedList a i o pa) (TaggedList b i o pb) where
+    walk (TaggedList add items) =
         TaggedList
         <$> walk add
-        <*> Lens._Just toBody items
+        <*> Lens._Just walk items
 
 instance ToBody Composite where
     toBody (Composite items punned tail_) =
         Composite
-        <$> toBody items
+        <$> walk items
         <*> (traverse . pvVar) (toNode (Lens._Wrapped walk)) punned
         <*> _OpenComposite toExpression tail_
 

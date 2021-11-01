@@ -115,28 +115,28 @@ data NodeActions o = NodeActions
     , _mApply :: Maybe (o EntityId)
     } deriving Generic
 
-data TaggedItem h v name i o k = TaggedItem
+data TaggedItem name i o a = TaggedItem
     { _tiTag :: TagRef name i o
     , _tiDelete :: o EntityId
     , _tiAddAfter :: TagChoice name i o EntityId
-    , _tiValue :: k :# h v name i o
-    } deriving Generic
+    , _tiValue :: a
+    } deriving (Generic, Functor, Foldable, Traversable)
 
-data TaggedSwappableItem h v name i o k = TaggedSwappableItem
-    { _tsiItem :: TaggedItem h v name i o k
+data TaggedSwappableItem name i o a = TaggedSwappableItem
+    { _tsiItem :: TaggedItem name i o a
     , _tsiSwapWithPrevious :: o ()
-    } deriving Generic
+    } deriving (Generic, Functor, Foldable, Traversable)
 
-data TaggedListBody h v name i o k = TaggedListBody
-    { _tlHead :: TaggedItem h v name i o k
+data TaggedListBody name i o a = TaggedListBody
+    { _tlHead :: TaggedItem name i o a
         -- The 2nd tagged item onwards can be swapped with their previous item
-    , _tlTail :: [TaggedSwappableItem h v name i o k]
-    } deriving Generic
+    , _tlTail :: [TaggedSwappableItem name i o a]
+    } deriving (Generic, Functor, Foldable, Traversable)
 
-data TaggedList h v name i o k = TaggedList
+data TaggedList name i o a = TaggedList
     { _tlAddFirst :: TagChoice name i o EntityId
-    , _tlItems :: Maybe (TaggedListBody h v name i o k)
-    } deriving Generic
+    , _tlItems :: Maybe (TaggedListBody name i o a)
+    } deriving (Generic, Functor, Foldable, Traversable)
 
 data AddFirstParam name i o
     = -- The inital param is created with anon-tag
@@ -208,8 +208,5 @@ traverse Lens.makePrisms
     [ ''AddFirstParam, ''AddNextParam, ''Annotation, ''BinderParams, ''Delete
     , ''DetachAction, ''FuncApplyLimit, ''Literal, ''VarInfo
     ] <&> concat
-traverse makeHTraversableAndBases
-    [ ''TaggedItem, ''TaggedSwappableItem, ''TaggedListBody, ''TaggedList
-    , ''NullaryInject, ''PunnedVar
-    ] <&> concat
+traverse makeHTraversableAndBases [''NullaryInject, ''PunnedVar] <&> concat
 makeHMorph ''NullaryInject
