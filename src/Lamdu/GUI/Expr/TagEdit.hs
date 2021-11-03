@@ -269,7 +269,7 @@ makeTagHoleEdit tagRefReplace mkPickResult holeId =
             ?? Menu.AnyPlace
 
 makeTagRefEdit :: _ => Sugar.TagRef Name i o -> GuiM env i o (M.TextWidget o)
-makeTagRefEdit = makeTagRefEditWith id (const Nothing) <&> fmap snd
+makeTagRefEdit = makeTagRefEditWith id (const Nothing) Nothing <&> fmap snd
 
 data TagRefEditType
     = TagHole
@@ -281,9 +281,10 @@ makeTagRefEditWith ::
     (n (M.TextWidget o) ->
      GuiM env i o (M.TextWidget o)) ->
     (Sugar.EntityId -> Maybe Widget.Id) ->
+    Maybe (o EntityId) ->
     Sugar.TagRef Name i o ->
     GuiM env i o (TagRefEditType, M.TextWidget o)
-makeTagRefEditWith onView onPickNext tag =
+makeTagRefEditWith onView onPickNext mSetToAnon tag =
     do
         isHole <- GuiState.isSubCursor ?? holeId
         env <- Lens.view id
@@ -329,7 +330,7 @@ makeTagRefEditWith onView onPickNext tag =
             , Menu._pickMNextEntry = onPickNext tagInstance
             }
         chooseAction =
-            case tag ^. Sugar.tagRefReplace . Sugar.tcAnon of
+            case mSetToAnon of
             Nothing -> pure myId
             Just setAnon -> setAnon <&> WidgetIds.fromEntityId
             <&> WidgetIds.tagHoleId
@@ -349,13 +350,14 @@ addParamId = (`Widget.joinId` ["add param"])
 makeLHSTag ::
     _ =>
     (Sugar.EntityId -> Maybe Widget.Id) ->
-    Lens.ALens' TextColors M.Color -> Sugar.TagRef Name i o ->
+    Lens.ALens' TextColors M.Color ->
+    Maybe (o EntityId) -> Sugar.TagRef Name i o ->
     GuiM env i o (M.TextWidget o)
-makeLHSTag onPickNext color tag =
+makeLHSTag onPickNext color mSetToAnon tag =
     do
         env <- Lens.view id
         (tagEditType, tagEdit) <-
-            makeTagRefEditWith onView onPickNext tag
+            makeTagRefEditWith onView onPickNext mSetToAnon tag
             & Styled.withColor color
             & local (has .~ env ^. has . Style.nameAtBinder)
         let chooseEventMap =
@@ -382,7 +384,7 @@ makeLHSTag onPickNext color tag =
             Styled.nameAtBinder (tag ^. Sugar.tagRefTag . Sugar.tagName) .
             Styled.withColor color
 
-makeParamTag :: _ => Sugar.TagRef Name i o -> GuiM env i o (M.TextWidget o)
+makeParamTag :: _ => Maybe (o EntityId) -> Sugar.TagRef Name i o -> GuiM env i o (M.TextWidget o)
 makeParamTag =
     makeLHSTag onPickNext TextColors.parameterColor
     where
@@ -399,8 +401,8 @@ makeArgTag name tagInstance =
 
 makeBinderTagEdit ::
     _ =>
-    Lens.ALens' TextColors M.Color -> Sugar.TagRef Name i o ->
+    Lens.ALens' TextColors M.Color -> Sugar.OptionalTag Name i o ->
     GuiM env i o (M.TextWidget o)
-makeBinderTagEdit color tag =
-    makeLHSTag (const Nothing) color tag
+makeBinderTagEdit color (Sugar.OptionalTag tag setToAnon) =
+    makeLHSTag (const Nothing) color (Just setToAnon) tag
     & local (has . Menu.configKeysPickOptionAndGotoNext .~ [])

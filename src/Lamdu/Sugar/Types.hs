@@ -69,7 +69,7 @@ data DefinitionBody v name i o a
     deriving (Functor, Foldable, Traversable, Generic)
 
 data Definition v name i o a = Definition
-    { _drName :: TagRef name i o
+    { _drName :: OptionalTag name i o
     , _drDefI :: V.Var
     , _drBody :: DefinitionBody v name i o a
     } deriving (Functor, Foldable, Traversable, Generic)
@@ -90,7 +90,7 @@ data NominalParam name i o = NominalParam
     } deriving Generic
 
 data NominalPane name i o = NominalPane
-    { _npName :: TagRef name i o
+    { _npName :: OptionalTag name i o
     , _npNominalId :: T.NominalId
     , _npEntityId :: EntityId
     , _npParams :: [NominalParam name i o]

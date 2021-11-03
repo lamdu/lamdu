@@ -221,7 +221,7 @@ topLevelLamParamCursor env =
     fromWorkArea env
     (replExpr . Sugar._BodyLam . Sugar.lamFunc .
         Sugar.fParams . Sugar._VarParam . _2 .
-        Sugar.vpiTag . Sugar.tagRefTag . Sugar.tagInstance)
+        Sugar.vpiTag . Sugar.oTag . Sugar.tagRefTag . Sugar.tagInstance)
     <&> WidgetIds.fromEntityId
 
 -- | Test for issue #410

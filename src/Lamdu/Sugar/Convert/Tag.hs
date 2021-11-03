@@ -3,7 +3,6 @@ module Lamdu.Sugar.Convert.Tag
     ( ref, replace, withoutContext
     , taggedEntity
     , taggedEntityWith
-    , AllowAnonTag(..)
     , NameContext(..), ncMVarInfo, ncUuid
     ) where
 
@@ -27,8 +26,6 @@ import           Revision.Deltum.Transaction (Transaction)
 import           Lamdu.Prelude
 
 type T = Transaction
-
-data AllowAnonTag = AllowAnon | RequireTag
 
 data NameContext = NameContext
     { _ncMVarInfo :: Maybe VarInfo
@@ -61,8 +58,7 @@ ref tag nameCtx forbiddenTags mkInstance setTag =
     Lens.view id
     <&> \env ->
     getTagsProp env
-    & refWith (env ^. Anchors.codeAnchors) tag name forbiddenTags RequireTag
-    mkInstance setTag
+    & refWith (env ^. Anchors.codeAnchors) tag name forbiddenTags mkInstance setTag
     where
         withContext (NameContext varInfo var) = nameWithContext varInfo var
         name = maybe nameWithoutContext withContext nameCtx
@@ -70,11 +66,11 @@ ref tag nameCtx forbiddenTags mkInstance setTag =
 refWith ::
     Monad m =>
     Anchors.CodeAnchors m ->
-    T.Tag -> (T.Tag -> name) -> Set T.Tag -> AllowAnonTag -> (T.Tag -> EntityId) ->
+    T.Tag -> (T.Tag -> name) -> Set T.Tag -> (T.Tag -> EntityId) ->
     (T.Tag -> T m ()) -> MkProperty' (T m) (Set T.Tag) ->
     OnceT (T m) (TagRef name (OnceT (T m)) (T m))
-refWith cp tag name forbiddenTags allowAnon mkInstance setTag tagsProp =
-    replaceWith name forbiddenTags allowAnon mkInstance setTag tagsProp
+refWith cp tag name forbiddenTags mkInstance setTag tagsProp =
+    replaceWith name forbiddenTags mkInstance setTag tagsProp
     <&>
     \r ->
     TagRef
@@ -92,21 +88,21 @@ refWith cp tag name forbiddenTags allowAnon mkInstance setTag tagsProp =
 
 replace ::
     (MonadTransaction n m, MonadReader env m, Anchors.HasCodeAnchors env n) =>
-    (T.Tag -> name) -> Set T.Tag -> AllowAnonTag -> (T.Tag -> EntityId) -> (T.Tag -> T n ()) ->
+    (T.Tag -> name) -> Set T.Tag -> (T.Tag -> EntityId) -> (T.Tag -> T n ()) ->
     m (OnceT (T n) (TagChoice name (OnceT (T n)) (T n)))
-replace name forbiddenTags allowAnon mkInstance setTag =
+replace name forbiddenTags mkInstance setTag =
     Lens.view id
     <&> \env ->
     getTagsProp env
-    & replaceWith name forbiddenTags allowAnon mkInstance setTag
+    & replaceWith name forbiddenTags mkInstance setTag
 
 replaceWith ::
     Monad m =>
-    (T.Tag -> name) -> Set T.Tag -> AllowAnonTag -> (T.Tag -> EntityId) ->
+    (T.Tag -> name) -> Set T.Tag -> (T.Tag -> EntityId) ->
     (T.Tag -> T m ()) ->
     MkProperty' (T m) (Set T.Tag) ->
     OnceT (T m) (TagChoice name (OnceT (T m)) (T m))
-replaceWith name forbiddenTags allowAnon mkInstance setTag tagsProp =
+replaceWith name forbiddenTags mkInstance setTag tagsProp =
     DataOps.genNewTag & lift & once
     <&>
     \mkNewTag ->
@@ -121,10 +117,6 @@ replaceWith name forbiddenTags allowAnon mkInstance setTag tagsProp =
         \newTag ->
         toOption newTag
         & toPick %~ (Property.modP tagsProp (Lens.contains newTag .~ True) >>)
-    , _tcAnon =
-        case allowAnon of
-        RequireTag -> Nothing
-        AllowAnon -> mkInstance Anchors.anonTag <$ setTag Anchors.anonTag & Just
     }
     where
         toOption x =
@@ -143,18 +135,22 @@ replaceWith name forbiddenTags allowAnon mkInstance setTag tagsProp =
 taggedEntityWith ::
     (UniqueId.ToUUID a, MonadTransaction n m) =>
     Anchors.CodeAnchors n -> Maybe VarInfo -> a ->
-    m (OnceT (T n) (TagRef InternalName (OnceT (T n)) (T n)))
+    m (OnceT (T n) (OptionalTag InternalName (OnceT (T n)) (T n)))
 taggedEntityWith cp mVarInfo entity =
     getP prop
     <&>
     \entityTag ->
-    refWith cp entityTag (nameWithContext mVarInfo entity) mempty AllowAnon
-    (EntityId.ofTaggedEntity entity) (setP prop) tagsProp
+    refWith cp entityTag (nameWithContext mVarInfo entity)
+    mempty mkInstance (setP prop) tagsProp
+    <&> (`OptionalTag` toAnon)
     where
+        toAnon = mkInstance Anchors.anonTag <$ setP prop Anchors.anonTag
+        mkInstance = EntityId.ofTaggedEntity entity
         prop = Anchors.assocTag entity
         tagsProp = Anchors.tags cp
 
 taggedEntity ::
     (UniqueId.ToUUID a, MonadTransaction n m, MonadReader env m, Anchors.HasCodeAnchors env n) =>
-    Maybe VarInfo -> a -> m (OnceT (T n) (TagRef InternalName (OnceT (T n)) (T n)))
-taggedEntity mVarInfo entity = Lens.view Anchors.codeAnchors >>= \x -> taggedEntityWith x mVarInfo entity
+    Maybe VarInfo -> a -> m (OnceT (T n) (OptionalTag InternalName (OnceT (T n)) (T n)))
+taggedEntity mVarInfo entity =
+    Lens.view Anchors.codeAnchors >>= \x -> taggedEntityWith x mVarInfo entity

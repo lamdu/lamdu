@@ -105,7 +105,7 @@ instance AddEval i n Function where
             VarParam (fp, info) ->
                 VarParam
                 ( fp & fpAnnotation . _AnnotationVal %~
-                    ConvertEval.param (EntityId.ofEvalOf (info ^. vpiTag . tagRefTag . tagInstance)) .
+                    ConvertEval.param (EntityId.ofEvalOf (info ^. vpiTag . oTag . tagRefTag . tagInstance)) .
                     appliesOfLam
                 , info
                 )

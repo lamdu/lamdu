@@ -2,8 +2,9 @@
 module Lamdu.Sugar.Types.Tag
     ( Tag(..), tagName, tagVal, tagInstance
     , TagOption(..), toInfo, toPick
-    , TagChoice(..), tcOptions, tcNewTag, tcAnon
+    , TagChoice(..), tcOptions, tcNewTag
     , TagRef(..), tagRefTag, tagRefReplace, tagRefJumpTo
+    , OptionalTag(..), oTag, oPickAnon
     ) where
 
 import qualified Control.Lens as Lens
@@ -26,10 +27,6 @@ data TagOption name o = TagOption
 data TagChoice name i o = TagChoice
     { _tcOptions :: i [TagOption name o]
     , _tcNewTag :: i (TagOption name o)
-    , -- In some cases, like let-items, single params,
-      -- the user does not have to choose a tag and can choose to have
-      -- an auto-generated name instead.
-      _tcAnon :: Maybe (o EntityId)
     } deriving Generic
 
 -- | A mutable tag (that can be replaced with a different tag)
@@ -39,4 +36,9 @@ data TagRef name i o = TagRef
     , _tagRefJumpTo :: Maybe (o EntityId)
     } deriving Generic
 
-traverse Lens.makeLenses [''Tag, ''TagOption, ''TagRef, ''TagChoice] <&> concat
+data OptionalTag name i o = OptionalTag
+    { _oTag :: TagRef name i o
+    , _oPickAnon :: o EntityId
+    } deriving Generic
+
+traverse Lens.makeLenses [''Tag, ''TagOption, ''TagRef, ''TagChoice, ''OptionalTag] <&> concat

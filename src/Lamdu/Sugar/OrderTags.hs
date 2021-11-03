@@ -108,7 +108,7 @@ tagChoiceOptions ::
     (Sugar.TagChoice n0 i o) (Sugar.TagChoice n1 i o)
     (Sugar.TagOption n0 o) (Sugar.TagOption n1 o)
 tagChoiceOptions =
-    Lens.setting (\f (Sugar.TagChoice o n a) -> Sugar.TagChoice (o <&> traverse %~ f) (n <&> f) a)
+    Lens.setting (\f (Sugar.TagChoice o n) -> Sugar.TagChoice (o <&> traverse %~ f) (n <&> f))
 
 tagChoicePick :: Functor i => Lens.IndexedSetter' T.Tag (Sugar.TagChoice n i o) (o ())
 tagChoicePick = tagChoiceOptions . Lens.filteredBy (Sugar.toInfo . Sugar.tagVal) <. Sugar.toPick

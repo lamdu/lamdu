@@ -40,7 +40,7 @@ make nom =
     where
         myId = nom ^. Sugar.npEntityId & WidgetIds.fromEntityId
         nameEditId =
-            nom ^. Sugar.npName . Sugar.tagRefTag . Sugar.tagInstance
+            nom ^. Sugar.npName . Sugar.oTag . Sugar.tagRefTag . Sugar.tagInstance
             & WidgetIds.fromEntityId
 
 makeNominalPaneBody :: _ => Maybe (Sugar.Scheme Name o) -> f (Responsive a)

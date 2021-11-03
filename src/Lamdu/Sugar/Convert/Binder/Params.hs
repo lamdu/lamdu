@@ -294,8 +294,7 @@ fieldParamInfo binderKind tags fp storedLam tag =
                     postProcess
         addNext <-
             ConvertTag.replace (nameWithContext Nothing param)
-            (Set.fromList tags) ConvertTag.RequireTag
-            (EntityId.ofTaggedEntity param) addParamAfter
+            (Set.fromList tags) (EntityId.ofTaggedEntity param) addParamAfter
             >>= ConvertM . lift
         del <- delFieldParamAndFixCalls binderKind tags fp storedLam
         pure RecordParamInfo
@@ -404,9 +403,7 @@ convertRecordParams mPresMode binderKind fieldParams lam@(V.TypedLam param _ _) 
                     postProcess
         addFirstSelection <-
             ConvertTag.replace (nameWithContext Nothing param)
-            (Set.fromList tags) ConvertTag.RequireTag
-            (EntityId.ofTaggedEntity param)
-            addFirst
+            (Set.fromList tags) (EntityId.ofTaggedEntity param) addFirst
             >>= ConvertM . lift
         pure ConventionalParams
             { cpTags = Set.fromList tags
@@ -555,7 +552,7 @@ lamParamType lamExprPl =
 
 makeVarParamInfo ::
     Monad m =>
-    TagRef InternalName (OnceT (T m)) (T m) ->
+    OptionalTag InternalName (OnceT (T m)) (T m) ->
     BinderKind m -> StoredLam m ->
     ConvertM m (VarParamInfo InternalName (OnceT (T m)) (T m))
 makeVarParamInfo tag binderKind storedLam =
@@ -572,8 +569,7 @@ makeVarParamInfo tag binderKind storedLam =
             then EntityId.ofTaggedEntity param oldParam & NeedToPickTagToAddNext & pure
             else
                 ConvertTag.replace (nameWithContext Nothing param)
-                (Set.singleton oldParam) ConvertTag.RequireTag
-                (EntityId.ofTaggedEntity param) addParamAfter
+                (Set.singleton oldParam) (EntityId.ofTaggedEntity param) addParamAfter
                 >>= ConvertM . lift
                 <&> AddNext
         pure VarParamInfo
@@ -636,7 +632,7 @@ convertNonRecordParam binderKind lam@(V.TypedLam param _ _) lamExprPl =
                 do
                     tag <- ConvertTag.taggedEntity (Just varInfo) param >>= ConvertM . lift
                     makeVarParamInfo tag binderKind storedLam
-                        >>= mkFuncParam (tag ^. tagRefTag . tagInstance) lamExprPl
+                        >>= mkFuncParam (tag ^. oTag . tagRefTag . tagInstance) lamExprPl
                 <&> VarParam
         postProcess <- ConvertM.postProcessAssert
         addFirst <-
@@ -650,7 +646,7 @@ convertNonRecordParam binderKind lam@(V.TypedLam param _ _) lamExprPl =
                     then NeedToPickTagToAddFirst (EntityId.ofTaggedEntity param oldParam) & pure
                     else
                         ConvertTag.replace (nameWithContext (Just varInfo) param) (Set.singleton oldParam)
-                        ConvertTag.RequireTag (EntityId.ofTaggedEntity param) addFirst
+                        (EntityId.ofTaggedEntity param) addFirst
                         >>= ConvertM . lift
                         <&> PrependParam
         pure ConventionalParams

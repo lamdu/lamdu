@@ -127,6 +127,9 @@ mkTag var tag =
     , Sugar._tagRefJumpTo = Nothing
     }
 
+mkOptionalTag :: Maybe UUID -> T.Tag -> Sugar.OptionalTag InternalName Identity Unit
+mkOptionalTag var tag = Sugar.OptionalTag (mkTag var tag) Unit
+
 def ::
     Annotated Sugar.EntityId # Sugar.Type InternalName Unit ->
     UUID -> T.Tag ->
@@ -134,7 +137,7 @@ def ::
     Sugar.Definition v InternalName Identity Unit expr
 def typ var tag body =
     Sugar.Definition
-    { Sugar._drName = mkTag (Just var) tag
+    { Sugar._drName = mkOptionalTag (Just var) tag
     , Sugar._drDefI = "def"
     , Sugar._drBody =
         Sugar.DefinitionBodyExpression Sugar.DefinitionExpression
@@ -247,7 +250,6 @@ tagRefReplace =
             }
         , Sugar._toPick = Unit
         }
-    , Sugar._tcAnon = Nothing
     }
 
 getName :: T.Tag -> Identity (IsOperator, TextsInLang)

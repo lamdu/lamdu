@@ -109,7 +109,7 @@ mkLightLambda params myId =
         paramIds =
             case params of
             Sugar.NullParam{} -> []
-            Sugar.VarParam (_, p) -> [p ^. Sugar.vpiTag . Sugar.tagRefTag . Sugar.tagInstance]
+            Sugar.VarParam (_, p) -> [p ^. Sugar.vpiTag . Sugar.oTag . Sugar.tagRefTag . Sugar.tagInstance]
             Sugar.RecordParams ps -> ps <&> (^. _2 . Sugar.piTag . Sugar.tagRefTag . Sugar.tagInstance)
 
 make :: _ => ExprGui.Expr Sugar.Lambda i o -> GuiM env i o (Responsive o)

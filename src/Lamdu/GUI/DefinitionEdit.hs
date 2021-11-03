@@ -35,7 +35,7 @@ makeExprDefinition def bodyExpr myId =
     & GuiState.assignCursor myId nameEditId
     where
         nameEditId =
-            def ^. Sugar.drName . Sugar.tagRefTag . Sugar.tagInstance & WidgetIds.fromEntityId
+            def ^. Sugar.drName . Sugar.oTag . Sugar.tagRefTag . Sugar.tagInstance & WidgetIds.fromEntityId
 
 makeBuiltinDefinition ::
     _ =>

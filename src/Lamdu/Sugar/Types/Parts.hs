@@ -70,7 +70,7 @@ newtype NullParamActions o = NullParamActions
     } deriving stock Generic
 
 data VarParamInfo name i o = VarParamInfo
-    { _vpiTag :: TagRef name i o
+    { _vpiTag :: OptionalTag name i o
     , _vpiAddNext :: AddNextParam name i o
     , _vpiDelete :: o ()
     } deriving Generic

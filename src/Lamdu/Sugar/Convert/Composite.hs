@@ -52,8 +52,7 @@ convertAddItem extendOp existingTags pl =
                 DataOps.CompositeExtendResult _ resultI <- extendOp tag (stored ^. ExprIRef.iref)
                 _ <- protectedSetToVal stored resultI
                 DataOps.setTagOrder tag (Set.size existingTags)
-        ConvertTag.replace nameWithoutContext existingTags ConvertTag.RequireTag
-            (EntityId.ofTag (pl ^. Input.entityId)) addItem
+        ConvertTag.replace nameWithoutContext existingTags (EntityId.ofTag (pl ^. Input.entityId)) addItem
             >>= ConvertM . lift
     where
         stored = pl ^. Input.stored

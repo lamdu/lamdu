@@ -276,18 +276,18 @@ makeParamsEdit annotationOpts delVarBackwardsId lhsId rhsId params =
         & traverse . _2 %%~ onFpInfo
         where
             onFpInfo x =
-                TagEdit.makeParamTag (x ^. Sugar.piTag)
+                TagEdit.makeParamTag Nothing (x ^. Sugar.piTag)
                 <&> namedRecordParamEditInfo widgetId x
                 where
                     widgetId =
                         x ^. Sugar.piTag . Sugar.tagRefTag . Sugar.tagInstance & WidgetIds.fromEntityId
     Sugar.VarParam (param, pInfo) ->
-        TagEdit.makeParamTag tag
+        TagEdit.makeParamTag (Just (tag ^. Sugar.oPickAnon)) (tag ^. Sugar.oTag)
         <&> namedVarParamEditInfo widgetId pInfo
         <&> (,) param <&> (:[])
         where
             tag = pInfo ^. Sugar.vpiTag
-            widgetId = tag ^. Sugar.tagRefTag . Sugar.tagInstance & WidgetIds.fromEntityId
+            widgetId = tag ^. Sugar.oTag . Sugar.tagRefTag . Sugar.tagInstance & WidgetIds.fromEntityId
     >>= fromParamList delVarBackwardsId rhsId
     & local (has . Menu.configKeysPickOptionAndGotoNext <>~ [noMods M.Key'Space])
     where
@@ -386,7 +386,7 @@ makeFunctionParts funcApplyLimit (Ann (Const pl) func) delVarBackwardsId =
             case func ^. Sugar.fParams of
             Sugar.NullParam{} -> bodyId
             Sugar.VarParam (_, pInfo) ->
-                pInfo ^. Sugar.vpiTag . Sugar.tagRefTag . Sugar.tagInstance & WidgetIds.fromEntityId
+                pInfo ^. Sugar.vpiTag . Sugar.oTag . Sugar.tagRefTag . Sugar.tagInstance & WidgetIds.fromEntityId
             Sugar.RecordParams ps ->
                 ps ^?! traverse . _2 . Sugar.piTag . Sugar.tagRefTag . Sugar.tagInstance
                 & WidgetIds.fromEntityId
@@ -433,7 +433,7 @@ makeJumpToRhs rhsId =
 make ::
     _ =>
     Maybe (i (Property o Meta.PresentationMode)) ->
-    Sugar.TagRef Name i o -> Lens.ALens' TextColors M.Color ->
+    Sugar.OptionalTag Name i o -> Lens.ALens' TextColors M.Color ->
     ExprGui.Expr Sugar.Assignment i o ->
     GuiM env i o (Responsive o)
 make pMode tag color assignment =
@@ -478,6 +478,6 @@ make pMode tag color assignment =
         <&> Widget.weakerEvents eventMap
     where
         myId = WidgetIds.fromExprPayload pl
-        delParamDest = tag ^. Sugar.tagRefTag . Sugar.tagInstance & WidgetIds.fromEntityId
+        delParamDest = tag ^. Sugar.oTag . Sugar.tagRefTag . Sugar.tagInstance & WidgetIds.fromEntityId
         Ann (Const pl) assignmentBody = assignment
         presentationChoiceId = Widget.joinId myId ["presentation"]

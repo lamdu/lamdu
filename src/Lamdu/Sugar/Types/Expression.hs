@@ -217,7 +217,7 @@ data Term v name i o k
 data Let v name i o k = Let
     { _lValue :: k :# Assignment v name i o -- "let foo = [[bar]] in x"
     , _lUsages :: [EntityId]
-    , _lName :: TagRef name i o -- let [[foo]] = bar in x
+    , _lName :: OptionalTag name i o -- let [[foo]] = bar in x
     , _lDelete :: o ()
     , _lBody :: k :# Binder v name i o -- "let foo = bar in [[x]]"
     } deriving Generic

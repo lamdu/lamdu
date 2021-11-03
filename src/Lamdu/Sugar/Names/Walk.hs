@@ -182,7 +182,7 @@ instance ToBody Let where
     toBody let_@Let{_lName, _lBody, _lValue} =
         do
             (_lName, _lBody) <-
-                unCPS (withTagRef MayBeAmbiguous TaggedVar _lName)
+                unCPS (withOptionalTag MayBeAmbiguous TaggedVar _lName)
                 (toExpression _lBody)
             _lValue <- toExpression _lValue
             pure let_{_lName, _lBody, _lValue}
@@ -220,14 +220,13 @@ toTagOf :: MonadNaming m => NameType -> Sugar.Tag (OldName m) -> m (Sugar.Tag (N
 toTagOf nameType = tagName (opGetName Nothing MayBeAmbiguous nameType)
 
 instance (a ~ OldName m, b ~ NewName m, i ~ IM m) => Walk m (TagChoice a i o) (TagChoice b i o) where
-    walk (TagChoice opts new anon) =
+    walk (TagChoice opts new) =
         (,) <$> opRun <*> opRun
         <&>
         \(run0, run1) ->
         TagChoice
         { _tcOptions = opts >>= run0 . (traverse . toInfo) (toTagOf Tag)
         , _tcNewTag = new >>= run1 . toInfo (toTagOf Tag)
-        , _tcAnon = anon
         }
 
 instance (a ~ OldName m, b ~ NewName m, i ~ IM m) => Walk m (Hole a i o) (Hole b i o) where
@@ -248,6 +247,12 @@ toTagRefOf nameType (Sugar.TagRef info actions jumpTo) =
     <*> walk actions
     ?? jumpTo
 
+toOptionalTag ::
+    MonadNaming f =>
+    NameType -> OptionalTag (OldName f) (IM f) o ->
+    f (OptionalTag (NewName f) (IM f) o)
+toOptionalTag nameType = Sugar.oTag (toTagRefOf nameType)
+
 withTagRef ::
     MonadNaming m =>
     IsUnambiguous -> NameType ->
@@ -258,6 +263,13 @@ withTagRef unambig nameType (Sugar.TagRef info actions jumpTo) =
     <$> tagName (opWithName unambig nameType) info
     <*> liftCPS (walk actions)
     ?? jumpTo
+
+withOptionalTag ::
+    MonadNaming m =>
+    IsUnambiguous -> NameType ->
+    OptionalTag (OldName m) (IM m) o ->
+    CPS m (OptionalTag (NewName m) (IM m) o)
+withOptionalTag unambig nameType = Sugar.oTag (withTagRef unambig nameType)
 
 instance ToBody AnnotatedArg where
     toBody (AnnotatedArg tag e) =
@@ -419,7 +431,7 @@ withVarParamInfo ::
     CPS m (VarParamInfo (NewName m) (IM m) o)
 withVarParamInfo unambig x@VarParamInfo{_vpiTag, _vpiAddNext} =
     (,)
-    <$> withTagRef unambig TaggedVar _vpiTag
+    <$> withOptionalTag unambig TaggedVar _vpiTag
     <*> liftCPS (_AddNext walk _vpiAddNext)
     <&> \(_vpiTag, _vpiAddNext) -> x{_vpiTag, _vpiAddNext}
 
@@ -472,7 +484,7 @@ instance
         do
             -- NOTE: A global def binding is not considered a binder, as
             -- it exists everywhere, not just inside the binding
-            _drName <- toTagRefOf GlobalDef _drName
+            _drName <- toOptionalTag GlobalDef _drName
             _drBody <- walk _drBody
             pure def{_drName, _drBody}
 
@@ -482,7 +494,7 @@ instance (a ~ OldName m, b ~ NewName m, IM m ~ i) => Walk m (NominalParam a i o)
 instance (a ~ OldName m, b ~ NewName m, i ~ IM m) => Walk m (NominalPane a i o) (NominalPane b i o) where
     walk nomPane@NominalPane{_npName, _npParams, _npBody} =
         do
-            _npName <- toTagRefOf TaggedNominal _npName
+            _npName <- toOptionalTag TaggedNominal _npName
             _npParams <- traverse walk _npParams
             _npBody <- Lens._Just walk _npBody
             pure nomPane{_npName, _npParams, _npBody}

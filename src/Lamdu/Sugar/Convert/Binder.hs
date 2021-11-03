@@ -238,7 +238,8 @@ convertLam lam exprPl =
             convParams (lam ^. V.tlOut)
         let paramNames =
                 func ^..
-                fParams . (_RecordParams . traverse . _2 . piTag <> _VarParam . _2 . vpiTag) . tagRefTag . tagName
+                fParams . (_RecordParams . traverse . _2 . piTag <> _VarParam . _2 . vpiTag . oTag) .
+                tagRefTag . tagName
                 & Set.fromList
         lightLamSugar <- Lens.view (ConvertM.scConfig . Config.sugarsEnabled . Config.lightLambda)
         let lambda
