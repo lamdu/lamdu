@@ -70,19 +70,20 @@ makePickEventMap action =
 
 makeNewTag ::
     (Monad i, Monad o) =>
-    Sugar.TagOption Name o a ->
-    GuiM env i o (Text -> (EntityId -> a -> b) -> o b)
+    Sugar.TagOption Name o ->
+    GuiM env i o (Text -> (EntityId -> r) -> o r)
 makeNewTag tagOpt =
     GuiM.assocTagName <&>
     \assocTagName searchTerm mkPickResult ->
+    mkPickResult (tagOpt ^. Sugar.toInfo . Sugar.tagInstance) <$
     do
         Property.setP (assocTagName (tagOpt ^. Sugar.toInfo . Sugar.tagVal)) searchTerm
-        tagOpt ^. Sugar.toPick <&> mkPickResult (tagOpt ^. Sugar.toInfo . Sugar.tagInstance)
+        tagOpt ^. Sugar.toPick
 
 makeNewTagPreEvent ::
     _ =>
-    Sugar.TagOption Name o a ->
-    GuiM env i o (Text -> (EntityId -> a -> r) -> Maybe (Widget.PreEvent (o r)))
+    Sugar.TagOption Name o ->
+    GuiM env i o (Text -> (EntityId -> r) -> Maybe (Widget.PreEvent (o r)))
 makeNewTagPreEvent tagOpt =
     (,) <$> Lens.view (has . Texts.newName) <*> makeNewTag tagOpt
     <&>
@@ -98,9 +99,9 @@ makeNewTagPreEvent tagOpt =
 
 makeAddNewTag ::
     _ =>
-    Sugar.TagOption Name o a ->
+    Sugar.TagOption Name o ->
     GuiM menv i o
-    ( (EntityId -> a -> Menu.PickResult) ->
+    ( (EntityId -> Menu.PickResult) ->
         SearchMenu.ResultsContext -> Maybe (Menu.Option f o)
     )
 makeAddNewTag tagOpt =
@@ -121,7 +122,7 @@ makeAddNewTag tagOpt =
             & Styled.withColor TextColors.actionTextColor
         }
 
-nameText :: Lens.Traversal' (Sugar.TagOption Name m a) Text
+nameText :: Lens.Traversal' (Sugar.TagOption Name m) Text
 nameText = Sugar.toInfo . Sugar.tagName . Name._NameTag . Name.tnDisplayText . Name.ttText
 
 {-# NOINLINE fuzzyMaker #-}
@@ -130,9 +131,9 @@ fuzzyMaker = memo Fuzzy.make
 
 makeOptions ::
     _ =>
-    Sugar.TagChoice Name i o a ->
-    Sugar.TagOption Name o a ->
-    (EntityId -> a -> Menu.PickResult) ->
+    Sugar.TagChoice Name i o ->
+    Sugar.TagOption Name o ->
+    (EntityId -> Menu.PickResult) ->
     SearchMenu.ResultsContext ->
     GuiM env i o (Menu.OptionList (Menu.Option m o))
 makeOptions tagRefReplace newTagOpt mkPickResult ctx
@@ -170,9 +171,8 @@ makeOptions tagRefReplace newTagOpt mkPickResult ctx
                         , Menu._rPick = Widget.PreEvent
                             { Widget._pDesc = chooseText
                             , Widget._pAction =
-                                opt ^. Sugar.toPick
-                                <&> mkPickResult
-                                (opt ^. Sugar.toInfo . Sugar.tagInstance)
+                                mkPickResult (opt ^. Sugar.toInfo . Sugar.tagInstance)
+                                <$ opt ^. Sugar.toPick
                             , Widget._pTextRemainder = ""
                             }
                         }
@@ -199,8 +199,8 @@ allowedSearchTerm = Name.isValidText
 
 makeHoleSearchTerm ::
     _ =>
-    Sugar.TagOption Name o a ->
-    (EntityId -> a -> Menu.PickResult) -> Widget.Id ->
+    Sugar.TagOption Name o ->
+    (EntityId -> Menu.PickResult) -> Widget.Id ->
     GuiM env i o (SearchMenu.Term o)
 makeHoleSearchTerm newTagOption mkPickResult holeId =
     do
@@ -256,8 +256,8 @@ makeHoleSearchTerm newTagOption mkPickResult holeId =
 
 makeTagHoleEdit ::
     _ =>
-    Sugar.TagChoice Name i o a ->
-    (EntityId -> a -> Menu.PickResult) ->
+    Sugar.TagChoice Name i o ->
+    (EntityId -> Menu.PickResult) ->
     Widget.Id ->
     GuiM env i o (M.TextWidget o)
 makeTagHoleEdit tagRefReplace mkPickResult holeId =
@@ -323,7 +323,7 @@ makeTagRefEditWith onView onPickNext tag =
         myId = info ^. Sugar.tagInstance & WidgetIds.fromEntityId
         holeId = WidgetIds.tagHoleId myId
         viewId = Widget.joinId myId ["view"]
-        mkPickResult tagInstance () =
+        mkPickResult tagInstance =
             Menu.PickResult
             { Menu._pickDest = WidgetIds.fromEntityId tagInstance
             , Menu._pickMNextEntry = onPickNext tagInstance
@@ -331,7 +331,7 @@ makeTagRefEditWith onView onPickNext tag =
         chooseAction =
             case tag ^. Sugar.tagRefReplace . Sugar.tcAnon of
             Nothing -> pure myId
-            Just setAnon -> setAnon <&> fst <&> WidgetIds.fromEntityId
+            Just setAnon -> setAnon <&> WidgetIds.fromEntityId
             <&> WidgetIds.tagHoleId
 
 makeRecordTag :: _ => Sugar.TagRef Name i o -> GuiM env i o (M.TextWidget o)

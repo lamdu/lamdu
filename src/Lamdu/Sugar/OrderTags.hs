@@ -105,12 +105,12 @@ instance (MonadTransaction m o, MonadTransaction m i) => Order i (Sugar.Function
 tagChoiceOptions ::
     Functor i =>
     Lens.Setter
-    (Sugar.TagChoice n0 i o a) (Sugar.TagChoice n1 i o a)
-    (Sugar.TagOption n0 o a) (Sugar.TagOption n1 o a)
+    (Sugar.TagChoice n0 i o) (Sugar.TagChoice n1 i o)
+    (Sugar.TagOption n0 o) (Sugar.TagOption n1 o)
 tagChoiceOptions =
     Lens.setting (\f (Sugar.TagChoice o n a) -> Sugar.TagChoice (o <&> traverse %~ f) (n <&> f) a)
 
-tagChoicePick :: Functor i => Lens.IndexedSetter' T.Tag (Sugar.TagChoice n i o a) (o a)
+tagChoicePick :: Functor i => Lens.IndexedSetter' T.Tag (Sugar.TagChoice n i o) (o ())
 tagChoicePick = tagChoiceOptions . Lens.filteredBy (Sugar.toInfo . Sugar.tagVal) <. Sugar.toPick
 
 addReorders ::

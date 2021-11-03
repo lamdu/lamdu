@@ -234,7 +234,7 @@ taggedEntityName ctx tag =
     , _inIsAutoName = False
     }
 
-tagRefReplace :: Sugar.TagChoice InternalName Identity Unit ()
+tagRefReplace :: Sugar.TagChoice InternalName Identity Unit
 tagRefReplace =
     Sugar.TagChoice
     { Sugar._tcOptions = pure []

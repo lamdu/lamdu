@@ -22,6 +22,9 @@ fromBS = Id . (: [])
 fromEntityId :: Sugar.EntityId -> Id
 fromEntityId = fromBS . EntityId.bs
 
+ofTagValue :: Sugar.EntityId -> Id
+ofTagValue = (`WidgetId.joinId` ["val"]) . fromEntityId
+
 fromExprPayload :: Sugar.Payload v o -> Id
 fromExprPayload pl = fromEntityId (pl ^. Sugar.plEntityId)
 

@@ -41,7 +41,7 @@ convertAddItem ::
     (T.Tag -> ValI m -> T m (DataOps.CompositeExtendResult m)) ->
     Set T.Tag ->
     Input.Payload m a # V.Term ->
-    ConvertM m (TagChoice InternalName (OnceT (T m)) (T m) EntityId)
+    ConvertM m (TagChoice InternalName (OnceT (T m)) (T m))
 convertAddItem extendOp existingTags pl =
     do
         addItem <-
@@ -49,10 +49,9 @@ convertAddItem extendOp existingTags pl =
             <&>
             \protectedSetToVal tag ->
             do
-                DataOps.CompositeExtendResult newValI resultI <- extendOp tag (stored ^. ExprIRef.iref)
+                DataOps.CompositeExtendResult _ resultI <- extendOp tag (stored ^. ExprIRef.iref)
                 _ <- protectedSetToVal stored resultI
                 DataOps.setTagOrder tag (Set.size existingTags)
-                EntityId.ofValI newValI & pure
         ConvertTag.replace nameWithoutContext existingTags ConvertTag.RequireTag
             (EntityId.ofTag (pl ^. Input.entityId)) addItem
             >>= ConvertM . lift
@@ -162,7 +161,7 @@ convertEmpty extendOp exprPl =
 
 convertItem ::
     Monad m =>
-    TagChoice InternalName (OnceT (T m)) (T m) EntityId ->
+    TagChoice InternalName (OnceT (T m)) (T m) ->
     (T.Tag -> ValI m -> ValI m -> ExprIRef.ValBody m) ->
     HRef m # V.Term ->
     EntityId -> Set T.Tag ->

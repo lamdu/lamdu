@@ -286,7 +286,7 @@ instance Recursive GetParam where
     recurse = getParamRecursive . proxyArgument
 
 instance GetParam (Const (BinderVarRef InternalName o))
-instance GetParam (Const (TagChoice InternalName i o EntityId))
+instance GetParam (Const (TagChoice InternalName i o))
 instance GetParam (Const (TagRef InternalName i o))
 instance GetParam (Const (TId name o))
 instance GetParam (Else v InternalName i o)
@@ -329,7 +329,7 @@ markNodeLightParams paramNames =
 
 -- instance MarkLightParams (Const a)
 instance MarkLightParams (Const (BinderVarRef InternalName o))
-instance MarkLightParams (Const (TagChoice InternalName i o EntityId))
+instance MarkLightParams (Const (TagChoice InternalName i o))
 instance MarkLightParams (Const (TagRef InternalName i o))
 instance MarkLightParams (Else v InternalName i o)
 instance MarkLightParams (Let v InternalName i o)

@@ -67,13 +67,13 @@ testInjectInRec =
             Sugar.BodyRecord Sugar.Composite
             { Sugar._cList =
                 Sugar.TaggedList
-                { Sugar._tlAddFirst = "stub" <$ Stub.tagRefReplace
+                { Sugar._tlAddFirst = Stub.tagRefReplace
                 , Sugar._tlItems =
                     Just Sugar.TaggedListBody
                     { Sugar._tlHead =
                         Stub.mkTag Nothing "x"
                         & Sugar.LeafInject & Sugar.BodyLeaf & Stub.node
-                        & Sugar.TaggedItem (Stub.mkTag Nothing "x") Unit ("stub" <$ Stub.tagRefReplace)
+                        & Sugar.TaggedItem (Stub.mkTag Nothing "x") Unit Stub.tagRefReplace
                     , Sugar._tlTail = []
                     }
                 }

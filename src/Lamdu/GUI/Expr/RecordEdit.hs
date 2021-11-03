@@ -41,6 +41,7 @@ import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
 import qualified Lamdu.Sugar.Lens as SugarLens
+import qualified GUI.Momentu.State as M
 
 doc :: _ => env -> Lens.ALens' (Texts.CodeUI Text) Text -> E.Doc
 doc env lens = E.toDoc env [has . MomentuTexts.edit, has . Texts.record, has . lens]
@@ -88,7 +89,7 @@ makeUnit pl =
 
 makeEmpty ::
     _ =>
-    Annotated (ExprGui.Payload i o) # Const (Sugar.TagChoice Name i o Sugar.EntityId) ->
+    Annotated (ExprGui.Payload i o) # Const (Sugar.TagChoice Name i o) ->
     GuiM env i o (Responsive o)
 makeEmpty (Ann (Const pl) (Const addField)) =
     do
@@ -169,7 +170,7 @@ addPostTags items =
 
 makeAddFieldRow ::
     _ =>
-    Sugar.TagChoice Name i o Sugar.EntityId ->
+    Sugar.TagChoice Name i o ->
     Sugar.Payload v o ->
     GuiM env i o (TaggedItem o)
 makeAddFieldRow addField pl =
@@ -185,10 +186,10 @@ makeAddFieldRow addField pl =
     }
     where
         tagHoleId = addFieldId (WidgetIds.fromExprPayload pl)
-        mkPickResult _ dst =
+        mkPickResult dst =
             Menu.PickResult
-            { Menu._pickDest = WidgetIds.fromEntityId dst
-            , Menu._pickMNextEntry = WidgetIds.fromEntityId dst & Just
+            { Menu._pickDest = WidgetIds.ofTagValue dst
+            , Menu._pickMNextEntry = WidgetIds.ofTagValue dst & Just
             }
 
 makeFieldRow :: _ => Sugar.TaggedItem Name i o (ExprGui.Expr Sugar.Term i o) -> GuiM env i o (TaggedItem o)
@@ -205,6 +206,9 @@ makeFieldRow (Sugar.TaggedItem tag delete _addAfter fieldExpr) =
             , _taggedItem = Widget.weakerEvents itemEventMap fieldGui
             , _tagPost = Just M.empty
             }
+    & M.assignCursor
+        (WidgetIds.ofTagValue (tag ^. Sugar.tagRefTag . Sugar.tagInstance))
+        (fieldExpr ^. annotation & WidgetIds.fromExprPayload)
 
 separationBar :: TextColors -> M.AnimId -> Widget.R -> M.View
 separationBar theme animId width =

@@ -219,7 +219,7 @@ instance ToBody Assignment where
 toTagOf :: MonadNaming m => NameType -> Sugar.Tag (OldName m) -> m (Sugar.Tag (NewName m))
 toTagOf nameType = tagName (opGetName Nothing MayBeAmbiguous nameType)
 
-instance (a ~ OldName m, b ~ NewName m, i ~ IM m) => Walk m (TagChoice a i o p) (TagChoice b i o p) where
+instance (a ~ OldName m, b ~ NewName m, i ~ IM m) => Walk m (TagChoice a i o) (TagChoice b i o) where
     walk (TagChoice opts new anon) =
         (,) <$> opRun <*> opRun
         <&>

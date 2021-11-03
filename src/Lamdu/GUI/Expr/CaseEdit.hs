@@ -90,6 +90,9 @@ makeAltRow (Sugar.TaggedItem tag delete _addAfter altExpr) =
             , _taggedItem = altExprGui
             , _tagPost = Nothing
             }
+    & GuiState.assignCursor
+        (WidgetIds.ofTagValue (tag ^. Sugar.tagRefTag . Sugar.tagInstance))
+        (altExpr ^. annotation & WidgetIds.fromExprPayload)
     & local (M.animIdPrefix .~ Widget.toAnimId altId)
     where
         altId = tag ^. Sugar.tagRefTag . Sugar.tagInstance & WidgetIds.fromEntityId
@@ -135,7 +138,7 @@ makeAltsWidget altsId (Sugar.TaggedList addAlt alts) punned =
             <&> (,) addAltEventMap
 
 makeAddAltRow ::
-    _ => Sugar.TagChoice Name i o Sugar.EntityId -> Widget.Id -> GuiM env i o (TaggedItem o)
+    _ => Sugar.TagChoice Name i o -> Widget.Id -> GuiM env i o (TaggedItem o)
 makeAddAltRow addAlt myId =
     TagEdit.makeTagHoleEdit addAlt mkPickResult myId
     & Styled.withColor TextColors.caseTagColor
@@ -148,10 +151,10 @@ makeAddAltRow addAlt myId =
     , _tagPost = Nothing
     }
     where
-        mkPickResult _ dst =
+        mkPickResult dst =
             Menu.PickResult
-            { Menu._pickDest = WidgetIds.fromEntityId dst
-            , Menu._pickMNextEntry = WidgetIds.fromEntityId dst & Just
+            { Menu._pickDest = WidgetIds.ofTagValue dst
+            , Menu._pickMNextEntry = WidgetIds.ofTagValue dst & Just
             }
 
 separationBar :: TextColors -> M.AnimId -> Widget.R -> View

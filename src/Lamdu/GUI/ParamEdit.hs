@@ -93,8 +93,8 @@ data Info i o = Info
     , iId :: Widget.Id
     }
 
-mkParamPickResult :: Sugar.EntityId -> a -> Menu.PickResult
-mkParamPickResult tagInstance _ =
+mkParamPickResult :: Sugar.EntityId -> Menu.PickResult
+mkParamPickResult tagInstance =
     Menu.PickResult
     { Menu._pickDest = WidgetIds.fromEntityId tagInstance
     , Menu._pickMNextEntry =

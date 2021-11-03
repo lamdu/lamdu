@@ -18,24 +18,24 @@ data Tag name = Tag
     , _tagVal :: T.Tag
     } deriving (Eq, Ord, Generic)
 
-data TagOption name o a = TagOption
+data TagOption name o = TagOption
     { _toInfo :: Tag name
-    , _toPick :: o a
-    } deriving (Functor, Foldable, Traversable, Generic)
+    , _toPick :: o ()
+    } deriving Generic
 
-data TagChoice name i o a = TagChoice
-    { _tcOptions :: i [TagOption name o a]
-    , _tcNewTag :: i (TagOption name o a)
+data TagChoice name i o = TagChoice
+    { _tcOptions :: i [TagOption name o]
+    , _tcNewTag :: i (TagOption name o)
     , -- In some cases, like let-items, single params,
       -- the user does not have to choose a tag and can choose to have
       -- an auto-generated name instead.
-      _tcAnon :: Maybe (o (EntityId, a))
-    } deriving (Functor, Generic)
+      _tcAnon :: Maybe (o EntityId)
+    } deriving Generic
 
 -- | A mutable tag (that can be replaced with a different tag)
 data TagRef name i o = TagRef
     { _tagRefTag :: Tag name
-    , _tagRefReplace :: TagChoice name i o ()
+    , _tagRefReplace :: TagChoice name i o
     , _tagRefJumpTo :: Maybe (o EntityId)
     } deriving Generic
 
