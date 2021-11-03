@@ -283,7 +283,7 @@ fieldParamInfo ::
     Monad m =>
     BinderKind m -> [T.Tag] -> FieldParam -> StoredLam m ->
     TagRef InternalName (OnceT (T m)) (T m) ->
-    ConvertM m (RecordParamInfo InternalName (OnceT (T m)) (T m))
+    ConvertM m (TaggedItem InternalName (OnceT (T m)) (T m) (FuncParam EvalPrep))
 fieldParamInfo binderKind tags fp storedLam tag =
     do
         postProcess <- ConvertM.postProcessAssert
@@ -296,12 +296,13 @@ fieldParamInfo binderKind tags fp storedLam tag =
             ConvertTag.replace (nameWithContext Nothing param) (Set.fromList tags) (pure ()) resultInfo
             >>= ConvertM . lift
         del <- delFieldParamAndFixCalls binderKind tags fp storedLam
-        pure RecordParamInfo
-            { _piTag = tag
-            , _piAddNext = addNext
-            , _piDelete = del <* postProcess
-            , _piMOrderBefore = Nothing
-            , _piMOrderAfter = Nothing
+        vinfo <- mkVarInfo (fpFieldType fp)
+        pure TaggedItem
+            { _tiTag = tag
+            , _tiAddAfter = addNext
+            , _tiDelete = del <* postProcess
+            , _tiValue =
+                FuncParam (EvalPrep (fpFieldType fp) (tag ^. tagRefTag . tagInstance)) vinfo
             }
     where
         param = storedLam ^. slLam . V.tlIn
@@ -393,7 +394,7 @@ convertRecordParams ::
     ConvertM m (ConventionalParams m)
 convertRecordParams mPresMode binderKind fieldParams lam@(V.TypedLam param _ _) lamPl =
     do
-        params <- traverse mkParam fieldParams
+        ~(p:ps) <- traverse mkParam fieldParams
         postProcess <- ConvertM.postProcessAssert
         add <- addFieldParam
         let resultInfo () tag =
@@ -405,7 +406,11 @@ convertRecordParams mPresMode binderKind fieldParams lam@(V.TypedLam param _ _) 
         pure ConventionalParams
             { cpTags = Set.fromList tags
             , _cpParamInfos = fieldParams <&> mkParInfo & mconcat
-            , _cpParams = RecordParams params & Just
+            , _cpParams =
+                RecordParams TaggedList
+                { _tlAddFirst = addFirstSelection
+                , _tlItems = Just (TaggedListBody p (ps <&> (`TaggedSwappableItem` pure ())))
+                } & Just
             , _cpAddFirstParam = PrependParam addFirstSelection
             , cpMLamParam = Just (entityId, param)
             }
@@ -418,24 +423,10 @@ convertRecordParams mPresMode binderKind fieldParams lam@(V.TypedLam param _ _) 
             do
                 setField <- setFieldParamTag mPresMode binderKind storedLam tagList tag
                 let resultInfo () = ConvertTag.TagResultInfo <$> EntityId.ofTaggedEntity param <*> setField
-                paramInfo <-
-                    ConvertTag.ref tag (Just (ConvertTag.NameContext Nothing (UniqueId.toUUID param)))
+                ConvertTag.ref tag (Just (ConvertTag.NameContext Nothing (UniqueId.toUUID param)))
                     (Set.delete tag (Set.fromList tagList)) (pure ()) resultInfo
                     >>= ConvertM . lift
                     >>= fieldParamInfo binderKind tags fp storedLam
-                let paramEntityId = paramInfo ^. piTag . tagRefTag . tagInstance
-                vinfo <- mkVarInfo (fpFieldType fp)
-                pure
-                    ( FuncParam
-                        { _fpAnnotation =
-                            EvalPrep
-                            { _eType = fpFieldType fp
-                            , _eEvalId = paramEntityId
-                            }
-                        , _fpVarInfo = vinfo
-                        }
-                    , paramInfo
-                    )
             where
                 tag = fpTag fp
                 tagList = fieldParams <&> fpTag

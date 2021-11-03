@@ -14,7 +14,7 @@ module Lamdu.Sugar.Types
     , Definition(..), drName, drBody, drDefI
     , DefinitionBody(..), _DefinitionBodyExpression, _DefinitionBodyBuiltin
     , DefinitionExpression(..), deContent, dePresentationMode, deType
-    , Meta.SpecialArgs(..), Meta.PresentationMode
+    , Meta.SpecialArgs(..), Meta.PresentationMode, Meta._Operator, Meta._Verbose
     , Meta.DefinitionState(..)
     , DefinitionBuiltin(..), biType, biName, biSetName
     ) where

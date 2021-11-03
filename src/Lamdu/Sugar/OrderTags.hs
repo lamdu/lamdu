@@ -5,10 +5,10 @@ module Lamdu.Sugar.OrderTags
     ) where
 
 import qualified Control.Lens as Lens
-import           Control.Monad ((>=>))
+import           Control.Monad ((>=>), zipWithM_)
 import           Control.Monad.Transaction (MonadTransaction(..))
 import           Data.Property (mkProperty, pVal, pSet)
-import           Data.List (sortOn)
+import           Data.List (sortOn, elemIndex)
 import           Hyper
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Data.Anchors as Anchors
@@ -32,19 +32,20 @@ class Order i t where
         OrderT i (t # Annotated a)
     order = htraverse (Proxy @(Order i) #> orderNode)
 
-orderByTag :: MonadTransaction m i => (a -> Sugar.Tag name) -> (a -> i b) -> [a] -> i [b]
-orderByTag toTag ord =
+orderByTag :: MonadTransaction m i => [T.Tag] -> (a -> Sugar.Tag name) -> (a -> i b) -> [a] -> i [b]
+orderByTag presModeTags toTag ord =
     fmap (map fst . sortOn snd) . traverse f
     where
-        f x =
-            (,)
-            <$> ord x
-            <*> (toTag x ^. Sugar.tagVal & ExprIRef.readTagData & transaction)
+        f x = (,) <$> ord x <*> getOrder (toTag x ^. Sugar.tagVal)
+        getOrder t =
+            case elemIndex t presModeTags of
+            Just x -> Left x & pure
+            Nothing -> ExprIRef.readTagData t & transaction <&> Right
 
 orderComposite ::
     MonadTransaction m i =>
     OrderT i (Sugar.CompositeFields name (Ann a # Sugar.Type name o))
-orderComposite = Sugar.compositeFields (orderByTag fst (_2 orderType))
+orderComposite = Sugar.compositeFields (orderByTag [] fst (_2 orderType))
 
 orderTBody ::
     MonadTransaction m i =>
@@ -59,16 +60,17 @@ orderType :: MonadTransaction m i => OrderT i (Ann a # Sugar.Type name o)
 orderType = hVal orderTBody
 
 orderTaggedList ::
-    (MonadTransaction m f, Applicative o) =>
-    (a -> f a) -> Sugar.TaggedList name i o a -> f (Sugar.TaggedList name i o a)
-orderTaggedList orderItem (Sugar.TaggedList addFirst items) =
-    Sugar.TaggedList addFirst <$> Lens._Just (orderTaggedListBody orderItem) items
+    (MonadTransaction m f, MonadTransaction n o, Functor i) =>
+    [T.Tag] -> (a -> f a) -> Sugar.TaggedList name i o a -> f (Sugar.TaggedList name i o a)
+orderTaggedList presMode orderItem (Sugar.TaggedList addFirst items) =
+    Sugar.TaggedList addFirst <$> Lens._Just (orderTaggedListBody presMode orderItem) items
+    <&> addReorders
 
 orderTaggedListBody ::
     (MonadTransaction m f, Applicative o) =>
-    (a -> f a) -> Sugar.TaggedListBody name i o a -> f (Sugar.TaggedListBody name i o a)
-orderTaggedListBody orderItem tlb =
-    orderByTag (^. Sugar.tiTag . Sugar.tagRefTag) (Sugar.tiValue orderItem) (tlb ^.. SugarLens.taggedListBodyItems) <&>
+    [T.Tag] -> (a -> f a) -> Sugar.TaggedListBody name i o a -> f (Sugar.TaggedListBody name i o a)
+orderTaggedListBody presMode orderItem tlb =
+    orderByTag presMode (^. Sugar.tiTag . Sugar.tagRefTag) (Sugar.tiValue orderItem) (tlb ^.. SugarLens.taggedListBodyItems) <&>
     \(newHd : newTl) ->
     newTl <&> (`Sugar.TaggedSwappableItem` pure ())
     & Sugar.TaggedListBody newHd
@@ -76,7 +78,7 @@ orderTaggedListBody orderItem tlb =
 instance (MonadTransaction m o, MonadTransaction m i) => Order i (Sugar.Composite v name i o) where
     order (Sugar.Composite items punned tail_) =
         Sugar.Composite
-        <$> orderTaggedList orderNode items
+        <$> orderTaggedList [] orderNode items
         <*> pure punned
         <*> Sugar._OpenComposite orderNode tail_
 
@@ -84,7 +86,7 @@ instance (MonadTransaction m o, MonadTransaction m i) => Order i (Sugar.LabeledA
     order (Sugar.LabeledApply func specialArgs annotated punned) =
         Sugar.LabeledApply func
         <$> (Lens._Just . htraverse1) orderNode specialArgs
-        <*> orderByTag (^. Sugar.aaTag) (Sugar.aaExpr orderNode) annotated
+        <*> orderByTag [] (^. Sugar.aaTag) (Sugar.aaExpr orderNode) annotated
         ?? punned
 
 instance MonadTransaction m i => Order i (Const a)
@@ -98,49 +100,43 @@ instance (MonadTransaction m o, MonadTransaction m i) => Order i (Sugar.Lambda v
 
 instance (MonadTransaction m o, MonadTransaction m i) => Order i (Sugar.Function v name i o) where
     order x =
-        (Sugar.fParams . Sugar._RecordParams) (orderByTag (^. _2 . Sugar.piTag . Sugar.tagRefTag) pure) x
+        (Sugar.fParams . Sugar._RecordParams) (orderTaggedList [] pure) x
         >>= Sugar.fBody orderNode
-        <&> Sugar.fParams . Sugar._RecordParams %~ addReorders
-
-tagChoiceOptions ::
-    Lens.Setter
-    (Sugar.TagChoice n0 o) (Sugar.TagChoice n1 o)
-    (Sugar.TagOption n0 o) (Sugar.TagOption n1 o)
-tagChoiceOptions =
-    Lens.setting (\f (Sugar.TagChoice o n) -> Sugar.TagChoice (o <&> f) (f n))
 
 tagChoicePick :: Lens.IndexedSetter' T.Tag (Sugar.TagChoice n o) (o ())
-tagChoicePick = tagChoiceOptions . Lens.filteredBy (Sugar.toInfo . Sugar.tagVal) <. Sugar.toPick
+tagChoicePick = SugarLens.tagChoiceOptions . Lens.filteredBy (Sugar.toInfo . Sugar.tagVal) <. Sugar.toPick
 
-addReorders ::
-    (MonadTransaction m o, Functor i) =>
-    [(a, Sugar.RecordParamInfo n i o)] -> [(a, Sugar.RecordParamInfo n i o)]
-addReorders params =
-    params & Lens.itraversed <. _2 %@~ addParamActions
+addReorders :: (MonadTransaction m o, Functor i) => Sugar.TaggedList n i o a -> Sugar.TaggedList n i o a
+addReorders tl =
+    tl
+    & Sugar.tlAddFirst . Lens.mapped . tagChoicePick %@~ fixPrepend
+    & Lens.indexing SugarLens.taggedListItems %@~ fixItem
+    & Sugar.tlItems . Lens._Just . Sugar.tlTail . Lens.traversed <. Sugar.tsiSwapWithPrevious .@~ mkSwap
     where
-        tags = params ^.. traverse . _2 . Sugar.piTag . Sugar.tagRefTag . Sugar.tagVal
-        addParamActions ::
-            (MonadTransaction m o, Functor i) =>
-            Int -> Sugar.RecordParamInfo n i o -> Sugar.RecordParamInfo n i o
-        addParamActions i a =
-            a
-            & Sugar.piTag . Sugar.tagRefReplace . Lens.mapped . tagChoicePick %@~
-                (\t ->
-                    (transaction (
-                        ExprIRef.readTagData (a ^. Sugar.piTag . Sugar.tagRefTag . Sugar.tagVal)
-                        <&> (^. tagOrder) >>= DataOps.setTagOrder t) >>))
-            & Sugar.piAddNext . Lens.mapped . tagChoicePick %@~
-                (\t -> (transaction (Lens.itraverse_ (flip DataOps.setTagOrder) (before <> [t] <> after)) >>))
-            & Sugar.piMOrderBefore .~
-                (setOrder ([0..i-1] <> [i, i-1] <> [i+1..length tags-1]) <$ guard (i > 0))
-            & Sugar.piMOrderAfter .~
-                (setOrder ([0..i] <> [i+1, i] <> [i+2..length tags-1]) <$ guard (i + 1 < length tags))
+        tags = tl ^.. SugarLens.taggedListItems . Sugar.tiTag . Sugar.tagRefTag . Sugar.tagVal
+        fixPrepend tag = (fixOrders (tag : tags) *>)
+        fixItem idx =
+            (Sugar.tiTag . Sugar.tagRefReplace . Lens.mapped . tagChoicePick %@~ \n -> (fixOrders (pre <> (n : post)) *>)) .
+            (Sugar.tiAddAfter . Lens.mapped . tagChoicePick %@~ \n -> (fixOrders (pre <> (cur : n : post)) *>))
             where
-                (before, after) = splitAt (i+1) tags
-        setOrder :: MonadTransaction m o => [Int] -> o ()
-        setOrder o =
-            Lens.itraverse_ (flip DataOps.setTagOrder) (o <&> \i -> tags ^?! Lens.ix i)
-            & transaction
+                (pre, cur : post) = splitAt idx tags
+        mkSwap idx =
+            fixOrders (pre <> (y : x : post))
+            where
+                (pre, x : y : post) = splitAt idx tags
+
+-- Change sequence so that each item will be larger than previous.
+fixRisingSequence :: [Int] -> [Int]
+fixRisingSequence s =
+    -- TODO: smart algorithm that does minimal changes to sequence
+    enumFromTo 0 (length s - 1)
+
+fixOrders :: MonadTransaction m o => [T.Tag] -> o ()
+fixOrders tags =
+    traverse ExprIRef.readTagData tags <&> (^.. traverse . tagOrder)
+    <&> fixRisingSequence
+    >>= zipWithM_ DataOps.setTagOrder tags
+    & transaction
 
 instance (MonadTransaction m o, MonadTransaction m i) => Order i (Sugar.PostfixFunc v name i o) where
     order (Sugar.PfCase x) = order x <&> Sugar.PfCase
@@ -187,6 +183,20 @@ orderNode ::
     OrderT i (Annotated a # f)
 orderNode = hVal order
 
+setVerboseWhenNeeded :: (Functor i, Applicative o) => o () -> Sugar.TaggedListBody name i o a -> Sugar.TaggedListBody name i o a
+setVerboseWhenNeeded setVerbose t =
+    Sugar.TaggedListBody
+    { Sugar._tlHead = t ^. Sugar.tlHead & onTaggedItem
+    , Sugar._tlTail =
+        t ^. Sugar.tlTail
+        & Lens.ix 0 %~ (Sugar.tsiItem %~ onTaggedItem) . (Sugar.tsiSwapWithPrevious %~ (setVerbose *>))
+        & Lens.ix 1 . Sugar.tsiSwapWithPrevious %~ (setVerbose *>)
+    }
+    where
+        onTaggedItem =
+            (Sugar.tiDelete %~ (setVerbose *>)) .
+            (SugarLens.taggedItemTagChoices . SugarLens.tagChoiceOptions . Sugar.toPick %~ (setVerbose *>))
+
 orderDef ::
     (MonadTransaction m o, MonadTransaction m i) =>
     OrderT i (Sugar.Definition v name i o a)
@@ -197,20 +207,8 @@ orderDef def =
         (orderNode >=> (hVal . Sugar._BodyFunction . Sugar.fParams . Sugar._RecordParams) processPresentationMode)
     where
         processPresentationMode orig =
-            Anchors.assocPresentationMode (def ^. Sugar.drDefI) ^. mkProperty & transaction <&>
-            \presModeProp ->
-            let
-                setVerboseWhenNeeded c l =
-                    Lens.taking c traverse . _2 . l . Lens._Just %~ (setToVerbose >>)
-                setToVerbose = (presModeProp ^. pSet) Sugar.Verbose & transaction
-                orderOp x =
-                    case presModeProp ^. pVal of
-                    Sugar.Verbose -> x
-                    Sugar.Operator l r ->
-                        fields (== l) <> fields (== r) <> fields (`notElem` [l, r])
-                    where
-                        fields p = filter (p . (^. _2 . Sugar.piTag . Sugar.tagRefTag . Sugar.tagVal)) x
-            in
-            setVerboseWhenNeeded 3 Sugar.piMOrderBefore orig
-            & setVerboseWhenNeeded 2 Sugar.piMOrderAfter
-            & orderOp
+            do
+                presModeProp <- Anchors.assocPresentationMode (def ^. Sugar.drDefI) ^. mkProperty & transaction
+                let setToVerbose = (presModeProp ^. pSet) Sugar.Verbose & transaction
+                orderTaggedList (presModeProp ^.. pVal . Sugar._Operator . Lens.both) pure orig
+                    <&> Sugar.tlItems . Lens._Just %~ setVerboseWhenNeeded setToVerbose

@@ -31,6 +31,7 @@ import qualified Lamdu.I18N.Navigation as Texts
 import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
+import qualified Lamdu.Sugar.Lens as SugarLens
 
 addScopeEdit :: _ => m (Maybe (M.Widget o) -> Responsive o -> Responsive o)
 addScopeEdit =
@@ -110,7 +111,7 @@ mkLightLambda params myId =
             case params of
             Sugar.NullParam{} -> []
             Sugar.VarParam (_, p) -> [p ^. Sugar.vpiTag . Sugar.oTag . Sugar.tagRefTag . Sugar.tagInstance]
-            Sugar.RecordParams ps -> ps <&> (^. _2 . Sugar.piTag . Sugar.tagRefTag . Sugar.tagInstance)
+            Sugar.RecordParams ps -> ps ^.. SugarLens.taggedListItems . Sugar.tiTag . Sugar.tagRefTag . Sugar.tagInstance
 
 make :: _ => ExprGui.Expr Sugar.Lambda i o -> GuiM env i o (Responsive o)
 make (Ann (Const pl) lam) =

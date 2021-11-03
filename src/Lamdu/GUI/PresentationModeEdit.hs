@@ -16,6 +16,7 @@ import qualified Lamdu.Config.Theme.TextColors as TextColors
 import           Lamdu.Data.Meta (_Operator)
 import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.I18N.CodeUI as Texts
+import qualified Lamdu.Sugar.Lens as SugarLens
 import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
@@ -50,8 +51,7 @@ make myId (Sugar.RecordParams params) prop =
             ?? defConfig ?? myId
             <&> Element.scale (theme ^. Theme.presentationChoiceScaleFactor)
     where
-        paramTags =
-            params ^.. traverse . _2 . Sugar.piTag . Sugar.tagRefTag . Sugar.tagVal
+        paramTags = params ^.. SugarLens.taggedListItems . Sugar.tiTag . Sugar.tagRefTag . Sugar.tagVal
         mkPair mode = Styled.focusableLabel (lens mode) <&> (,) mode
 make _ _ _ =
     -- This shouldn't happen?

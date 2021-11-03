@@ -244,18 +244,20 @@ namedVarParamEditInfo widgetId paramInfo nameEdit =
     }
 
 namedRecordParamEditInfo ::
-    Widget.Id -> Sugar.RecordParamInfo Name i o ->
-    M.TextWidget o ->
-    ParamEdit.Info i o
-namedRecordParamEditInfo widgetId paramInfo nameEdit =
-    ParamEdit.Info
-    { ParamEdit._iNameEdit = nameEdit
-    , ParamEdit._iAddNext = paramInfo ^. Sugar.piAddNext & Sugar.AddNext & Just
-    , ParamEdit._iMOrderBefore = paramInfo ^. Sugar.piMOrderBefore
-    , ParamEdit._iMOrderAfter = paramInfo ^. Sugar.piMOrderAfter
-    , ParamEdit._iDel = paramInfo ^. Sugar.piDelete
-    , ParamEdit._iId = widgetId
-    }
+    _ => Sugar.TaggedItem Name i o a -> GuiM env i o (a, ParamEdit.Info i o)
+namedRecordParamEditInfo item =
+    TagEdit.makeParamTag Nothing (item ^. Sugar.tiTag) <&>
+    \nameEdit ->
+    ( item ^. Sugar.tiValue
+    , ParamEdit.Info
+        { ParamEdit._iNameEdit = nameEdit
+        , ParamEdit._iAddNext = item ^. Sugar.tiAddAfter & Sugar.AddNext & Just
+        , ParamEdit._iMOrderBefore = Nothing
+        , ParamEdit._iMOrderAfter = Nothing
+        , ParamEdit._iDel = item ^. Sugar.tiDelete & void
+        , ParamEdit._iId = item ^. Sugar.tiTag . Sugar.tagRefTag . Sugar.tagInstance & WidgetIds.fromEntityId
+        }
+    )
 
 makeParamsEdit ::
     _ =>
@@ -272,15 +274,19 @@ makeParamsEdit annotationOpts delVarBackwardsId lhsId rhsId params =
         where
             nullParamId = Widget.joinId lhsId ["param"]
     Sugar.RecordParams ps ->
-        ps
-        & traverse . _2 %%~ onFpInfo
-        where
-            onFpInfo x =
-                TagEdit.makeParamTag Nothing (x ^. Sugar.piTag)
-                <&> namedRecordParamEditInfo widgetId x
-                where
-                    widgetId =
-                        x ^. Sugar.piTag . Sugar.tagRefTag . Sugar.tagInstance & WidgetIds.fromEntityId
+        case ps ^. Sugar.tlItems of
+        Nothing -> error "Empty record params?"
+        Just items ->
+            (:)
+            <$> namedRecordParamEditInfo (items ^. Sugar.tlHead)
+            <*> traverse swapable (items ^. Sugar.tlTail)
+            <&> zipWith
+                (Lens._2 . ParamEdit.iMOrderAfter .~)
+                ((items ^.. Sugar.tlTail . traverse . Sugar.tsiSwapWithPrevious <&> Just) <> [Nothing])
+            where
+                swapable item =
+                    namedRecordParamEditInfo (item ^. Sugar.tsiItem)
+                    <&> Lens._2 . ParamEdit.iMOrderBefore ?~ item ^. Sugar.tsiSwapWithPrevious
     Sugar.VarParam (param, pInfo) ->
         TagEdit.makeParamTag (Just (tag ^. Sugar.oPickAnon)) (tag ^. Sugar.oTag)
         <&> namedVarParamEditInfo widgetId pInfo
@@ -389,7 +395,7 @@ makeFunctionParts funcApplyLimit (Ann (Const pl) func) delVarBackwardsId =
             Sugar.VarParam (_, pInfo) ->
                 pInfo ^. Sugar.vpiTag . Sugar.oTag . Sugar.tagRefTag . Sugar.tagInstance & WidgetIds.fromEntityId
             Sugar.RecordParams ps ->
-                ps ^?! traverse . _2 . Sugar.piTag . Sugar.tagRefTag . Sugar.tagInstance
+                ps ^?! SugarLens.taggedListItems . Sugar.tiTag . Sugar.tagRefTag . Sugar.tagInstance
                 & WidgetIds.fromEntityId
         scopesNavId = Widget.joinId myId ["scopesNav"]
         bodyId = func ^. Sugar.fBody . annotation & WidgetIds.fromExprPayload

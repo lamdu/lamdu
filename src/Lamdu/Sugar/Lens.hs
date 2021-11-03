@@ -12,6 +12,8 @@ module Lamdu.Sugar.Lens
     , paneBinder
     , unfinishedPayloads
     , taggedListItems, taggedListBodyItems
+    , taggedItemTagChoices
+    , tagChoiceOptions
     ) where
 
 import           Control.Lens (Traversal)
@@ -145,7 +147,7 @@ binderParamsFuncParams ::
     (FuncParam v0)
     (FuncParam v1)
 binderParamsFuncParams f (NullParam x) = _1 f x <&> NullParam
-binderParamsFuncParams f (RecordParams x) = (traverse . _1) f x <&> RecordParams
+binderParamsFuncParams f (RecordParams x) = traverse f x <&> RecordParams
 binderParamsFuncParams f (VarParam x) = _1 f x <&> VarParam
 
 paneBinder :: Traversal (Pane v0 n i o a0) (Pane v1 n i o a1) (Annotated a0 # Assignment v0 n i o) (Annotated a1 # Assignment v1 n i o)
@@ -160,6 +162,13 @@ taggedListItems ::
     Traversal (TaggedList n i o a0) (TaggedList n i o a1)
     (TaggedItem n i o a0) (TaggedItem n i o a1)
 taggedListItems = tlItems . Lens._Just . taggedListBodyItems
+
+taggedItemTagChoices :: Functor i => Lens.Setter' (TaggedItem n i o a) (TagChoice n o)
+taggedItemTagChoices =
+    Lens.sets (\f (TaggedItem t d a v) -> TaggedItem (t & tagRefReplace . Lens.mapped %~ f) d (a <&> f) v)
+
+tagChoiceOptions :: Lens.Setter (TagChoice n0 o0) (TagChoice n1 o1) (TagOption n0 o0) (TagOption n1 o1)
+tagChoiceOptions = Lens.sets (\f (TagChoice o n) -> TagChoice (o <&> f) (f n))
 
 class Annotations a b s t where
     annotations :: Traversal s t a b

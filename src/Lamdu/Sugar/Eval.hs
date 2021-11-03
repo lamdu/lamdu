@@ -111,21 +111,21 @@ instance AddEval i n Function where
                 )
             RecordParams ps ->
                 ps
-                <&> fixParam
+                & SugarLens.taggedListItems %~ fixItem
                 & RecordParams
                 where
-                    fixParam (fp, info) =
-                        ( fp & fpAnnotation . _AnnotationVal %~
-                            \v ->
-                            ctx ^. evalResults
-                            <&> (^. erAppliesOfLam . Lens.at u)
-                            <&> fromMaybe mempty
-                            <&> Lens.mapped . Lens.mapped . _2 %~
-                                addTypes (ctx ^. nominalsMap) (v ^. eType) .
-                                extractField () (info ^. piTag . tagRefTag . tagVal)
-                            & ConvertEval.param (EntityId.ofEvalOf (info ^. piTag . tagRefTag . tagInstance))
-                        , info
-                        )
+                    fixItem taggedItem =
+                        taggedItem & tiValue . fpAnnotation . _AnnotationVal %~
+                        \v ->
+                        ctx ^. evalResults
+                        <&> (^. erAppliesOfLam . Lens.at u)
+                        <&> fromMaybe mempty
+                        <&> Lens.mapped . Lens.mapped . _2 %~
+                            addTypes (ctx ^. nominalsMap) (v ^. eType) .
+                            extractField () (t ^. tagVal)
+                        & ConvertEval.param (EntityId.ofEvalOf (t ^. tagInstance))
+                        where
+                            t = taggedItem ^. tiTag . tagRefTag
         , _fBody = addToNode ctx _fBody
         , _fBodyScopes =
             ctx ^. evalResults

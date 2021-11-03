@@ -124,7 +124,7 @@ instance Eq (Sugar.TagPane f) where
     , ''Sugar.ResList, ''Sugar.ResTree, ''Sugar.AddFirstParam, ''Sugar.AddNextParam
     , ''Sugar.BinderVarForm, ''Sugar.BinderVarRef, ''Sugar.Payload
     , ''Sugar.DefinitionBuiltin, ''Sugar.DefinitionForm
-    , ''Sugar.GetVar, ''Sugar.Leaf, ''Sugar.NameRef, ''Sugar.RecordParamInfo, ''Sugar.VarParamInfo, ''Sugar.ParamRef
+    , ''Sugar.GetVar, ''Sugar.Leaf, ''Sugar.NameRef, ''Sugar.VarParamInfo, ''Sugar.ParamRef
     , ''Sugar.ResVal, ''Sugar.Scheme, ''Sugar.TagRef, ''Sugar.TagChoice, ''Sugar.TagOption
     , ''Sugar.NominalPane, ''Sugar.NominalParam, ''Sugar.ParamKind
     ] & sequenceA <&> concat

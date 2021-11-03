@@ -408,16 +408,16 @@ funcSignature apply =
 toExpression :: (MonadNaming m, Walk m v0 v1, Walk m a0 a1, ToBody e) => WalkExpr e m o v0 v1 a0 a1
 toExpression = toNode toBody
 
-withRecordParamInfo ::
-    MonadNaming m =>
+withRecordParam ::
+    (MonadNaming m, Walk m v0 v1) =>
     IsUnambiguous ->
-    RecordParamInfo (OldName m) (IM m) o ->
-    CPS m (RecordParamInfo (NewName m) (IM m) o)
-withRecordParamInfo unambig x@RecordParamInfo{_piTag, _piAddNext} =
-    (,)
-    <$> withTagRef unambig TaggedVar _piTag
-    <*> liftCPS (opRun <&> \run -> _piAddNext >>= run . walk)
-    <&> \(_piTag, _piAddNext) -> x{_piTag, _piAddNext}
+    TaggedItem (OldName m) (IM m) o (FuncParam v0) ->
+    CPS m (TaggedItem (NewName m) (IM m) o (FuncParam v1))
+withRecordParam unambig (TaggedItem t d a v) =
+    (`TaggedItem` d)
+    <$> withTagRef unambig TaggedVar t
+    <*> liftCPS (opRun <&> \run -> a >>= run . walk)
+    <*> withFuncParam v
 
 withVarParamInfo ::
     MonadNaming m =>
@@ -432,25 +432,25 @@ withVarParamInfo unambig x@VarParamInfo{_vpiTag, _vpiAddNext} =
 
 withFuncParam ::
     (MonadNaming m, Walk m v0 v1) =>
-    (a -> CPS m b) ->
-    (FuncParam v0, a) ->
-    CPS m (FuncParam v1, b)
-withFuncParam f (FuncParam pl varInfo, info) =
-    (,)
-    <$>
-    ( FuncParam
-        <$> liftCPS (walk pl)
-        <*> pure varInfo
-    ) <*> f info
+    FuncParam v0 ->
+    CPS m (FuncParam v1)
+withFuncParam = fpAnnotation (liftCPS . walk)
 
 withBinderParams ::
     (MonadNaming m, Walk m v0 v1) =>
     IsUnambiguous ->
     BinderParams v0 (OldName m) (IM m) o ->
     CPS m (BinderParams v1 (NewName m) (IM m) o)
-withBinderParams _ (NullParam x) = withFuncParam pure x <&> NullParam
-withBinderParams u (RecordParams xs) = traverse (withFuncParam (withRecordParamInfo u)) xs <&> RecordParams
-withBinderParams u (VarParam x) = withFuncParam (withVarParamInfo u) x <&> VarParam
+withBinderParams _ (NullParam (funcParam, info)) = withFuncParam funcParam <&> (,) ?? info <&> NullParam
+withBinderParams u (RecordParams (TaggedList addFirst items)) =
+    TaggedList
+    <$> liftCPS (opRun <&> \run -> addFirst >>= run . walk)
+    <*> (Lens._Just . SugarLens.taggedListBodyItems) (withRecordParam u) items <&> RecordParams
+withBinderParams u (VarParam (funcParam, info)) =
+    (,)
+    <$> withFuncParam funcParam
+    <*> withVarParamInfo u info
+    <&> VarParam
 
 type Top t n i (o :: Type -> Type) p = t (Annotation (EvaluationScopes n i) n) n i o p
 

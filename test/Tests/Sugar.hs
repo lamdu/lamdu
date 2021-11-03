@@ -115,7 +115,7 @@ testChangeParam =
             replBody . _BodySimpleApply . V.appFunc .
             hVal . _BodySimpleApply . V.appArg .
             hVal . _BodyLam . lamFunc . fParams . _RecordParams .
-            Lens.ix 0 . _2 . piTag . tagRefReplace
+            tlItems . Lens._Just . tlHead . tiTag . tagRefReplace
             >>= lift . (^. tcNewTag . toPick)
 
 -- | Test for issue #373
@@ -360,14 +360,13 @@ openTopLevelDef =
 delDefParam :: Test
 delDefParam =
     testSugarActions "def-with-params.json"
-    [openTopLevelDef, lift . (^?! action)]
+    [openTopLevelDef, lift . void . (^?! action)]
     & testCase "del-def-param"
     where
         action =
             waPanes . traverse . SugarLens.paneBinder .
             hVal . _BodyFunction .
-            fParams . _RecordParams . traverse .
-            _2 . piDelete
+            fParams . _RecordParams . tlItems . Lens._Just . tlHead . tiDelete
 
 updateDef :: Test
 updateDef =
@@ -545,12 +544,12 @@ testParamsOrder =
                 do
                     mOrderBefore <-
                         convertWorkArea env
-                        <&> (^?! funcParams . Lens.ix 1 . _2 . piMOrderBefore)
+                        <&> (^? funcParams . tlTail . traverse . tsiSwapWithPrevious)
                     case mOrderBefore of
                         Just a -> lift a
                         Nothing -> error ("cant reorder before " <> msg)
         let readTags =
-                convertWorkArea env <&> (^.. funcParams . traverse . _2 . piTag . tagRefTag . tagVal)
+                convertWorkArea env <&> (^.. funcParams . SugarLens.taggedListBodyItems . tiTag . tagRefTag . tagVal)
         testProgram "func-params.json" $
             do
                 params0 <- readTags
@@ -561,8 +560,8 @@ testParamsOrder =
                 params2 <- readTags
                 assertEq "params should be same" params0 params2
     where
-        funcParams :: Lens.Traversal' (WorkArea v n i o a) [(FuncParam v, RecordParamInfo n i o)]
-        funcParams = replBinder . _BinderLet . lValue . hVal . _BodyFunction . fParams . _RecordParams
+        funcParams :: Lens.Traversal' (WorkArea v n i o a) (TaggedListBody n i o (FuncParam v))
+        funcParams = replBinder . _BinderLet . lValue . hVal . _BodyFunction . fParams . _RecordParams . tlItems . Lens._Just
 
 testAddToInferredParamList :: Test
 testAddToInferredParamList =
@@ -573,11 +572,10 @@ testAddToInferredParamList =
             testProgram "func-params.json" $
             do
                 convertWorkArea env
-                    >>= (^?! elseClause . lamBodyParams .
-                            Lens.ix 0 . _2 . piAddNext)
+                    >>= (^?! elseClause . lamBodyParams . tiAddAfter)
                     >>= lift . (^. tcNewTag . toPick)
                 convertWorkArea env
-        let paramList = workArea ^?! elseClause . _BodyFragment . fExpr . hVal . lamBodyParams
+        let paramList = workArea ^.. elseClause . _BodyFragment . fExpr . hVal . lamBodyParams
         assertEqual "Parameter list length" (length paramList) 3
     where
         elseClause :: Lens.Traversal' (WorkArea v n i o a) (Term v n i o # Annotated a)
@@ -586,8 +584,8 @@ testAddToInferredParamList =
             hVal . _BinderTerm . _BodyIfElse . iElse .
             hVal . _SimpleElse . _BodyLam . lamFunc . fBody .
             hVal . _BinderTerm
-        lamBodyParams :: Lens.Traversal' (Term v n i o # k) [(FuncParam v, RecordParamInfo n i o)]
-        lamBodyParams = _BodyLam . lamFunc . fParams . _RecordParams
+        lamBodyParams :: Lens.Traversal' (Term v n i o # k) (TaggedItem n i o (FuncParam v))
+        lamBodyParams = _BodyLam . lamFunc . fParams . _RecordParams . SugarLens.taggedListItems
 
 testInfixWithArgParens :: Test
 testInfixWithArgParens =
