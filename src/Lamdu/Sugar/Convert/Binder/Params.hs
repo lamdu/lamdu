@@ -300,7 +300,7 @@ fieldParamInfo binderKind tags fp storedLam tag =
         pure RecordParamInfo
             { _piTag = tag
             , _piAddNext = addNext
-            , _piDelete = del
+            , _piDelete = del <* postProcess
             , _piMOrderBefore = Nothing
             , _piMOrderAfter = Nothing
             }
@@ -575,7 +575,7 @@ makeVarParamInfo tag binderKind storedLam =
         pure VarParamInfo
             { _vpiTag = tag
             , _vpiAddNext = addNext
-            , _vpiDelete = del
+            , _vpiDelete = del <* postProcess
             }
     where
         param = storedLam ^. slLam . V.tlIn
@@ -675,14 +675,6 @@ isParamAlwaysUsedWithGetField (V.TypedLam param _paramTyp bod) =
                 ) x
                 & and
 
--- Post process param delete action
-postProcessActions ::
-    Monad m => T m () -> ConventionalParams m -> ConventionalParams m
-postProcessActions post x =
-    x
-    & cpParams . Lens._Just . _RecordParams . traverse . _2 . piDelete %~ (<* post)
-    & cpParams . Lens._Just . _VarParam . _2 . vpiDelete %~ (<* post)
-
 convertLamParams ::
     Monad m =>
     V.TypedLam V.Var (HCompose Prune T.Type) V.Term # Ann (Input.Payload m a) ->
@@ -703,7 +695,6 @@ convertNonEmptyParams mPresMode binderKind lambda lambdaPl =
             Lens.view (ConvertM.scScopeInfo . ConvertM.siTagParamInfos)
             <&> Map.keysSet
         sugarParamsRecord <- Lens.view (ConvertM.scConfig . Config.sugarsEnabled . Config.parametersRecord)
-        postProcess <- ConvertM.postProcessAssert
         case lambdaPl ^. Input.inferredType . _Pure of
             T.TFun (FuncType (Pure (T.TRecord composite)) _)
                 | sugarParamsRecord
@@ -720,7 +711,6 @@ convertNonEmptyParams mPresMode binderKind lambda lambdaPl =
                         convertNonRecordParam binderKind lambda lambdaPl
                         <&> cpParamInfos <>~ (fieldParams & map mkCollidingInfo & mconcat)
             _ -> convertNonRecordParam binderKind lambda lambdaPl
-            <&> postProcessActions postProcess
     where
         param = lambda ^. V.tlIn
         mkCollidingInfo fp = mkParamInfo param fp <&> ConvertM.CollidingFieldParam
