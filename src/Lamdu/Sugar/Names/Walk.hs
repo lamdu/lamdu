@@ -18,6 +18,7 @@ import           Hyper.Syntax (FuncType(..))
 import qualified Lamdu.Calc.Type as T
 import           Lamdu.Sugar.Convert.Input (userData)
 import           Lamdu.Sugar.Internal
+import qualified Lamdu.Sugar.Lens as SugarLens
 import           Lamdu.Sugar.Names.CPS (CPS(..), liftCPS)
 import qualified Lamdu.Sugar.Types as Sugar
 import           Lamdu.Sugar.Types hiding (Tag(..), Type)
@@ -329,15 +330,9 @@ instance (Walk m pa pb, i ~ IM m, a ~ OldName m, b ~ NewName m) => Walk m (Tagge
         <*> walk _tiValue
         <&> \(_tiTag, _tiAddAfter, _tiValue) -> ti{_tiTag,_tiValue,_tiAddAfter}
 
-instance (Walk m pa pb, i ~ IM m, a ~ OldName m, b ~ NewName m) => Walk m (TaggedListBody a i o pa) (TaggedListBody b i o pb) where
-    walk (TaggedListBody hd tl) =
-        TaggedListBody <$> walk hd <*> (traverse . tsiItem) walk tl
-
 instance (Walk m pa pb, i ~ IM m, a ~ OldName m, b ~ NewName m) => Walk m (TaggedList a i o pa) (TaggedList b i o pb) where
     walk (TaggedList add items) =
-        TaggedList
-        <$> walk add
-        <*> Lens._Just walk items
+        TaggedList <$> walk add <*> (Lens._Just . SugarLens.taggedListBodyItems) walk items
 
 instance ToBody Composite where
     toBody (Composite items punned tail_) =
