@@ -11,7 +11,7 @@ module Lamdu.Sugar.Lens
     , getVarName
     , paneBinder
     , unfinishedPayloads
-    , taggedListItems
+    , taggedListItems, taggedListBodyItems
     ) where
 
 import           Control.Lens (Traversal)
@@ -151,10 +151,15 @@ binderParamsFuncParams f (VarParam x) = _1 f x <&> VarParam
 paneBinder :: Traversal (Pane v0 n i o a0) (Pane v1 n i o a1) (Annotated a0 # Assignment v0 n i o) (Annotated a1 # Assignment v1 n i o)
 paneBinder = paneBody . _PaneDefinition . drBody . _DefinitionBodyExpression . deContent
 
-taggedListItems ::
+taggedListBodyItems ::
     Traversal (TaggedListBody n0 i0 o a0) (TaggedListBody n1 i1 o a1)
     (TaggedItem n0 i0 o a0) (TaggedItem n1 i1 o a1)
-taggedListItems f (TaggedListBody hd tl) = TaggedListBody <$> f hd <*> (traverse . tsiItem) f tl
+taggedListBodyItems f (TaggedListBody hd tl) = TaggedListBody <$> f hd <*> (traverse . tsiItem) f tl
+
+taggedListItems ::
+    Traversal (TaggedList n i o a0) (TaggedList n i o a1)
+    (TaggedItem n i o a0) (TaggedItem n i o a1)
+taggedListItems = tlItems . Lens._Just . taggedListBodyItems
 
 class Annotations a b s t where
     annotations :: Traversal s t a b

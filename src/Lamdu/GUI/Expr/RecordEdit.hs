@@ -137,7 +137,7 @@ make (Ann (Const pl) (Sugar.Composite (Sugar.TaggedList addField mTlBody) punned
             <&> Widget.weakerEvents (addFieldEventMap <> tailEventMap)
             & stdWrapParentExpr pl
     where
-        fields = mTlBody ^.. Lens._Just . SugarLens.taggedListItems
+        fields = mTlBody ^.. Lens._Just . SugarLens.taggedListBodyItems
         postProcess =
             case recordTail of
             Sugar.OpenComposite restExpr -> makeOpenRecord restExpr

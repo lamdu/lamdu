@@ -68,7 +68,7 @@ orderTaggedListBody ::
     (MonadTransaction m f, Applicative o) =>
     (a -> f a) -> Sugar.TaggedListBody name i o a -> f (Sugar.TaggedListBody name i o a)
 orderTaggedListBody orderItem tlb =
-    orderByTag (^. Sugar.tiTag . Sugar.tagRefTag) (Sugar.tiValue orderItem) (tlb ^.. SugarLens.taggedListItems) <&>
+    orderByTag (^. Sugar.tiTag . Sugar.tagRefTag) (Sugar.tiValue orderItem) (tlb ^.. SugarLens.taggedListBodyItems) <&>
     \(newHd : newTl) ->
     newTl <&> (`Sugar.TaggedSwappableItem` pure ())
     & Sugar.TaggedListBody newHd

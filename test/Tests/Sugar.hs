@@ -511,8 +511,7 @@ testPunnedIso =
     testCase "punned-iso" $
     Env.make >>= testProgram "punned-fields.json" . convertWorkArea
     <&> (^.. replBinder . _BinderLet . lBody . hVal . _BinderLet . lBody .
-            hVal . _BinderTerm . _BodyRecord . cList . tlItems .
-            Lens._Just . SugarLens.taggedListItems)
+            hVal . _BinderTerm . _BodyRecord . cList . SugarLens.taggedListItems)
     <&> Lens.mapped %~
         (\x -> (x ^. tiTag . tagRefTag . tagName, x ^? tiValue . hVal . _BodyLeaf . _LeafGetVar . _GetBinder . bvNameRef . nrName))
     >>= assertEqual "Record items expected to be punned" []

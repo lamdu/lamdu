@@ -113,7 +113,7 @@ makeAltsWidget altsId (Sugar.TaggedList addAlt alts) punned =
                 <&> (\x -> [TaggedItem Nothing x Nothing])
         existingAltWidgets <-
             traverse makeAltRow
-            (alts ^.. Lens._Just . SugarLens.taggedListItems)
+            (alts ^.. Lens._Just . SugarLens.taggedListBodyItems)
             <&> (<> punnedWidgets)
         newAlts <-
             GuiState.isSubCursor ?? addAltId altsId

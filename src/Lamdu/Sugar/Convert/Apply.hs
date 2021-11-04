@@ -84,7 +84,7 @@ defParamsMatchArgs var record frozenDeps =
         defArgs ^? freRest . _Pure . T._REmpty
         let sFields =
                 record ^..
-                ( cList . tlItems . Lens._Just . taggedListItems . tiTag . tagRefTag . tagVal
+                ( cList . taggedListItems . tiTag . tagRefTag . tagVal
                     <> cPunnedItems . traverse . pvVar . hVal . Lens._Wrapped . getVarName . inTag
                 ) & Set.fromList
         guard (sFields == Map.keysSet (defArgs ^. freExtends))
@@ -148,7 +148,7 @@ convertLabeled subexprs funcS argS exprPl =
         -- that is closed
         Lens.has (cTail . _ClosedComposite) record & guard
         -- with at least 2 fields
-        length (record ^.. cList . tlItems . Lens._Just . taggedListItems) + length (record ^. cPunnedItems) >= 2 & guard
+        length (record ^.. cList . taggedListItems) + length (record ^. cPunnedItems) >= 2 & guard
         frozenDeps <- Lens.view ConvertM.scFrozenDeps <&> Property.value
         let var = funcVar ^. hVal . Lens._Wrapped . bvVar
         -- If it is an external (non-recursive) def (i.e: not in
@@ -165,7 +165,7 @@ convertLabeled subexprs funcS argS exprPl =
         bod <-
             PresentationModes.makeLabeledApply
             funcVar
-            (record ^.. cList . tlItems . Lens._Just . taggedListItems <&> getArg)
+            (record ^.. cList . taggedListItems <&> getArg)
             (record ^. cPunnedItems) exprPl
             <&> BodyLabeledApply & lift
         let userPayload =
