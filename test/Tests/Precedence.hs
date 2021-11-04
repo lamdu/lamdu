@@ -135,7 +135,7 @@ test514 =
                     (Stub.node . Sugar.BodyLeaf . Sugar.LeafGetVar . Sugar.GetParam)
                     (Sugar.ParamRef (Stub.nameRef (Stub.taggedEntityName "x" "x")) Sugar.NormalBinder)
                     $$ Stub.hole
-                    & Stub.funcExpr [("x", "x")]
+                    & Stub.funcExpr "x" "x"
                 } & Stub.node
             , Sugar._fHeal = Unit
             , Sugar._fTypeMismatch = Nothing

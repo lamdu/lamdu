@@ -87,7 +87,7 @@ workArea396 =
     Sugar.WorkArea
     { Sugar._waRepl = Stub.repl lamExpr
     , Sugar._waPanes =
-        [ Stub.binderExpr [("paneVar", "num")] Stub.hole
+        [ Stub.funcExpr "paneVar" "num" Stub.hole & Sugar.BodyFunction & Stub.node
             & Stub.def lamType "def" "def"
             & Stub.pane
         ]
@@ -99,7 +99,7 @@ workArea396 =
             Sugar.BodyLam Sugar.Lambda
             { Sugar._lamMode = Sugar.NormalBinder
             , Sugar._lamApplyLimit = Sugar.UnlimitedFuncApply
-            , Sugar._lamFunc = Stub.funcExpr [("lamVar", "num")] Stub.hole
+            , Sugar._lamFunc = Stub.funcExpr "lamVar" "num" Stub.hole
             } & Stub.expr
 
 workAreaGlobals :: IO ()
@@ -124,4 +124,7 @@ workAreaGlobals =
                 [ "Unexpected/bad collision for name", show text
                 , show textCollision, show tagCollision
                 ] & assertString
-        trivialBinder = Stub.binderExpr [] Stub.hole
+        trivialBinder =
+            Sugar.AssignPlain (Sugar.AddInitialParam Unit) (Sugar.BinderTerm (Sugar.BodyLeaf (Sugar.LeafHole (Sugar.Hole mempty))))
+            & Sugar.BodyPlain
+            & Ann (Const Stub.payload)

@@ -163,39 +163,21 @@ repl (Ann (Const pl) x) =
     , Sugar._replResult = CurAndPrev Nothing Nothing
     }
 
-mkFuncRecordParam ::
-    (UUID, T.Tag) -> (Sugar.FuncParam (Sugar.Annotation v name), Sugar.RecordParamInfo InternalName Identity Unit)
-mkFuncRecordParam (paramVar, paramTag) =
-    ( Sugar.FuncParam
-        { Sugar._fpAnnotation = Sugar.AnnotationNone
-        , Sugar._fpVarInfo = Sugar.VarGeneric
-        }
-    , Sugar.RecordParamInfo
-        { Sugar._piTag = mkTag (Just paramVar) paramTag
-        , Sugar._piAddNext = tagRefReplace
-        , Sugar._piDelete = Unit
-        , Sugar._piMOrderBefore = Nothing
-        , Sugar._piMOrderAfter = Nothing
-        }
-    )
-
 funcExpr ::
-    [(UUID, T.Tag)] -> Expr ->
+    UUID -> T.Tag -> Expr ->
     Sugar.Body Sugar.Function (Sugar.Annotation (Sugar.EvaluationScopes InternalName Identity) InternalName) InternalName Identity Unit
-funcExpr params (Ann (Const ba) bx) =
+funcExpr paramVar paramTag (Ann (Const ba) bx) =
     Sugar.Function
     { Sugar._fChosenScopeProp = prop Nothing & pure
     , Sugar._fBodyScopes = mempty
     , Sugar._fAddFirstParam = Sugar.PrependParam tagRefReplace
-    , Sugar._fParams = params <&> mkFuncRecordParam & Sugar.RecordParams
+    , Sugar._fParams =
+        Sugar.VarParam
+        ( Sugar.FuncParam Sugar.AnnotationNone Sugar.VarGeneric
+        , Sugar.VarParamInfo (Sugar.OptionalTag (mkTag (Just paramVar) paramTag) Unit) (Sugar.AddNext tagRefReplace) Unit
+        )
     , Sugar._fBody = Ann (Const ba) (Sugar.BinderTerm bx)
     }
-
-binderExpr ::
-    [(UUID, T.Tag)] -> Expr ->
-    Sugar.Expr Sugar.Assignment (Sugar.Annotation (Sugar.EvaluationScopes InternalName Identity) InternalName)
-    InternalName Identity Unit
-binderExpr params body = funcExpr params body & Sugar.BodyFunction & node
 
 expr ::
     Sugar.Body Sugar.Term (Sugar.Annotation v InternalName) InternalName Identity Unit ->
