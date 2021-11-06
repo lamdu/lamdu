@@ -1,5 +1,8 @@
+{-# LANGUAGE TemplateHaskell #-}
+
 module Lamdu.GUI.ParamEdit
-    ( Info(..), make
+    ( Info(..), iNameEdit, iDel, iAddNext, iMOrderBefore, iMOrderAfter, iId
+    , make
     , eventMapAddFirstParam, mkParamPickResult
     ) where
 
@@ -28,6 +31,16 @@ import           Lamdu.Name (Name)
 import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
+
+data Info i o = Info
+    { _iNameEdit :: TextWidget o
+    , _iDel :: o ()
+    , _iAddNext :: Maybe (Sugar.AddNextParam Name i o)
+    , _iMOrderBefore :: Maybe (o ())
+    , _iMOrderAfter :: Maybe (o ())
+    , _iId :: Widget.Id
+    }
+Lens.makeLenses ''Info
 
 eventMapAddFirstParam ::
     _ => Widget.Id -> Sugar.AddFirstParam name i o -> m (EventMap (o GuiState.Update))
@@ -84,15 +97,6 @@ eventParamDelEventMap env fpDel keys delParam dstPosId =
     & E.keyPresses (env ^# has . keys)
         (E.toDoc env [has . MomentuTexts.edit, has . delParam])
 
-data Info i o = Info
-    { iNameEdit :: TextWidget o
-    , iDel :: o ()
-    , iAddNext :: Maybe (Sugar.AddNextParam Name i o)
-    , iMOrderBefore :: Maybe (o ())
-    , iMOrderAfter :: Maybe (o ())
-    , iId :: Widget.Id
-    }
-
 mkParamPickResult :: Sugar.EntityId -> Menu.PickResult
 mkParamPickResult tagInstance =
     Menu.PickResult
@@ -113,11 +117,11 @@ make annotationOpts prevId nextId (param, info) =
         env <- Lens.view id
         let paramEventMap =
                 mconcat
-                [ eventParamDelEventMap env (iDel info) Config.delForwardKeys Texts.deleteParameter nextId
-                , eventParamDelEventMap env (iDel info) Config.delBackwardKeys Texts.deleteParameterBackwards prevId
-                , foldMap (eventMapAddNextParam env myId) (iAddNext info)
-                , foldMap (eventMapOrderParam env Config.paramOrderBeforeKeys Texts.moveBefore) (iMOrderBefore info)
-                , foldMap (eventMapOrderParam env Config.paramOrderAfterKeys Texts.moveAfter) (iMOrderAfter info)
+                [ eventParamDelEventMap env (info ^. iDel) Config.delForwardKeys Texts.deleteParameter nextId
+                , eventParamDelEventMap env (info ^. iDel) Config.delBackwardKeys Texts.deleteParameterBackwards prevId
+                , foldMap (eventMapAddNextParam env myId) (info ^. iAddNext)
+                , foldMap (eventMapOrderParam env Config.paramOrderBeforeKeys Texts.moveBefore) (info ^. iMOrderBefore)
+                , foldMap (eventMapOrderParam env Config.paramOrderAfterKeys Texts.moveAfter) (info ^. iMOrderAfter)
                 ]
         postProcessAnnotation <-
             GuiState.isSubCursor ?? myId
@@ -127,13 +131,13 @@ make annotationOpts prevId nextId (param, info) =
             postProcessAnnotation
             (param ^. Sugar.fpAnnotation)
             <&> (Widget.widget %~)
-            ?? Responsive.fromWithTextPos (iNameEdit info)
+            ?? Responsive.fromWithTextPos (info ^. iNameEdit)
             <&> Widget.widget . Widget.eventMapMaker . Lens.mapped %~ (<> paramEventMap)
             & local (M.animIdPrefix .~ Widget.toAnimId myId)
         mAddParam <-
             GuiState.isSubCursor ?? addId
             <&> guard
-            <&> (>> (iAddNext info ^? Lens._Just . Sugar._AddNext))
+            <&> (>> (info ^? iAddNext . Lens._Just . Sugar._AddNext))
         addParamEdits <-
             case mAddParam of
             Nothing -> pure []
@@ -145,5 +149,5 @@ make annotationOpts prevId nextId (param, info) =
                 <&> (:[])
         paramEdit : addParamEdits & pure
     where
-        myId = iId info
+        myId = info ^. iId
         addId = TagEdit.addParamId myId

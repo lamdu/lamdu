@@ -221,12 +221,12 @@ nullParamEditInfo ::
     Sugar.NullParamActions o -> ParamEdit.Info i o
 nullParamEditInfo widgetId nameEdit mActions =
     ParamEdit.Info
-    { ParamEdit.iNameEdit = nameEdit
-    , ParamEdit.iAddNext = Nothing
-    , ParamEdit.iMOrderBefore = Nothing
-    , ParamEdit.iMOrderAfter = Nothing
-    , ParamEdit.iDel = mActions ^. Sugar.npDeleteLambda
-    , ParamEdit.iId = widgetId
+    { ParamEdit._iNameEdit = nameEdit
+    , ParamEdit._iAddNext = Nothing
+    , ParamEdit._iMOrderBefore = Nothing
+    , ParamEdit._iMOrderAfter = Nothing
+    , ParamEdit._iDel = mActions ^. Sugar.npDeleteLambda
+    , ParamEdit._iId = widgetId
     }
 
 namedVarParamEditInfo ::
@@ -235,12 +235,12 @@ namedVarParamEditInfo ::
     ParamEdit.Info i o
 namedVarParamEditInfo widgetId paramInfo nameEdit =
     ParamEdit.Info
-    { ParamEdit.iNameEdit = nameEdit
-    , ParamEdit.iAddNext = paramInfo ^. Sugar.vpiAddNext & Just
-    , ParamEdit.iMOrderBefore = Nothing
-    , ParamEdit.iMOrderAfter = Nothing
-    , ParamEdit.iDel = paramInfo ^. Sugar.vpiDelete
-    , ParamEdit.iId = widgetId
+    { ParamEdit._iNameEdit = nameEdit
+    , ParamEdit._iAddNext = paramInfo ^. Sugar.vpiAddNext & Just
+    , ParamEdit._iMOrderBefore = Nothing
+    , ParamEdit._iMOrderAfter = Nothing
+    , ParamEdit._iDel = paramInfo ^. Sugar.vpiDelete
+    , ParamEdit._iId = widgetId
     }
 
 namedRecordParamEditInfo ::
@@ -249,12 +249,12 @@ namedRecordParamEditInfo ::
     ParamEdit.Info i o
 namedRecordParamEditInfo widgetId paramInfo nameEdit =
     ParamEdit.Info
-    { ParamEdit.iNameEdit = nameEdit
-    , ParamEdit.iAddNext = paramInfo ^. Sugar.piAddNext & Sugar.AddNext & Just
-    , ParamEdit.iMOrderBefore = paramInfo ^. Sugar.piMOrderBefore
-    , ParamEdit.iMOrderAfter = paramInfo ^. Sugar.piMOrderAfter
-    , ParamEdit.iDel = paramInfo ^. Sugar.piDelete
-    , ParamEdit.iId = widgetId
+    { ParamEdit._iNameEdit = nameEdit
+    , ParamEdit._iAddNext = paramInfo ^. Sugar.piAddNext & Sugar.AddNext & Just
+    , ParamEdit._iMOrderBefore = paramInfo ^. Sugar.piMOrderBefore
+    , ParamEdit._iMOrderAfter = paramInfo ^. Sugar.piMOrderAfter
+    , ParamEdit._iDel = paramInfo ^. Sugar.piDelete
+    , ParamEdit._iId = widgetId
     }
 
 makeParamsEdit ::
@@ -293,7 +293,7 @@ makeParamsEdit annotationOpts delVarBackwardsId lhsId rhsId params =
     where
         fromParamList delDestFirst delDestLast paramList =
             withPrevNext delDestFirst delDestLast
-            (ParamEdit.iId . snd) paramList
+            (^. _2 . ParamEdit.iId) paramList
             & traverse mkParam <&> concat
             where
                 mkParam (prevId, nextId, param) = ParamEdit.make annotationOpts prevId nextId param
