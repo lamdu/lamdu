@@ -157,13 +157,12 @@ addPostTags :: _ => [TaggedItem o] -> m [TaggedItem o]
 addPostTags items =
     do
         let f idx item =
-                label t & grammar
-                & Element.locallyAugmented idx
+                label (if isComma then Texts.recordSep else Texts.recordCloser)
+                & grammar
+                & (if isComma then Element.locallyAugmented idx else id)
                 <&> \lbl -> item & tagPost ?~ (lbl <&> Widget.fromView)
                 where
-                    t :: Lens' (Texts.Code a) a
-                    t | idx < lastIdx = Texts.recordSep
-                        | otherwise = Texts.recordCloser
+                    isComma = idx < lastIdx
         Lens.itraverse f items
     where
         lastIdx = length items - 1
