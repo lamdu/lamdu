@@ -5,7 +5,6 @@ module Lamdu.Sugar.Convert.Record
 import           Hyper.Syntax.Row (RowExtend(..))
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
-import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Sugar.Convert.Composite as Composite
 import           Lamdu.Sugar.Convert.Expression.Actions (addActions)
@@ -21,7 +20,7 @@ convertEmpty ::
     (Monad m, Monoid a) =>
     Input.Payload m a # V.Term -> ConvertM m (ExpressionU v m a)
 convertEmpty pl =
-    Composite.convertEmpty DataOps.recExtend pl
+    Composite.convertEmpty V.BRecExtend pl
     <&> BodyRecord
     >>= addActions (Const ()) pl
     <&> annotation . pActions . mApply .~ Nothing
@@ -41,7 +40,5 @@ convertExtend (RowExtend tag val rest) exprPl =
                 , Composite._extendValI = val ^. hAnn . Input.stored . ExprIRef.iref
                 , Composite._extendRest = rest ^. hAnn
                 }
-        Composite.convert DataOps.recExtend mkRecExtend _BodyRecord valS restS exprPl recP
+        Composite.convert V.BRecExtend _BodyRecord valS restS exprPl recP
     <&> annotation . pActions . mApply .~ Nothing
-    where
-        mkRecExtend t v r = RowExtend t v r & V.BRecExtend

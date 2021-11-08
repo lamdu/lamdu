@@ -3,9 +3,6 @@ module Lamdu.Data.Ops
     ( newHole, applyHoleTo, setToAppliedHole
     , replace, replaceWithHole, setToHole, lambdaWrap, redexWrap
     , redexWrapWithGivenParam
-    , CompositeExtendResult(..)
-    , recExtend
-    , case_
     , genNewTag, assocTagName
     , newPublicDefinitionWithPane
     , newPublicDefinitionToIRef
@@ -22,7 +19,6 @@ import qualified Data.Set as Set
 import qualified Data.UUID as UUID
 import qualified GUI.Momentu.Direction as Dir
 import           Hyper (_HCompose)
-import           Hyper.Syntax.Row (RowExtend(..))
 import           Hyper.Type.Prune (Prune(..))
 import           Lamdu.Calc.Identifier (Identifier(..))
 import qualified Lamdu.Calc.Term as V
@@ -102,27 +98,8 @@ redexWrap exprP =
         _ <- redexWrapWithGivenParam newParam newValueI exprP
         pure newValueI
 
-data CompositeExtendResult m = CompositeExtendResult
-    { cerNewVal :: ValI m
-    , cerResult :: ValI m
-    }
-
 genNewTag :: Monad m => T m T.Tag
 genNewTag = Transaction.newKey <&> T.Tag . Identifier . BS.strictify . UUID.toByteString
-
-recExtend :: Monad m => T.Tag -> ValI m -> T m (CompositeExtendResult m)
-recExtend tag valI =
-    do
-        newValueI <- newHole
-        RowExtend tag newValueI valI & V.BRecExtend & ExprIRef.newValI
-            <&> CompositeExtendResult newValueI
-
-case_ :: Monad m => T.Tag -> ValI m -> T m (CompositeExtendResult m)
-case_ tag tailI =
-    do
-        newValueI <- newHole
-        RowExtend tag newValueI tailI & V.BCase & ExprIRef.newValI
-            <&> CompositeExtendResult newValueI
 
 assocTagName ::
     (Monad f, MonadReader env m, Has LangId env, Has Dir.Layout env) =>

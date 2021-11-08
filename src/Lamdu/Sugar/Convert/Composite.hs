@@ -8,10 +8,11 @@ module Lamdu.Sugar.Convert.Composite
 import qualified Control.Lens as Lens
 import           Control.Monad.Once (OnceT)
 import qualified Data.Set as Set
+import           Hyper.Type.Functor (F(..))
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Data.Ops as DataOps
-import           Lamdu.Expr.IRef (ValBody, ValI, HRef)
+import           Lamdu.Expr.IRef (ValI, HRef)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Sugar.Config as Config
 import           Lamdu.Sugar.Convert.Expression.Actions (addActions)
@@ -23,6 +24,7 @@ import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import qualified Lamdu.Sugar.Lens as SugarLens
 import           Lamdu.Sugar.Types
+import           Revision.Deltum.IRef (IRef)
 import           Revision.Deltum.Transaction (Transaction)
 
 import           Lamdu.Prelude
@@ -38,19 +40,21 @@ deleteItem stored restI =
 
 convertAddItem ::
     Monad m =>
-    (T.Tag -> ValI m -> T m (DataOps.CompositeExtendResult m)) ->
+    (V.RowExtend T.Tag V.Term V.Term # F (IRef m) -> ExprIRef.ValBody m) ->
     Set T.Tag ->
     Input.Payload m a # V.Term ->
     ConvertM m (TagChoice InternalName (OnceT (T m)) (T m))
-convertAddItem extendOp existingTags pl =
+convertAddItem cons existingTags pl =
     do
         addItem <-
             ConvertM.typeProtectedSetToVal
             <&>
             \protectedSetToVal tag ->
             do
-                DataOps.CompositeExtendResult _ resultI <- extendOp tag (stored ^. ExprIRef.iref)
-                _ <- protectedSetToVal stored resultI
+                _ <-
+                    DataOps.newHole
+                    >>= ExprIRef.newValI . cons . (V.RowExtend tag ?? stored ^. ExprIRef.iref)
+                    >>= protectedSetToVal stored
                 DataOps.setTagOrder tag (Set.size existingTags)
         ConvertTag.replace nameWithoutContext existingTags (EntityId.ofTag (pl ^. Input.entityId)) addItem
             >>= ConvertM . lift
@@ -66,16 +70,15 @@ Lens.makeLenses ''ExtendVal
 
 convertExtend ::
     Monad m =>
-    (T.Tag -> ValI m -> ValI m -> ExprIRef.ValBody m) ->
-    (T.Tag -> ValI m -> T m (DataOps.CompositeExtendResult m)) ->
+    (V.RowExtend T.Tag V.Term V.Term # F (IRef m) -> ExprIRef.ValBody m) ->
     Annotated b # Term v InternalName (OnceT (T m)) (T m) ->
     Input.Payload m a # V.Term ->
     ExtendVal m (Input.Payload m a # V.Term) ->
     Composite v InternalName (OnceT (T m)) (T m) # Annotated b ->
     ConvertM m (Composite v InternalName (OnceT (T m)) (T m) # Annotated b)
-convertExtend cons extendOp valS exprPl extendV restC =
+convertExtend cons valS exprPl extendV restC =
     do
-        addItemAction <- convertAddItem extendOp (Set.fromList (extendV ^. extendTag : restTags)) exprPl
+        addItemAction <- convertAddItem cons (Set.fromList (extendV ^. extendTag : restTags)) exprPl
         itemS <-
             convertItem addItemAction cons (exprPl ^. Input.stored)
             (extendV ^. extendRest . Input.entityId) (Set.fromList restTags) valS
@@ -108,16 +111,15 @@ convertExtend cons extendOp valS exprPl extendV restC =
 
 convertOneItemOpenComposite ::
     Monad m =>
-    (T.Tag -> ValI m -> ValI m -> ExprIRef.ValBody m) ->
-    (T.Tag -> ValI m -> T m (DataOps.CompositeExtendResult m)) ->
+    (V.RowExtend T.Tag V.Term V.Term # F (IRef m) -> ExprIRef.ValBody m) ->
     k # Term v InternalName (OnceT (T m)) (T m) ->
     k # Term v InternalName (OnceT (T m)) (T m) ->
     Input.Payload m a # V.Term ->
     ExtendVal m (Input.Payload m a # V.Term) ->
     ConvertM m (Composite v InternalName (OnceT (T m)) (T m) # k)
-convertOneItemOpenComposite cons extendOp valS restS exprPl extendV =
+convertOneItemOpenComposite cons valS restS exprPl extendV =
     do
-        addItem <- convertAddItem extendOp (Set.singleton (extendV ^. extendTag)) exprPl
+        addItem <- convertAddItem cons (Set.singleton (extendV ^. extendTag)) exprPl
         item <-
             convertItem addItem cons
             (exprPl ^. Input.stored) (extendV ^. extendRest . Input.entityId) mempty valS
@@ -133,10 +135,10 @@ convertOneItemOpenComposite cons extendOp valS restS exprPl extendV =
 
 convertEmpty ::
     Monad m =>
-    (T.Tag -> ValI m -> T m (DataOps.CompositeExtendResult m)) ->
+    (V.RowExtend T.Tag V.Term V.Term # F (IRef m) -> ExprIRef.ValBody m) ->
     Input.Payload m a # V.Term ->
     ConvertM m (Composite v InternalName (OnceT (T m)) (T m) expr)
-convertEmpty extendOp exprPl =
+convertEmpty cons exprPl =
     do
         actions <-
             ConvertM.postProcessAssert
@@ -148,7 +150,7 @@ convertEmpty extendOp exprPl =
                 <* postProcess
                 <&> EntityId.ofValI
             }
-        addItem <- convertAddItem extendOp mempty exprPl
+        addItem <- convertAddItem cons mempty exprPl
         pure Composite
             { _cList = TaggedList
                 { _tlAddFirst = addItem
@@ -161,7 +163,7 @@ convertEmpty extendOp exprPl =
 convertItem ::
     Monad m =>
     TagChoice InternalName (OnceT (T m)) (T m) ->
-    (T.Tag -> ValI m -> ValI m -> ExprIRef.ValBody m) ->
+    (V.RowExtend T.Tag V.Term V.Term # F (IRef m) -> ExprIRef.ValBody m) ->
     HRef m # V.Term ->
     EntityId -> Set T.Tag ->
     h # Term v InternalName (OnceT (T m)) (T m) ->
@@ -174,7 +176,7 @@ convertItem addItem cons stored inst forbiddenTags exprS extendVal =
         protectedSetToVal <- ConvertM.typeProtectedSetToVal
         let setTag newTag =
                 do
-                    cons newTag exprI restI & ExprIRef.writeValI valI
+                    V.RowExtend newTag exprI restI & cons & ExprIRef.writeValI valI
                     protectedSetToVal stored valI & void
                 where
                     valI = stored ^. ExprIRef.iref
@@ -197,13 +199,13 @@ type BodyPrism m v a =
 
 convert ::
     (Monad m, Monoid a) =>
-    (T.Tag -> ValI m -> T m (DataOps.CompositeExtendResult m)) ->
-    (T.Tag -> ValI m -> ValI m -> ValBody m) -> BodyPrism m v a ->
+    (V.RowExtend T.Tag V.Term V.Term # F (IRef m) -> ExprIRef.ValBody m) ->
+    BodyPrism m v a ->
     ExpressionU v m a ->
     ExpressionU v m a -> Input.Payload m a # V.Term ->
     ExtendVal m (Input.Payload m a # V.Term) ->
     ConvertM m (ExpressionU v m a)
-convert op cons prism valS restS exprPl extendV =
+convert cons prism valS restS exprPl extendV =
     Lens.view (ConvertM.scConfig . Config.sugarsEnabled . Config.composite) >>=
     \case
     False -> convertOneItem
@@ -211,7 +213,7 @@ convert op cons prism valS restS exprPl extendV =
         case restS ^? hVal . prism of
         Nothing -> convertOneItem
         Just r ->
-            convertExtend cons op valS exprPl extendV r
+            convertExtend cons valS exprPl extendV r
             <&> (prism #)
             -- Closed sugar Composites use their tail as an entity id,
             -- unlike other sugar constructs.  All the extend entity ids
@@ -225,6 +227,6 @@ convert op cons prism valS restS exprPl extendV =
                 exprPl ^. Input.userData <> restS ^. annotation . pInput . Input.userData
     where
         convertOneItem =
-            convertOneItemOpenComposite cons op valS restS exprPl extendV
+            convertOneItemOpenComposite cons valS restS exprPl extendV
             <&> (prism #)
             >>= addActions (Const ()) exprPl

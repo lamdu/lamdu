@@ -6,7 +6,6 @@ module Lamdu.Sugar.Convert.Case
 import           Hyper.Syntax.Row (RowExtend(..))
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
-import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Sugar.Convert.Composite as Composite
 import           Lamdu.Sugar.Convert.Expression.Actions (addActions)
@@ -25,7 +24,7 @@ convertAbsurd ::
     (Monad m, Monoid a) =>
     Input.Payload m a # V.Term -> ConvertM m (ExpressionU v m a)
 convertAbsurd pl =
-    Composite.convertEmpty DataOps.case_ pl
+    Composite.convertEmpty V.BCase pl
     <&> PfCase <&> BodyPostfixFunc
     >>= addActions (Const ()) pl
 
@@ -46,6 +45,4 @@ convert (RowExtend tag v rest) exprPl =
                 , Composite._extendValI = v ^. hAnn . Input.stored . ExprIRef.iref
                 , Composite._extendRest = rest ^. hAnn
                 }
-        Composite.convert DataOps.case_ mkCase (_BodyPostfixFunc . _PfCase) valS restS exprPl caseP
-    where
-        mkCase t c r = RowExtend t c r & V.BCase
+        Composite.convert V.BCase (_BodyPostfixFunc . _PfCase) valS restS exprPl caseP
