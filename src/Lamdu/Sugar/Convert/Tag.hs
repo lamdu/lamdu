@@ -34,10 +34,6 @@ data NameContext = NameContext
 
 Lens.makeLenses ''NameContext
 
-getTagsProp ::
-    Anchors.HasCodeAnchors env m => env -> MkProperty' (T m) (Set T.Tag)
-getTagsProp = Lens.view Anchors.codeAnchors <&> Anchors.tags
-
 withoutContext :: EntityId -> T.Tag -> Tag InternalName
 withoutContext entityId tag =
     Tag
@@ -55,10 +51,8 @@ ref ::
     (T.Tag -> T n ()) ->
     m (OnceT (T n) (TagRef InternalName (OnceT (T n)) (T n)))
 ref tag nameCtx forbiddenTags mkInstance setTag =
-    Lens.view id
-    <&> \env ->
-    getTagsProp env
-    & refWith (env ^. Anchors.codeAnchors) tag name forbiddenTags mkInstance setTag
+    Lens.view Anchors.codeAnchors
+    <&> \anchors -> refWith anchors tag name forbiddenTags mkInstance setTag
     where
         withContext (NameContext varInfo var) = nameWithContext varInfo var
         name = maybe nameWithoutContext withContext nameCtx
@@ -67,9 +61,9 @@ refWith ::
     Monad m =>
     Anchors.CodeAnchors m ->
     T.Tag -> (T.Tag -> name) -> Set T.Tag -> (T.Tag -> EntityId) ->
-    (T.Tag -> T m ()) -> MkProperty' (T m) (Set T.Tag) ->
+    (T.Tag -> T m ()) ->
     OnceT (T m) (TagRef name (OnceT (T m)) (T m))
-refWith cp tag name forbiddenTags mkInstance setTag tagsProp =
+refWith cp tag name forbiddenTags mkInstance setTag =
     replaceWith name forbiddenTags mkInstance setTag tagsProp
     <&>
     \r ->
@@ -85,16 +79,16 @@ refWith cp tag name forbiddenTags mkInstance setTag tagsProp =
         then Nothing
         else jumpToTag cp tag & Just
     }
+    where
+        tagsProp = Anchors.tags cp
 
 replace ::
     (MonadTransaction n m, MonadReader env m, Anchors.HasCodeAnchors env n) =>
     (T.Tag -> name) -> Set T.Tag -> (T.Tag -> EntityId) -> (T.Tag -> T n ()) ->
     m (OnceT (T n) (TagChoice name (OnceT (T n)) (T n)))
 replace name forbiddenTags mkInstance setTag =
-    Lens.view id
-    <&> \env ->
-    getTagsProp env
-    & replaceWith name forbiddenTags mkInstance setTag
+    Lens.view Anchors.codeAnchors <&> Anchors.tags
+    <&> replaceWith name forbiddenTags mkInstance setTag
 
 replaceWith ::
     Monad m =>
@@ -141,13 +135,12 @@ taggedEntityWith cp mVarInfo entity =
     <&>
     \entityTag ->
     refWith cp entityTag (nameWithContext mVarInfo entity)
-    mempty mkInstance (setP prop) tagsProp
+    mempty mkInstance (setP prop)
     <&> (`OptionalTag` toAnon)
     where
         toAnon = mkInstance Anchors.anonTag <$ setP prop Anchors.anonTag
         mkInstance = EntityId.ofTaggedEntity entity
         prop = Anchors.assocTag entity
-        tagsProp = Anchors.tags cp
 
 taggedEntity ::
     (UniqueId.ToUUID a, MonadTransaction n m, MonadReader env m, Anchors.HasCodeAnchors env n) =>
