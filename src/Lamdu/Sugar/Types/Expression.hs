@@ -289,7 +289,7 @@ type Dep v (c :: HyperType -> Constraint) name i o =
     , c (Binder v name i o)
     , c (Const (BinderVarRef name o))
     , c (Const (GetVar name o))
-    , c (Const (TagChoice name i o))
+    , c (Const (i (TagChoice name o)))
     , c (Const (TagRef name i o))
     , c (Else v name i o)
     , c (PostfixFunc v name i o)

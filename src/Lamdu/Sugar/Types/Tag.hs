@@ -24,15 +24,15 @@ data TagOption name o = TagOption
     , _toPick :: o ()
     } deriving Generic
 
-data TagChoice name i o = TagChoice
-    { _tcOptions :: i [TagOption name o]
-    , _tcNewTag :: i (TagOption name o)
+data TagChoice name o = TagChoice
+    { _tcOptions :: [TagOption name o]
+    , _tcNewTag :: TagOption name o
     } deriving Generic
 
 -- | A mutable tag (that can be replaced with a different tag)
 data TagRef name i o = TagRef
     { _tagRefTag :: Tag name
-    , _tagRefReplace :: TagChoice name i o
+    , _tagRefReplace :: i (TagChoice name o)
     , _tagRefJumpTo :: Maybe (o EntityId)
     } deriving Generic
 

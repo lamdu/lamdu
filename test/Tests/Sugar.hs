@@ -115,8 +115,8 @@ testChangeParam =
             replBody . _BodySimpleApply . V.appFunc .
             hVal . _BodySimpleApply . V.appArg .
             hVal . _BodyLam . lamFunc . fParams . _RecordParams .
-            Lens.ix 0 . _2 . piTag . tagRefReplace . tcNewTag
-            >>= lift . (^. toPick)
+            Lens.ix 0 . _2 . piTag . tagRefReplace
+            >>= lift . (^. tcNewTag . toPick)
 
 -- | Test for issue #373
 -- https://trello.com/c/1kP4By8j/373-re-ordering-let-items-results-in-inference-error
@@ -574,8 +574,8 @@ testAddToInferredParamList =
             do
                 convertWorkArea env
                     >>= (^?! elseClause . lamBodyParams .
-                            Lens.ix 0 . _2 . piAddNext . tcNewTag)
-                    >>= lift . (^. toPick)
+                            Lens.ix 0 . _2 . piAddNext)
+                    >>= lift . (^. tcNewTag . toPick)
                 convertWorkArea env
         let paramList = workArea ^?! elseClause . _BodyFragment . fExpr . hVal . lamBodyParams
         assertEqual "Parameter list length" (length paramList) 3

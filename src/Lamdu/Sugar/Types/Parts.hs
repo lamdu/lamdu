@@ -59,7 +59,7 @@ data Annotation v name
     deriving Generic
 
 data AddNextParam name i o
-    = AddNext (TagChoice name i o)
+    = AddNext (i (TagChoice name o))
     | -- When the param has anon tag one can't add another one,
       -- contains the EntityId of the param requiring tag.
       NeedToPickTagToAddNext EntityId
@@ -77,7 +77,7 @@ data VarParamInfo name i o = VarParamInfo
 
 data RecordParamInfo name i o = RecordParamInfo
     { _piTag :: TagRef name i o
-    , _piAddNext :: TagChoice name i o
+    , _piAddNext :: i (TagChoice name o)
     , _piDelete :: o ()
     , _piMOrderBefore :: Maybe (o ())
     , _piMOrderAfter :: Maybe (o ())
@@ -118,7 +118,7 @@ data NodeActions o = NodeActions
 data TaggedItem name i o a = TaggedItem
     { _tiTag :: TagRef name i o
     , _tiDelete :: o EntityId
-    , _tiAddAfter :: TagChoice name i o
+    , _tiAddAfter :: i (TagChoice name o)
     , _tiValue :: a
     } deriving (Generic, Functor, Foldable, Traversable)
 
@@ -134,14 +134,14 @@ data TaggedListBody name i o a = TaggedListBody
     } deriving (Generic, Functor, Foldable, Traversable)
 
 data TaggedList name i o a = TaggedList
-    { _tlAddFirst :: TagChoice name i o
+    { _tlAddFirst :: i (TagChoice name o)
     , _tlItems :: Maybe (TaggedListBody name i o a)
     } deriving (Generic, Functor, Foldable, Traversable)
 
 data AddFirstParam name i o
     = -- The inital param is created with anon-tag
       AddInitialParam (o EntityId)
-    | PrependParam (TagChoice name i o)
+    | PrependParam (i (TagChoice name o))
     | -- When the param has anon tag one can't add another one,
       -- contains the EntityId of the param requiring tag.
       NeedToPickTagToAddFirst EntityId
@@ -186,7 +186,7 @@ data Literal f
 data NullaryInject name i o k = NullaryInject
     { _iInject :: k :# Const (TagRef name i o)
     , -- Child represents the empty record, and has action to add an item
-      _iContent :: k :# Const (TagChoice name i o)
+      _iContent :: k :# Const (i (TagChoice name o))
     } deriving Generic
 
 data PunnedVar name o k = PunnedVar

@@ -193,7 +193,7 @@ instance ToBody Binder where
     toBody (BinderTerm e) = toBody e <&> BinderTerm
 
 instance (a ~ OldName m, b ~ NewName m, i ~ IM m) => Walk m (AddFirstParam a i o) (AddFirstParam b i o) where
-    walk = _PrependParam walk
+    walk x = opRun <&> \run -> x & _PrependParam %~ (>>= run . walk)
 
 toFunction :: (MonadNaming m, Walk m v0 v1, Walk m a0 a1) => IsUnambiguous -> WalkBody Function m o v0 v1 a0 a1
 toFunction u func@Function{_fParams, _fBody, _fAddFirstParam} =
@@ -220,15 +220,11 @@ instance ToBody Assignment where
 toTagOf :: MonadNaming m => NameType -> Sugar.Tag (OldName m) -> m (Sugar.Tag (NewName m))
 toTagOf nameType = tagName (opGetName Nothing MayBeAmbiguous nameType)
 
-instance (a ~ OldName m, b ~ NewName m, i ~ IM m) => Walk m (TagChoice a i o) (TagChoice b i o) where
+instance (a ~ OldName m, b ~ NewName m, i ~ IM m) => Walk m (TagChoice a o) (TagChoice b o) where
     walk (TagChoice opts new) =
-        (,) <$> opRun <*> opRun
-        <&>
-        \(run0, run1) ->
         TagChoice
-        { _tcOptions = opts >>= run0 . (traverse . toInfo) (toTagOf Tag)
-        , _tcNewTag = new >>= run1 . toInfo (toTagOf Tag)
-        }
+        <$> (traverse . toInfo) (toTagOf Tag) opts
+        <*> toInfo (toTagOf Tag) new
 
 instance (a ~ OldName m, b ~ NewName m, i ~ IM m) => Walk m (Hole a i o) (Hole b i o) where
     walk (Hole opts) =
@@ -242,10 +238,10 @@ toTagRefOf ::
     MonadNaming m =>
     NameType -> Sugar.TagRef (OldName m) (IM m) o ->
     m (Sugar.TagRef (NewName m) (IM m) o)
-toTagRefOf nameType (Sugar.TagRef info actions jumpTo) =
+toTagRefOf nameType (Sugar.TagRef info replace jumpTo) =
     Sugar.TagRef
     <$> toTagOf nameType info
-    <*> walk actions
+    <*> (opRun <&> \run -> replace >>= run . walk)
     ?? jumpTo
 
 toOptionalTag ::
@@ -259,10 +255,10 @@ withTagRef ::
     IsUnambiguous -> NameType ->
     Sugar.TagRef (OldName m) (IM m) o ->
     CPS m (Sugar.TagRef (NewName m) (IM m) o)
-withTagRef unambig nameType (Sugar.TagRef info actions jumpTo) =
+withTagRef unambig nameType (Sugar.TagRef info replace jumpTo) =
     Sugar.TagRef
     <$> tagName (opWithName unambig nameType) info
-    <*> liftCPS (walk actions)
+    <*> liftCPS (opRun <&> \run -> replace >>= run . walk)
     ?? jumpTo
 
 withOptionalTag ::
@@ -326,13 +322,15 @@ instance (Walk m pa pb, i ~ IM m, a ~ OldName m, b ~ NewName m) => Walk m (Tagge
     walk ti@TaggedItem{_tiTag, _tiAddAfter, _tiValue} =
         (,,)
         <$> toTagRefOf Tag _tiTag
-        <*> walk _tiAddAfter
+        <*> (opRun <&> \run -> _tiAddAfter >>= run . walk)
         <*> walk _tiValue
         <&> \(_tiTag, _tiAddAfter, _tiValue) -> ti{_tiTag,_tiValue,_tiAddAfter}
 
 instance (Walk m pa pb, i ~ IM m, a ~ OldName m, b ~ NewName m) => Walk m (TaggedList a i o pa) (TaggedList b i o pb) where
     walk (TaggedList add items) =
-        TaggedList <$> walk add <*> (Lens._Just . SugarLens.taggedListBodyItems) walk items
+        TaggedList
+        <$> (opRun <&> \run -> add >>= run . walk)
+        <*> (Lens._Just . SugarLens.taggedListBodyItems) walk items
 
 instance ToBody Composite where
     toBody (Composite items punned tail_) =
@@ -368,9 +366,11 @@ instance
     (a ~ OldName m, b ~ NewName m, i ~ IM m, Walk m pa pb) =>
     Walk m (NullaryInject a i o # Annotated pa) (NullaryInject b i o # Annotated pb) where
     walk (NullaryInject t n) =
-        NullaryInject
-        <$> toNode (Lens._Wrapped walk) t
-        <*> toNode (Lens._Wrapped walk) n
+        do
+            run <- opRun
+            NullaryInject
+                <$> toNode (Lens._Wrapped walk) t
+                <*> toNode (pure . (Lens._Wrapped %~ (>>= run . walk))) n
 
 instance (a ~ OldName m, b ~ NewName m, i ~ IM m) => Walk m (TagRef a i o) (TagRef b i o) where
     walk = toTagRefOf Tag
@@ -416,7 +416,7 @@ withRecordParamInfo ::
 withRecordParamInfo unambig x@RecordParamInfo{_piTag, _piAddNext} =
     (,)
     <$> withTagRef unambig TaggedVar _piTag
-    <*> liftCPS (walk _piAddNext)
+    <*> liftCPS (opRun <&> \run -> _piAddNext >>= run . walk)
     <&> \(_piTag, _piAddNext) -> x{_piTag, _piAddNext}
 
 withVarParamInfo ::
@@ -427,7 +427,7 @@ withVarParamInfo ::
 withVarParamInfo unambig x@VarParamInfo{_vpiTag, _vpiAddNext} =
     (,)
     <$> withOptionalTag unambig TaggedVar _vpiTag
-    <*> liftCPS (_AddNext walk _vpiAddNext)
+    <*> liftCPS (opRun <&> \run -> _vpiAddNext & _AddNext %~ (>>= run . walk))
     <&> \(_vpiTag, _vpiAddNext) -> x{_vpiTag, _vpiAddNext}
 
 withFuncParam ::

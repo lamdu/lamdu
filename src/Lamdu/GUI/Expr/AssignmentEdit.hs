@@ -312,7 +312,8 @@ makeMParamsEdit mScopeCursor isScopeNavFocused delVarBackwardsId myId bodyId add
         prependParamEdits <-
             case addFirstParam of
             Sugar.PrependParam selection | isPrepend ->
-                TagEdit.makeTagHoleEdit selection ParamEdit.mkParamPickResult prependId
+                GuiM.im selection
+                >>= TagEdit.makeTagHoleEdit ParamEdit.mkParamPickResult prependId
                 & local (has . Menu.configKeysPickOptionAndGotoNext <>~ [noMods M.Key'Space])
                 & Styled.withColor TextColors.parameterColor
                 <&> Responsive.fromWithTextPos

@@ -59,7 +59,7 @@ instance Recursive SugarExpr where
 
 instance SugarExpr (Const (GetVar name o))
 instance SugarExpr (Const (TId name o))
-instance SugarExpr (Const (TagChoice name i o))
+instance SugarExpr (Const (i (TagChoice name o)))
 instance SugarExpr (Const (TagRef name i o))
 instance SugarExpr (PostfixFunc v name i o)
 instance SugarExpr (FragOpt v name i o)
@@ -182,8 +182,8 @@ class HAnnotations a b s t where
 
 instance Annotations a b (BinderVarRef n o) (BinderVarRef n o) where annotations _ = pure
 instance Annotations a b (GetVar n o) (GetVar n o) where annotations _ = pure
-instance Annotations a b (TagChoice n i o) (TagChoice n i o) where annotations _ = pure
 instance Annotations a b (TagRef n i o) (TagRef n i o) where annotations _ = pure
+instance Annotations a b (i (TagChoice n o)) (i (TagChoice n o)) where annotations _ = pure
 
 instance Annotations a b s0 t0 => Annotations a b (s0, x) (t0, x) where
     annotations = _1 . annotations

@@ -89,14 +89,14 @@ makeUnit pl =
 
 makeEmpty ::
     _ =>
-    Annotated (ExprGui.Payload i o) # Const (Sugar.TagChoice Name i o) ->
+    Annotated (ExprGui.Payload i o) # Const (i (Sugar.TagChoice Name o)) ->
     GuiM env i o (Responsive o)
 makeEmpty (Ann (Const pl) (Const addField)) =
     do
         isAddField <- GuiState.isSubCursor ?? addFieldId (WidgetIds.fromExprPayload pl)
         if isAddField
             then
-                makeAddFieldRow addField pl <&> (:[]) >>= makeRecord pure
+                GuiM.im addField >>= makeAddFieldRow pl <&> (:[]) >>= makeRecord pure
                 & stdWrapParentExpr pl
             else makeUnit pl
 
@@ -122,7 +122,7 @@ make (Ann (Const pl) (Sugar.Composite (Sugar.TaggedList addField mTlBody) punned
         isAddField <- GuiState.isSubCursor ?? addFieldId (WidgetIds.fromExprPayload pl)
         addFieldGuis <-
             if isAddField
-            then makeAddFieldRow addField pl <&> (:[])
+            then GuiM.im addField >>= makeAddFieldRow pl <&> (:[])
             else pure []
         env <- Lens.view id
         let goToRecordEventMap =
@@ -169,11 +169,11 @@ addPostTags items =
 
 makeAddFieldRow ::
     _ =>
-    Sugar.TagChoice Name i o ->
     Sugar.Payload v o ->
+    Sugar.TagChoice Name o ->
     GuiM env i o (TaggedItem o)
-makeAddFieldRow addField pl =
-    TagEdit.makeTagHoleEdit addField mkPickResult tagHoleId
+makeAddFieldRow pl addField =
+    TagEdit.makeTagHoleEdit mkPickResult tagHoleId addField
     & Styled.withColor TextColors.recordTagColor
     & local (has . Menu.configKeysPickOptionAndGotoNext <>~ [M.noMods M.Key'Space])
     <&>

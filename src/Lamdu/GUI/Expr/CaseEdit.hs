@@ -103,7 +103,7 @@ makeAltsWidget ::
     Sugar.TaggedList Name i o (ExprGui.Expr Sugar.Term i o) ->
     [Sugar.PunnedVar Name o # Annotated (ExprGui.Payload i o)] ->
     GuiM env i o (EventMap _, Responsive o)
-makeAltsWidget altsId (Sugar.TaggedList addAlt alts) punned =
+makeAltsWidget altsId (Sugar.TaggedList mkAddAlt alts) punned =
     do
         punnedWidgets <-
             case punned of
@@ -115,6 +115,7 @@ makeAltsWidget altsId (Sugar.TaggedList addAlt alts) punned =
             traverse makeAltRow
             (alts ^.. Lens._Just . SugarLens.taggedListBodyItems)
             <&> (<> punnedWidgets)
+        addAlt <- GuiM.im mkAddAlt
         newAlts <-
             GuiState.isSubCursor ?? addAltId altsId
             <&> guard
@@ -138,9 +139,9 @@ makeAltsWidget altsId (Sugar.TaggedList addAlt alts) punned =
             <&> (,) addAltEventMap
 
 makeAddAltRow ::
-    _ => Sugar.TagChoice Name i o -> Widget.Id -> GuiM env i o (TaggedItem o)
+    _ => Sugar.TagChoice Name o -> Widget.Id -> GuiM env i o (TaggedItem o)
 makeAddAltRow addAlt myId =
-    TagEdit.makeTagHoleEdit addAlt mkPickResult myId
+    TagEdit.makeTagHoleEdit mkPickResult myId addAlt
     & Styled.withColor TextColors.caseTagColor
     & local (has . Menu.configKeysPickOptionAndGotoNext <>~ [M.noMods M.Key'Space])
     <&>

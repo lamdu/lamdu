@@ -43,7 +43,7 @@ convertAddItem ::
     (V.RowExtend T.Tag V.Term V.Term # F (IRef m) -> ExprIRef.ValBody m) ->
     Set T.Tag ->
     Input.Payload m a # V.Term ->
-    ConvertM m (TagChoice InternalName (OnceT (T m)) (T m))
+    ConvertM m (OnceT (T m) (TagChoice InternalName (T m)))
 convertAddItem cons existingTags pl =
     do
         addItem <-
@@ -162,7 +162,7 @@ convertEmpty cons exprPl =
 
 convertItem ::
     Monad m =>
-    TagChoice InternalName (OnceT (T m)) (T m) ->
+    OnceT (T m) (TagChoice InternalName (T m)) ->
     (V.RowExtend T.Tag V.Term V.Term # F (IRef m) -> ExprIRef.ValBody m) ->
     HRef m # V.Term ->
     EntityId -> Set T.Tag ->

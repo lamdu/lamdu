@@ -70,7 +70,7 @@ leaveSubexpr myId =
 
 nullaryRecord ::
     _ =>
-    Annotated (ExprGui.Payload i o) # Const (Sugar.TagChoice Name i o) ->
+    Annotated (ExprGui.Payload i o) # Const (i (Sugar.TagChoice Name o)) ->
     GuiM env i o (NullaryRecord o)
 nullaryRecord x =
     do

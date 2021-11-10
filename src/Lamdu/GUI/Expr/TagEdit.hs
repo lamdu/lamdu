@@ -131,7 +131,7 @@ fuzzyMaker = memo Fuzzy.make
 
 makeOptions ::
     _ =>
-    Sugar.TagChoice Name i o ->
+    Sugar.TagChoice Name o ->
     Sugar.TagOption Name o ->
     (EntityId -> Menu.PickResult) ->
     SearchMenu.ResultsContext ->
@@ -143,11 +143,6 @@ makeOptions tagRefReplace newTagOpt mkPickResult ctx
             resultCount <-
                 Lens.view
                 (Config.hasConfig . Config.completion . Config.completionResultCount)
-            results <-
-                tagRefReplace ^. Sugar.tcOptions
-                <&> concatMap withText
-                <&> (Fuzzy.memoableMake fuzzyMaker ?? searchTerm)
-                & GuiM.im
             let nonFuzzyResults =
                     results ^? Lens.ix 0 . _1 . Fuzzy.isFuzzy
                     & any not
@@ -191,6 +186,7 @@ makeOptions tagRefReplace newTagOpt mkPickResult ctx
                 & (\(list, isTrunc) -> Menu.OptionList isTrunc list)
                 & pure
     where
+        results = Fuzzy.memoableMake fuzzyMaker (tagRefReplace ^. Sugar.tcOptions >>= withText) searchTerm
         withText tagOption = tagOption ^.. nameText <&> ((,) ?? tagOption)
         searchTerm = ctx ^. SearchMenu.rSearchTerm
 
@@ -256,17 +252,17 @@ makeHoleSearchTerm newTagOption mkPickResult holeId =
 
 makeTagHoleEdit ::
     _ =>
-    Sugar.TagChoice Name i o ->
     (EntityId -> Menu.PickResult) ->
     Widget.Id ->
+    Sugar.TagChoice Name o ->
     GuiM env i o (M.TextWidget o)
-makeTagHoleEdit tagRefReplace mkPickResult holeId =
-    do
-        newTagOption <- tagRefReplace ^. Sugar.tcNewTag & GuiM.im
-        SearchMenu.make
-            (const (makeHoleSearchTerm newTagOption mkPickResult holeId))
-            (makeOptions tagRefReplace newTagOption mkPickResult) M.empty holeId
-            ?? Menu.AnyPlace
+makeTagHoleEdit mkPickResult holeId tagRefReplace =
+    SearchMenu.make
+    (const (makeHoleSearchTerm newTagOption mkPickResult holeId))
+    (makeOptions tagRefReplace newTagOption mkPickResult) M.empty holeId
+    ?? Menu.AnyPlace
+    where
+        newTagOption = tagRefReplace ^. Sugar.tcNewTag
 
 makeTagRefEdit :: _ => Sugar.TagRef Name i o -> GuiM env i o (M.TextWidget o)
 makeTagRefEdit = makeTagRefEditWith id (const Nothing) Nothing <&> fmap snd
@@ -315,7 +311,8 @@ makeTagRefEditWith onView onPickNext mSetToAnon tag =
             & onView
         if isHole
             then
-                makeTagHoleEdit (tag ^. Sugar.tagRefReplace) mkPickResult holeId
+                tag ^. Sugar.tagRefReplace & GuiM.im
+                >>= makeTagHoleEdit mkPickResult holeId
                 <&> (,) TagHole
             else pure (SimpleView, nameView)
         & GuiState.assignCursor myId viewId

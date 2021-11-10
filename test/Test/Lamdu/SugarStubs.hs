@@ -122,7 +122,7 @@ tagRefTag var tag =
 mkTag :: Maybe UUID -> T.Tag -> Sugar.TagRef InternalName Identity Unit
 mkTag var tag =
     Sugar.TagRef
-    { Sugar._tagRefReplace = tagRefReplace
+    { Sugar._tagRefReplace = Identity tagRefReplace
     , Sugar._tagRefTag = tagRefTag var tag
     , Sugar._tagRefJumpTo = Nothing
     }
@@ -170,11 +170,12 @@ funcExpr paramVar paramTag (Ann (Const ba) bx) =
     Sugar.Function
     { Sugar._fChosenScopeProp = prop Nothing & pure
     , Sugar._fBodyScopes = mempty
-    , Sugar._fAddFirstParam = Sugar.PrependParam tagRefReplace
+    , Sugar._fAddFirstParam = Sugar.PrependParam (Identity tagRefReplace)
     , Sugar._fParams =
         Sugar.VarParam
         ( Sugar.FuncParam Sugar.AnnotationNone Sugar.VarGeneric
-        , Sugar.VarParamInfo (Sugar.OptionalTag (mkTag (Just paramVar) paramTag) Unit) (Sugar.AddNext tagRefReplace) Unit
+        , Sugar.VarParamInfo (Sugar.OptionalTag (mkTag (Just paramVar) paramTag) Unit)
+            (Sugar.AddNext (Identity tagRefReplace)) Unit
         )
     , Sugar._fBody = Ann (Const ba) (Sugar.BinderTerm bx)
     }
@@ -219,12 +220,12 @@ taggedEntityName ctx tag =
     , _inIsAutoName = False
     }
 
-tagRefReplace :: Sugar.TagChoice InternalName Identity Unit
+tagRefReplace :: Sugar.TagChoice InternalName Unit
 tagRefReplace =
     Sugar.TagChoice
-    { Sugar._tcOptions = pure []
+    { Sugar._tcOptions = []
     , Sugar._tcNewTag =
-        pure Sugar.TagOption
+        Sugar.TagOption
         { Sugar._toInfo = Sugar.Tag
             { Sugar._tagName = taggedEntityName "newTag" "newTag"
             , Sugar._tagInstance = "newTag"

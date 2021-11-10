@@ -85,7 +85,7 @@ refWith cp tag name forbiddenTags mkInstance setTag =
 replace ::
     (MonadTransaction n m, MonadReader env m, Anchors.HasCodeAnchors env n) =>
     (T.Tag -> name) -> Set T.Tag -> (T.Tag -> EntityId) -> (T.Tag -> T n ()) ->
-    m (OnceT (T n) (TagChoice name (OnceT (T n)) (T n)))
+    m (OnceT (T n) (OnceT (T n) (TagChoice name (T n))))
 replace name forbiddenTags mkInstance setTag =
     Lens.view Anchors.codeAnchors <&> Anchors.tags
     <&> replaceWith name forbiddenTags mkInstance setTag
@@ -95,22 +95,13 @@ replaceWith ::
     (T.Tag -> name) -> Set T.Tag -> (T.Tag -> EntityId) ->
     (T.Tag -> T m ()) ->
     MkProperty' (T m) (Set T.Tag) ->
-    OnceT (T m) (TagChoice name (OnceT (T m)) (T m))
+    OnceT (T m) (OnceT (T m) (TagChoice name (T m)))
 replaceWith name forbiddenTags mkInstance setTag tagsProp =
-    DataOps.genNewTag & lift & once
-    <&>
-    \mkNewTag ->
+    (,) <$> DataOps.genNewTag <*> getP tagsProp & lift & once <&> Lens.mapped %~
+    \(newTag, tags) ->
     TagChoice
-    { _tcOptions =
-        getP tagsProp & lift
-        <&> (`Set.difference` forbiddenTags)
-        <&> (^.. Lens.folded . Lens.to toOption)
-    , _tcNewTag =
-        mkNewTag
-        <&>
-        \newTag ->
-        toOption newTag
-        & toPick %~ (Property.modP tagsProp (Lens.contains newTag .~ True) >>)
+    { _tcOptions = Set.difference tags forbiddenTags ^.. Lens.folded . Lens.to toOption
+    , _tcNewTag = toOption newTag & toPick %~ (Property.modP tagsProp (Lens.contains newTag .~ True) >>)
     }
     where
         toOption x =

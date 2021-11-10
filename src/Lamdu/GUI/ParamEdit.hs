@@ -23,7 +23,7 @@ import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Theme.TextColors as TextColors
 import qualified Lamdu.GUI.Expr.TagEdit as TagEdit
 import qualified Lamdu.GUI.Annotation as Annotation
-import           Lamdu.GUI.Monad (GuiM)
+import           Lamdu.GUI.Monad (GuiM, im)
 import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.I18N.CodeUI as Texts
@@ -142,7 +142,8 @@ make annotationOpts prevId nextId (param, info) =
             case mAddParam of
             Nothing -> pure []
             Just addParam ->
-                TagEdit.makeTagHoleEdit addParam mkParamPickResult addId
+                addParam & im
+                >>= TagEdit.makeTagHoleEdit mkParamPickResult addId
                 & local (has . Menu.configKeysPickOptionAndGotoNext <>~ [noMods M.Key'Space])
                 & Styled.withColor TextColors.parameterColor
                 <&> Responsive.fromWithTextPos
