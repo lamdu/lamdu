@@ -85,14 +85,14 @@ convertNominalParams replaceTypeVars entityId tagList =
         replaceNominalParamAsTag (T.Tag oldIdentifier) (T.Tag newIdentifier) =
             replaceTypeVars oldIdentifier newIdentifier
         convParam kind t =
-            ConvertTag.ref t Nothing (tagList & Lens.contains t .~ False)
-            (EntityId.ofTag entityId)
-            (replaceNominalParamAsTag t)
+            ConvertTag.ref t Nothing (tagList & Lens.contains t .~ False) resultInfo
             >>= lift
             <&> \tagRef -> NominalParam
             { _pName = tagRef
             , _pKind = kind
             }
+            where
+                resultInfo = ConvertTag.TagResultInfo <$> EntityId.ofTag entityId <*> replaceNominalParamAsTag t
 
 qvars ::
     forall t.

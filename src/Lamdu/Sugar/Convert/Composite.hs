@@ -56,8 +56,8 @@ convertAddItem cons existingTags pl =
                     >>= ExprIRef.newValI . cons . (V.RowExtend tag ?? stored ^. ExprIRef.iref)
                     >>= protectedSetToVal stored
                 DataOps.setTagOrder tag (Set.size existingTags)
-        ConvertTag.replace nameWithoutContext existingTags (EntityId.ofTag (pl ^. Input.entityId)) addItem
-            >>= ConvertM . lift
+        let resultInfo = ConvertTag.TagResultInfo <$> EntityId.ofTag (pl ^. Input.entityId) <*> addItem
+        ConvertTag.replace nameWithoutContext existingTags resultInfo >>= ConvertM . lift
     where
         stored = pl ^. Input.stored
 
@@ -180,9 +180,8 @@ convertItem addItem cons stored inst forbiddenTags exprS extendVal =
                     protectedSetToVal stored valI & void
                 where
                     valI = stored ^. ExprIRef.iref
-        tagS <-
-            ConvertTag.ref tag Nothing forbiddenTags (EntityId.ofTag inst) setTag
-            >>= ConvertM . lift
+        let resultInfo = ConvertTag.TagResultInfo <$> EntityId.ofTag inst <*> setTag
+        tagS <- ConvertTag.ref tag Nothing forbiddenTags resultInfo >>= ConvertM . lift
         pure TaggedItem
             { _tiTag = tagS
             , _tiValue = exprS

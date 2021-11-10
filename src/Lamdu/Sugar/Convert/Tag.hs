@@ -3,6 +3,7 @@ module Lamdu.Sugar.Convert.Tag
     ( ref, replace, withoutContext
     , taggedEntity
     , taggedEntityWith
+    , TagResultInfo(..), trEntityId, trPick
     , NameContext(..), ncMVarInfo, ncUuid
     ) where
 
@@ -31,8 +32,13 @@ data NameContext = NameContext
     { _ncMVarInfo :: Maybe VarInfo
     , _ncUuid :: UUID
     }
-
 Lens.makeLenses ''NameContext
+
+data TagResultInfo m = TagResultInfo
+    { _trEntityId :: EntityId
+    , _trPick :: m ()
+    }
+Lens.makeLenses ''TagResultInfo
 
 withoutContext :: EntityId -> T.Tag -> Tag InternalName
 withoutContext entityId tag =
@@ -47,12 +53,11 @@ withoutContext entityId tag =
 -- allowed, generating ordinary type errors
 ref ::
     (MonadTransaction n m, MonadReader env m, Anchors.HasCodeAnchors env n) =>
-    T.Tag -> Maybe NameContext -> Set T.Tag -> (T.Tag -> EntityId) ->
-    (T.Tag -> T n ()) ->
+    T.Tag -> Maybe NameContext -> Set T.Tag -> (T.Tag -> TagResultInfo (T n)) ->
     m (OnceT (T n) (TagRef InternalName (OnceT (T n)) (T n)))
-ref tag nameCtx forbiddenTags mkInstance setTag =
+ref tag nameCtx forbiddenTags resultInfo =
     Lens.view Anchors.codeAnchors
-    <&> \anchors -> refWith anchors tag name forbiddenTags mkInstance setTag
+    <&> \anchors -> refWith anchors tag name forbiddenTags resultInfo
     where
         withContext (NameContext varInfo var) = nameWithContext varInfo var
         name = maybe nameWithoutContext withContext nameCtx
@@ -60,17 +65,16 @@ ref tag nameCtx forbiddenTags mkInstance setTag =
 refWith ::
     Monad m =>
     Anchors.CodeAnchors m ->
-    T.Tag -> (T.Tag -> name) -> Set T.Tag -> (T.Tag -> EntityId) ->
-    (T.Tag -> T m ()) ->
+    T.Tag -> (T.Tag -> name) -> Set T.Tag -> (T.Tag -> TagResultInfo (T m)) ->
     OnceT (T m) (TagRef name (OnceT (T m)) (T m))
-refWith cp tag name forbiddenTags mkInstance setTag =
-    replaceWith name forbiddenTags mkInstance setTag tagsProp
+refWith cp tag name forbiddenTags resultInfo =
+    replaceWith name forbiddenTags resultInfo tagsProp
     <&>
     \r ->
     TagRef
     { _tagRefTag = Tag
         { _tagName = name tag
-        , _tagInstance = mkInstance tag
+        , _tagInstance = resultInfo tag ^. trEntityId
         , _tagVal = tag
         }
     , _tagRefReplace = r
@@ -84,19 +88,18 @@ refWith cp tag name forbiddenTags mkInstance setTag =
 
 replace ::
     (MonadTransaction n m, MonadReader env m, Anchors.HasCodeAnchors env n) =>
-    (T.Tag -> name) -> Set T.Tag -> (T.Tag -> EntityId) -> (T.Tag -> T n ()) ->
+    (T.Tag -> name) -> Set T.Tag -> (T.Tag -> TagResultInfo (T n)) ->
     m (OnceT (T n) (OnceT (T n) (TagChoice name (T n))))
-replace name forbiddenTags mkInstance setTag =
+replace name forbiddenTags resultInfo =
     Lens.view Anchors.codeAnchors <&> Anchors.tags
-    <&> replaceWith name forbiddenTags mkInstance setTag
+    <&> replaceWith name forbiddenTags resultInfo
 
 replaceWith ::
     Monad m =>
-    (T.Tag -> name) -> Set T.Tag -> (T.Tag -> EntityId) ->
-    (T.Tag -> T m ()) ->
+    (T.Tag -> name) -> Set T.Tag -> (T.Tag -> TagResultInfo (T m)) ->
     MkProperty' (T m) (Set T.Tag) ->
     OnceT (T m) (OnceT (T m) (TagChoice name (T m)))
-replaceWith name forbiddenTags mkInstance setTag tagsProp =
+replaceWith name forbiddenTags resultInfo tagsProp =
     (,) <$> DataOps.genNewTag <*> getP tagsProp & lift & once <&> Lens.mapped %~
     \(newTag, tags) ->
     TagChoice
@@ -109,10 +112,10 @@ replaceWith name forbiddenTags mkInstance setTag tagsProp =
             { _toInfo =
                 Tag
                 { _tagName = name x
-                , _tagInstance = mkInstance x
+                , _tagInstance = resultInfo x ^. trEntityId
                 , _tagVal = x
                 }
-            , _toPick = setTag x
+            , _toPick = resultInfo x ^. trPick
             }
 
 -- NOTE: Used for panes, outside ConvertM, so has no ConvertM.Context env
@@ -126,10 +129,11 @@ taggedEntityWith cp mVarInfo entity =
     <&>
     \entityTag ->
     refWith cp entityTag (nameWithContext mVarInfo entity)
-    mempty mkInstance (setP prop)
+    mempty resultInfo
     <&> (`OptionalTag` toAnon)
     where
         toAnon = mkInstance Anchors.anonTag <$ setP prop Anchors.anonTag
+        resultInfo = TagResultInfo <$> mkInstance <*> setP prop
         mkInstance = EntityId.ofTaggedEntity entity
         prop = Anchors.assocTag entity
 
