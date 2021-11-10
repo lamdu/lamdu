@@ -218,7 +218,7 @@ instance ToBody Assignment where
         BodyFunction x -> toFunction MayBeAmbiguous x <&> BodyFunction
 
 toTagOf :: MonadNaming m => NameType -> Sugar.Tag (OldName m) -> m (Sugar.Tag (NewName m))
-toTagOf nameType = tagName (opGetName Nothing MayBeAmbiguous nameType)
+toTagOf = tagName . opGetName Nothing MayBeAmbiguous
 
 instance (a ~ OldName m, b ~ NewName m, i ~ IM m) => Walk m (TagChoice a o) (TagChoice b o) where
     walk (TagChoice opts new) =
@@ -244,12 +244,6 @@ toTagRefOf nameType (Sugar.TagRef info replace jumpTo) =
     <*> (opRun <&> \run -> replace >>= run . walk)
     ?? jumpTo
 
-toOptionalTag ::
-    MonadNaming f =>
-    NameType -> OptionalTag (OldName f) (IM f) o ->
-    f (OptionalTag (NewName f) (IM f) o)
-toOptionalTag nameType = Sugar.oTag (toTagRefOf nameType)
-
 withTagRef ::
     MonadNaming m =>
     IsUnambiguous -> NameType ->
@@ -261,12 +255,18 @@ withTagRef unambig nameType (Sugar.TagRef info replace jumpTo) =
     <*> liftCPS (opRun <&> \run -> replace >>= run . walk)
     ?? jumpTo
 
+toOptionalTag ::
+    MonadNaming f =>
+    NameType -> OptionalTag (OldName f) (IM f) o ->
+    f (OptionalTag (NewName f) (IM f) o)
+toOptionalTag = Sugar.oTag . toTagRefOf
+
 withOptionalTag ::
     MonadNaming m =>
     IsUnambiguous -> NameType ->
     OptionalTag (OldName m) (IM m) o ->
     CPS m (OptionalTag (NewName m) (IM m) o)
-withOptionalTag unambig nameType = Sugar.oTag (withTagRef unambig nameType)
+withOptionalTag unambig = Sugar.oTag . withTagRef unambig
 
 instance ToBody AnnotatedArg where
     toBody (AnnotatedArg tag e) =
