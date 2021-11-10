@@ -117,7 +117,7 @@ data NodeActions o = NodeActions
 
 data TaggedItem name i o a = TaggedItem
     { _tiTag :: TagRef name i o
-    , _tiDelete :: o EntityId
+    , _tiDelete :: o ()
     , _tiAddAfter :: i (TagChoice name o)
     , _tiValue :: a
     } deriving (Generic, Functor, Foldable, Traversable)

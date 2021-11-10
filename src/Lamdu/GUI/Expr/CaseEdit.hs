@@ -2,6 +2,7 @@ module Lamdu.GUI.Expr.CaseEdit
     ( make
     ) where
 
+import           Control.Monad (zipWithM)
 import qualified Control.Lens as Lens
 import qualified GUI.Momentu as M
 import           GUI.Momentu.EventMap (EventMap)
@@ -74,11 +75,11 @@ make (Ann (Const pl) (Sugar.Composite alts punned caseTail)) =
             <*> grammar (label Texts.case_)
             <&> Responsive.fromWithTextPos
 
-makeAltRow :: _ => Sugar.TaggedItem Name i o (ExprGui.Expr Sugar.Term i o) -> GuiM env i o (TaggedItem o)
-makeAltRow (Sugar.TaggedItem tag delete _addAfter altExpr) =
+makeAltRow :: _ => Widget.Id -> Sugar.TaggedItem Name i o (ExprGui.Expr Sugar.Term i o) -> GuiM env i o (TaggedItem o)
+makeAltRow delDst (Sugar.TaggedItem tag delete _addAfter altExpr) =
     do
         env <- Lens.view id
-        let itemEventMap = caseDelEventMap env delete
+        let itemEventMap = caseDelEventMap env (delDst <$ delete)
         altExprGui <-
             GuiM.makeSubexpression altExpr <&> Widget.weakerEvents itemEventMap
         pre <-
@@ -112,9 +113,9 @@ makeAltsWidget altsId (Sugar.TaggedList mkAddAlt alts) punned =
                 GetVarEdit.makePunnedVars punned
                 <&> (\x -> [TaggedItem Nothing x Nothing])
         existingAltWidgets <-
-            traverse makeAltRow
-            (alts ^.. Lens._Just . SugarLens.taggedListBodyItems)
-            <&> (<> punnedWidgets)
+            zipWithM makeAltRow
+            ((drop 1 altItems <&> WidgetIds.fromEntityId . (^. Sugar.tiTag . Sugar.tagRefTag . Sugar.tagInstance)) <> [altsId])
+            altItems <&> (<> punnedWidgets)
         addAlt <- GuiM.im mkAddAlt
         newAlts <-
             GuiState.isSubCursor ?? addAltId altsId
@@ -137,6 +138,8 @@ makeAltsWidget altsId (Sugar.TaggedList mkAddAlt alts) punned =
                 <&> Responsive.fromWithTextPos
             altWidgtes -> taggedList ?? altWidgtes
             <&> (,) addAltEventMap
+    where
+        altItems = alts ^.. Lens._Just . SugarLens.taggedListBodyItems
 
 makeAddAltRow ::
     _ => Sugar.TagChoice Name o -> Widget.Id -> GuiM env i o (TaggedItem o)
@@ -184,8 +187,5 @@ closedCaseEventMap env (Sugar.ClosedCompositeActions open) =
     open <&> WidgetIds.fromEntityId
     & E.keysEventMapMovesCursor (env ^. has . Config.caseOpenKeys) (doc env Texts.open)
 
-caseDelEventMap :: _ => env -> o Sugar.EntityId -> EventMap (o GuiState.Update)
-caseDelEventMap env delete =
-    delete <&> WidgetIds.fromEntityId
-    & E.keysEventMapMovesCursor (Config.delKeys env)
-    (doc env Texts.deleteAlt)
+caseDelEventMap :: _ => env -> o Widget.Id -> EventMap (o GuiState.Update)
+caseDelEventMap env = E.keysEventMapMovesCursor (Config.delKeys env) (doc env Texts.deleteAlt)

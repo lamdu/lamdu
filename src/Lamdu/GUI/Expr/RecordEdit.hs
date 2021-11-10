@@ -3,6 +3,7 @@ module Lamdu.GUI.Expr.RecordEdit
     ) where
 
 import qualified Control.Lens as Lens
+import           Control.Monad (zipWithM)
 import qualified Data.Char as Char
 import qualified Data.Text as Text
 import qualified GUI.Momentu as M
@@ -118,7 +119,10 @@ make (Ann (Const pl) (Sugar.Composite (Sugar.TaggedList addField mTlBody) punned
             _ ->
                 GetVarEdit.makePunnedVars punned
                 <&> (\x -> [TaggedItem Nothing x Nothing])
-        fieldGuis <- traverse makeFieldRow fields <&> (++ punnedGuis)
+        fieldGuis <-
+            zipWithM makeFieldRow
+            ((drop 1 fields <&> (^. Sugar.tiTag . Sugar.tagRefTag . Sugar.tagInstance)) <> [pl ^. Sugar.plEntityId])
+            fields <&> (++ punnedGuis)
         isAddField <- GuiState.isSubCursor ?? addFieldId (WidgetIds.fromExprPayload pl)
         addFieldGuis <-
             if isAddField
@@ -191,10 +195,10 @@ makeAddFieldRow pl addField =
             , Menu._pickMNextEntry = WidgetIds.ofTagValue dst & Just
             }
 
-makeFieldRow :: _ => Sugar.TaggedItem Name i o (ExprGui.Expr Sugar.Term i o) -> GuiM env i o (TaggedItem o)
-makeFieldRow (Sugar.TaggedItem tag delete _addAfter fieldExpr) =
+makeFieldRow :: _ => Sugar.EntityId -> Sugar.TaggedItem Name i o (ExprGui.Expr Sugar.Term i o) -> GuiM env i o (TaggedItem o)
+makeFieldRow delDst (Sugar.TaggedItem tag delete _addAfter fieldExpr) =
     do
-        itemEventMap <- recordDelEventMap delete
+        itemEventMap <- recordDelEventMap (delDst <$ delete)
         fieldGui <- GuiM.makeSubexpression fieldExpr
         pre <-
             ( TagEdit.makeRecordTag tag

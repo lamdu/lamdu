@@ -35,9 +35,8 @@ type T = Transaction
 deleteItem ::
     Monad m =>
     HRef m # V.Term -> ValI m ->
-    ConvertM m (T m EntityId)
-deleteItem stored restI =
-    ConvertM.typeProtectedSetToVal ?? stored ?? restI <&> Lens.mapped %~ EntityId.ofValI
+    ConvertM m (T m ())
+deleteItem stored restI = ConvertM.typeProtectedSetToVal ?? stored ?? restI <&> void
 
 convertAddItem ::
     Monad m =>
