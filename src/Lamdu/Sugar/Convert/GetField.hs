@@ -52,8 +52,8 @@ convert tag exprPl =
                 do
                     V.LGetField newTag & V.BLeaf & ExprIRef.writeValI valI
                     protectedSetToVal (exprPl ^. Input.stored) valI & void
-        let resultInfo = ConvertTag.TagResultInfo <$> EntityId.ofTag (exprPl ^. Input.entityId) <*> setTag
-        ConvertTag.ref tag Nothing mempty resultInfo >>= ConvertM . lift
+        let resultInfo () = ConvertTag.TagResultInfo <$> EntityId.ofTag (exprPl ^. Input.entityId) <*> setTag
+        ConvertTag.ref tag Nothing mempty (pure ()) resultInfo >>= ConvertM . lift
     <&> PfGetField <&> BodyPostfixFunc
     >>= addActions (Const ()) exprPl
     where

@@ -20,7 +20,7 @@ convertEmpty ::
     (Monad m, Monoid a) =>
     Input.Payload m a # V.Term -> ConvertM m (ExpressionU v m a)
 convertEmpty pl =
-    Composite.convertEmpty V.BRecExtend pl
+    Composite.convertEmpty V.BRecExtend (pl ^. Input.stored)
     <&> BodyRecord
     >>= addActions (Const ()) pl
     <&> annotation . pActions . mApply .~ Nothing

@@ -7,6 +7,7 @@ module Lamdu.Sugar.Convert.Composite
 
 import qualified Control.Lens as Lens
 import           Control.Monad.Once (OnceT)
+import           Control.Monad.Transaction (MonadTransaction(..))
 import qualified Data.Set as Set
 import           Hyper.Type.Functor (F(..))
 import qualified Lamdu.Calc.Term as V
@@ -24,8 +25,8 @@ import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import qualified Lamdu.Sugar.Lens as SugarLens
 import           Lamdu.Sugar.Types
-import           Revision.Deltum.IRef (IRef)
-import           Revision.Deltum.Transaction (Transaction)
+import           Revision.Deltum.IRef (IRef, unsafeFromUUID)
+import           Revision.Deltum.Transaction (Transaction, newKey)
 
 import           Lamdu.Prelude
 
@@ -42,24 +43,24 @@ convertAddItem ::
     Monad m =>
     (V.RowExtend T.Tag V.Term V.Term # F (IRef m) -> ExprIRef.ValBody m) ->
     Set T.Tag ->
-    Input.Payload m a # V.Term ->
+    HRef m # V.Term ->
     ConvertM m (OnceT (T m) (TagChoice InternalName (T m)))
-convertAddItem cons existingTags pl =
+convertAddItem cons existingTags stored =
     do
-        addItem <-
-            ConvertM.typeProtectedSetToVal
-            <&>
-            \protectedSetToVal tag ->
-            do
-                _ <-
-                    DataOps.newHole
-                    >>= ExprIRef.newValI . cons . (V.RowExtend tag ?? stored ^. ExprIRef.iref)
-                    >>= protectedSetToVal stored
-                DataOps.setTagOrder tag (Set.size existingTags)
-        let resultInfo = ConvertTag.TagResultInfo <$> EntityId.ofTag (pl ^. Input.entityId) <*> addItem
-        ConvertTag.replace nameWithoutContext existingTags resultInfo >>= ConvertM . lift
-    where
-        stored = pl ^. Input.stored
+        protectedSetToVal <- ConvertM.typeProtectedSetToVal
+        genNewExtendId <- transaction newKey & ConvertM.convertOnce
+        let resultInfo dstKey =
+                ConvertTag.TagResultInfo <$> EntityId.ofTag (EntityId.ofIRef dst) <*> addItem
+                where
+                    dst = unsafeFromUUID dstKey
+                    addItem tag =
+                        do
+                            _ <-
+                                DataOps.newHole
+                                >>= ExprIRef.writeValI (F dst) . cons . (V.RowExtend tag ?? stored ^. ExprIRef.iref)
+                            _ <- protectedSetToVal stored (F dst)
+                            DataOps.setTagOrder tag (Set.size existingTags)
+        ConvertTag.replace nameWithoutContext existingTags genNewExtendId resultInfo >>= ConvertM . lift
 
 data ExtendVal m rest = ExtendVal
     { _extendTag :: T.Tag
@@ -78,10 +79,10 @@ convertExtend ::
     ConvertM m (Composite v InternalName (OnceT (T m)) (T m) # Annotated b)
 convertExtend cons valS exprPl extendV restC =
     do
-        addItemAction <- convertAddItem cons (Set.fromList (extendV ^. extendTag : restTags)) exprPl
+        addItemAction <- convertAddItem cons (Set.fromList (extendV ^. extendTag : restTags)) (exprPl ^. Input.stored)
         itemS <-
-            convertItem addItemAction cons (exprPl ^. Input.stored)
-            (extendV ^. extendRest . Input.entityId) (Set.fromList restTags) valS
+            convertItem addItemAction cons exprPl
+            (Set.fromList restTags) valS
             (extendV & extendRest %~ (^. Input.stored . ExprIRef.iref))
         punSugar <- Lens.view (ConvertM.scConfig . Config.sugarsEnabled . Config.fieldPuns)
         let addItem items =
@@ -119,10 +120,9 @@ convertOneItemOpenComposite ::
     ConvertM m (Composite v InternalName (OnceT (T m)) (T m) # k)
 convertOneItemOpenComposite cons valS restS exprPl extendV =
     do
-        addItem <- convertAddItem cons (Set.singleton (extendV ^. extendTag)) exprPl
+        addItem <- convertAddItem cons (Set.singleton (extendV ^. extendTag)) (exprPl ^. Input.stored)
         item <-
-            convertItem addItem cons
-            (exprPl ^. Input.stored) (extendV ^. extendRest . Input.entityId) mempty valS
+            convertItem addItem cons exprPl mempty valS
             (extendV & extendRest %~ (^. Input.stored . ExprIRef.iref))
         pure Composite
             { _cList = TaggedList
@@ -136,9 +136,9 @@ convertOneItemOpenComposite cons valS restS exprPl extendV =
 convertEmpty ::
     Monad m =>
     (V.RowExtend T.Tag V.Term V.Term # F (IRef m) -> ExprIRef.ValBody m) ->
-    Input.Payload m a # V.Term ->
+    HRef m # V.Term ->
     ConvertM m (Composite v InternalName (OnceT (T m)) (T m) expr)
-convertEmpty cons exprPl =
+convertEmpty cons stored =
     do
         actions <-
             ConvertM.postProcessAssert
@@ -146,11 +146,11 @@ convertEmpty cons exprPl =
             \postProcess ->
             ClosedCompositeActions
             { _closedCompositeOpen =
-                DataOps.replaceWithHole (exprPl ^. Input.stored)
+                DataOps.replaceWithHole stored
                 <* postProcess
                 <&> EntityId.ofValI
             }
-        addItem <- convertAddItem cons mempty exprPl
+        addItem <- convertAddItem cons mempty stored
         pure Composite
             { _cList = TaggedList
                 { _tlAddFirst = addItem
@@ -164,24 +164,24 @@ convertItem ::
     Monad m =>
     OnceT (T m) (TagChoice InternalName (T m)) ->
     (V.RowExtend T.Tag V.Term V.Term # F (IRef m) -> ExprIRef.ValBody m) ->
-    HRef m # V.Term ->
-    EntityId -> Set T.Tag ->
+    Input.Payload m a # V.Term ->
+    Set T.Tag ->
     h # Term v InternalName (OnceT (T m)) (T m) ->
     -- Using tuple in place of shared RecExtend/Case structure (no such in lamdu-calculus)
     ExtendVal m (ValI m) ->
     ConvertM m (TaggedItem InternalName (OnceT (T m)) (T m) (h # Term v InternalName (OnceT (T m)) (T m)))
-convertItem addItem cons stored inst forbiddenTags exprS extendVal =
+convertItem addItem cons exprPl forbiddenTags exprS extendVal =
     do
-        delItem <- deleteItem stored restI
+        delItem <- deleteItem (exprPl ^. Input.stored) restI
         protectedSetToVal <- ConvertM.typeProtectedSetToVal
         let setTag newTag =
                 do
                     V.RowExtend newTag exprI restI & cons & ExprIRef.writeValI valI
-                    protectedSetToVal stored valI & void
+                    protectedSetToVal (exprPl ^. Input.stored) valI & void
                 where
-                    valI = stored ^. ExprIRef.iref
-        let resultInfo = ConvertTag.TagResultInfo <$> EntityId.ofTag inst <*> setTag
-        tagS <- ConvertTag.ref tag Nothing forbiddenTags resultInfo >>= ConvertM . lift
+                    valI = exprPl ^. Input.stored . ExprIRef.iref
+        let resultInfo () = ConvertTag.TagResultInfo <$> EntityId.ofTag (exprPl ^. Input.entityId) <*> setTag
+        tagS <- ConvertTag.ref tag Nothing forbiddenTags (pure ()) resultInfo >>= ConvertM . lift
         pure TaggedItem
             { _tiTag = tagS
             , _tiValue = exprS

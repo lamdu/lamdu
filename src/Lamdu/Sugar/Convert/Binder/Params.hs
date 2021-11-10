@@ -288,12 +288,12 @@ fieldParamInfo binderKind tags fp storedLam tag =
     do
         postProcess <- ConvertM.postProcessAssert
         add <- addFieldParam
-        let resultInfo newTag =
+        let resultInfo () newTag =
                 ConvertTag.TagResultInfo
                 (EntityId.ofTaggedEntity param newTag)
                 (add DataOps.newHole binderKind storedLam (: tags) newTag >> postProcess)
         addNext <-
-            ConvertTag.replace (nameWithContext Nothing param) (Set.fromList tags) resultInfo
+            ConvertTag.replace (nameWithContext Nothing param) (Set.fromList tags) (pure ()) resultInfo
             >>= ConvertM . lift
         del <- delFieldParamAndFixCalls binderKind tags fp storedLam
         pure RecordParamInfo
@@ -396,12 +396,12 @@ convertRecordParams mPresMode binderKind fieldParams lam@(V.TypedLam param _ _) 
         params <- traverse mkParam fieldParams
         postProcess <- ConvertM.postProcessAssert
         add <- addFieldParam
-        let resultInfo tag =
+        let resultInfo () tag =
                 ConvertTag.TagResultInfo
                 (EntityId.ofTaggedEntity param tag)
                 (add DataOps.newHole binderKind storedLam (: (fieldParams <&> fpTag)) tag >> postProcess)
         addFirstSelection <-
-            ConvertTag.replace (nameWithContext Nothing param) (Set.fromList tags) resultInfo >>= ConvertM . lift
+            ConvertTag.replace (nameWithContext Nothing param) (Set.fromList tags) (pure ()) resultInfo >>= ConvertM . lift
         pure ConventionalParams
             { cpTags = Set.fromList tags
             , _cpParamInfos = fieldParams <&> mkParInfo & mconcat
@@ -417,10 +417,10 @@ convertRecordParams mPresMode binderKind fieldParams lam@(V.TypedLam param _ _) 
         mkParam fp =
             do
                 setField <- setFieldParamTag mPresMode binderKind storedLam tagList tag
-                let resultInfo = ConvertTag.TagResultInfo <$> EntityId.ofTaggedEntity param <*> setField
+                let resultInfo () = ConvertTag.TagResultInfo <$> EntityId.ofTaggedEntity param <*> setField
                 paramInfo <-
                     ConvertTag.ref tag (Just (ConvertTag.NameContext Nothing (UniqueId.toUUID param)))
-                    (Set.delete tag (Set.fromList tagList)) resultInfo
+                    (Set.delete tag (Set.fromList tagList)) (pure ()) resultInfo
                     >>= ConvertM . lift
                     >>= fieldParamInfo binderKind tags fp storedLam
                 let paramEntityId = paramInfo ^. piTag . tagRefTag . tagInstance
@@ -560,13 +560,13 @@ makeVarParamInfo tag binderKind storedLam =
             convertToRecordParams ?? DataOps.newHole ?? binderKind ?? storedLam
             ?? NewParamAfter
             <&> Lens.mapped %~ (<* postProcess)
-        let resultInfo = ConvertTag.TagResultInfo <$> EntityId.ofTaggedEntity param <*> addParamAfter
+        let resultInfo () = ConvertTag.TagResultInfo <$> EntityId.ofTaggedEntity param <*> addParamAfter
         oldParam <- Anchors.assocTag param & getP
         addNext <-
             if oldParam == Anchors.anonTag
             then EntityId.ofTaggedEntity param oldParam & NeedToPickTagToAddNext & pure
             else
-                ConvertTag.replace (nameWithContext Nothing param) (Set.singleton oldParam) resultInfo
+                ConvertTag.replace (nameWithContext Nothing param) (Set.singleton oldParam) (pure ()) resultInfo
                 >>= ConvertM . lift
                 <&> AddNext
         pure VarParamInfo
@@ -636,14 +636,14 @@ convertNonRecordParam binderKind lam@(V.TypedLam param _ _) lamExprPl =
             convertToRecordParams ?? DataOps.newHole ?? binderKind ?? storedLam
             ?? NewParamBefore
             <&> Lens.mapped %~ (<* postProcess)
-        let resultInfo = ConvertTag.TagResultInfo <$> EntityId.ofTaggedEntity param <*> addFirst
+        let resultInfo () = ConvertTag.TagResultInfo <$> EntityId.ofTaggedEntity param <*> addFirst
         addFirstParam <-
             do
                 oldParam <- Anchors.assocTag param & getP
                 if oldParam == Anchors.anonTag
                     then NeedToPickTagToAddFirst (EntityId.ofTaggedEntity param oldParam) & pure
                     else
-                        ConvertTag.replace (nameWithContext (Just varInfo) param) (Set.singleton oldParam) resultInfo
+                        ConvertTag.replace (nameWithContext (Just varInfo) param) (Set.singleton oldParam) (pure ()) resultInfo
                         >>= ConvertM . lift
                         <&> PrependParam
         pure ConventionalParams

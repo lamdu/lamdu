@@ -24,7 +24,7 @@ convertAbsurd ::
     (Monad m, Monoid a) =>
     Input.Payload m a # V.Term -> ConvertM m (ExpressionU v m a)
 convertAbsurd pl =
-    Composite.convertEmpty V.BCase pl
+    Composite.convertEmpty V.BCase (pl ^. Input.stored)
     <&> PfCase <&> BodyPostfixFunc
     >>= addActions (Const ()) pl
 

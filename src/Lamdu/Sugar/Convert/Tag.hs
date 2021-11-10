@@ -8,7 +8,7 @@ module Lamdu.Sugar.Convert.Tag
     ) where
 
 import qualified Control.Lens as Lens
-import           Control.Monad.Once (MonadOnce(..), OnceT)
+import           Control.Monad.Once (MonadOnce(..), OnceT, Typeable)
 import           Control.Monad.Transaction (MonadTransaction, getP, setP)
 import           Data.Property (MkProperty')
 import qualified Data.Property as Property
@@ -52,71 +52,73 @@ withoutContext entityId tag =
 -- NOT type-level constraints on tags. Violation of constraints is
 -- allowed, generating ordinary type errors
 ref ::
-    (MonadTransaction n m, MonadReader env m, Anchors.HasCodeAnchors env n) =>
-    T.Tag -> Maybe NameContext -> Set T.Tag -> (T.Tag -> TagResultInfo (T n)) ->
+    (MonadTransaction n m, MonadReader env m, Anchors.HasCodeAnchors env n, Typeable a) =>
+    T.Tag -> Maybe NameContext -> Set T.Tag -> OnceT (T n) a -> (a -> T.Tag -> TagResultInfo (T n)) ->
     m (OnceT (T n) (TagRef InternalName (OnceT (T n)) (T n)))
-ref tag nameCtx forbiddenTags resultInfo =
+ref tag nameCtx forbiddenTags resultSeed resultInfo =
     Lens.view Anchors.codeAnchors
-    <&> \anchors -> refWith anchors tag name forbiddenTags resultInfo
+    <&> \anchors -> refWith anchors tag name forbiddenTags resultSeed resultInfo
     where
         withContext (NameContext varInfo var) = nameWithContext varInfo var
         name = maybe nameWithoutContext withContext nameCtx
 
 refWith ::
-    Monad m =>
+    (Monad m, Typeable a) =>
     Anchors.CodeAnchors m ->
-    T.Tag -> (T.Tag -> name) -> Set T.Tag -> (T.Tag -> TagResultInfo (T m)) ->
+    T.Tag -> (T.Tag -> name) -> Set T.Tag ->
+    OnceT (T m) a -> (a -> T.Tag -> TagResultInfo (T m)) ->
     OnceT (T m) (TagRef name (OnceT (T m)) (T m))
-refWith cp tag name forbiddenTags resultInfo =
-    replaceWith name forbiddenTags resultInfo tagsProp
-    <&>
-    \r ->
-    TagRef
-    { _tagRefTag = Tag
-        { _tagName = name tag
-        , _tagInstance = resultInfo tag ^. trEntityId
-        , _tagVal = tag
-        }
-    , _tagRefReplace = r
-    , _tagRefJumpTo =
-        if tag == Anchors.anonTag
-        then Nothing
-        else jumpToTag cp tag & Just
-    }
+refWith cp tag name forbiddenTags resultSeed resultInfo =
+    do
+        r <- replaceWith name forbiddenTags resultSeed resultInfo tagsProp
+        seed <- resultSeed
+        pure TagRef
+            { _tagRefTag = Tag
+                { _tagName = name tag
+                , _tagInstance = resultInfo seed tag ^. trEntityId
+                , _tagVal = tag
+                }
+            , _tagRefReplace = r
+            , _tagRefJumpTo =
+                if tag == Anchors.anonTag
+                then Nothing
+                else jumpToTag cp tag & Just
+            }
     where
         tagsProp = Anchors.tags cp
 
 replace ::
-    (MonadTransaction n m, MonadReader env m, Anchors.HasCodeAnchors env n) =>
-    (T.Tag -> name) -> Set T.Tag -> (T.Tag -> TagResultInfo (T n)) ->
+    (MonadTransaction n m, MonadReader env m, Anchors.HasCodeAnchors env n, Typeable a) =>
+    (T.Tag -> name) -> Set T.Tag -> OnceT (T n) a -> (a -> T.Tag -> TagResultInfo (T n)) ->
     m (OnceT (T n) (OnceT (T n) (TagChoice name (T n))))
-replace name forbiddenTags resultInfo =
+replace name forbiddenTags resultSeed resultInfo =
     Lens.view Anchors.codeAnchors <&> Anchors.tags
-    <&> replaceWith name forbiddenTags resultInfo
+    <&> replaceWith name forbiddenTags resultSeed resultInfo
 
 replaceWith ::
-    Monad m =>
-    (T.Tag -> name) -> Set T.Tag -> (T.Tag -> TagResultInfo (T m)) ->
+    (Monad m, Typeable a) =>
+    (T.Tag -> name) -> Set T.Tag ->
+    OnceT (T m) a -> (a -> T.Tag -> TagResultInfo (T m)) ->
     MkProperty' (T m) (Set T.Tag) ->
     OnceT (T m) (OnceT (T m) (TagChoice name (T m)))
-replaceWith name forbiddenTags resultInfo tagsProp =
-    (,) <$> DataOps.genNewTag <*> getP tagsProp & lift & once <&> Lens.mapped %~
-    \(newTag, tags) ->
-    TagChoice
-    { _tcOptions = Set.difference tags forbiddenTags ^.. Lens.folded . Lens.to toOption
-    , _tcNewTag = toOption newTag & toPick %~ (Property.modP tagsProp (Lens.contains newTag .~ True) >>)
-    }
-    where
-        toOption x =
+replaceWith name forbiddenTags resultSeed resultInfo tagsProp =
+    (,,) <$> resultSeed <*> lift DataOps.genNewTag <*> lift (getP tagsProp) & once <&> Lens.mapped %~
+    \(seed, newTag, tags) ->
+    let toOption x =
             TagOption
             { _toInfo =
                 Tag
                 { _tagName = name x
-                , _tagInstance = resultInfo x ^. trEntityId
+                , _tagInstance = resultInfo seed x ^. trEntityId
                 , _tagVal = x
                 }
-            , _toPick = resultInfo x ^. trPick
+            , _toPick = resultInfo seed x ^. trPick
             }
+    in
+    TagChoice
+    { _tcOptions = Set.difference tags forbiddenTags ^.. Lens.folded . Lens.to toOption
+    , _tcNewTag = toOption newTag & toPick %~ (Property.modP tagsProp (Lens.contains newTag .~ True) >>)
+    }
 
 -- NOTE: Used for panes, outside ConvertM, so has no ConvertM.Context env
 -- | Convert a "Entity" (param, def, TId) via its associated tag
@@ -129,11 +131,11 @@ taggedEntityWith cp mVarInfo entity =
     <&>
     \entityTag ->
     refWith cp entityTag (nameWithContext mVarInfo entity)
-    mempty resultInfo
+    mempty (pure ()) resultInfo
     <&> (`OptionalTag` toAnon)
     where
         toAnon = mkInstance Anchors.anonTag <$ setP prop Anchors.anonTag
-        resultInfo = TagResultInfo <$> mkInstance <*> setP prop
+        resultInfo () = TagResultInfo <$> mkInstance <*> setP prop
         mkInstance = EntityId.ofTaggedEntity entity
         prop = Anchors.assocTag entity
 
