@@ -122,6 +122,21 @@ addAnnotation annotationOpts param myId widget =
             ?? Responsive.fromWithTextPos widget
     & local (M.animIdPrefix .~ Widget.toAnimId myId)
 
+addAddParam :: _ => i (Sugar.TagChoice Name a) -> Widget.Id -> Responsive a -> GuiM env i a [Responsive a]
+addAddParam addParam myId paramEdit =
+    GuiState.isSubCursor ?? addId >>=
+    \case
+    False -> pure [paramEdit]
+    True ->
+        addParam & im
+        >>= TagEdit.makeTagHoleEdit mkParamPickResult addId
+        & local (has . Menu.configKeysPickOptionAndGotoNext <>~ [noMods M.Key'Space])
+        & Styled.withColor TextColors.parameterColor
+        <&> Responsive.fromWithTextPos
+        <&> (:[]) <&> (paramEdit :)
+    where
+        addId = TagEdit.addParamId myId
+
 -- exported for use in definition sugaring.
 make ::
     _ =>
@@ -143,21 +158,8 @@ make annotationOpts prevId nextId (param, info) =
             addAnnotation annotationOpts param myId (info ^. iNameEdit)
             <&> Widget.widget . Widget.eventMapMaker . Lens.mapped %~ (<> paramEventMap)
             & local (M.animIdPrefix .~ Widget.toAnimId myId)
-        mAddParam <-
-            GuiState.isSubCursor ?? addId
-            <&> guard
-            <&> (>> (info ^? iAddNext . Lens._Just . Sugar._AddNext))
-        addParamEdits <-
-            case mAddParam of
-            Nothing -> pure []
-            Just addParam ->
-                addParam & im
-                >>= TagEdit.makeTagHoleEdit mkParamPickResult addId
-                & local (has . Menu.configKeysPickOptionAndGotoNext <>~ [noMods M.Key'Space])
-                & Styled.withColor TextColors.parameterColor
-                <&> Responsive.fromWithTextPos
-                <&> (:[])
-        paramEdit : addParamEdits & pure
+        case info ^? iAddNext . Lens._Just . Sugar._AddNext of
+            Nothing -> pure [paramEdit]
+            Just addNext -> addAddParam addNext myId paramEdit
     where
         myId = info ^. iId
-        addId = TagEdit.addParamId myId
