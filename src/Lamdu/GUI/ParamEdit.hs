@@ -1,5 +1,3 @@
-{-# LANGUAGE TemplateHaskell #-}
-
 module Lamdu.GUI.ParamEdit
     ( makeParams, addAnnotation, paramDelEventMap, eventMapAddNextParamOrPickTag, addAddParam
     , eventMapAddFirstParam, mkParamPickResult
@@ -31,16 +29,6 @@ import           Lamdu.Name (Name)
 import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
-
-data Info i o = Info
-    { _iNameEdit :: TextWidget o
-    , _iDel :: o ()
-    , _iAddNext :: i (Sugar.TagChoice Name o)
-    , _iMOrderBefore :: Maybe (o ())
-    , _iMOrderAfter :: Maybe (o ())
-    , _iId :: Widget.Id
-    }
-Lens.makeLenses ''Info
 
 eventMapAddFirstParam ::
     _ => Widget.Id -> Sugar.AddFirstParam name i o -> m (EventMap (o GuiState.Update))
@@ -137,63 +125,58 @@ addAddParam addParam myId paramEdit =
     where
         addId = TagEdit.addParamId myId
 
--- exported for use in definition sugaring.
-make ::
+itemId :: Sugar.TaggedItem name i o a -> Widget.Id
+itemId item = item ^. Sugar.tiTag . Sugar.tagRefTag . Sugar.tagInstance & WidgetIds.fromEntityId
+
+makeTagParamEdit ::
     _ =>
     Annotation.EvalAnnotationOptions ->
-    Widget.Id -> Widget.Id ->
-    (Sugar.FuncParam (Sugar.Annotation (Sugar.EvaluationScopes Name i) Name), Info i o) ->
-    GuiM env i o [Responsive o]
-make annotationOpts prevId nextId (param, info) =
+    Sugar.TaggedItem Name i o (Sugar.FuncParam (Sugar.Annotation (Sugar.EvaluationScopes Name i) Name)) ->
+    GuiM env i o (Sugar.TaggedItem Name i o (Responsive o))
+makeTagParamEdit annotationOpts item =
     do
-        env <- Lens.view id
-        let paramEventMap =
-                mconcat
-                [ paramDelEventMap env (info ^. iDel) prevId nextId
-                , eventMapAddNextParam env myId
-                , foldMap (eventMapOrderParam env Config.paramOrderBeforeKeys Texts.moveBefore) (info ^. iMOrderBefore)
-                , foldMap (eventMapOrderParam env Config.paramOrderAfterKeys Texts.moveAfter) (info ^. iMOrderAfter)
-                ]
-        addAnnotation annotationOpts param myId (info ^. iNameEdit)
-            <&> Widget.widget . Widget.eventMapMaker . Lens.mapped %~ (<> paramEventMap)
-            & local (M.animIdPrefix .~ Widget.toAnimId myId)
-    >>= addAddParam (info ^. iAddNext) myId
+        nameEdit <-
+            TagEdit.makeParamTag Nothing (item ^. Sugar.tiTag)
+            >>= addAnnotation annotationOpts (item ^. Sugar.tiValue) myId
+        eventMap <- Lens.view id <&> eventMapAddNextParam ?? itemId item
+        item & Sugar.tiValue .~ M.weakerEvents eventMap nameEdit & pure
+    & local (M.animIdPrefix .~ Widget.toAnimId myId)
     where
-        myId = info ^. iId
-
-namedRecordParamEditInfo ::
-    _ => Sugar.TaggedItem Name i o a -> GuiM env i o (a, Info i o)
-namedRecordParamEditInfo item =
-    TagEdit.makeParamTag Nothing (item ^. Sugar.tiTag) <&>
-    \nameEdit ->
-    ( item ^. Sugar.tiValue
-    , Info
-        { _iNameEdit = nameEdit
-        , _iAddNext = item ^. Sugar.tiAddAfter
-        , _iMOrderBefore = Nothing
-        , _iMOrderAfter = Nothing
-        , _iDel = item ^. Sugar.tiDelete & void
-        , _iId = item ^. Sugar.tiTag . Sugar.tagRefTag . Sugar.tagInstance & WidgetIds.fromEntityId
-        }
-    )
+        myId = itemId item
 
 makeParams ::
     _ =>
     Annotation.EvalAnnotationOptions ->
     Widget.Id -> Widget.Id ->
-    Sugar.TaggedListBody Name i o (Sugar.FuncParam v) ->
+    Sugar.TaggedListBody Name i o (Sugar.FuncParam (Sugar.Annotation (Sugar.EvaluationScopes Name i) Name)) ->
     GuiM env i o [Responsive o]
 makeParams annotationOpts prevId nextId items =
-    (:)
-    <$> namedRecordParamEditInfo (items ^. Sugar.tlHead)
-    <*> traverse swapable (items ^. Sugar.tlTail)
-    <&> zipWith
-        (Lens._2 . iMOrderAfter .~)
-        ((items ^.. Sugar.tlTail . traverse . Sugar.tsiSwapWithPrevious <&> Just) <> [Nothing])
-    <&> withPrevNext prevId nextId (^. _2 . iId)
-    >>= traverse mkParam <&> concat
+    do
+        infos <-
+            (:)
+            <$> makeTagParamEdit annotationOpts (items ^. Sugar.tlHead)
+            <*> traverse swapable (items ^. Sugar.tlTail)
+        let orderAfters =
+                (items ^.. Sugar.tlTail . traverse . Sugar.tsiSwapWithPrevious <&> Just) <> [Nothing]
+        env <- Lens.view id
+        let addOrderAfter Nothing = id
+            addOrderAfter (Just orderAfter) =
+                Sugar.tiValue %~
+                M.weakerEvents (eventMapOrderParam env Config.paramOrderAfterKeys Texts.moveAfter orderAfter)
+        zipWith addOrderAfter orderAfters infos
+            & withPrevNext prevId nextId itemId
+            & traverse make
+    <&> concat
     where
         swapable item =
-            namedRecordParamEditInfo (item ^. Sugar.tsiItem)
-            <&> Lens._2 . iMOrderBefore ?~ item ^. Sugar.tsiSwapWithPrevious
-        mkParam (p, n, param) = make annotationOpts p n param
+            do
+                eventMap <-
+                    Lens.view id <&>
+                    \env -> eventMapOrderParam env Config.paramOrderBeforeKeys Texts.moveBefore (item ^. Sugar.tsiSwapWithPrevious)
+                makeTagParamEdit annotationOpts (item ^. Sugar.tsiItem)
+                    <&> Sugar.tiValue %~ M.weakerEvents eventMap
+        make (p, n, item) =
+            do
+                env <- Lens.view id
+                M.weakerEvents (paramDelEventMap env (() <$ item ^. Sugar.tiDelete) p n) (item ^. Sugar.tiValue)
+                    & addAddParam (item ^. Sugar.tiAddAfter) (itemId item)
