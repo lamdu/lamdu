@@ -216,19 +216,6 @@ makeScopeNavEdit func myId curCursor =
 data IsScopeNavFocused = ScopeNavIsFocused | ScopeNavNotFocused
     deriving (Eq, Ord)
 
-nullParamEditInfo ::
-    Widget.Id -> M.TextWidget o ->
-    Sugar.NullParamActions o -> ParamEdit.Info i o
-nullParamEditInfo widgetId nameEdit mActions =
-    ParamEdit.Info
-    { ParamEdit._iNameEdit = nameEdit
-    , ParamEdit._iAddNext = Nothing
-    , ParamEdit._iMOrderBefore = Nothing
-    , ParamEdit._iMOrderAfter = Nothing
-    , ParamEdit._iDel = mActions ^. Sugar.npDeleteLambda
-    , ParamEdit._iId = widgetId
-    }
-
 namedVarParamEditInfo ::
     Widget.Id -> Sugar.VarParamInfo Name i o ->
     M.TextWidget o ->
@@ -267,10 +254,19 @@ makeParamsEdit ::
     GuiM env i o [Responsive o]
 makeParamsEdit annotationOpts delVarBackwardsId lhsId rhsId params =
     case params of
-    Sugar.NullParam p ->
-        (Widget.makeFocusableView ?? nullParamId <&> (M.tValue %~))
-        <*> grammar (label Texts.defer)
-        <&> \nullParamGui -> [p & _2 %~ nullParamEditInfo lhsId nullParamGui]
+    Sugar.NullParam (p, actions) ->
+        Widget.weakerEvents
+        <$> ( Lens.view id <&>
+                \env ->
+                E.keyPresses (env ^. has . (Config.delForwardKeys <> Config.delBackwardKeys))
+                (E.toDoc env [has . MomentuTexts.edit, has . MomentuTexts.delete])
+                (GuiState.updateCursor rhsId <$ actions ^. Sugar.npDeleteLambda)
+            )
+        <*> ( (Widget.makeFocusableView ?? nullParamId <&> (M.tValue %~))
+                <*> grammar (label Texts.defer)
+                >>= ParamEdit.addAnnotation annotationOpts p nullParamId
+            )
+        <&> (:[])
         where
             nullParamId = Widget.joinId lhsId ["param"]
     Sugar.RecordParams ps ->
@@ -283,6 +279,7 @@ makeParamsEdit annotationOpts delVarBackwardsId lhsId rhsId params =
             <&> zipWith
                 (Lens._2 . ParamEdit.iMOrderAfter .~)
                 ((items ^.. Sugar.tlTail . traverse . Sugar.tsiSwapWithPrevious <&> Just) <> [Nothing])
+            >>= fromParamList delVarBackwardsId rhsId
             where
                 swapable item =
                     namedRecordParamEditInfo (item ^. Sugar.tsiItem)
@@ -291,10 +288,10 @@ makeParamsEdit annotationOpts delVarBackwardsId lhsId rhsId params =
         TagEdit.makeParamTag (Just (tag ^. Sugar.oPickAnon)) (tag ^. Sugar.oTag)
         <&> namedVarParamEditInfo widgetId pInfo
         <&> (,) param <&> (:[])
+        >>= fromParamList delVarBackwardsId rhsId
         where
             tag = pInfo ^. Sugar.vpiTag
             widgetId = tag ^. Sugar.oTag . Sugar.tagRefTag . Sugar.tagInstance & WidgetIds.fromEntityId
-    >>= fromParamList delVarBackwardsId rhsId
     & local (has . Menu.configKeysPickOptionAndGotoNext <>~ [noMods M.Key'Space])
     where
         fromParamList delDestFirst delDestLast paramList =

@@ -2,7 +2,7 @@
 
 module Lamdu.GUI.ParamEdit
     ( Info(..), iNameEdit, iDel, iAddNext, iMOrderBefore, iMOrderAfter, iId
-    , make
+    , make, addAnnotation
     , eventMapAddFirstParam, mkParamPickResult
     ) where
 
