@@ -105,6 +105,23 @@ mkParamPickResult tagInstance =
         WidgetIds.fromEntityId tagInstance & TagEdit.addParamId & Just
     }
 
+addAnnotation ::
+    _ =>
+    Annotation.EvalAnnotationOptions ->
+    Sugar.FuncParam (Sugar.Annotation (Sugar.EvaluationScopes Name i) Name) ->
+    Widget.Id -> TextWidget o ->
+    GuiM env i o (Responsive o)
+addAnnotation annotationOpts param myId widget =
+    do
+        postProcessAnnotation <-
+            GuiState.isSubCursor ?? myId
+            <&> Annotation.postProcessAnnotationFromSelected
+        Annotation.maybeAddAnnotationWith annotationOpts postProcessAnnotation
+            (param ^. Sugar.fpAnnotation)
+            <&> (Widget.widget %~)
+            ?? Responsive.fromWithTextPos widget
+    & local (M.animIdPrefix .~ Widget.toAnimId myId)
+
 -- exported for use in definition sugaring.
 make ::
     _ =>
@@ -123,15 +140,8 @@ make annotationOpts prevId nextId (param, info) =
                 , foldMap (eventMapOrderParam env Config.paramOrderBeforeKeys Texts.moveBefore) (info ^. iMOrderBefore)
                 , foldMap (eventMapOrderParam env Config.paramOrderAfterKeys Texts.moveAfter) (info ^. iMOrderAfter)
                 ]
-        postProcessAnnotation <-
-            GuiState.isSubCursor ?? myId
-            <&> Annotation.postProcessAnnotationFromSelected
         paramEdit <-
-            Annotation.maybeAddAnnotationWith annotationOpts
-            postProcessAnnotation
-            (param ^. Sugar.fpAnnotation)
-            <&> (Widget.widget %~)
-            ?? Responsive.fromWithTextPos (info ^. iNameEdit)
+            addAnnotation annotationOpts param myId (info ^. iNameEdit)
             <&> Widget.widget . Widget.eventMapMaker . Lens.mapped %~ (<> paramEventMap)
             & local (M.animIdPrefix .~ Widget.toAnimId myId)
         mAddParam <-
