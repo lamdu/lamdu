@@ -87,15 +87,15 @@ eventMapOrderParam env keys moveDoc =
     (E.toDoc env
         [has . MomentuTexts.edit, has . Texts.parameter, has . moveDoc])
 
-eventParamDelEventMap ::
-    _ =>
-    env -> m () ->
-    Lens.ALens' (Config ModKey) [ModKey] ->
-    Lens.ALens' (Texts.CodeUI Text) Text -> Widget.Id -> EventMap (m GuiState.Update)
-eventParamDelEventMap env fpDel keys delParam dstPosId =
-    GuiState.updateCursor dstPosId <$ fpDel
-    & E.keyPresses (env ^# has . keys)
-        (E.toDoc env [has . MomentuTexts.edit, has . delParam])
+paramDelEventMap ::
+    _ => env -> m () -> Widget.Id -> Widget.Id -> EventMap (m GuiState.Update)
+paramDelEventMap env fpDel prevId nextId =
+    dir Config.delBackwardKeys Texts.deleteParameterBackwards prevId <>
+    dir Config.delForwardKeys Texts.deleteParameter nextId
+    where
+        dir keys delParam dstPosId =
+            GuiState.updateCursor dstPosId <$ fpDel
+            & E.keyPresses (env ^. has . keys) (E.toDoc env [has . MomentuTexts.edit, has . delParam])
 
 mkParamPickResult :: Sugar.EntityId -> Menu.PickResult
 mkParamPickResult tagInstance =
@@ -134,8 +134,7 @@ make annotationOpts prevId nextId (param, info) =
         env <- Lens.view id
         let paramEventMap =
                 mconcat
-                [ eventParamDelEventMap env (info ^. iDel) Config.delForwardKeys Texts.deleteParameter nextId
-                , eventParamDelEventMap env (info ^. iDel) Config.delBackwardKeys Texts.deleteParameterBackwards prevId
+                [ paramDelEventMap env (info ^. iDel) prevId nextId
                 , foldMap (eventMapAddNextParam env myId) (info ^. iAddNext)
                 , foldMap (eventMapOrderParam env Config.paramOrderBeforeKeys Texts.moveBefore) (info ^. iMOrderBefore)
                 , foldMap (eventMapOrderParam env Config.paramOrderAfterKeys Texts.moveAfter) (info ^. iMOrderAfter)
