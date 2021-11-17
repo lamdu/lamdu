@@ -224,7 +224,7 @@ namedRecordParamEditInfo item =
     ( item ^. Sugar.tiValue
     , ParamEdit.Info
         { ParamEdit._iNameEdit = nameEdit
-        , ParamEdit._iAddNext = item ^. Sugar.tiAddAfter & Sugar.AddNext & Just
+        , ParamEdit._iAddNext = item ^. Sugar.tiAddAfter
         , ParamEdit._iMOrderBefore = Nothing
         , ParamEdit._iMOrderAfter = Nothing
         , ParamEdit._iDel = item ^. Sugar.tiDelete & void
@@ -276,7 +276,7 @@ makeParamsEdit annotationOpts delVarBackwardsId lhsId rhsId params =
                 Lens.view id <&>
                 \env ->
                 ParamEdit.paramDelEventMap env (pInfo ^. Sugar.vpiDelete) delVarBackwardsId rhsId <>
-                ParamEdit.eventMapAddNextParam env widgetId (pInfo ^. Sugar.vpiAddNext)
+                ParamEdit.eventMapAddNextParamOrPickTag env widgetId (pInfo ^. Sugar.vpiAddNext)
             paramEdit <-
                 TagEdit.makeParamTag (Just (tag ^. Sugar.oPickAnon)) (tag ^. Sugar.oTag)
                 >>= ParamEdit.addAnnotation annotationOpts param widgetId

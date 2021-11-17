@@ -2,7 +2,7 @@
 
 module Lamdu.GUI.ParamEdit
     ( Info(..), iNameEdit, iDel, iAddNext, iMOrderBefore, iMOrderAfter, iId
-    , make, addAnnotation, paramDelEventMap, eventMapAddNextParam, addAddParam
+    , make, addAnnotation, paramDelEventMap, eventMapAddNextParamOrPickTag, addAddParam
     , eventMapAddFirstParam, mkParamPickResult
     ) where
 
@@ -35,7 +35,7 @@ import           Lamdu.Prelude
 data Info i o = Info
     { _iNameEdit :: TextWidget o
     , _iDel :: o ()
-    , _iAddNext :: Maybe (Sugar.AddNextParam Name i o)
+    , _iAddNext :: i (Sugar.TagChoice Name o)
     , _iMOrderBefore :: Maybe (o ())
     , _iMOrderAfter :: Maybe (o ())
     , _iId :: Widget.Id
@@ -62,19 +62,19 @@ eventMapAddFirstParam binderId addFirst =
                 (x <&> enterParam, Texts.addParameter)
 
 eventMapAddNextParam ::
-    _ => env -> Widget.Id -> Sugar.AddNextParam name i o -> EventMap (o GuiState.Update)
-eventMapAddNextParam env myId addNext =
+    _ => env -> Widget.Id -> EventMap (o GuiState.Update)
+eventMapAddNextParam env myId =
     E.keysEventMapMovesCursor (env ^. has . Config.addNextParamKeys)
-    (E.toDoc env [has . MomentuTexts.edit, has . doc]) (pure dst)
-    where
-        (dst, doc) =
-            case addNext of
-            Sugar.AddNext{} ->
-                (TagEdit.addParamId myId, Texts.addNextParameter)
-            Sugar.NeedToPickTagToAddNext x ->
-                ( WidgetIds.tagHoleId (WidgetIds.fromEntityId x)
-                , Texts.nameFirstParameter
-                )
+    (E.toDoc env [has . MomentuTexts.edit, has . Texts.addNextParameter])
+    (pure (TagEdit.addParamId myId))
+
+eventMapAddNextParamOrPickTag ::
+    _ => env -> Widget.Id -> Sugar.AddNextParam name i o -> EventMap (o GuiState.Update)
+eventMapAddNextParamOrPickTag env myId Sugar.AddNext{} =
+    eventMapAddNextParam env myId
+eventMapAddNextParamOrPickTag env _ (Sugar.NeedToPickTagToAddNext x) =
+    E.keysEventMapMovesCursor (env ^. has . Config.addNextParamKeys)
+    (E.toDoc env [has . MomentuTexts.edit, has . Texts.nameFirstParameter]) (pure (WidgetIds.tagHoleId (WidgetIds.fromEntityId x)))
 
 eventMapOrderParam ::
     _ =>
@@ -150,16 +150,13 @@ make annotationOpts prevId nextId (param, info) =
         let paramEventMap =
                 mconcat
                 [ paramDelEventMap env (info ^. iDel) prevId nextId
-                , foldMap (eventMapAddNextParam env myId) (info ^. iAddNext)
+                , eventMapAddNextParam env myId
                 , foldMap (eventMapOrderParam env Config.paramOrderBeforeKeys Texts.moveBefore) (info ^. iMOrderBefore)
                 , foldMap (eventMapOrderParam env Config.paramOrderAfterKeys Texts.moveAfter) (info ^. iMOrderAfter)
                 ]
-        paramEdit <-
-            addAnnotation annotationOpts param myId (info ^. iNameEdit)
+        addAnnotation annotationOpts param myId (info ^. iNameEdit)
             <&> Widget.widget . Widget.eventMapMaker . Lens.mapped %~ (<> paramEventMap)
             & local (M.animIdPrefix .~ Widget.toAnimId myId)
-        case info ^? iAddNext . Lens._Just . Sugar._AddNext of
-            Nothing -> pure [paramEdit]
-            Just addNext -> addAddParam addNext myId paramEdit
+    >>= addAddParam (info ^. iAddNext) myId
     where
         myId = info ^. iId
