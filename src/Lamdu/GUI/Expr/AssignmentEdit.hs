@@ -216,20 +216,6 @@ makeScopeNavEdit func myId curCursor =
 data IsScopeNavFocused = ScopeNavIsFocused | ScopeNavNotFocused
     deriving (Eq, Ord)
 
-namedVarParamEditInfo ::
-    Widget.Id -> Sugar.VarParamInfo Name i o ->
-    M.TextWidget o ->
-    ParamEdit.Info i o
-namedVarParamEditInfo widgetId paramInfo nameEdit =
-    ParamEdit.Info
-    { ParamEdit._iNameEdit = nameEdit
-    , ParamEdit._iAddNext = paramInfo ^. Sugar.vpiAddNext & Just
-    , ParamEdit._iMOrderBefore = Nothing
-    , ParamEdit._iMOrderAfter = Nothing
-    , ParamEdit._iDel = paramInfo ^. Sugar.vpiDelete
-    , ParamEdit._iId = widgetId
-    }
-
 namedRecordParamEditInfo ::
     _ => Sugar.TaggedItem Name i o a -> GuiM env i o (a, ParamEdit.Info i o)
 namedRecordParamEditInfo item =
@@ -285,10 +271,19 @@ makeParamsEdit annotationOpts delVarBackwardsId lhsId rhsId params =
                     namedRecordParamEditInfo (item ^. Sugar.tsiItem)
                     <&> Lens._2 . ParamEdit.iMOrderBefore ?~ item ^. Sugar.tsiSwapWithPrevious
     Sugar.VarParam (param, pInfo) ->
-        TagEdit.makeParamTag (Just (tag ^. Sugar.oPickAnon)) (tag ^. Sugar.oTag)
-        <&> namedVarParamEditInfo widgetId pInfo
-        <&> (,) param <&> (:[])
-        >>= fromParamList delVarBackwardsId rhsId
+        do
+            eventMap <-
+                Lens.view id <&>
+                \env ->
+                ParamEdit.paramDelEventMap env (pInfo ^. Sugar.vpiDelete) delVarBackwardsId rhsId <>
+                ParamEdit.eventMapAddNextParam env widgetId (pInfo ^. Sugar.vpiAddNext)
+            paramEdit <-
+                TagEdit.makeParamTag (Just (tag ^. Sugar.oPickAnon)) (tag ^. Sugar.oTag)
+                >>= ParamEdit.addAnnotation annotationOpts param widgetId
+                <&> M.weakerEvents eventMap
+            case pInfo ^? Sugar.vpiAddNext . Sugar._AddNext of
+                Nothing -> pure [paramEdit]
+                Just addNext -> ParamEdit.addAddParam addNext widgetId paramEdit
         where
             tag = pInfo ^. Sugar.vpiTag
             widgetId = tag ^. Sugar.oTag . Sugar.tagRefTag . Sugar.tagInstance & WidgetIds.fromEntityId
