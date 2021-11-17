@@ -7,7 +7,6 @@ module Lamdu.GUI.Expr.AssignmentEdit
 import           Control.Applicative ((<|>), liftA2)
 import qualified Control.Lens as Lens
 import           Data.CurAndPrev (CurAndPrev, current, fallbackToPrev)
-import           Data.List.Extended (withPrevNext)
 import qualified Data.Map as Map
 import           Data.Property (Property)
 import qualified Data.Property as Property
@@ -216,22 +215,6 @@ makeScopeNavEdit func myId curCursor =
 data IsScopeNavFocused = ScopeNavIsFocused | ScopeNavNotFocused
     deriving (Eq, Ord)
 
-namedRecordParamEditInfo ::
-    _ => Sugar.TaggedItem Name i o a -> GuiM env i o (a, ParamEdit.Info i o)
-namedRecordParamEditInfo item =
-    TagEdit.makeParamTag Nothing (item ^. Sugar.tiTag) <&>
-    \nameEdit ->
-    ( item ^. Sugar.tiValue
-    , ParamEdit.Info
-        { ParamEdit._iNameEdit = nameEdit
-        , ParamEdit._iAddNext = item ^. Sugar.tiAddAfter
-        , ParamEdit._iMOrderBefore = Nothing
-        , ParamEdit._iMOrderAfter = Nothing
-        , ParamEdit._iDel = item ^. Sugar.tiDelete & void
-        , ParamEdit._iId = item ^. Sugar.tiTag . Sugar.tagRefTag . Sugar.tagInstance & WidgetIds.fromEntityId
-        }
-    )
-
 makeParamsEdit ::
     _ =>
     Annotation.EvalAnnotationOptions ->
@@ -258,18 +241,7 @@ makeParamsEdit annotationOpts delVarBackwardsId lhsId rhsId params =
     Sugar.RecordParams ps ->
         case ps ^. Sugar.tlItems of
         Nothing -> error "Empty record params?"
-        Just items ->
-            (:)
-            <$> namedRecordParamEditInfo (items ^. Sugar.tlHead)
-            <*> traverse swapable (items ^. Sugar.tlTail)
-            <&> zipWith
-                (Lens._2 . ParamEdit.iMOrderAfter .~)
-                ((items ^.. Sugar.tlTail . traverse . Sugar.tsiSwapWithPrevious <&> Just) <> [Nothing])
-            >>= fromParamList delVarBackwardsId rhsId
-            where
-                swapable item =
-                    namedRecordParamEditInfo (item ^. Sugar.tsiItem)
-                    <&> Lens._2 . ParamEdit.iMOrderBefore ?~ item ^. Sugar.tsiSwapWithPrevious
+        Just items -> ParamEdit.makeParams annotationOpts delVarBackwardsId rhsId items
     Sugar.VarParam (param, pInfo) ->
         do
             eventMap <-
@@ -288,13 +260,6 @@ makeParamsEdit annotationOpts delVarBackwardsId lhsId rhsId params =
             tag = pInfo ^. Sugar.vpiTag
             widgetId = tag ^. Sugar.oTag . Sugar.tagRefTag . Sugar.tagInstance & WidgetIds.fromEntityId
     & local (has . Menu.configKeysPickOptionAndGotoNext <>~ [noMods M.Key'Space])
-    where
-        fromParamList delDestFirst delDestLast paramList =
-            withPrevNext delDestFirst delDestLast
-            (^. _2 . ParamEdit.iId) paramList
-            & traverse mkParam <&> concat
-            where
-                mkParam (prevId, nextId, param) = ParamEdit.make annotationOpts prevId nextId param
 
 makeMParamsEdit ::
     _ =>

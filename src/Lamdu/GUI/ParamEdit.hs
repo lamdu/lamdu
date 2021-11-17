@@ -1,12 +1,12 @@
 {-# LANGUAGE TemplateHaskell #-}
 
 module Lamdu.GUI.ParamEdit
-    ( Info(..), iNameEdit, iDel, iAddNext, iMOrderBefore, iMOrderAfter, iId
-    , make, addAnnotation, paramDelEventMap, eventMapAddNextParamOrPickTag, addAddParam
+    ( makeParams, addAnnotation, paramDelEventMap, eventMapAddNextParamOrPickTag, addAddParam
     , eventMapAddFirstParam, mkParamPickResult
     ) where
 
 import qualified Control.Lens as Lens
+import           Data.List.Extended (withPrevNext)
 import qualified GUI.Momentu as M
 import           GUI.Momentu.Align (TextWidget)
 import           GUI.Momentu.EventMap (EventMap)
@@ -160,3 +160,40 @@ make annotationOpts prevId nextId (param, info) =
     >>= addAddParam (info ^. iAddNext) myId
     where
         myId = info ^. iId
+
+namedRecordParamEditInfo ::
+    _ => Sugar.TaggedItem Name i o a -> GuiM env i o (a, Info i o)
+namedRecordParamEditInfo item =
+    TagEdit.makeParamTag Nothing (item ^. Sugar.tiTag) <&>
+    \nameEdit ->
+    ( item ^. Sugar.tiValue
+    , Info
+        { _iNameEdit = nameEdit
+        , _iAddNext = item ^. Sugar.tiAddAfter
+        , _iMOrderBefore = Nothing
+        , _iMOrderAfter = Nothing
+        , _iDel = item ^. Sugar.tiDelete & void
+        , _iId = item ^. Sugar.tiTag . Sugar.tagRefTag . Sugar.tagInstance & WidgetIds.fromEntityId
+        }
+    )
+
+makeParams ::
+    _ =>
+    Annotation.EvalAnnotationOptions ->
+    Widget.Id -> Widget.Id ->
+    Sugar.TaggedListBody Name i o (Sugar.FuncParam v) ->
+    GuiM env i o [Responsive o]
+makeParams annotationOpts prevId nextId items =
+    (:)
+    <$> namedRecordParamEditInfo (items ^. Sugar.tlHead)
+    <*> traverse swapable (items ^. Sugar.tlTail)
+    <&> zipWith
+        (Lens._2 . iMOrderAfter .~)
+        ((items ^.. Sugar.tlTail . traverse . Sugar.tsiSwapWithPrevious <&> Just) <> [Nothing])
+    <&> withPrevNext prevId nextId (^. _2 . iId)
+    >>= traverse mkParam <&> concat
+    where
+        swapable item =
+            namedRecordParamEditInfo (item ^. Sugar.tsiItem)
+            <&> Lens._2 . iMOrderBefore ?~ item ^. Sugar.tsiSwapWithPrevious
+        mkParam (p, n, param) = make annotationOpts p n param
