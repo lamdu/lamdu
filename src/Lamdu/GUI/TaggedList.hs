@@ -43,7 +43,7 @@ make prevId nextId items =
                 orderAfter
         let addDel (p, n, item) =
                 item
-                & iEventMap <>~ delEventMap (() <$ item ^. iValue . _1) p n env
+                & iEventMap <>~ delEventMap (void (item ^. iValue . _1)) p n env
                 & iValue %~ (^. _2)
         (:) <$> makeItem (items ^. Sugar.tlHead)
             <*> traverse makeSwappableItem (items ^. Sugar.tlTail)
