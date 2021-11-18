@@ -2,7 +2,7 @@
 
 module Lamdu.GUI.TaggedList
     ( Item(..), iTag, iValue, iEventMap, iAddAfter
-    , make, itemId
+    , make, itemId, delEventMap, addNextEventMap
     ) where
 
 import qualified Control.Lens as Lens
@@ -43,7 +43,7 @@ make prevId nextId items =
                 orderAfter
         let addDel (p, n, item) =
                 item
-                & iEventMap <>~ delEventMap env (() <$ item ^. iValue . _1) p n
+                & iEventMap <>~ delEventMap (() <$ item ^. iValue . _1) p n env
                 & iValue %~ (^. _2)
         (:) <$> makeItem (items ^. Sugar.tlHead)
             <*> traverse makeSwappableItem (items ^. Sugar.tlTail)
@@ -55,27 +55,34 @@ make prevId nextId items =
             (items ^.. Sugar.tlTail . traverse . Sugar.tsiSwapWithPrevious <&> Just) <>
             [Nothing]
 
-delEventMap :: _ => env -> o () -> Widget.Id -> Widget.Id -> EventMap (o GuiState.Update)
-delEventMap env fpDel prevId nextId =
-    dir Config.delBackwardKeys Texts.deleteParameterBackwards prevId <>
-    dir Config.delForwardKeys Texts.deleteParameter nextId
-    where
-        dir keys delParam dstPosId =
+delEventMap :: _ => o () -> Widget.Id -> Widget.Id -> m (EventMap (o GuiState.Update))
+delEventMap fpDel prevId nextId =
+    Lens.view id <&>
+    \env ->
+    let dir keys delParam dstPosId =
             GuiState.updateCursor dstPosId <$ fpDel
             & E.keyPresses (env ^. has . keys) (E.toDoc env [has . MomentuTexts.edit, has . delParam])
+    in
+    dir Config.delBackwardKeys Texts.deleteParameterBackwards prevId <>
+    dir Config.delForwardKeys Texts.deleteParameter nextId
+
+addNextEventMap :: _ => Widget.Id -> m _
+addNextEventMap myId =
+    Lens.view id <&>
+    \env ->
+    E.keysEventMapMovesCursor (env ^. has . Config.addNextParamKeys)
+    (E.toDoc env [has . MomentuTexts.edit, has . Texts.addNextParameter])
+    (pure (TagEdit.addParamId myId))
 
 makeItem :: _ => Sugar.TaggedItem name i o a -> m (Item name i o (o (), a))
 makeItem item =
-    Lens.view id <&>
-    \env ->
+    addNextEventMap (itemId (item ^. Sugar.tiTag)) <&>
+    \x ->
     Item
     { _iTag = item ^. Sugar.tiTag
     , _iValue = (item ^. Sugar.tiDelete, item ^. Sugar.tiValue)
     , _iAddAfter = item ^. Sugar.tiAddAfter
-    , _iEventMap =
-        E.keysEventMapMovesCursor (env ^. has . Config.addNextParamKeys)
-        (E.toDoc env [has . MomentuTexts.edit, has . Texts.addNextParameter])
-        (pure (TagEdit.addParamId (itemId (item ^. Sugar.tiTag))))
+    , _iEventMap = x
     }
 
 makeSwappableItem :: _ => Sugar.TaggedSwappableItem name i o a -> m (Item name i o (o (), a))

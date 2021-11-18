@@ -247,8 +247,8 @@ makeParamsEdit annotationOpts delVarBackwardsId lhsId rhsId params =
             eventMap <-
                 Lens.view id <&>
                 \env ->
-                ParamEdit.paramDelEventMap env (pInfo ^. Sugar.vpiDelete) delVarBackwardsId rhsId <>
-                ParamEdit.eventMapAddNextParamOrPickTag env widgetId (pInfo ^. Sugar.vpiAddNext)
+                ParamEdit.delEventMap (pInfo ^. Sugar.vpiDelete) delVarBackwardsId rhsId env <>
+                ParamEdit.eventMapAddNextParamOrPickTag widgetId (pInfo ^. Sugar.vpiAddNext) env
             paramEdit <-
                 TagEdit.makeParamTag (Just (tag ^. Sugar.oPickAnon)) (tag ^. Sugar.oTag)
                 >>= ParamEdit.addAnnotation annotationOpts param widgetId

@@ -1,6 +1,7 @@
 module Lamdu.GUI.ParamEdit
-    ( makeParams, addAnnotation, paramDelEventMap, eventMapAddNextParamOrPickTag, addAddParam
+    ( makeParams, addAnnotation, eventMapAddNextParamOrPickTag, addAddParam
     , eventMapAddFirstParam, mkParamPickResult
+    , TaggedList.delEventMap
     ) where
 
 import qualified Control.Lens as Lens
@@ -48,30 +49,15 @@ eventMapAddFirstParam binderId addFirst =
             Sugar.AddInitialParam x ->
                 (x <&> enterParam, Texts.addParameter)
 
-eventMapAddNextParam ::
-    _ => env -> Widget.Id -> EventMap (o GuiState.Update)
-eventMapAddNextParam env myId =
-    E.keysEventMapMovesCursor (env ^. has . Config.addNextParamKeys)
-    (E.toDoc env [has . MomentuTexts.edit, has . Texts.addNextParameter])
-    (pure (TagEdit.addParamId myId))
-
 eventMapAddNextParamOrPickTag ::
-    _ => env -> Widget.Id -> Sugar.AddNextParam name i o -> EventMap (o GuiState.Update)
-eventMapAddNextParamOrPickTag env myId Sugar.AddNext{} =
-    eventMapAddNextParam env myId
-eventMapAddNextParamOrPickTag env _ (Sugar.NeedToPickTagToAddNext x) =
+    _ => Widget.Id -> Sugar.AddNextParam name i o -> m (EventMap (o GuiState.Update))
+eventMapAddNextParamOrPickTag myId Sugar.AddNext{} =
+    TaggedList.addNextEventMap myId
+eventMapAddNextParamOrPickTag _ (Sugar.NeedToPickTagToAddNext x) =
+    Lens.view id <&>
+    \env ->
     E.keysEventMapMovesCursor (env ^. has . Config.addNextParamKeys)
     (E.toDoc env [has . MomentuTexts.edit, has . Texts.nameFirstParameter]) (pure (WidgetIds.tagHoleId (WidgetIds.fromEntityId x)))
-
-paramDelEventMap ::
-    _ => env -> m () -> Widget.Id -> Widget.Id -> EventMap (m GuiState.Update)
-paramDelEventMap env fpDel prevId nextId =
-    dir Config.delBackwardKeys Texts.deleteParameterBackwards prevId <>
-    dir Config.delForwardKeys Texts.deleteParameter nextId
-    where
-        dir keys delParam dstPosId =
-            GuiState.updateCursor dstPosId <$ fpDel
-            & E.keyPresses (env ^. has . keys) (E.toDoc env [has . MomentuTexts.edit, has . delParam])
 
 mkParamPickResult :: Sugar.EntityId -> Menu.PickResult
 mkParamPickResult tagInstance =
