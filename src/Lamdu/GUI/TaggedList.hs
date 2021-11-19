@@ -39,7 +39,7 @@ make prevId nextId items =
             addOrderAfter (Just orderAfter) =
                 iEventMap <>~
                 E.keysEventMap (env ^. has . Config.paramOrderAfterKeys)
-                (E.toDoc env [has . MomentuTexts.edit, has . Texts.addNextParameter])
+                (E.toDoc env [has . MomentuTexts.edit, has . Texts.moveAfter])
                 orderAfter
         let addDel (p, n, item) =
                 item
