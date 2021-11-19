@@ -12,6 +12,7 @@ import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.I18N as MomentuTexts
 import qualified GUI.Momentu.State as GuiState
 import qualified GUI.Momentu.Widget as Widget
+import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import qualified Lamdu.Config as Config
 import qualified Lamdu.GUI.Expr.TagEdit as TagEdit
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
@@ -60,11 +61,13 @@ delEventMap fpDel prevId nextId =
     Lens.view id <&>
     \env ->
     let dir keys delParam dstPosId =
-            GuiState.updateCursor dstPosId <$ fpDel
-            & E.keyPresses (env ^. has . keys) (E.toDoc env [has . MomentuTexts.edit, has . delParam])
+            E.keyPresses (env ^. has . keys)
+            (E.toDoc env [has . MomentuTexts.edit, has . Texts.parameter, has . delParam])
+            (GuiState.updateCursor dstPosId <$ fpDel)
     in
-    dir Config.delBackwardKeys Texts.deleteParameterBackwards prevId <>
-    dir Config.delForwardKeys Texts.deleteParameter nextId
+    -- TODO: Imports SearchMenu just for deleteBackwards text?
+    dir Config.delBackwardKeys SearchMenu.textDeleteBackwards prevId <>
+    dir Config.delForwardKeys MomentuTexts.delete nextId
 
 addNextEventMap :: _ => Widget.Id -> m _
 addNextEventMap myId =

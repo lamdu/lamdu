@@ -42,7 +42,7 @@ makeToNom (Ann (Const pl) (Sugar.Nominal tid binder)) =
                 (E.toDoc env
                     [ has . MomentuTexts.edit
                     , has . Texts.nominal
-                    , has . Texts.deleteToNominal
+                    , has . MomentuTexts.delete
                     ])
         let eventMap =
                 binder ^.

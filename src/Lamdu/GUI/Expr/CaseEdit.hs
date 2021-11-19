@@ -41,13 +41,8 @@ import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
 
-doc :: _ => env -> Lens.ALens' (Texts.CodeUI Text) Text -> E.Doc
-doc env lens =
-    E.toDoc env
-    [ has . MomentuTexts.edit
-    , has . Texts.caseLabel
-    , has . lens
-    ]
+doc :: _ => env -> [Lens.ALens' (Texts.CodeUI Text) Text] -> E.Doc
+doc env lens = E.toDoc env ([has . MomentuTexts.edit, has . Texts.caseLabel] <> (lens <&> (has .)))
 
 addAltId :: Widget.Id -> Widget.Id
 addAltId = (`Widget.joinId` ["add alt"])
@@ -128,7 +123,7 @@ makeAltsWidget altsId (Sugar.TaggedList mkAddAlt alts) punned =
                 & GuiState.uWidgetStateUpdates . Lens.at dst ?~ mempty
                 & pure
                 & E.keyPresses (env ^. has . Config.caseAddAltKeys)
-                    (doc env Texts.addAlt)
+                    (doc env [Texts.alternative, Texts.add])
                 where
                     dst = addAltId altsId
         case existingAltWidgets ++ newAlts of
@@ -185,7 +180,9 @@ makeOpenCase rest animId altsGui =
 closedCaseEventMap :: _ => env -> Sugar.ClosedCompositeActions o -> EventMap (o GuiState.Update)
 closedCaseEventMap env (Sugar.ClosedCompositeActions open) =
     open <&> WidgetIds.fromEntityId
-    & E.keysEventMapMovesCursor (env ^. has . Config.caseOpenKeys) (doc env Texts.open)
+    & E.keysEventMapMovesCursor (env ^. has . Config.caseOpenKeys) (doc env [Texts.open])
 
 caseDelEventMap :: _ => env -> o Widget.Id -> EventMap (o GuiState.Update)
-caseDelEventMap env = E.keysEventMapMovesCursor (Config.delKeys env) (doc env Texts.deleteAlt)
+caseDelEventMap env =
+    E.keysEventMapMovesCursor (Config.delKeys env)
+    (E.toDoc env [has . MomentuTexts.edit, has . Texts.caseLabel, has . Texts.alternative, has . MomentuTexts.delete])

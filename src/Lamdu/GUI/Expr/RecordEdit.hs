@@ -44,8 +44,9 @@ import           Lamdu.Prelude
 import qualified Lamdu.Sugar.Lens as SugarLens
 import qualified GUI.Momentu.State as M
 
-doc :: _ => env -> Lens.ALens' (Texts.CodeUI Text) Text -> E.Doc
-doc env lens = E.toDoc env [has . MomentuTexts.edit, has . Texts.record, has . lens]
+doc :: _ => env -> [Lens.ALens' (Texts.CodeUI Text) Text] -> E.Doc
+doc env lens =
+    E.toDoc env ([has . MomentuTexts.edit, has . Texts.record] <> (lens <&> (has .)))
 
 addFieldId :: Widget.Id -> Widget.Id
 addFieldId = (`Widget.joinId` ["add field"])
@@ -58,11 +59,11 @@ mkAddFieldEventMap myId =
     addFieldId myId
     & pure
     & E.keysEventMapMovesCursor (env ^. has . Config.recordAddFieldKeys)
-    (doc env Texts.addField)
+    (doc env [Texts.field, Texts.add])
 
 addFieldWithSearchTermEventMap :: _ => env -> Widget.Id -> EventMap (o GuiState.Update)
 addFieldWithSearchTermEventMap env myId =
-    E.charEventMap "Letter" (doc env Texts.addField) f
+    E.charEventMap "Letter" (doc env [Texts.field, Texts.add]) f
     where
         f c
             | Char.isAlpha c =
@@ -239,12 +240,13 @@ closedRecordEventMap (Sugar.ClosedCompositeActions open) =
     \env ->
     open <&> WidgetIds.fromEntityId
     & E.keysEventMapMovesCursor (env ^. has . Config.recordOpenKeys)
-    (doc env Texts.open)
+    (doc env [Texts.open])
 
 recordDelEventMap :: _ => o Sugar.EntityId -> m (EventMap (o GuiState.Update))
 recordDelEventMap delete =
     Lens.view id
     <&>
     \env ->
-    delete <&> WidgetIds.fromEntityId
-    & E.keysEventMapMovesCursor (Config.delKeys env) (doc env Texts.deleteField)
+    E.keysEventMapMovesCursor (Config.delKeys env)
+    (E.toDoc env [has . MomentuTexts.edit, has . Texts.record, has . Texts.field, has . MomentuTexts.delete])
+    (delete <&> WidgetIds.fromEntityId)

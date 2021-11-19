@@ -28,15 +28,12 @@ data CodeUI a = CodeUI
     , _doneChangingImportedName :: a
     , _pane :: a
     , _nominal :: a
-    , _deleteToNominal :: a
     , _tag :: a
     , _record :: a
     , _injectValue :: a
     , _caseLabel :: a
-    , _addField :: a
-    , _deleteField :: a
-    , _addAlt :: a
-    , _deleteAlt :: a
+    , _field :: a
+    , _alternative :: a
     , _open :: a
     , _close :: a
     , _shrinkLambdaParams :: a
@@ -69,8 +66,6 @@ data CodeUI a = CodeUI
     , _parameter :: a
     , _addParameter :: a
     , _addNextParameter :: a
-    , _deleteParameter :: a
-    , _deleteParameterBackwards :: a
     , _moveBefore :: a
     , _moveAfter :: a
     , _fragment :: a
