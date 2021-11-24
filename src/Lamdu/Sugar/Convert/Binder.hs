@@ -221,7 +221,7 @@ makeAssignment _chosenScopeProp binderKind _defVar expr =
     do
         addFirstParam <- convertEmptyParams binderKind expr
         convertBinder expr
-            <&> annValue %~ BodyPlain . AssignPlain (AddInitialParam addFirstParam)
+            <&> annValue %~ BodyPlain . AssignPlain addFirstParam
     <&> (,) Nothing
 
 convertLam ::
@@ -372,7 +372,7 @@ convertAssignment binderKind defVar expr =
     \case
     False ->
         convertBinder expr
-        <&> annValue %~ BodyPlain . AssignPlain (AddInitialParam (error "TODO: add param when assignment parameters not supported"))
+        <&> annValue %~ BodyPlain . AssignPlain (error "TODO: add param when assignment parameters not supported")
         <&> (,) Nothing
     True -> makeAssignment (Anchors.assocScopeRef defVar) binderKind defVar expr
 

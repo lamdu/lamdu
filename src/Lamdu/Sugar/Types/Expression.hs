@@ -243,7 +243,7 @@ data Function v name i o k = Function
     } deriving Generic
 
 data AssignPlain v name i o f = AssignPlain
-    { _apAddFirstParam :: AddFirstParam name i o
+    { _apAddFirstParam :: o EntityId
     , _apBody :: Binder v name i o f
     } deriving Generic
 

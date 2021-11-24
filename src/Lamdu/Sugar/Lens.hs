@@ -131,9 +131,9 @@ binderResultExpr f (Ann (Const pl) x) =
         <&> BinderLet
         <&> Ann (Const pl)
 
-assignmentBodyAddFirstParam :: Lens' (Assignment v name i o a) (AddFirstParam name i o)
-assignmentBodyAddFirstParam f (BodyFunction x) = fAddFirstParam f x <&> BodyFunction
-assignmentBodyAddFirstParam f (BodyPlain x) = apAddFirstParam f x <&> BodyPlain
+assignmentBodyAddFirstParam :: Assignment v name i o a -> AddFirstParam name i o
+assignmentBodyAddFirstParam (BodyFunction x) = x ^. fAddFirstParam
+assignmentBodyAddFirstParam (BodyPlain x) = x ^. apAddFirstParam & AddInitialParam
 
 getVarName :: Lens.Traversal' (GetVar a o) a
 getVarName f (GetParam x) = (pNameRef . nrName) f x <&> GetParam

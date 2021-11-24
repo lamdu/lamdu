@@ -360,25 +360,19 @@ makeFunctionParts funcApplyLimit (Ann (Const pl) func) delVarBackwardsId =
 
 makePlainParts ::
     _ =>
-    ExprGui.Expr Sugar.AssignPlain i o -> Widget.Id -> GuiM env i o (Parts i o)
-makePlainParts (Ann (Const pl) assignPlain) delVarBackwardsId =
-    do
-        mParamsEdit <-
-            makeMParamsEdit (pure Nothing) ScopeNavNotFocused delVarBackwardsId myId myId
-            (assignPlain ^. Sugar.apAddFirstParam) Nothing
-        rhs <-
-            assignPlain ^. Sugar.apBody & Ann (Const pl)
-            & GuiM.makeBinder
-        Parts mParamsEdit Nothing rhs mempty Nothing myId & pure
+    ExprGui.Expr Sugar.AssignPlain i o -> GuiM env i o (Parts i o)
+makePlainParts (Ann (Const pl) assignPlain) =
+    assignPlain ^. Sugar.apBody & Ann (Const pl) & GuiM.makeBinder
+    <&> \rhs -> Parts Nothing Nothing rhs mempty Nothing myId
     where
         myId = WidgetIds.fromExprPayload pl
 
 makeParts ::
     _ =>
     Sugar.FuncApplyLimit -> ExprGui.Expr Sugar.Assignment i o -> Widget.Id -> GuiM env i o (Parts i o)
-makeParts funcApplyLimit (Ann (Const pl) assignmentBody) =
+makeParts funcApplyLimit (Ann (Const pl) assignmentBody) myId =
     case assignmentBody of
-    Sugar.BodyFunction x -> makeFunctionParts funcApplyLimit (Ann (Const pl) x)
+    Sugar.BodyFunction x -> makeFunctionParts funcApplyLimit (Ann (Const pl) x) myId
     Sugar.BodyPlain x -> makePlainParts (Ann (Const pl) x)
 
 makeJumpToRhs :: _ => Widget.Id -> GuiM env i o (EventMap (o M.Update))
@@ -414,7 +408,7 @@ make pMode tag color assignment =
                 >>= traverse
                     (PresentationModeEdit.make presentationChoiceId (x ^. Sugar.fParams))
         addFirstParamEventMap <-
-            ParamEdit.eventMapAddFirstParam myId (assignmentBody ^. SugarLens.assignmentBodyAddFirstParam)
+            ParamEdit.eventMapAddFirstParam myId (SugarLens.assignmentBodyAddFirstParam assignmentBody)
         (|---|) <- Glue.mkGlue ?? Glue.Vertical
         defNameEdit <-
             TagEdit.makeBinderTagEdit color tag

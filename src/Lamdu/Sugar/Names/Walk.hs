@@ -203,10 +203,7 @@ toFunction u func@Function{_fParams, _fBody, _fAddFirstParam} =
     <*> walk _fAddFirstParam
 
 instance ToBody AssignPlain where
-    toBody AssignPlain{_apBody, _apAddFirstParam} =
-        (\_apBody _apAddFirstParam -> AssignPlain{_apBody, _apAddFirstParam})
-        <$> toBody _apBody
-        <*> walk _apAddFirstParam
+    toBody = apBody toBody
 
 type ExprW t v n m (o :: Type -> Type) a = Annotated a # t v n (IM m) o
 type WalkExpr t m o v0 v1 a0 a1 = ExprW t v0 (OldName m) m o a0 -> m (ExprW t v1 (NewName m) m o a1)
