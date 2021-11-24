@@ -390,8 +390,8 @@ makeJumpToRhs rhsId =
             "="
 
 eventMapAddFirstParam ::
-    _ => Widget.Id -> Sugar.AddFirstParam name i o -> m (EventMap (o GuiState.Update))
-eventMapAddFirstParam binderId addFirst =
+    _ => Widget.Id -> Sugar.Assignment v name i o a -> m (EventMap (o GuiState.Update))
+eventMapAddFirstParam binderId assignment =
     Lens.view id
     <&>
     \env ->
@@ -400,17 +400,15 @@ eventMapAddFirstParam binderId addFirst =
     where
         enterParam = WidgetIds.tagHoleId . WidgetIds.fromEntityId
         (action, doc) =
-            case addFirst of
-            Sugar.NeedToPickTagToAddFirst x ->
-                (pure (enterParam x), [has . Texts.nameFirstParameter])
-            Sugar.PrependParam{} ->
-                (pure (TagEdit.addItemId binderId), [has . Texts.parameter, has . Texts.add])
-            Sugar.AddInitialParam x ->
-                (x <&> enterParam, [has . Texts.parameter, has . Texts.add])
-
-assignmentBodyAddFirstParam :: Sugar.Assignment v name i o a -> Sugar.AddFirstParam name i o
-assignmentBodyAddFirstParam (Sugar.BodyFunction x) = x ^. Sugar.fAddFirstParam
-assignmentBodyAddFirstParam (Sugar.BodyPlain x) = x ^. Sugar.apAddFirstParam & Sugar.AddInitialParam
+            case assignment of
+            Sugar.BodyPlain x ->
+                (x ^. Sugar.apAddFirstParam <&> enterParam, [has . Texts.parameter, has . Texts.add])
+            Sugar.BodyFunction f ->
+                case f ^. Sugar.fAddFirstParam of
+                Sugar.NeedToPickTagToAddFirst x ->
+                    (pure (enterParam x), [has . Texts.nameFirstParameter])
+                Sugar.PrependParam{} ->
+                    (pure (TagEdit.addItemId binderId), [has . Texts.parameter, has . Texts.add])
 
 make ::
     _ =>
@@ -431,7 +429,7 @@ make pMode tag color assignment =
                 >>= traverse
                     (PresentationModeEdit.make presentationChoiceId (x ^. Sugar.fParams))
         addFirstParamEventMap <-
-            eventMapAddFirstParam myId (assignmentBodyAddFirstParam assignmentBody)
+            eventMapAddFirstParam myId assignmentBody
         (|---|) <- Glue.mkGlue ?? Glue.Vertical
         defNameEdit <-
             TagEdit.makeBinderTagEdit color tag

@@ -24,7 +24,7 @@ module Lamdu.Sugar.Types.Parts
     , FuncParam(..), fpAnnotation, fpVarInfo
     , NullParamActions(..), npDeleteLambda
     , VarParamInfo(..), vpiTag, vpiAddNext, vpiDelete
-    , AddFirstParam(..), _AddInitialParam, _PrependParam, _NeedToPickTagToAddFirst
+    , AddFirstParam(..), _PrependParam, _NeedToPickTagToAddFirst
     , AddNextParam(..), _AddNext, _NeedToPickTagToAddNext
     , -- Expressions
       Payload(..), plEntityId, plAnnotation, plActions, plHiddenEntityIds, plParenInfo
@@ -130,9 +130,7 @@ data TaggedList name i o a = TaggedList
     } deriving (Generic, Functor, Foldable, Traversable)
 
 data AddFirstParam name i o
-    = -- The inital param is created with anon-tag
-      AddInitialParam (o EntityId)
-    | PrependParam (i (TagChoice name o))
+    = PrependParam (i (TagChoice name o))
     | -- When the param has anon tag one can't add another one,
       -- contains the EntityId of the param requiring tag.
       NeedToPickTagToAddFirst EntityId
