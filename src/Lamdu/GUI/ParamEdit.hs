@@ -32,7 +32,7 @@ import qualified Lamdu.Sugar.Types as Sugar
 import           Lamdu.Prelude
 
 eventMapAddNextParamOrPickTag ::
-    _ => Widget.Id -> Sugar.AddNextParam name i o -> m (EventMap (o GuiState.Update))
+    _ => Widget.Id -> Sugar.AddParam name i o -> m (EventMap (o GuiState.Update))
 eventMapAddNextParamOrPickTag myId Sugar.AddNext{} =
     Lens.view (has . Config.addNextParamKeys) >>=
     (TaggedList.addNextEventMap (has . Texts.parameter) ?? myId)

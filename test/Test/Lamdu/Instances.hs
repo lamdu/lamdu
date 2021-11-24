@@ -121,7 +121,7 @@ instance Eq (Sugar.TagPane f) where
     , ''Sugar.WorkArea, ''Sugar.BinderVarInline, ''Sugar.ClosedCompositeActions, ''Sugar.Delete
     , ''Sugar.DetachAction, ''Sugar.EvalCompletionResult, ''Sugar.EvalException, ''Sugar.Hole
     , ''Sugar.Literal, ''Sugar.NodeActions, ''Sugar.NullParamActions, ''Sugar.Globals
-    , ''Sugar.ResList, ''Sugar.ResTree, ''Sugar.AddFirstParam, ''Sugar.AddNextParam
+    , ''Sugar.ResList, ''Sugar.ResTree, ''Sugar.AddParam
     , ''Sugar.BinderVarForm, ''Sugar.BinderVarRef, ''Sugar.Payload
     , ''Sugar.DefinitionBuiltin, ''Sugar.DefinitionForm
     , ''Sugar.GetVar, ''Sugar.Leaf, ''Sugar.NameRef, ''Sugar.VarParamInfo, ''Sugar.ParamRef

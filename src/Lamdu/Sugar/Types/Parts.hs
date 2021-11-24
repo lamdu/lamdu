@@ -24,8 +24,7 @@ module Lamdu.Sugar.Types.Parts
     , FuncParam(..), fpAnnotation, fpVarInfo
     , NullParamActions(..), npDeleteLambda
     , VarParamInfo(..), vpiTag, vpiAddNext, vpiDelete
-    , AddFirstParam(..), _PrependParam, _NeedToPickTagToAddFirst
-    , AddNextParam(..), _AddNext, _NeedToPickTagToAddNext
+    , AddParam(..), _AddNext, _NeedToPickTagToAddNext
     , -- Expressions
       Payload(..), plEntityId, plAnnotation, plActions, plHiddenEntityIds, plParenInfo
     , ClosedCompositeActions(..), closedCompositeOpen
@@ -57,7 +56,7 @@ data Annotation v name
     | AnnotationNone
     deriving Generic
 
-data AddNextParam name i o
+data AddParam name i o
     = AddNext (i (TagChoice name o))
     | -- When the param has anon tag one can't add another one,
       -- contains the EntityId of the param requiring tag.
@@ -70,7 +69,7 @@ newtype NullParamActions o = NullParamActions
 
 data VarParamInfo name i o = VarParamInfo
     { _vpiTag :: OptionalTag name i o
-    , _vpiAddNext :: AddNextParam name i o
+    , _vpiAddNext :: AddParam name i o
     , _vpiDelete :: o ()
     } deriving Generic
 
@@ -128,13 +127,6 @@ data TaggedList name i o a = TaggedList
     { _tlAddFirst :: i (TagChoice name o)
     , _tlItems :: Maybe (TaggedListBody name i o a)
     } deriving (Generic, Functor, Foldable, Traversable)
-
-data AddFirstParam name i o
-    = PrependParam (i (TagChoice name o))
-    | -- When the param has anon tag one can't add another one,
-      -- contains the EntityId of the param requiring tag.
-      NeedToPickTagToAddFirst EntityId
-    deriving Generic
 
 -- TODO: rename BinderParams -> Params
 data BinderParams v name i o
@@ -194,7 +186,7 @@ traverse Lens.makeLenses
     , ''TaggedList, ''TaggedListBody, ''TaggedItem, ''TaggedSwappableItem
     ] <&> concat
 traverse Lens.makePrisms
-    [ ''AddFirstParam, ''AddNextParam, ''Annotation, ''BinderParams, ''Delete
+    [ ''AddParam, ''Annotation, ''BinderParams, ''Delete
     , ''DetachAction, ''FuncApplyLimit, ''Literal, ''VarInfo
     ] <&> concat
 traverse makeHTraversableAndBases [''NullaryInject, ''PunnedVar] <&> concat

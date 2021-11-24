@@ -56,7 +56,7 @@ data ConventionalParams m = ConventionalParams
     { cpTags :: Set T.Tag
     , _cpParamInfos :: Map T.Tag ConvertM.TagFieldParam
     , _cpParams :: Maybe (BinderParams EvalPrep InternalName (OnceT (T m)) (T m))
-    , _cpAddFirstParam :: AddFirstParam InternalName (OnceT (T m)) (T m)
+    , _cpAddFirstParam :: AddParam InternalName (OnceT (T m)) (T m)
     , cpMLamParam :: Maybe ({- lambda's -}EntityId, V.Var)
     }
 Lens.makeLenses ''ConventionalParams
@@ -411,7 +411,7 @@ convertRecordParams mPresMode binderKind fieldParams lam@(V.TypedLam param _ _) 
                 { _tlAddFirst = addFirstSelection
                 , _tlItems = Just (TaggedListBody p (ps <&> (`TaggedSwappableItem` pure ())))
                 } & Just
-            , _cpAddFirstParam = PrependParam addFirstSelection
+            , _cpAddFirstParam = AddNext addFirstSelection
             , cpMLamParam = Just (entityId, param)
             }
     where
@@ -632,11 +632,11 @@ convertNonRecordParam binderKind lam@(V.TypedLam param _ _) lamExprPl =
             do
                 oldParam <- Anchors.assocTag param & getP
                 if oldParam == Anchors.anonTag
-                    then NeedToPickTagToAddFirst (EntityId.ofTaggedEntity param oldParam) & pure
+                    then NeedToPickTagToAddNext (EntityId.ofTaggedEntity param oldParam) & pure
                     else
                         ConvertTag.replace (nameWithContext (Just varInfo) param) (Set.singleton oldParam) (pure ()) resultInfo
                         >>= ConvertM . lift
-                        <&> PrependParam
+                        <&> AddNext
         pure ConventionalParams
             { cpTags = mempty
             , _cpParamInfos = mempty

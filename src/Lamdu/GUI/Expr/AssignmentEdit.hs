@@ -267,7 +267,7 @@ makeMParamsEdit ::
     CurAndPrev (Maybe ScopeCursor) -> IsScopeNavFocused ->
     Widget.Id -> Widget.Id ->
     Widget.Id ->
-    Sugar.AddFirstParam Name i o ->
+    Sugar.AddParam Name i o ->
     Maybe (Sugar.BinderParams (Sugar.Annotation (Sugar.EvaluationScopes Name i) Name) Name i o) ->
     GuiM env i o (Maybe (Responsive o))
 makeMParamsEdit mScopeCursor isScopeNavFocused delVarBackwardsId myId bodyId addFirstParam mParams =
@@ -275,7 +275,7 @@ makeMParamsEdit mScopeCursor isScopeNavFocused delVarBackwardsId myId bodyId add
         isPrepend <- GuiState.isSubCursor ?? prependId
         prependParamEdits <-
             case addFirstParam of
-            Sugar.PrependParam selection | isPrepend ->
+            Sugar.AddNext selection | isPrepend ->
                 GuiM.im selection
                 >>= TagEdit.makeTagHoleEdit ParamEdit.mkParamPickResult prependId
                 & local (has . Menu.configKeysPickOptionAndGotoNext <>~ [noMods M.Key'Space])
@@ -405,9 +405,9 @@ eventMapAddFirstParam binderId assignment =
                 (x ^. Sugar.apAddFirstParam <&> enterParam, [has . Texts.parameter, has . Texts.add])
             Sugar.BodyFunction f ->
                 case f ^. Sugar.fAddFirstParam of
-                Sugar.NeedToPickTagToAddFirst x ->
+                Sugar.NeedToPickTagToAddNext x ->
                     (pure (enterParam x), [has . Texts.nameFirstParameter])
-                Sugar.PrependParam{} ->
+                Sugar.AddNext{} ->
                     (pure (TagEdit.addItemId binderId), [has . Texts.parameter, has . Texts.add])
 
 make ::

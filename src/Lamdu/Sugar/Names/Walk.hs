@@ -192,8 +192,8 @@ instance ToBody Binder where
     toBody (BinderLet l) = toBody l <&> BinderLet
     toBody (BinderTerm e) = toBody e <&> BinderTerm
 
-instance (a ~ OldName m, b ~ NewName m, i ~ IM m) => Walk m (AddFirstParam a i o) (AddFirstParam b i o) where
-    walk x = opRun <&> \run -> x & _PrependParam %~ (>>= run . walk)
+instance (a ~ OldName m, b ~ NewName m, i ~ IM m) => Walk m (AddParam a i o) (AddParam b i o) where
+    walk x = opRun <&> \run -> x & _AddNext %~ (>>= run . walk)
 
 toFunction :: (MonadNaming m, Walk m v0 v1, Walk m a0 a1) => IsUnambiguous -> WalkBody Function m o v0 v1 a0 a1
 toFunction u func@Function{_fParams, _fBody, _fAddFirstParam} =
