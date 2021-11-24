@@ -133,7 +133,7 @@ makeOptions globals (SearchMenu.ResultsContext searchTerm prefix)
             \text -> (maybe id Text.cons mTagPrefix text, global)
         toPickResult x = Menu.PickResult x (Just x)
 
-make :: _ => Sugar.Globals Name m o -> m (StatusBar.StatusWidget m o)
+make :: _ => Sugar.Globals Name m o -> m (StatusBar.StatusWidget o)
 make globals =
     do
         goto <- Lens.view (has . Texts.goto)
@@ -141,10 +141,10 @@ make globals =
                 x
                 & SearchMenu.emptyStrings . Lens.mapped .~ goto
                 & SearchMenu.bgColors . Lens.mapped .~ M.Color 0 0 0 0
-        pure StatusBar.StatusWidget
-            { StatusBar._widget =
-                SearchMenu.make (SearchMenu.searchTermEdit myId (pure . allowSearchTerm))
-                (makeOptions globals) M.empty myId ?? Menu.Below
-                & local (has . Theme.searchTerm %~ onTermStyle)
+        SearchMenu.make (SearchMenu.searchTermEdit myId (pure . allowSearchTerm))
+            (makeOptions globals) M.empty myId ?? Menu.Below
+            & local (has . Theme.searchTerm %~ onTermStyle)
+            <&> \searchWidget -> StatusBar.StatusWidget
+            { StatusBar._widget = searchWidget
             , StatusBar._globalEventMap = mempty
             }

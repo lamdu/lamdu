@@ -26,27 +26,27 @@ import qualified Lamdu.I18N.StatusBar as Texts
 
 import           Lamdu.Prelude
 
-data StatusWidget m f = StatusWidget
-    { _widget :: m (M.TextWidget f)
+data StatusWidget f = StatusWidget
+    { _widget :: M.TextWidget f
     , _globalEventMap :: EventMap (f M.Update)
     }
 Lens.makeLenses ''StatusWidget
 
-instance (Functor f, Applicative m) => M.Element (StatusWidget m f) where
-    setLayeredImage = widget . Lens.mapped . M.setLayeredImage
-    hoverLayeredImage = widget . Lens.mapped %~ M.hoverLayeredImage
-    padImpl x y = widget . Lens.mapped %~ M.padImpl x y
-    scale x = widget . Lens.mapped %~ M.scale x
-    empty = StatusWidget (pure M.empty) mempty
+instance Functor f => M.Element (StatusWidget f) where
+    setLayeredImage = widget . M.setLayeredImage
+    hoverLayeredImage = widget %~ M.hoverLayeredImage
+    padImpl x y = widget %~ M.padImpl x y
+    scale x = widget %~ M.scale x
+    empty = StatusWidget M.empty mempty
 
-hoist :: Functor m => (f M.Update -> g M.Update) -> StatusWidget m f -> StatusWidget m g
+hoist :: (f M.Update -> g M.Update) -> StatusWidget f -> StatusWidget g
 hoist f (StatusWidget w e) =
     StatusWidget
-    { _widget = w <&> M.tValue . Widget.updates %~ f
+    { _widget = w & M.tValue . Widget.updates %~ f
     , _globalEventMap = e <&> f
     }
 
-fromWidget :: m (M.TextWidget f) -> StatusWidget m f
+fromWidget :: M.TextWidget f -> StatusWidget f
 fromWidget w =
     StatusWidget { _widget = w, _globalEventMap = mempty }
 
@@ -67,9 +67,10 @@ labeledDropDownList categoryTextLens prop choices headerView =
 makeSwitchStatusWidget ::
     _ =>
     m (M.WithTextPos M.View) -> OneOf t -> OneOf Texts.StatusBar -> Lens' (Config ModKey) [ModKey] -> Property f a ->
-    [(a, M.TextWidget f)] -> m (StatusWidget m f)
+    [(a, M.TextWidget f)] -> m (StatusWidget f)
 makeSwitchStatusWidget mkHeaderWidget categoryTextLens switchTextLens keysGetter prop choiceVals =
     do
+        w <- mkHeaderWidget >>= labeledDropDownList categoryTextLens prop choiceVals
         keys <- Lens.view (has . keysGetter)
         txt <- Lens.view has
         let e =
@@ -80,7 +81,7 @@ makeSwitchStatusWidget mkHeaderWidget categoryTextLens switchTextLens keysGetter
                     , switchTextLens
                     ])
         pure StatusWidget
-            { _widget = mkHeaderWidget >>= labeledDropDownList categoryTextLens prop choiceVals
+            { _widget = w
             , _globalEventMap = e
             }
     where
@@ -93,34 +94,30 @@ hspacer = do
     hSpaceCount <- Lens.view (has . Theme.statusBar . Theme.statusBarHSpaces)
     Spacer.getSpaceSize <&> (^. _1) <&> (* hSpaceCount) <&> Spacer.makeHorizontal
 
-combine :: _ => [StatusWidget m f] -> StatusWidget m f
-combine statusWidgets =
+combine :: _ => m ([StatusWidget f] -> StatusWidget f)
+combine =
+    (,,) <$> (Glue.mkPoly ?? Glue.Horizontal) <*> Glue.hbox <*> hspacer
+    <&> \(Glue.Poly (|||), hbox, space) statusWidgets ->
     StatusWidget
     { _widget =
-        do
-            Glue.Poly (|||) <- Glue.mkPoly ?? Glue.Horizontal
-            hbox <- Glue.hbox
-            space <- hspacer
-            case statusWidgets of
-                [] -> pure M.empty
-                (x:xs) ->
-                    do
-                        xw <- x ^. widget
-                        xsw <- traverse (^. widget) xs <&> map (space |||) <&> hbox
-                        xw ||| xsw & pure
+        case statusWidgets of
+        [] -> M.empty
+        (x:xs) ->
+            xs
+            <&> (^. widget)
+            <&> (space |||)
+            & hbox
+            & ((x ^. widget) |||)
     , _globalEventMap = statusWidgets ^. Lens.folded . globalEventMap
     }
 
-combineEdges :: _ => Double -> StatusWidget m f -> StatusWidget m f -> StatusWidget m f
-combineEdges width (StatusWidget mkX xe) (StatusWidget mkY ye) =
-    StatusWidget
-    { _widget =
-        do
-            Glue.Poly (|||) <- Glue.mkPoly ?? Glue.Horizontal
-            xw <- mkX
-            yw <- mkY
-            let combinedWidths = xw ^. M.width + yw ^. M.width
-            let padding = max 0 (width - combinedWidths)
-            xw ||| Spacer.makeHorizontal padding ||| yw & pure
-    , _globalEventMap = xe <> ye
-    }
+combineEdges :: _ => m (Double -> StatusWidget f -> StatusWidget f -> StatusWidget f)
+combineEdges =
+    Glue.mkPoly ?? Glue.Horizontal
+    <&> \(Glue.Poly (|||)) width (StatusWidget xw xe) (StatusWidget yw ye) ->
+    let padding = max 0 (width - combinedWidths)
+        combinedWidths = xw ^. M.width + yw ^. M.width
+    in  StatusWidget
+        { _widget = xw ||| Spacer.makeHorizontal padding ||| yw
+        , _globalEventMap = xe <> ye
+        }

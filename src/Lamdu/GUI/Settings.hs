@@ -47,7 +47,7 @@ data TitledSelection a = TitledSelection
     }
 Lens.makeLenses ''TitledSelection
 
-makeAnnotationsSwitcher :: _ => Property f Ann.Mode -> m (StatusBar.StatusWidget m f)
+makeAnnotationsSwitcher :: _ => Property f Ann.Mode -> m (StatusBar.StatusWidget f)
 makeAnnotationsSwitcher annotationModeProp =
     do
         mk0 <- Styled.mkFocusableLabel
@@ -57,14 +57,14 @@ makeAnnotationsSwitcher annotationModeProp =
             , (Ann.None, mk1 (OneOf Texts.sbNone))
             ]
             & StatusBar.makeSwitchStatusWidget
-            (Styled.sprite Sprites.pencilLine <&> WithTextPos 0)
-            Texts.sbAnnotations Texts.sbSwitchAnnotations
+                (Styled.sprite Sprites.pencilLine <&> WithTextPos 0)
+                Texts.sbAnnotations Texts.sbSwitchAnnotations
             Config.nextAnnotationModeKeys annotationModeProp
 
 makeStatusWidgets ::
     (MonadReader env m, _) =>
     [TitledSelection Folder.Theme] -> [TitledSelection Folder.Language] ->
-    Property f Settings -> m (StatusWidgets (StatusWidget m f))
+    Property f Settings -> m (StatusWidgets (StatusWidget f))
 makeStatusWidgets themeNames langNames prop =
     sequenceA
     StatusWidgets
