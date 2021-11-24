@@ -44,7 +44,7 @@ make gotoDefinition themeNames langNames settingsProp width vcActions =
 
         statusWidgets <-
             SettingsGui.makeStatusWidgets themeNames langNames settingsProp
-            <&> SettingsGui.hoist IOTrans.liftIO
+            <&> Lens.mapped %~ StatusBar.hoist IOTrans.liftIO
 
         theTheme <- Lens.view has
         bgColor <-

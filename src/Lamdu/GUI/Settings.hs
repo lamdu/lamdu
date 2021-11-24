@@ -3,7 +3,6 @@
 module Lamdu.GUI.Settings
     ( StatusWidgets(..), annotationWidget, themeWidget, languageWidget, helpWidget
     , TitledSelection(..), title, selection
-    , hoist
     , makeStatusWidgets
     ) where
 
@@ -13,7 +12,6 @@ import           GUI.Momentu.Align (WithTextPos(..))
 import qualified GUI.Momentu.Animation.Id as AnimId
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.I18N as Texts
-import qualified GUI.Momentu.State as GuiState
 import qualified GUI.Momentu.Widget.Id as WidgetId
 import           GUI.Momentu.Widgets.EventMapHelp (IsHelpShown(..))
 import qualified GUI.Momentu.Widgets.TextView as TextView
@@ -22,6 +20,7 @@ import qualified Lamdu.Config as Config
 import           Lamdu.Config.Folder (Selection)
 import qualified Lamdu.Config.Folder as Folder
 import qualified Lamdu.Config.Theme.Sprites as Sprites
+import           Lamdu.GUI.StatusBar.Common (StatusWidget)
 import qualified Lamdu.GUI.StatusBar.Common as StatusBar
 import           Lamdu.GUI.Styled (OneOfT(..), info, label)
 import qualified Lamdu.GUI.Styled as Styled
@@ -32,12 +31,12 @@ import qualified Lamdu.Settings as Settings
 
 import           Lamdu.Prelude
 
-data StatusWidgets f = StatusWidgets
-    { _annotationWidget :: StatusBar.StatusWidget f
-    , _themeWidget :: StatusBar.StatusWidget f
-    , _languageWidget :: StatusBar.StatusWidget f
-    , _helpWidget :: StatusBar.StatusWidget f
-    }
+data StatusWidgets a = StatusWidgets
+    { _annotationWidget :: a
+    , _themeWidget      :: a
+    , _languageWidget   :: a
+    , _helpWidget       :: a
+    } deriving (Functor, Foldable, Traversable)
 Lens.makeLenses ''StatusWidgets
 
 data TitledSelection a = TitledSelection
@@ -45,14 +44,6 @@ data TitledSelection a = TitledSelection
     , _selection :: !(Selection a)
     }
 Lens.makeLenses ''TitledSelection
-
-hoist ::
-    (f GuiState.Update -> g GuiState.Update) ->
-    StatusWidgets f -> StatusWidgets g
-hoist f (StatusWidgets x y z a) =
-    StatusWidgets (h x) (h y) (h z) (h a)
-    where
-        h = StatusBar.hoist f
 
 makeAnnotationsSwitcher :: _ => Property f Ann.Mode -> m (StatusBar.StatusWidget f)
 makeAnnotationsSwitcher annotationModeProp =
@@ -71,7 +62,7 @@ makeAnnotationsSwitcher annotationModeProp =
 makeStatusWidgets ::
     (MonadReader env m, _) =>
     [TitledSelection Folder.Theme] -> [TitledSelection Folder.Language] ->
-    Property f Settings -> m (StatusWidgets f)
+    Property f Settings -> m (StatusWidgets (StatusWidget f))
 makeStatusWidgets themeNames langNames prop =
     StatusWidgets
     <$> makeAnnotationsSwitcher
