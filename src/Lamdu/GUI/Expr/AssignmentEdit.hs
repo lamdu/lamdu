@@ -389,6 +389,29 @@ makeJumpToRhs rhsId =
                 ])
             "="
 
+eventMapAddFirstParam ::
+    _ => Widget.Id -> Sugar.AddFirstParam name i o -> m (EventMap (o GuiState.Update))
+eventMapAddFirstParam binderId addFirst =
+    Lens.view id
+    <&>
+    \env ->
+    E.keysEventMapMovesCursor (env ^. has . Config.addNextParamKeys)
+    (E.toDoc env (has . MomentuTexts.edit : doc)) action
+    where
+        enterParam = WidgetIds.tagHoleId . WidgetIds.fromEntityId
+        (action, doc) =
+            case addFirst of
+            Sugar.NeedToPickTagToAddFirst x ->
+                (pure (enterParam x), [has . Texts.nameFirstParameter])
+            Sugar.PrependParam{} ->
+                (pure (TagEdit.addItemId binderId), [has . Texts.parameter, has . Texts.add])
+            Sugar.AddInitialParam x ->
+                (x <&> enterParam, [has . Texts.parameter, has . Texts.add])
+
+assignmentBodyAddFirstParam :: Sugar.Assignment v name i o a -> Sugar.AddFirstParam name i o
+assignmentBodyAddFirstParam (Sugar.BodyFunction x) = x ^. Sugar.fAddFirstParam
+assignmentBodyAddFirstParam (Sugar.BodyPlain x) = x ^. Sugar.apAddFirstParam & Sugar.AddInitialParam
+
 make ::
     _ =>
     Maybe (i (Property o Meta.PresentationMode)) ->
@@ -408,7 +431,7 @@ make pMode tag color assignment =
                 >>= traverse
                     (PresentationModeEdit.make presentationChoiceId (x ^. Sugar.fParams))
         addFirstParamEventMap <-
-            ParamEdit.eventMapAddFirstParam myId (SugarLens.assignmentBodyAddFirstParam assignmentBody)
+            eventMapAddFirstParam myId (assignmentBodyAddFirstParam assignmentBody)
         (|---|) <- Glue.mkGlue ?? Glue.Vertical
         defNameEdit <-
             TagEdit.makeBinderTagEdit color tag

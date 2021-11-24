@@ -1,6 +1,6 @@
 module Lamdu.GUI.ParamEdit
     ( makeParams, addAnnotation, eventMapAddNextParamOrPickTag, addAddParam
-    , eventMapAddFirstParam, mkParamPickResult
+    , mkParamPickResult
     ) where
 
 import qualified Control.Lens as Lens
@@ -30,25 +30,6 @@ import           Lamdu.Name (Name)
 import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
-
-eventMapAddFirstParam ::
-    _ => Widget.Id -> Sugar.AddFirstParam name i o -> m (EventMap (o GuiState.Update))
-eventMapAddFirstParam binderId addFirst =
-    Lens.view id
-    <&>
-    \env ->
-    E.keysEventMapMovesCursor (env ^. has . Config.addNextParamKeys)
-    (E.toDoc env (has . MomentuTexts.edit : doc)) action
-    where
-        enterParam = WidgetIds.tagHoleId . WidgetIds.fromEntityId
-        (action, doc) =
-            case addFirst of
-            Sugar.NeedToPickTagToAddFirst x ->
-                (pure (enterParam x), [has . Texts.nameFirstParameter])
-            Sugar.PrependParam{} ->
-                (pure (TagEdit.addItemId binderId), [has . Texts.parameter, has . Texts.add])
-            Sugar.AddInitialParam x ->
-                (x <&> enterParam, [has . Texts.parameter, has . Texts.add])
 
 eventMapAddNextParamOrPickTag ::
     _ => Widget.Id -> Sugar.AddNextParam name i o -> m (EventMap (o GuiState.Update))

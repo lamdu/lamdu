@@ -6,7 +6,6 @@ module Lamdu.Sugar.Lens
     , childPayloads
     , bodyUnfinished
     , defSchemes
-    , assignmentBodyAddFirstParam
     , binderResultExpr
     , getVarName
     , paneBinder
@@ -130,10 +129,6 @@ binderResultExpr f (Ann (Const pl) x) =
         lBody (binderResultExpr f) l
         <&> BinderLet
         <&> Ann (Const pl)
-
-assignmentBodyAddFirstParam :: Assignment v name i o a -> AddFirstParam name i o
-assignmentBodyAddFirstParam (BodyFunction x) = x ^. fAddFirstParam
-assignmentBodyAddFirstParam (BodyPlain x) = x ^. apAddFirstParam & AddInitialParam
 
 getVarName :: Lens.Traversal' (GetVar a o) a
 getVarName f (GetParam x) = (pNameRef . nrName) f x <&> GetParam
