@@ -161,7 +161,8 @@
             "switchHelp": "Switch Help",
             "switchLanguage": "Switch Language",
             "switchTheme": "Switch Theme",
-            "switchAnnotations": "Switch Annotations"
+            "switchAnnotations": "Switch Annotations",
+            "extraOptions": "Extra options"
         },
         "versioning": {
             "branches": "Branches",

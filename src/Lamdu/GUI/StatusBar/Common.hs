@@ -1,11 +1,11 @@
 -- | Common utilities for status bar widgets
-{-# LANGUAGE TemplateHaskell, RankNTypes, TypeFamilies #-}
+{-# LANGUAGE TemplateHaskell, RankNTypes, TypeFamilies, ScopedTypeVariables #-}
 
 module Lamdu.GUI.StatusBar.Common
     ( StatusWidget(..), widget, globalEventMap
     , hoist
     , makeSwitchStatusWidget
-    , fromWidget, combine, combineEdges
+    , fromWidget, combineEdges
     ) where
 
 import qualified Control.Lens as Lens
@@ -15,13 +15,20 @@ import qualified GUI.Momentu as M
 import           GUI.Momentu.Animation.Id (ElemIds(..))
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
+import           GUI.Momentu.FocusDirection (FocusDirection(..))
 import qualified GUI.Momentu.Glue as Glue
+import qualified GUI.Momentu.Hover as Hover
 import           GUI.Momentu.ModKey (ModKey)
+import           GUI.Momentu.Rect (Rect(..))
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.DropDownList as DropDownList
+import qualified GUI.Momentu.Widgets.Label as Label
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import           Lamdu.Config (Config)
+import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Theme as Theme
+import qualified Lamdu.GUI.Styled as Styled
+import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.I18N.StatusBar as Texts
 
 import           Lamdu.Prelude
@@ -94,30 +101,111 @@ hspacer = do
     hSpaceCount <- Lens.view (has . Theme.statusBar . Theme.statusBarHSpaces)
     Spacer.getSpaceSize <&> (^. _1) <&> (* hSpaceCount) <&> Spacer.makeHorizontal
 
-combine :: _ => m ([StatusWidget f] -> StatusWidget f)
-combine =
-    (,,) <$> (Glue.mkPoly ?? Glue.Horizontal) <*> Glue.hbox <*> hspacer
-    <&> \(Glue.Poly (|||), hbox, space) statusWidgets ->
-    StatusWidget
-    { _widget =
-        case statusWidgets of
-        [] -> M.empty
-        (x:xs) ->
-            xs
-            <&> (^. widget)
-            <&> (space |||)
-            & hbox
-            & ((x ^. widget) |||)
-    , _globalEventMap = statusWidgets ^. Lens.folded . globalEventMap
-    }
+hamburgerText :: Text
+hamburgerText = "☰"
 
-combineEdges :: _ => m (Double -> StatusWidget f -> StatusWidget f -> StatusWidget f)
+hamburgerLabel :: _ => m (M.TextWidget f)
+hamburgerLabel =
+    do
+        toFocusable <- Widget.makeFocusableView
+        Label.make hamburgerText <&> M.tValue %~ toFocusable WidgetIds.statusBarHamburger
+            & Styled.info
+
+-- | Generate an invisible hamburger that responds to cursor so we
+-- don't get a red cursor if the hamburger disappears with the cursor
+-- on it
+makeInvisibleHamburger :: _ => m (M.TextWidget f)
+makeInvisibleHamburger =
+    Widget.respondToCursorPrefix ?? WidgetIds.statusBarHamburger ?? M.empty <&> M.WithTextPos 0
+
+enter :: M.Widget f -> Maybe (f M.Update)
+enter w =
+    w ^? Widget.wState . Widget._StateUnfocused . Widget.uMEnter . Lens._Just
+    ?? FromOutside
+    <&> (^. Widget.enterResultEvent)
+
+clickTo :: f M.Update -> M.Widget f -> M.Widget f
+clickTo action w =
+    w
+    & Widget.wFocused . Widget.fMEnterPoint ?~ pure enterResult
+    & Widget.wState . Widget._StateUnfocused . Widget.uMEnter %~
+    \maybeEnter ->
+        Just $
+        \case
+        Point{} -> enterResult
+        other -> maybe enterResult ($ other) maybeEnter
+    where
+        enterResult = Widget.EnterResult
+            { Widget._enterResultRect = Rect 0 0
+            , Widget._enterResultLayer = 0
+            , Widget._enterResultEvent = action
+            }
+
+makeHamburgerMenu :: _ => m (M.TextWidget f -> [M.TextWidget f] -> M.TextWidget f)
+makeHamburgerMenu =
+    do
+        vbox <- Glue.vbox
+        hover <- Hover.hover
+        anchor <- Hover.anchor <&> (M.tValue %~)
+        actionKeys <- Lens.view (has . Config.actionKeys)
+        Glue.Poly (///) <- Glue.mkPoly ?? Glue.Vertical
+        texts <- Lens.view has
+        let doc = E.toDoc texts [Texts.sbStatusBar, Texts.sbExtraOptions]
+        pure $ \hamburger hiddenWidgets@(w:_) ->
+            let menu = vbox hiddenWidgets
+                hoverMenu = hover menu & Hover.sequenceHover
+                hoverOptions = [M.Aligned 1 (anchor hamburger) /// M.Aligned 1 hoverMenu] <&> (^. M.value . M.tValue)
+                enterFirst = w ^. M.tValue & enter
+                gotoFirstHiddenItem = foldMap (E.keyPresses actionKeys doc) enterFirst
+            in  if Widget.isFocused (menu ^. M.tValue)
+                then anchor hamburger
+                     & M.tValue %~ Hover.hoverInPlaceOf hoverOptions
+                else hamburger
+                     & M.tValue %~ maybe id clickTo enterFirst
+                     & M.tValue %~ M.weakerEvents gotoFirstHiddenItem
+
+
+combineWidgets :: _ => m (Double -> [StatusWidget f] -> StatusWidget f)
+combineWidgets =
+    do
+        Glue.Poly (|||) <- Glue.mkPoly ?? Glue.Horizontal
+        hamburger <- hamburgerLabel
+        hamburgerMenu <- makeHamburgerMenu ?? hamburger
+        invisibleHamburger <- makeInvisibleHamburger
+        space <- hspacer
+        pure $ \width statusWidgets ->
+            let go _ [] = M.empty
+                go remainingWidth [w]
+                    | w ^. M.width > remainingWidth = hamburgerMenu [w]
+                    | otherwise = w ||| invisibleHamburger
+                go remainingWidth (w:ws)
+                    | newRemaining < hamburger ^. M.width = hamburgerMenu (w:ws)
+                    | otherwise =
+                        case ws of
+                        [] -> w
+                        (_:_) -> wSpaced ||| go newRemaining ws
+                    where
+                        wSpaced = w ||| space
+                        newRemaining = remainingWidth - wSpaced ^. M.width
+                combined = go width (statusWidgets ^.. Lens.folded . widget)
+                paddingWidth = max 0 (width - combined ^. M.width)
+                padding = Spacer.makeHorizontal paddingWidth
+            in  StatusWidget
+                { _widget = padding ||| combined
+                , _globalEventMap = statusWidgets ^. Lens.folded . globalEventMap
+                }
+
+combineEdges :: _ => m (Double -> StatusWidget f -> [StatusWidget f] -> StatusWidget f)
 combineEdges =
-    Glue.mkPoly ?? Glue.Horizontal
-    <&> \(Glue.Poly (|||)) width (StatusWidget xw xe) (StatusWidget yw ye) ->
-    let padding = max 0 (width - combinedWidths)
-        combinedWidths = xw ^. M.width + yw ^. M.width
+    (,,)
+    <$> (Glue.mkPoly ?? Glue.Horizontal)
+    <*> combineWidgets
+    <*> hspacer
+    <&> \(Glue.Poly (|||), combine, space) width (StatusWidget topLeftWidget em) topRightWidgets ->
+    let topLeftSpacedWidget = topLeftWidget ||| space
+        topRightMaxWidth = width - topLeftSpacedWidget ^. M.width
+        topRightCombined = combine topRightMaxWidth topRightWidgets
     in  StatusWidget
-        { _widget = xw ||| Spacer.makeHorizontal padding ||| yw
-        , _globalEventMap = xe <> ye
+        { _widget = topLeftSpacedWidget ||| (topRightCombined ^. widget)
+        , _globalEventMap = em <> topRightCombined ^. globalEventMap
         }

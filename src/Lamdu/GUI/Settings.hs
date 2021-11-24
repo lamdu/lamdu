@@ -70,24 +70,28 @@ makeStatusWidgets themeNames langNames prop =
     StatusWidgets
     { _annotationWidget =
         makeAnnotationsSwitcher (composeLens Settings.sAnnotationMode prop)
+        & local (Element.animIdPrefix <>~ ["Annotations Mode"])
     , _themeWidget =
         traverse opt themeNames
         >>= StatusBar.makeSwitchStatusWidget
         (Styled.sprite Sprites.theme <&> WithTextPos 0)
         Texts.sbTheme Texts.sbSwitchTheme
         Config.changeThemeKeys themeProp
+        & local (Element.animIdPrefix <>~ ["Theme Select"])
     , _languageWidget =
        traverse opt langNames
         >>= StatusBar.makeSwitchStatusWidget
         (Styled.sprite Sprites.earthGlobe <&> WithTextPos 0)
         Texts.language Texts.sbSwitchLanguage
         Config.changeLanguageKeys langProp
+        & local (Element.animIdPrefix <>~ ["Language Select"])
     , _helpWidget =
         helpVals
         >>= StatusBar.makeSwitchStatusWidget
         (pure Element.empty)
         Texts.sbHelp Texts.sbSwitchHelp
         Config.helpKeys helpProp
+        & local (Element.animIdPrefix <>~ ["Help Select"])
     }
     where
         helpHiddenSprite = Styled.sprite Sprites.help

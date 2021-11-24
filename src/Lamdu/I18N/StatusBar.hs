@@ -21,6 +21,7 @@ data StatusBar a = StatusBar
     , _sbSwitchLanguage :: a
     , _sbTheme :: a
     , _sbSwitchTheme :: a
+    , _sbExtraOptions :: a
     }
     deriving stock (Generic, Generic1, Eq, Functor, Foldable, Traversable)
     deriving anyclass ElemIds

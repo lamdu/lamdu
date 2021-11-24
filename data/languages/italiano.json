@@ -161,7 +161,8 @@
             "switchHelp": "Cambia Aiuto",
             "switchLanguage": "Cambia lingua",
             "switchTheme": "Cambia tema",
-            "switchAnnotations": "Cambia annotazioni"
+            "switchAnnotations": "Cambia annotazioni",
+            "extraOptions": "Opzioni extra"
         },
         "versioning": {
             "branches": "Rami",

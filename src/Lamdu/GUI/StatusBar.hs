@@ -41,6 +41,7 @@ make gotoDefinition themeNames langNames settingsProp width vcActions =
             M./|/ VersionControlGUI.makeBranchSelector IOTrans.liftTrans
                 transaction vcActions
             <&> StatusBar.fromWidget
+            & local (Element.animIdPrefix <>~ ["Branch Selector"])
 
         statusWidgets <-
             SettingsGui.makeStatusWidgets themeNames langNames settingsProp
@@ -50,14 +51,12 @@ make gotoDefinition themeNames langNames settingsProp width vcActions =
         bgColor <-
             M.backgroundColor ?? theTheme ^. Theme.statusBar . Theme.statusBarBGColor
         padToSize <- Element.padToSize
-        (StatusBar.combineEdges ?? width ?? gotoDefinition)
-            <*> ( StatusBar.combine ??
-                    [ statusWidgets ^. SettingsGui.annotationWidget
-                    , statusWidgets ^. SettingsGui.themeWidget
-                    , branchSelector
-                    , statusWidgets ^. SettingsGui.languageWidget
-                    , statusWidgets ^. SettingsGui.helpWidget
-                    ]
-                )
+        (StatusBar.combineEdges ?? width ?? gotoDefinition) ??
+            [ statusWidgets ^. SettingsGui.annotationWidget
+            , statusWidgets ^. SettingsGui.themeWidget
+            , branchSelector
+            , statusWidgets ^. SettingsGui.languageWidget
+            , statusWidgets ^. SettingsGui.helpWidget
+            ]
             <&> StatusBar.widget . M.tValue %~ padToSize (Vector2 width 0) 0
             <&> StatusBar.widget %~ bgColor

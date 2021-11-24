@@ -158,7 +158,8 @@
             "switchHelp": "שנה מצב עזרה",
             "switchLanguage": "שנה שפה",
             "switchTheme": "שנה תמה",
-            "switchAnnotations": "החלף ביאורים"
+            "switchAnnotations": "החלף ביאורים",
+            "extraOptions": "אפשרויות נוספות"
         },
         "name": {
             "unnamed": "פלוני",

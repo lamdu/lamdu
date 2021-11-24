@@ -37,6 +37,9 @@ fromUUID = fromBS . UUIDUtils.toSBS16
 branchSelection :: Id
 branchSelection = Id ["selected branch"]
 
+statusBarHamburger :: Id
+statusBarHamburger = Id ["hamburger"]
+
 replId :: Id
 replId = Id ["repl"]
 
