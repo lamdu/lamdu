@@ -43,6 +43,7 @@ import qualified Lamdu.GUI.ParamEdit as ParamEdit
 import qualified Lamdu.GUI.PresentationModeEdit as PresentationModeEdit
 import           Lamdu.GUI.Styled (grammar, label)
 import qualified Lamdu.GUI.Styled as Styled
+import qualified Lamdu.GUI.TaggedList as TaggedList
 import qualified Lamdu.GUI.Types as ExprGui
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.GUI.Wrap (stdWrap)
@@ -247,7 +248,7 @@ makeParamsEdit annotationOpts delVarBackwardsId lhsId rhsId params =
             eventMap <-
                 Lens.view id <&>
                 \env ->
-                ParamEdit.delEventMap (pInfo ^. Sugar.vpiDelete) delVarBackwardsId rhsId env <>
+                TaggedList.delEventMap (has . Texts.parameter) (pInfo ^. Sugar.vpiDelete) delVarBackwardsId rhsId env <>
                 ParamEdit.eventMapAddNextParamOrPickTag widgetId (pInfo ^. Sugar.vpiAddNext) env
             paramEdit <-
                 TagEdit.makeParamTag (Just (tag ^. Sugar.oPickAnon)) (tag ^. Sugar.oTag)

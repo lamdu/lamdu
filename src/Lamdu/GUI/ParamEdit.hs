@@ -1,7 +1,6 @@
 module Lamdu.GUI.ParamEdit
     ( makeParams, addAnnotation, eventMapAddNextParamOrPickTag, addAddParam
     , eventMapAddFirstParam, mkParamPickResult
-    , TaggedList.delEventMap
     ) where
 
 import qualified Control.Lens as Lens
@@ -52,7 +51,7 @@ eventMapAddFirstParam binderId addFirst =
 eventMapAddNextParamOrPickTag ::
     _ => Widget.Id -> Sugar.AddNextParam name i o -> m (EventMap (o GuiState.Update))
 eventMapAddNextParamOrPickTag myId Sugar.AddNext{} =
-    TaggedList.addNextEventMap myId
+    TaggedList.addNextEventMap (has . Texts.parameter) myId
 eventMapAddNextParamOrPickTag _ (Sugar.NeedToPickTagToAddNext x) =
     Lens.view id <&>
     \env ->
@@ -120,6 +119,6 @@ makeParams ::
     Sugar.TaggedListBody Name i o (Sugar.FuncParam (Sugar.Annotation (Sugar.EvaluationScopes Name i) Name)) ->
     GuiM env i o [Responsive o]
 makeParams annotationOpts prevId nextId items =
-    TaggedList.make prevId nextId items
+    TaggedList.make (has . Texts.parameter) prevId nextId items
     >>= traverse (makeParam annotationOpts)
     <&> concat
