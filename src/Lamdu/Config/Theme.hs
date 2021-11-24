@@ -3,7 +3,9 @@
 
 -- | The themes/ config format
 module Lamdu.Config.Theme
-    ( Help(..), helpTextSize, helpTextColor, helpInputDocColor, helpBGColor, helpTint, helpSrcLocColor
+    ( Help(..)
+        , helpTextSize, helpTextColor, helpInputDocColor, helpBGColor, helpTint
+        , helpShownIconTint, helpSrcLocColor
     , Eval(..), neighborsScaleFactor, neighborsPadding, staleResultTint
     , ToolTip(..), tooltipFgColor, tooltipBgColor
     , StatusBar(..), statusBarBGColor, statusBarHSpaces
@@ -53,6 +55,7 @@ data Help = Help
     , _helpInputDocColor :: Draw.Color
     , _helpBGColor :: Draw.Color
     , _helpTint :: Draw.Color
+    , _helpShownIconTint :: Draw.Color
     , _helpSrcLocColor :: Maybe Draw.Color
     } deriving (Eq, Generic)
 JsonTH.derivePrefixed "_help" ''Help

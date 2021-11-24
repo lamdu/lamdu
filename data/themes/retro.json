@@ -37,7 +37,8 @@
     "help": {
         "inputDocColor": [0, 0.5, 0.5, 1.0],
         "textSize": 16,
-        "bGColor": [0, 0, 0, 0.5]
+        "bGColor": [0, 0, 0, 0.5],
+        "shownIconTint": [0.5, 0.5, 0.5, 1.0]
     },
     "menu": {
         "submenuSymbolColorUnselected": [1.0, 1.0, 1.0, 0.5],

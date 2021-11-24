@@ -23,7 +23,8 @@
     "sprites": {
         "earthGlobe": "earth-globe-world.png",
         "pencilLine": "pencil-line.png",
-        "theme": "theme.png"
+        "theme": "theme.png",
+        "help": "help.png"
     },
     "fonts": {
         "base"        : { "width": "Proportional", "style": "Sans" , "slant": "Roman" , "weight": "Light" },
@@ -36,7 +37,8 @@
     },
     "help": {
         "textSize": 14,
-        "srcLocColor": null
+        "srcLocColor": null,
+        "shownIconTint": [0.2, 0.2, 0.2, 0.9]
     },
     "searchTerm": {
         "emptyStrings": {

@@ -185,7 +185,7 @@ unitSprite lens =
     & (GLDraw.translateV 1 %%)
     -- (0..2) -> (0..1)
     & (GLDraw.scaleV (M.Vector2 0.5 0.5) %%)
-    & Anim.singletonFrame 1 (elemIds ^# lens)
+    & Anim.singletonFrame 1 (env ^. Element.animIdPrefix <> elemIds ^# lens)
     & View.make 1
 
 sprite :: _ => OneOf Sprites -> m M.View

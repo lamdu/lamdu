@@ -12,6 +12,7 @@ import           GUI.Momentu.Align (WithTextPos(..))
 import qualified GUI.Momentu.Animation.Id as AnimId
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.I18N as Texts
+import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widget.Id as WidgetId
 import           GUI.Momentu.Widgets.EventMapHelp (IsHelpShown(..))
 import qualified GUI.Momentu.Widgets.TextView as TextView
@@ -19,10 +20,11 @@ import qualified Lamdu.Annotations as Ann
 import qualified Lamdu.Config as Config
 import           Lamdu.Config.Folder (Selection)
 import qualified Lamdu.Config.Folder as Folder
+import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.Config.Theme.Sprites as Sprites
 import           Lamdu.GUI.StatusBar.Common (StatusWidget)
 import qualified Lamdu.GUI.StatusBar.Common as StatusBar
-import           Lamdu.GUI.Styled (OneOfT(..), info, label)
+import           Lamdu.GUI.Styled (OneOfT(..))
 import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.I18N.CodeUI as Texts
 import qualified Lamdu.I18N.StatusBar as Texts
@@ -83,10 +85,21 @@ makeStatusWidgets themeNames langNames prop =
     , _helpWidget =
         helpVals
         >>= StatusBar.makeSwitchStatusWidget
-        (info (label Texts.sbHelp)) Texts.sbHelp Texts.sbSwitchHelp
+        (pure Element.empty)
+        Texts.sbHelp Texts.sbSwitchHelp
         Config.helpKeys helpProp
     }
     where
+        helpHiddenSprite = Styled.sprite Sprites.help
+        helpShownSprite =
+            do
+                iconTint <- Lens.view (has . Theme.help . Theme.helpShownIconTint)
+                Styled.sprite Sprites.help <&> Element.tint iconTint
+        makeFocusable animId mkView =
+            (Widget.makeFocusableView ?? Widget.Id animId) <*> mkView
+            <&> WithTextPos 0
+            & local (Element.animIdPrefix .~ animId)
+
         opt sel =
             (TextView.makeFocusable ?? sel ^. title)
             <*> (Lens.view Element.animIdPrefix
@@ -94,12 +107,10 @@ makeStatusWidgets themeNames langNames prop =
                     <&> WidgetId.Id)
             <&> (,) (sel ^. selection)
         helpVals =
-            Styled.mkFocusableLabel
-            <&> \mk ->
-            [ (HelpNotShown, OneOf Texts.hidden)
-            , (HelpShown, OneOf Texts.shown)
-            ] <&>
-            _2 %~ \(OneOf lens) -> mk (OneOf lens)
+            Lens.sequenceOf (Lens.traverse . _2)
+            [ (HelpNotShown, makeFocusable ["Help hidden"] helpHiddenSprite)
+            , (HelpShown, makeFocusable ["Help shown"] helpShownSprite)
+            ]
         themeProp = composeLens Settings.sSelectedTheme prop
         langProp = composeLens Settings.sSelectedLanguage prop
         helpProp = composeLens Settings.sHelpShown prop
