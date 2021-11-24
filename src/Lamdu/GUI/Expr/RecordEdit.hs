@@ -3,7 +3,6 @@ module Lamdu.GUI.Expr.RecordEdit
     ) where
 
 import qualified Control.Lens as Lens
-import           Control.Monad (zipWithM)
 import qualified Data.Char as Char
 import qualified Data.Text as Text
 import qualified GUI.Momentu as M
@@ -14,12 +13,13 @@ import qualified GUI.Momentu.Glue as Glue
 import qualified GUI.Momentu.I18N as MomentuTexts
 import           GUI.Momentu.Responsive (Responsive)
 import qualified GUI.Momentu.Responsive as Responsive
-import           GUI.Momentu.Responsive.TaggedList (TaggedItem(..), taggedList, tagPost)
+import           GUI.Momentu.Responsive.TaggedList (TaggedItem(..), taggedList, tagPre, tagPost)
 import qualified GUI.Momentu.State as GuiState
 import qualified GUI.Momentu.View as View
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Menu as Menu
 import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
+import qualified GUI.Momentu.Widgets.StdKeys as StdKeys
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Theme as Theme
@@ -31,6 +31,7 @@ import           Lamdu.GUI.Monad (GuiM)
 import qualified Lamdu.GUI.Monad as GuiM
 import           Lamdu.GUI.Styled (label, grammar)
 import qualified Lamdu.GUI.Styled as Styled
+import qualified Lamdu.GUI.TaggedList as TaggedList
 import qualified Lamdu.GUI.Types as ExprGui
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.GUI.Wrap (stdWrap, stdWrapParentExpr)
@@ -41,22 +42,11 @@ import           Lamdu.Name (Name(..))
 import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
-import qualified Lamdu.Sugar.Lens as SugarLens
 import qualified GUI.Momentu.State as M
 
 doc :: _ => env -> [Lens.ALens' (Texts.CodeUI Text) Text] -> E.Doc
 doc env lens =
     E.toDoc env ([has . MomentuTexts.edit, has . Texts.record] <> (lens <&> (has .)))
-
-mkAddFieldEventMap :: _ => Widget.Id -> m (EventMap (o GuiState.Update))
-mkAddFieldEventMap myId =
-    Lens.view id
-    <&>
-    \env ->
-    TagEdit.addItemId myId
-    & pure
-    & E.keysEventMapMovesCursor (env ^. has . Config.recordAddFieldKeys)
-    (doc env [Texts.field, Texts.add])
 
 addFieldWithSearchTermEventMap :: _ => env -> Widget.Id -> EventMap (o GuiState.Update)
 addFieldWithSearchTermEventMap env myId =
@@ -74,8 +64,11 @@ makeUnit :: _ => ExprGui.Payload i o -> GuiM env i o (Responsive o)
 makeUnit pl =
     do
         makeFocusable <- Widget.makeFocusableView ?? myId <&> (M.tValue %~)
-        addFieldEventMap <- mkAddFieldEventMap myId
         env <- Lens.view id
+        let addFieldEventMap =
+                E.keysEventMapMovesCursor (env ^. has . Config.recordAddFieldKeys)
+                (doc env [Texts.field, Texts.add])
+                (pure (TagEdit.addItemId myId))
         grammar (label Texts.recordOpener)
             M./|/ grammar (label Texts.recordCloser)
             <&> makeFocusable
@@ -86,18 +79,20 @@ makeUnit pl =
     where
         myId = WidgetIds.fromExprPayload pl
 
+makeAddField ::
+    _ =>
+    i (Sugar.TagChoice Name o) -> Widget.Id -> GuiM env i o (Maybe (TaggedItem o))
+makeAddField addField myId =
+    GuiState.isSubCursor ?? TagEdit.addItemId myId <&> guard
+    >>= (Lens._Just . const) (GuiM.im addField >>= makeAddFieldRow myId)
+
 makeEmpty ::
     _ =>
     Annotated (ExprGui.Payload i o) # Const (i (Sugar.TagChoice Name o)) ->
     GuiM env i o (Responsive o)
 makeEmpty (Ann (Const pl) (Const addField)) =
-    do
-        isAddField <- GuiState.isSubCursor ?? TagEdit.addItemId (WidgetIds.fromExprPayload pl)
-        if isAddField
-            then
-                GuiM.im addField >>= makeAddFieldRow pl <&> (:[]) >>= makeRecord pure
-                & stdWrapParentExpr pl
-            else makeUnit pl
+    makeAddField addField (WidgetIds.fromExprPayload pl) >>=
+    maybe (makeUnit pl) (stdWrapParentExpr pl . makeRecord pure . (:[]))
 
 make :: _ => ExprGui.Expr Sugar.Composite i o -> GuiM env i o (Responsive o)
 make (Ann (Const pl) (Sugar.Composite (Sugar.TaggedList addField Nothing) [] Sugar.ClosedComposite{})) =
@@ -106,26 +101,10 @@ make (Ann (Const pl) (Sugar.Composite (Sugar.TaggedList addField Nothing) [] Sug
     makeEmpty (Ann (Const pl) (Const addField))
 make (Ann (Const pl) (Sugar.Composite (Sugar.TaggedList addField mTlBody) punned recordTail)) =
     do
-        addFieldEventMap <- mkAddFieldEventMap (WidgetIds.fromExprPayload pl)
         tailEventMap <-
             case recordTail of
             Sugar.ClosedComposite actions -> closedRecordEventMap actions
             Sugar.OpenComposite{} -> pure mempty
-        punnedGuis <-
-            case punned of
-            [] -> pure []
-            _ ->
-                GetVarEdit.makePunnedVars punned
-                <&> (\x -> [TaggedItem Nothing x Nothing])
-        fieldGuis <-
-            zipWithM makeFieldRow
-            ((drop 1 fields <&> (^. Sugar.tiTag . Sugar.tagRefTag . Sugar.tagInstance)) <> [pl ^. Sugar.plEntityId])
-            fields <&> (++ punnedGuis)
-        isAddField <- GuiState.isSubCursor ?? TagEdit.addItemId (WidgetIds.fromExprPayload pl)
-        addFieldGuis <-
-            if isAddField
-            then GuiM.im addField >>= makeAddFieldRow pl <&> (:[])
-            else pure []
         env <- Lens.view id
         let goToRecordEventMap =
                 WidgetIds.fromExprPayload pl & GuiState.updateCursor & pure & const
@@ -134,12 +113,30 @@ make (Ann (Const pl) (Sugar.Composite (Sugar.TaggedList addField mTlBody) punned
                     [ has . MomentuTexts.navigation
                     , has . Texts.goToParent
                     ]) "}"
-        makeRecord postProcess (fieldGuis ++ addFieldGuis)
-            <&> Widget.weakerEvents goToRecordEventMap
-            <&> Widget.weakerEvents (addFieldEventMap <> tailEventMap)
+        keys <-
+            traverse Lens.view TaggedList.Keys
+            { TaggedList._kAdd = has . Config.recordAddFieldKeys
+            , TaggedList._kOrderBefore = has . Config.orderDirKeys . StdKeys.keysUp
+            , TaggedList._kOrderAfter = has . Config.orderDirKeys . StdKeys.keysDown
+            }
+        let prependEventMap = addFieldWithSearchTermEventMap env myId
+        mconcat
+            [ makeAddField addField myId <&> (^.. traverse)
+            , foldMap (TaggedList.make (has . Texts.field) keys myId myId) mTlBody
+                >>= traverse makeFieldRow
+                <&> concat
+                <&> Lens.ix 0 . tagPre . Lens._Just . M.tValue %~ M.weakerEvents prependEventMap
+            , case punned of
+                [] -> pure []
+                _ ->
+                    GetVarEdit.makePunnedVars punned
+                    <&> (\x -> [TaggedItem Nothing x Nothing])
+            ]
+            >>= makeRecord postProcess
+            <&> Widget.weakerEvents (goToRecordEventMap <> tailEventMap)
             & stdWrapParentExpr pl
     where
-        fields = mTlBody ^.. Lens._Just . SugarLens.taggedListBodyItems
+        myId = WidgetIds.fromExprPayload pl
         postProcess =
             case recordTail of
             Sugar.OpenComposite restExpr -> makeOpenRecord restExpr
@@ -171,10 +168,10 @@ addPostTags items =
 
 makeAddFieldRow ::
     _ =>
-    Sugar.Payload v o ->
+    Widget.Id ->
     Sugar.TagChoice Name o ->
     GuiM env i o (TaggedItem o)
-makeAddFieldRow pl addField =
+makeAddFieldRow baseId addField =
     TagEdit.makeTagHoleEdit mkPickResult tagHoleId addField
     & Styled.withColor TextColors.recordTagColor
     & local (has . Menu.configKeysPickOptionAndGotoNext <>~ [M.noMods M.Key'Space])
@@ -186,30 +183,37 @@ makeAddFieldRow pl addField =
     , _tagPost = Just M.empty
     }
     where
-        tagHoleId = TagEdit.addItemId (WidgetIds.fromExprPayload pl)
+        tagHoleId = TagEdit.addItemId baseId
         mkPickResult dst =
             Menu.PickResult
             { Menu._pickDest = WidgetIds.ofTagValue dst
             , Menu._pickMNextEntry = WidgetIds.ofTagValue dst & Just
             }
 
-makeFieldRow :: _ => Sugar.EntityId -> Sugar.TaggedItem Name i o (ExprGui.Expr Sugar.Term i o) -> GuiM env i o (TaggedItem o)
-makeFieldRow delDst (Sugar.TaggedItem tag delete _addAfter fieldExpr) =
+makeFieldRow ::
+    _ =>
+    TaggedList.Item Name i o (ExprGui.Expr Sugar.Term i o) ->
+    GuiM env i o [TaggedItem o]
+makeFieldRow item =
     do
-        itemEventMap <- recordDelEventMap (delDst <$ delete)
-        fieldGui <- GuiM.makeSubexpression fieldExpr
+        fieldGui <-
+            GuiM.makeSubexpression (item ^. TaggedList.iValue)
+            & M.assignCursor (WidgetIds.ofTagValue fieldId)
+                (item ^. TaggedList.iValue . annotation & WidgetIds.fromExprPayload)
         pre <-
-            ( TagEdit.makeRecordTag tag
-                <&> M.tValue %~ Widget.weakerEvents itemEventMap
+            ( TagEdit.makeRecordTag (item ^. TaggedList.iTag)
+                <&> M.tValue %~ Widget.weakerEvents (item ^. TaggedList.iEventMap)
             ) M./|/ Spacer.stdHSpace
-        pure TaggedItem
-            { _tagPre = Just pre
-            , _taggedItem = Widget.weakerEvents itemEventMap fieldGui
-            , _tagPost = Just M.empty
-            }
-    & M.assignCursor
-        (WidgetIds.ofTagValue (tag ^. Sugar.tagRefTag . Sugar.tagInstance))
-        (fieldExpr ^. annotation & WidgetIds.fromExprPayload)
+        let row =
+                TaggedItem
+                { _tagPre = Just pre
+                , _taggedItem = M.weakerEvents (item ^. TaggedList.iEventMap) fieldGui
+                , _tagPost = Just M.empty
+                }
+        makeAddField (item ^. TaggedList.iAddAfter) myId <&> (^.. traverse) <&> (row:)
+    where
+        fieldId = item ^. TaggedList.iTag . Sugar.tagRefTag . Sugar.tagInstance
+        myId = WidgetIds.fromEntityId fieldId
 
 separationBar :: TextColors -> M.AnimId -> Widget.R -> M.View
 separationBar theme animId width =
@@ -238,12 +242,3 @@ closedRecordEventMap (Sugar.ClosedCompositeActions open) =
     open <&> WidgetIds.fromEntityId
     & E.keysEventMapMovesCursor (env ^. has . Config.recordOpenKeys)
     (doc env [Texts.open])
-
-recordDelEventMap :: _ => o Sugar.EntityId -> m (EventMap (o GuiState.Update))
-recordDelEventMap delete =
-    Lens.view id
-    <&>
-    \env ->
-    E.keysEventMapMovesCursor (Config.delKeys env)
-    (E.toDoc env [has . MomentuTexts.edit, has . Texts.record, has . Texts.field, has . MomentuTexts.delete])
-    (delete <&> WidgetIds.fromEntityId)
