@@ -29,19 +29,13 @@ import           Lamdu.Prelude
 
 make ::
     _ =>
-    StatusWidget (IOTrans n) ->
+    StatusWidget m (IOTrans n) ->
     [TitledSelection Folder.Theme] -> [TitledSelection Folder.Language] ->
     Property IO Settings ->
     Double -> VCActions.Actions n (IOTrans n) ->
-    m (StatusWidget (IOTrans n))
+    m (StatusWidget m (IOTrans n))
 make gotoDefinition themeNames langNames settingsProp width vcActions =
     do
-        branchSelector <-
-            info (label Texts.sbBranch)
-            M./|/ VersionControlGUI.makeBranchSelector IOTrans.liftTrans
-                transaction vcActions
-            <&> StatusBar.fromWidget
-
         statusWidgets <-
             SettingsGui.makeStatusWidgets themeNames langNames settingsProp
             <&> Lens.mapped %~ StatusBar.hoist IOTrans.liftIO
@@ -50,14 +44,17 @@ make gotoDefinition themeNames langNames settingsProp width vcActions =
         bgColor <-
             M.backgroundColor ?? theTheme ^. Theme.statusBar . Theme.statusBarBGColor
         padToSize <- Element.padToSize
-        (StatusBar.combineEdges ?? width ?? gotoDefinition)
-            <*> ( StatusBar.combine ??
-                    [ statusWidgets ^. SettingsGui.annotationWidget
-                    , statusWidgets ^. SettingsGui.themeWidget
-                    , branchSelector
-                    , statusWidgets ^. SettingsGui.languageWidget
-                    , statusWidgets ^. SettingsGui.helpWidget
-                    ]
-                )
-            <&> StatusBar.widget . M.tValue %~ padToSize (Vector2 width 0) 0
-            <&> StatusBar.widget %~ bgColor
+        (StatusBar.combineEdges width gotoDefinition)
+            ( StatusBar.combine
+                [ statusWidgets ^. SettingsGui.annotationWidget
+                , statusWidgets ^. SettingsGui.themeWidget
+                , info (label Texts.sbBranch)
+                  M./|/ VersionControlGUI.makeBranchSelector IOTrans.liftTrans transaction vcActions
+                  & StatusBar.fromWidget
+                , statusWidgets ^. SettingsGui.languageWidget
+                , statusWidgets ^. SettingsGui.helpWidget
+                ]
+            )
+            & StatusBar.widget . Lens.mapped . M.tValue %~ padToSize (Vector2 width 0) 0
+            & StatusBar.widget . Lens.mapped %~ bgColor
+            & pure

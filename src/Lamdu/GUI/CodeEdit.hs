@@ -90,7 +90,8 @@ type Model env m =
 make ::
     _ =>
     Anchors.CodeAnchors m -> Anchors.GuiAnchors (T m) (T m) -> Widget.R -> Model env m ->
-    ReaderT env (OnceT (T m)) (StatusBar.StatusWidget (IOTrans m), Widget (IOTrans m))
+    ReaderT env (OnceT (T m))
+    (StatusBar.StatusWidget (ReaderT env (OnceT (T m))) (IOTrans m), Widget (IOTrans m))
 make cp gp width mkWorkArea =
     do
         theExportActions <- Lens.view has

@@ -52,16 +52,18 @@ make themeNames langNames settingsProp env mkWorkArea =
         vcActions <-
             VersionControl.makeActions <&> VCActions.hoist IOTrans.liftTrans & transaction
         state <- Lens.view has
-        let viewToDb x = x & IOTrans.trans %~ VersionControl.runEvent state
+        let viewToDbEvent x = x & IOTrans.trans %~ VersionControl.runEvent state
+        let viewToDbAction = Reader.mapReaderT (_OnceT %~ mapStateT VersionControl.runAction)
         (gotoDefinition, codeEdit) <-
             CodeEdit.make DbLayout.codeAnchors DbLayout.guiAnchors (fullSize ^. _1) mkWorkArea
-            & Reader.mapReaderT (_OnceT %~ mapStateT VersionControl.runAction)
-            <&> _1 %~ StatusBar.hoist viewToDb
-            <&> _2 . Widget.updates %~ viewToDb
+            & viewToDbAction
+            <&> _1 %~ StatusBar.hoist viewToDbEvent
+            <&> _1 . StatusBar.widget %~ viewToDbAction
+            <&> _2 . Widget.updates %~ viewToDbEvent
         statusBar <-
             StatusBar.make gotoDefinition themeNames langNames settingsProp
             (fullSize ^. _1) vcActions
-        let statusBarWidget = statusBar ^. StatusBar.widget . M.tValue
+        statusBarWidget <- statusBar ^. StatusBar.widget <&> (^. M.tValue)
 
         vcEventMap <-
             VersionControlGUI.eventMap ??
