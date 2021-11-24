@@ -115,7 +115,7 @@ makeSwappableItem cat keys item =
                 (E.toDoc env
                 [has . MomentuTexts.edit, has . Texts.moveBefore])
                 (item ^. Sugar.tsiSwapWithPrevious)
-        makeItem cat (keys ^. kOrderAfter) (item ^. Sugar.tsiItem)
+        makeItem cat (keys ^. kAdd) (item ^. Sugar.tsiItem)
             <&> iEventMap <>~ eventMap
 
 itemId :: Sugar.TagRef name i o -> Widget.Id
