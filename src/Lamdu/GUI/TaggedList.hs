@@ -2,11 +2,13 @@
 
 module Lamdu.GUI.TaggedList
     ( Item(..), iTag, iValue, iEventMap, iAddAfter
+    , Keys(..), kAdd, kOrderBefore, kOrderAfter
     , make, itemId, delEventMap, addNextEventMap
     ) where
 
 import qualified Control.Lens as Lens
 import           Data.List.Extended (withPrevNext)
+import           GUI.Momentu (ModKey)
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.I18N as MomentuTexts
@@ -28,27 +30,35 @@ data Item name i o a = Item
     }
 Lens.makeLenses ''Item
 
+data Keys a = Keys
+    { _kAdd :: a
+    , _kOrderBefore :: a
+    , _kOrderAfter :: a
+    } deriving (Functor, Foldable, Traversable)
+Lens.makeLenses ''Keys
+
 make ::
     _ =>
     Lens.ALens' env Text ->
+    Keys [ModKey] ->
     Widget.Id -> Widget.Id ->
     Sugar.TaggedListBody name i o a ->
     m [Item name i o a]
-make cat prevId nextId items =
+make cat keys prevId nextId items =
     do
         env <- Lens.view id
         let addOrderAfter Nothing = id
             addOrderAfter (Just orderAfter) =
                 iEventMap <>~
-                E.keysEventMap (env ^. has . Config.paramOrderAfterKeys)
+                E.keysEventMap (keys ^. kOrderAfter)
                 (E.toDoc env [has . MomentuTexts.edit, cat, has . Texts.moveAfter])
                 orderAfter
         let addDel (p, n, item) =
                 item
                 & iEventMap <>~ delEventMap cat (void (item ^. iValue . _1)) p n env
                 & iValue %~ (^. _2)
-        (:) <$> makeItem cat (items ^. Sugar.tlHead)
-            <*> traverse (makeSwappableItem cat) (items ^. Sugar.tlTail)
+        (:) <$> makeItem cat (keys ^. kAdd) (items ^. Sugar.tlHead)
+            <*> traverse (makeSwappableItem cat keys) (items ^. Sugar.tlTail)
             <&> zipWith addOrderAfter orderAfters
             <&> withPrevNext prevId nextId (itemId . (^. iTag))
             <&> Lens.mapped %~ addDel
@@ -71,17 +81,20 @@ delEventMap cat fpDel prevId nextId =
     dir Config.delBackwardKeys SearchMenu.textDeleteBackwards prevId <>
     dir Config.delForwardKeys MomentuTexts.delete nextId
 
-addNextEventMap :: _ => Lens.ALens' env Text -> Widget.Id -> m _
-addNextEventMap cat myId =
+addNextEventMap :: _ => Lens.ALens' env Text -> [ModKey] -> Widget.Id -> m _
+addNextEventMap cat addKeys myId =
     Lens.view id <&>
     \env ->
-    E.keysEventMapMovesCursor (env ^. has . Config.addNextParamKeys)
+    E.keysEventMapMovesCursor addKeys
     (E.toDoc env [has . MomentuTexts.edit, cat, has . Texts.add])
     (pure (TagEdit.addItemId myId))
 
-makeItem :: _ => Lens.ALens' env Text -> Sugar.TaggedItem name i o a -> m (Item name i o (o (), a))
-makeItem cat item =
-    addNextEventMap cat (itemId (item ^. Sugar.tiTag)) <&>
+makeItem ::
+    _ =>
+    Lens.ALens' env Text -> [ModKey] ->
+    Sugar.TaggedItem name i o a -> m (Item name i o (o (), a))
+makeItem cat addKeys item =
+    addNextEventMap cat addKeys (itemId (item ^. Sugar.tiTag)) <&>
     \x ->
     Item
     { _iTag = item ^. Sugar.tiTag
@@ -91,16 +104,18 @@ makeItem cat item =
     }
 
 makeSwappableItem ::
-    _ => Lens.ALens' env Text -> Sugar.TaggedSwappableItem name i o a -> m (Item name i o (o (), a))
-makeSwappableItem cat item =
+    _ =>
+    Lens.ALens' env Text -> Keys [ModKey] ->
+    Sugar.TaggedSwappableItem name i o a -> m (Item name i o (o (), a))
+makeSwappableItem cat keys item =
     do
         env <- Lens.view id
         let eventMap =
-                E.keysEventMap (env ^. has . Config.paramOrderBeforeKeys)
+                E.keysEventMap (keys ^. kOrderBefore)
                 (E.toDoc env
                 [has . MomentuTexts.edit, has . Texts.moveBefore])
                 (item ^. Sugar.tsiSwapWithPrevious)
-        makeItem cat (item ^. Sugar.tsiItem)
+        makeItem cat (keys ^. kOrderAfter) (item ^. Sugar.tsiItem)
             <&> iEventMap <>~ eventMap
 
 itemId :: Sugar.TagRef name i o -> Widget.Id

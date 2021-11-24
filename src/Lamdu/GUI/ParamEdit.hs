@@ -51,7 +51,8 @@ eventMapAddFirstParam binderId addFirst =
 eventMapAddNextParamOrPickTag ::
     _ => Widget.Id -> Sugar.AddNextParam name i o -> m (EventMap (o GuiState.Update))
 eventMapAddNextParamOrPickTag myId Sugar.AddNext{} =
-    TaggedList.addNextEventMap (has . Texts.parameter) myId
+    Lens.view (has . Config.addNextParamKeys) >>=
+    (TaggedList.addNextEventMap (has . Texts.parameter) ?? myId)
 eventMapAddNextParamOrPickTag _ (Sugar.NeedToPickTagToAddNext x) =
     Lens.view id <&>
     \env ->
@@ -119,6 +120,13 @@ makeParams ::
     Sugar.TaggedListBody Name i o (Sugar.FuncParam (Sugar.Annotation (Sugar.EvaluationScopes Name i) Name)) ->
     GuiM env i o [Responsive o]
 makeParams annotationOpts prevId nextId items =
-    TaggedList.make (has . Texts.parameter) prevId nextId items
+    do
+        keys <-
+            traverse Lens.view TaggedList.Keys
+            { TaggedList._kAdd = has . Config.addNextParamKeys
+            , TaggedList._kOrderBefore = has . Config.paramOrderBeforeKeys
+            , TaggedList._kOrderAfter = has . Config.paramOrderAfterKeys
+            }
+        TaggedList.make (has . Texts.parameter) keys prevId nextId items
     >>= traverse (makeParam annotationOpts)
     <&> concat
