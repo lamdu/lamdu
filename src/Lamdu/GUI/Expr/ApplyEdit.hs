@@ -5,6 +5,7 @@ module Lamdu.GUI.Expr.ApplyEdit
 import qualified Control.Lens as Lens
 import qualified GUI.Momentu as M
 import           GUI.Momentu ((/|/))
+import           GUI.Momentu.Direction (Orientation(..), Order(..))
 import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.I18N as MomentuTexts
 import           GUI.Momentu.Responsive (Responsive)
@@ -13,6 +14,7 @@ import qualified GUI.Momentu.Responsive.Expression as ResponsiveExpr
 import qualified GUI.Momentu.Responsive.Options as Options
 import           GUI.Momentu.Responsive.TaggedList (TaggedItem(..), taggedList)
 import qualified GUI.Momentu.Widget as Widget
+import           GUI.Momentu.Widgets.StdKeys (dirKey)
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified Lamdu.Config as Config
 import qualified Lamdu.GUI.Expr.CaseEdit as CaseEdit
@@ -58,19 +60,20 @@ makeLabeled (Ann (Const pl) apply) =
         Just (Sugar.OperatorArgs l r s) ->
             do
                 env <- Lens.view id
-                let swapAction keys =
-                        Widget.weakerEvents
-                        (E.keysEventMap (env ^. has . keys)
-                        (E.toDoc env [has . MomentuTexts.edit, has . Texts.swapOperatorArgs]) s)
+                let swapAction order =
+                        E.keysEventMap
+                        (env ^. has . Config.orderDirKeys . Lens.cloneLens (dirKey (env ^. has) Horizontal order))
+                        (E.toDoc env [has . MomentuTexts.edit, has . Texts.swapOperatorArgs]) s
+                        & Widget.weakerEvents
                 navigateOut <-
                     ExprEventMap.closeParenEvent
                     [has . MomentuTexts.navigation, has . Texts.leaveSubexpression]
                     (pure myId)
                 (ResponsiveExpr.boxSpacedMDisamb ?? ExprGui.mParensId pl)
                     <*> sequenceA
-                    [ GuiM.makeSubexpression l <&> swapAction Config.swapWithRightKeys
+                    [ GuiM.makeSubexpression l <&> swapAction Forward
                     , makeOperatorRow
-                        (Widget.weakerEvents navigateOut . swapAction Config.swapWithLeftKeys) func r
+                        (Widget.weakerEvents navigateOut . swapAction Backward) func r
                         >>= wrap
                     ]
     )

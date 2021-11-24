@@ -6,6 +6,7 @@ module Lamdu.GUI.ParamEdit
 import qualified Control.Lens as Lens
 import qualified GUI.Momentu as M
 import           GUI.Momentu.Align (TextWidget)
+import           GUI.Momentu.Direction (Orientation(..), Order(..))
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.I18N as MomentuTexts
@@ -15,6 +16,7 @@ import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.State as GuiState
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Menu as Menu
+import           GUI.Momentu.Widgets.StdKeys (dirKey)
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Theme.TextColors as TextColors
 import qualified Lamdu.GUI.Expr.TagEdit as TagEdit
@@ -121,11 +123,12 @@ makeParams ::
     GuiM env i o [Responsive o]
 makeParams annotationOpts prevId nextId items =
     do
+        o <- Lens.view has <&> \d -> Lens.cloneLens . dirKey d Horizontal
         keys <-
             traverse Lens.view TaggedList.Keys
             { TaggedList._kAdd = has . Config.addNextParamKeys
-            , TaggedList._kOrderBefore = has . Config.paramOrderBeforeKeys
-            , TaggedList._kOrderAfter = has . Config.paramOrderAfterKeys
+            , TaggedList._kOrderBefore = has . Config.orderDirKeys . o Backward
+            , TaggedList._kOrderAfter = has . Config.orderDirKeys . o Forward
             }
         TaggedList.make (has . Texts.parameter) keys prevId nextId items
     >>= traverse (makeParam annotationOpts)

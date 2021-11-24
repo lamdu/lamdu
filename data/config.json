@@ -77,6 +77,12 @@
         "up": ["Up"],
         "down": ["Down"]
     },
+    "orderDirKeys": {
+        "left": ["Cmd+Left"],
+        "right": ["Cmd+Right"],
+        "up": ["Cmd+Up"],
+        "down": ["Cmd+Down"]
+    },
     "grid": {
         "moreLeft": [ "Home" ],
         "moreRight": [ "End" ],
@@ -118,15 +124,11 @@
     "changeThemeKeys"          : [ "Alt+T" ],
     "changeLanguageKeys"       : [],
     "addNextParamKeys"         : [ "Space" ],
-    "paramOrderBeforeKeys"     : [ "Cmd+Left" ],
-    "paramOrderAfterKeys"      : [ "Cmd+Right" ],
     "healKeys"                 : [ "Space", "Enter" ],
     "recordOpenKeys"           : [ "Alt+O" ],
     "recordCloseKeys"          : [ "Alt+O" ],
     "caseOpenKeys"             : [ "Alt+O" ],
     "extractKeys"              : [ "Cmd+X", "Cmd+Up" ],
-    "swapWithLeftKeys"         : [ "Cmd+Left" ],
-    "swapWithRightKeys"        : [ "Cmd+Right" ],
     "moveLetInwardKeys"        : [ "Cmd+Down" ],
     "inlineKeys"               : [ "Cmd+V" ],
     "nextAnnotationModeKeys"   : [ "F7" ],

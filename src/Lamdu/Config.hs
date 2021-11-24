@@ -105,6 +105,7 @@ data Config key = Config
     , _grid :: Grid.Keys key
     , _textEdit :: TextEdit.Keys key
     , _dirKeys :: StdKeys.DirKeys key
+    , _orderDirKeys :: StdKeys.DirKeys key
 
     , _maxExprDepth :: Int
 
@@ -116,8 +117,6 @@ data Config key = Config
     , _previousCursorKeys :: [key]
 
     , _addNextParamKeys :: [key]
-    , _paramOrderBeforeKeys :: [key]
-    , _paramOrderAfterKeys :: [key]
     , _jumpToDefinitionKeys :: [key]
     , _delForwardKeys :: [key]
     , _delBackwardKeys :: [key]
@@ -130,8 +129,6 @@ data Config key = Config
     , _extractKeys :: [key]
     , _inlineKeys :: [key]
     , _moveLetInwardKeys:: [key]
-    , _swapWithLeftKeys :: [key]
-    , _swapWithRightKeys :: [key]
 
     , _enterSubexpressionKeys :: [key]
     , _leaveSubexpressionKeys :: [key]
