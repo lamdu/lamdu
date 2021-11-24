@@ -74,7 +74,7 @@ addNextEventMap myId =
     Lens.view id <&>
     \env ->
     E.keysEventMapMovesCursor (env ^. has . Config.addNextParamKeys)
-    (E.toDoc env [has . MomentuTexts.edit, has . Texts.addNextParameter])
+    (E.toDoc env [has . MomentuTexts.edit, has . Texts.parameter, has . Texts.add])
     (pure (TagEdit.addItemId myId))
 
 makeItem :: _ => Sugar.TaggedItem name i o a -> m (Item name i o (o (), a))

@@ -37,17 +37,17 @@ eventMapAddFirstParam binderId addFirst =
     <&>
     \env ->
     E.keysEventMapMovesCursor (env ^. has . Config.addNextParamKeys)
-    (E.toDoc env [has . MomentuTexts.edit, has . doc]) action
+    (E.toDoc env (has . MomentuTexts.edit : doc)) action
     where
         enterParam = WidgetIds.tagHoleId . WidgetIds.fromEntityId
         (action, doc) =
             case addFirst of
             Sugar.NeedToPickTagToAddFirst x ->
-                (pure (enterParam x), Texts.nameFirstParameter)
+                (pure (enterParam x), [has . Texts.nameFirstParameter])
             Sugar.PrependParam{} ->
-                (pure (TagEdit.addItemId binderId), Texts.addParameter)
+                (pure (TagEdit.addItemId binderId), [has . Texts.parameter, has . Texts.add])
             Sugar.AddInitialParam x ->
-                (x <&> enterParam, Texts.addParameter)
+                (x <&> enterParam, [has . Texts.parameter, has . Texts.add])
 
 eventMapAddNextParamOrPickTag ::
     _ => Widget.Id -> Sugar.AddNextParam name i o -> m (EventMap (o GuiState.Update))

@@ -122,8 +122,6 @@
             "stopEditing": "Stop editing",
             "nameFirstParameter": "Name first parameter",
             "parameter": "Parameter",
-            "addParameter": "Add parameter",
-            "addNextParameter": "Add next parameter",
             "moveBefore": "Move before",
             "moveAfter": "Move after",
             "fragment": "Fragment",

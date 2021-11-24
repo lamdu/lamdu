@@ -64,8 +64,6 @@ data CodeUI a = CodeUI
     , _stopEditing :: a
     , _nameFirstParameter :: a
     , _parameter :: a
-    , _addParameter :: a
-    , _addNextParameter :: a
     , _moveBefore :: a
     , _moveAfter :: a
     , _fragment :: a

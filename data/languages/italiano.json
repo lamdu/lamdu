@@ -122,8 +122,6 @@
             "stopEditing": "Termina modifica",
             "nameFirstParameter": "Nome del primo parametro",
             "parameter": "Parametro",
-            "addParameter": "Aggiungi parametro",
-            "addNextParameter": "Aggiungi prossimo parametro",
             "moveBefore": "Muovi prima",
             "moveAfter": "Muovi dopo",
             "fragment": "Frammenta",
