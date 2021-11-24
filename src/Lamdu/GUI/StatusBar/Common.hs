@@ -60,8 +60,8 @@ makeDropDownList headerText prop choices =
         myId = Widget.Id ("status" : elemIds ^# headerText)
 
 labeledDropDownList ::
-    _ => M.WithTextPos M.View -> OneOf t -> Property f a -> [(a, M.TextWidget f)] -> m (M.TextWidget f)
-labeledDropDownList headerView categoryTextLens prop choices =
+    _ => OneOf t -> Property f a -> [(a, M.TextWidget f)] -> M.WithTextPos M.View -> m (M.TextWidget f)
+labeledDropDownList categoryTextLens prop choices headerView =
     pure headerView M./|/ makeDropDownList categoryTextLens prop choices
 
 makeSwitchStatusWidget ::
@@ -70,8 +70,7 @@ makeSwitchStatusWidget ::
     [(a, M.TextWidget f)] -> m (StatusWidget f)
 makeSwitchStatusWidget mkHeaderWidget categoryTextLens switchTextLens keysGetter prop choiceVals =
     do
-        header <- mkHeaderWidget
-        w <- labeledDropDownList header categoryTextLens prop choiceVals
+        w <- mkHeaderWidget >>= labeledDropDownList categoryTextLens prop choiceVals
         keys <- Lens.view (has . keysGetter)
         txt <- Lens.view has
         let e =
