@@ -1,6 +1,6 @@
 module Lamdu.GUI.Expr.TagEdit
     ( makeRecordTag, makeVariantTag
-    , makeParamTag, addParamId
+    , makeParamTag, addItemId
     , makeArgTag
     , makeTagHoleEdit
     , makeBinderTagEdit
@@ -341,8 +341,8 @@ makeVariantTag tag =
     makeTagRefEdit tag
     & Styled.withColor TextColors.caseTagColor
 
-addParamId :: Widget.Id -> Widget.Id
-addParamId = (`Widget.joinId` ["add param"])
+addItemId :: Widget.Id -> Widget.Id
+addItemId = (`Widget.joinId` ["add item"])
 
 makeLHSTag ::
     _ =>
@@ -385,7 +385,7 @@ makeParamTag :: _ => Maybe (o EntityId) -> Sugar.TagRef Name i o -> GuiM env i o
 makeParamTag =
     makeLHSTag onPickNext TextColors.parameterColor
     where
-        onPickNext pos = WidgetIds.fromEntityId pos & addParamId & Just
+        onPickNext pos = WidgetIds.fromEntityId pos & addItemId & Just
 
 -- | Unfocusable tag view (e.g: in apply args)
 makeArgTag :: _ => Name -> Sugar.EntityId -> m (M.WithTextPos M.View)

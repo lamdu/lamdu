@@ -44,9 +44,6 @@ import           Lamdu.Prelude
 doc :: _ => env -> [Lens.ALens' (Texts.CodeUI Text) Text] -> E.Doc
 doc env lens = E.toDoc env ([has . MomentuTexts.edit, has . Texts.caseLabel] <> (lens <&> (has .)))
 
-addAltId :: Widget.Id -> Widget.Id
-addAltId = (`Widget.joinId` ["add alt"])
-
 make :: _ => ExprGui.Expr Sugar.Composite i o -> GuiM env i o (Responsive o)
 make (Ann (Const pl) (Sugar.Composite alts punned caseTail)) =
     do
@@ -112,20 +109,19 @@ makeAltsWidget altsId (Sugar.TaggedList mkAddAlt alts) punned =
             ((drop 1 altItems <&> WidgetIds.fromEntityId . (^. Sugar.tiTag . Sugar.tagRefTag . Sugar.tagInstance)) <> [altsId])
             altItems <&> (<> punnedWidgets)
         addAlt <- GuiM.im mkAddAlt
+        let addAltId = TagEdit.addItemId altsId
         newAlts <-
-            GuiState.isSubCursor ?? addAltId altsId
+            GuiState.isSubCursor ?? addAltId
             <&> guard
-            <&> Lens.mapped .~ makeAddAltRow addAlt (addAltId altsId)
+            <&> Lens.mapped .~ makeAddAltRow addAlt addAltId
             >>= sequenceA
         env <- Lens.view id
         let addAltEventMap =
-                GuiState.updateCursor dst
-                & GuiState.uWidgetStateUpdates . Lens.at dst ?~ mempty
+                GuiState.updateCursor addAltId
+                & GuiState.uWidgetStateUpdates . Lens.at addAltId ?~ mempty
                 & pure
                 & E.keyPresses (env ^. has . Config.caseAddAltKeys)
                     (doc env [Texts.alternative, Texts.add])
-                where
-                    dst = addAltId altsId
         case existingAltWidgets ++ newAlts of
             [] ->
                 (Widget.makeFocusableView ?? Widget.joinId altsId ["Ø"] <&> (M.tValue %~))

@@ -45,7 +45,7 @@ eventMapAddFirstParam binderId addFirst =
             Sugar.NeedToPickTagToAddFirst x ->
                 (pure (enterParam x), Texts.nameFirstParameter)
             Sugar.PrependParam{} ->
-                (pure (TagEdit.addParamId binderId), Texts.addParameter)
+                (pure (TagEdit.addItemId binderId), Texts.addParameter)
             Sugar.AddInitialParam x ->
                 (x <&> enterParam, Texts.addParameter)
 
@@ -64,7 +64,7 @@ mkParamPickResult tagInstance =
     Menu.PickResult
     { Menu._pickDest = WidgetIds.fromEntityId tagInstance
     , Menu._pickMNextEntry =
-        WidgetIds.fromEntityId tagInstance & TagEdit.addParamId & Just
+        WidgetIds.fromEntityId tagInstance & TagEdit.addItemId & Just
     }
 
 addAnnotation ::
@@ -97,7 +97,7 @@ addAddParam addParam myId paramEdit =
         <&> Responsive.fromWithTextPos
         <&> (:[]) <&> (paramEdit :)
     where
-        addId = TagEdit.addParamId myId
+        addId = TagEdit.addItemId myId
 
 makeParam ::
     _ =>

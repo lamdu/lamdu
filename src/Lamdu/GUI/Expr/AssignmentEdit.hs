@@ -299,7 +299,7 @@ makeMParamsEdit mScopeCursor isScopeNavFocused delVarBackwardsId myId bodyId add
                 <*> (Options.boxSpaced ?? Options.disambiguationNone ?? edits)
                 <&> Just
     where
-        prependId = TagEdit.addParamId myId
+        prependId = TagEdit.addItemId myId
         frame =
             case mParams of
             Just Sugar.RecordParams{} -> Styled.addValFrame

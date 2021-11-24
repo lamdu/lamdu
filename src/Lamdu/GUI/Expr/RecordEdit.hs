@@ -48,15 +48,12 @@ doc :: _ => env -> [Lens.ALens' (Texts.CodeUI Text) Text] -> E.Doc
 doc env lens =
     E.toDoc env ([has . MomentuTexts.edit, has . Texts.record] <> (lens <&> (has .)))
 
-addFieldId :: Widget.Id -> Widget.Id
-addFieldId = (`Widget.joinId` ["add field"])
-
 mkAddFieldEventMap :: _ => Widget.Id -> m (EventMap (o GuiState.Update))
 mkAddFieldEventMap myId =
     Lens.view id
     <&>
     \env ->
-    addFieldId myId
+    TagEdit.addItemId myId
     & pure
     & E.keysEventMapMovesCursor (env ^. has . Config.recordAddFieldKeys)
     (doc env [Texts.field, Texts.add])
@@ -67,7 +64,7 @@ addFieldWithSearchTermEventMap env myId =
     where
         f c
             | Char.isAlpha c =
-                addFieldId myId
+                TagEdit.addItemId myId
                 & SearchMenu.enterWithSearchTerm (Text.singleton c)
                 & pure
                 & Just
@@ -95,7 +92,7 @@ makeEmpty ::
     GuiM env i o (Responsive o)
 makeEmpty (Ann (Const pl) (Const addField)) =
     do
-        isAddField <- GuiState.isSubCursor ?? addFieldId (WidgetIds.fromExprPayload pl)
+        isAddField <- GuiState.isSubCursor ?? TagEdit.addItemId (WidgetIds.fromExprPayload pl)
         if isAddField
             then
                 GuiM.im addField >>= makeAddFieldRow pl <&> (:[]) >>= makeRecord pure
@@ -124,7 +121,7 @@ make (Ann (Const pl) (Sugar.Composite (Sugar.TaggedList addField mTlBody) punned
             zipWithM makeFieldRow
             ((drop 1 fields <&> (^. Sugar.tiTag . Sugar.tagRefTag . Sugar.tagInstance)) <> [pl ^. Sugar.plEntityId])
             fields <&> (++ punnedGuis)
-        isAddField <- GuiState.isSubCursor ?? addFieldId (WidgetIds.fromExprPayload pl)
+        isAddField <- GuiState.isSubCursor ?? TagEdit.addItemId (WidgetIds.fromExprPayload pl)
         addFieldGuis <-
             if isAddField
             then GuiM.im addField >>= makeAddFieldRow pl <&> (:[])
@@ -189,7 +186,7 @@ makeAddFieldRow pl addField =
     , _tagPost = Just M.empty
     }
     where
-        tagHoleId = addFieldId (WidgetIds.fromExprPayload pl)
+        tagHoleId = TagEdit.addItemId (WidgetIds.fromExprPayload pl)
         mkPickResult dst =
             Menu.PickResult
             { Menu._pickDest = WidgetIds.ofTagValue dst
