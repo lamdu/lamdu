@@ -391,24 +391,23 @@ makeJumpToRhs rhsId =
 
 eventMapAddFirstParam ::
     _ => Widget.Id -> Sugar.Assignment v name i o a -> m (EventMap (o GuiState.Update))
-eventMapAddFirstParam binderId assignment =
-    Lens.view id
-    <&>
-    \env ->
-    E.keysEventMapMovesCursor (env ^. has . Config.addNextParamKeys)
-    (E.toDoc env (has . MomentuTexts.edit : doc)) action
+eventMapAddFirstParam binderId =
+    \case
+    Sugar.BodyPlain x ->
+        r (x ^. Sugar.apAddFirstParam <&> enterParam) [has . Texts.parameter, has . Texts.add]
+    Sugar.BodyFunction f ->
+        case f ^. Sugar.fAddFirstParam of
+        Sugar.NeedToPickTagToAddNext x ->
+            r (pure (enterParam x)) [has . Texts.nameFirstParameter]
+        Sugar.AddNext{} ->
+            r (pure (TagEdit.addItemId binderId)) [has . Texts.parameter, has . Texts.add]
     where
         enterParam = WidgetIds.tagHoleId . WidgetIds.fromEntityId
-        (action, doc) =
-            case assignment of
-            Sugar.BodyPlain x ->
-                (x ^. Sugar.apAddFirstParam <&> enterParam, [has . Texts.parameter, has . Texts.add])
-            Sugar.BodyFunction f ->
-                case f ^. Sugar.fAddFirstParam of
-                Sugar.NeedToPickTagToAddNext x ->
-                    (pure (enterParam x), [has . Texts.nameFirstParameter])
-                Sugar.AddNext{} ->
-                    (pure (TagEdit.addItemId binderId), [has . Texts.parameter, has . Texts.add])
+        r action doc =
+            Lens.view id <&>
+            \env ->
+            E.keysEventMapMovesCursor (env ^. has . Config.addNextParamKeys)
+            (E.toDoc env (has . MomentuTexts.edit : doc)) action
 
 make ::
     _ =>
