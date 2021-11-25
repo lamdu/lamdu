@@ -1,6 +1,7 @@
 - warn: { name: Use DerivingStrategies }
 - warn: { name: Redundant bracket due to operator fixities }
 - ignore: { name: Too strict if }
+- fixity: "infixl 9 |||"
 
 - group:
     name: default

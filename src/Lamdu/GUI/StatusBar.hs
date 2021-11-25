@@ -51,7 +51,7 @@ make gotoDefinition themeNames langNames settingsProp width vcActions =
         bgColor <-
             M.backgroundColor ?? theTheme ^. Theme.statusBar . Theme.statusBarBGColor
         padToSize <- Element.padToSize
-        (StatusBar.combineEdges ?? width ?? gotoDefinition) ??
+        StatusBar.combineEdges ?? width ?? gotoDefinition ??
             [ statusWidgets ^. SettingsGui.annotationWidget
             , statusWidgets ^. SettingsGui.themeWidget
             , branchSelector
