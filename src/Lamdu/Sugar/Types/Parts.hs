@@ -23,7 +23,7 @@ module Lamdu.Sugar.Types.Parts
       BinderParams(..), _NullParam, _VarParam, _RecordParams
     , FuncParam(..), fpAnnotation, fpVarInfo
     , NullParamActions(..), npDeleteLambda
-    , VarParamInfo(..), vpiTag, vpiAddNext, vpiDelete
+    , VarParamInfo(..), vpiTag, vpiAddPrev, vpiAddNext, vpiDelete
     , AddParam(..), _AddNext, _NeedToPickTagToAddNext
     , -- Expressions
       Payload(..), plEntityId, plAnnotation, plActions, plHiddenEntityIds, plParenInfo
@@ -69,6 +69,7 @@ newtype NullParamActions o = NullParamActions
 
 data VarParamInfo name i o = VarParamInfo
     { _vpiTag :: OptionalTag name i o
+    , _vpiAddPrev :: AddParam name i o
     , _vpiAddNext :: AddParam name i o
     , _vpiDelete :: o ()
     } deriving Generic

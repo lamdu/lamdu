@@ -1,5 +1,5 @@
 module Lamdu.GUI.ParamEdit
-    ( makeParams, addAnnotation, eventMapAddNextParamOrPickTag, addAddParam
+    ( makeParams, addAnnotation, eventMapAddNextParamOrPickTag, mkAddParam
     , mkParamPickResult
     ) where
 
@@ -67,18 +67,18 @@ addAnnotation annotationOpts param myId widget =
             ?? Responsive.fromWithTextPos widget
     & local (M.animIdPrefix .~ Widget.toAnimId myId)
 
-addAddParam :: _ => i (Sugar.TagChoice Name a) -> Widget.Id -> Responsive a -> GuiM env i a [Responsive a]
-addAddParam addParam myId paramEdit =
+mkAddParam :: _ => i (Sugar.TagChoice Name a) -> Widget.Id -> GuiM env i a [Responsive a]
+mkAddParam addParam myId =
     GuiState.isSubCursor ?? addId >>=
     \case
-    False -> pure [paramEdit]
+    False -> pure []
     True ->
         addParam & im
         >>= TagEdit.makeTagHoleEdit mkParamPickResult addId
         & local (has . Menu.configKeysPickOptionAndGotoNext <>~ [noMods M.Key'Space])
         & Styled.withColor TextColors.parameterColor
         <&> Responsive.fromWithTextPos
-        <&> (:[]) <&> (paramEdit :)
+        <&> (:[])
     where
         addId = TagEdit.addItemId myId
 
@@ -88,10 +88,11 @@ makeParam ::
     TaggedList.Item Name i o (Sugar.FuncParam (Sugar.Annotation (Sugar.EvaluationScopes Name i) Name)) ->
     GuiM env i o [Responsive o]
 makeParam annotationOpts item =
-    TagEdit.makeParamTag Nothing (item ^. TaggedList.iTag)
-    >>= addAnnotation annotationOpts (item ^. TaggedList.iValue) myId
-    <&> M.weakerEvents (item ^. TaggedList.iEventMap)
-    >>= addAddParam (item ^. TaggedList.iAddAfter) myId
+    (<>)
+    <$> (TagEdit.makeParamTag Nothing (item ^. TaggedList.iTag)
+            >>= addAnnotation annotationOpts (item ^. TaggedList.iValue) myId
+            <&> M.weakerEvents (item ^. TaggedList.iEventMap) <&> (:[]))
+    <*> mkAddParam (item ^. TaggedList.iAddAfter) myId
     & local (M.animIdPrefix .~ Widget.toAnimId myId)
     where
         myId = TaggedList.itemId (item ^. TaggedList.iTag)
@@ -100,8 +101,8 @@ makeParams ::
     _ =>
     Annotation.EvalAnnotationOptions ->
     Widget.Id -> Widget.Id ->
-    Sugar.TaggedListBody Name i o (Sugar.FuncParam (Sugar.Annotation (Sugar.EvaluationScopes Name i) Name)) ->
-    GuiM env i o [Responsive o]
+    Sugar.TaggedList Name i o (Sugar.FuncParam (Sugar.Annotation (Sugar.EvaluationScopes Name i) Name)) ->
+    GuiM env i o (EventMap (o GuiState.Update), [Responsive o])
 makeParams annotationOpts prevId nextId items =
     do
         o <- Lens.view has <&> \d -> Lens.cloneLens . dirKey d Horizontal
@@ -111,6 +112,8 @@ makeParams annotationOpts prevId nextId items =
             , TaggedList._kOrderBefore = has . Config.orderDirKeys . o Backward
             , TaggedList._kOrderAfter = has . Config.orderDirKeys . o Forward
             }
-        TaggedList.make (has . Texts.parameter) keys prevId nextId items
-    >>= traverse (makeParam annotationOpts)
-    <&> concat
+        (addFirstEventMap, itemsR) <- TaggedList.make (has . Texts.parameter) keys prevId nextId items
+        (<>)
+            <$> mkAddParam (items ^. Sugar.tlAddFirst) prevId
+            <*> (traverse (makeParam annotationOpts) itemsR <&> concat)
+            <&> (,) addFirstEventMap

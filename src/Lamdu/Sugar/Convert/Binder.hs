@@ -24,7 +24,7 @@ import           Lamdu.Expr.UniqueId (ToUUID(..))
 import qualified Lamdu.Sugar.Config as Config
 import           Lamdu.Sugar.Convert.Binder.Float (makeFloatLetToOuterScope)
 import           Lamdu.Sugar.Convert.Binder.Inline (inlineLet)
-import           Lamdu.Sugar.Convert.Binder.Params (ConventionalParams(..), convertLamParams, convertEmptyParams, convertNonEmptyParams, cpParams, cpAddFirstParam, mkVarInfo)
+import           Lamdu.Sugar.Convert.Binder.Params (ConventionalParams(..), convertLamParams, convertEmptyParams, convertNonEmptyParams, cpParams, mkVarInfo)
 import           Lamdu.Sugar.Convert.Binder.Redex (Redex(..))
 import qualified Lamdu.Sugar.Convert.Binder.Redex as Redex
 import           Lamdu.Sugar.Convert.Binder.Types (BinderKind(..))
@@ -178,7 +178,6 @@ makeFunction chosenScopeProp params funcBody =
             , _fChosenScopeProp = chosenScopeProp ^. Property.mkProperty & lift
             , _fBody = assignmentBody
             , _fBodyScopes = mempty
-            , _fAddFirstParam = params ^. cpAddFirstParam
             }
         addParams ctx =
             ctx

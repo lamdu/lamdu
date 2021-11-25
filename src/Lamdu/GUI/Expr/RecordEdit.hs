@@ -122,7 +122,7 @@ make (Ann (Const pl) (Sugar.Composite (Sugar.TaggedList addField mTlBody) punned
         let prependEventMap = addFieldWithSearchTermEventMap env myId
         mconcat
             [ makeAddField addField myId <&> (^.. traverse)
-            , foldMap (TaggedList.make (has . Texts.field) keys myId myId) mTlBody
+            , foldMap (TaggedList.makeBody (has . Texts.field) keys myId myId) mTlBody
                 >>= traverse makeFieldRow
                 <&> concat
                 <&> Lens.ix 0 . tagPre . Lens._Just . M.tValue %~ M.weakerEvents prependEventMap

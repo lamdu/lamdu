@@ -116,7 +116,7 @@ mkLightLambda params myId =
 make :: _ => ExprGui.Expr Sugar.Lambda i o -> GuiM env i o (Responsive o)
 make (Ann (Const pl) lam) =
     do
-        AssignmentEdit.Parts mParamsEdit mScopeEdit bodyEdit eventMap _wrap rhsId <-
+        AssignmentEdit.Parts lhsEventMap mParamsEdit mScopeEdit bodyEdit scopeEventMap _wrap rhsId <-
             AssignmentEdit.makeFunctionParts (lam ^. Sugar.lamApplyLimit)
             (Ann (Const pl) func) (WidgetIds.fromEntityId bodyId)
         rhsJumperEquals <- AssignmentEdit.makeJumpToRhs rhsId
@@ -124,7 +124,7 @@ make (Ann (Const pl) lam) =
             case (lam ^. Sugar.lamMode, params) of
             (_, Sugar.NullParam{}) -> mkLhsEdits ?? mParamsEdit ?? mScopeEdit
             (Sugar.LightLambda, _) -> mkLightLambda params myId ?? mParamsEdit ?? mScopeEdit
-            _ -> mkExpanded ?? mParamsEdit ?? mScopeEdit
+            _ -> mkExpanded ?? mParamsEdit ?? mScopeEdit <&> Lens.ix 0 %~ M.weakerEvents lhsEventMap
         navigateOut <-
             closeParenEvent
             [has . MomentuTexts.navigation, has . Texts.lambda, has . Texts.leaveSubexpression]
@@ -134,7 +134,7 @@ make (Ann (Const pl) lam) =
                 <&> Widget.strongerEvents rhsJumperEquals
                 <&> (: [bodyEdit]))
             & stdWrapParentExpr pl
-            <&> M.weakerEvents (eventMap <> navigateOut)
+            <&> M.weakerEvents (scopeEventMap <> navigateOut)
     where
         myId = WidgetIds.fromExprPayload pl
         params = func ^. Sugar.fParams

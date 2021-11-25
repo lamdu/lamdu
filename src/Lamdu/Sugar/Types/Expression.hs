@@ -19,9 +19,7 @@ module Lamdu.Sugar.Types.Expression
     , Meta.DefinitionState(..)
     , BinderParamScopeId(..), bParamScopeId
     , Binder(..), _BinderLet, _BinderTerm
-    , Function(..)
-        , fChosenScopeProp, fParams, fBody
-        , fAddFirstParam, fBodyScopes
+    , Function(..), fChosenScopeProp, fParams, fBody, fBodyScopes
     , AssignPlain(..), apAddFirstParam, apBody
     , Assignment(..), _BodyFunction, _BodyPlain
     -- Holes
@@ -237,7 +235,6 @@ data Function v name i o k = Function
     { _fChosenScopeProp :: i (Property o (Maybe BinderParamScopeId))
     , _fParams :: BinderParams v name i o
     , _fBody :: k :# Binder v name i o
-    , _fAddFirstParam :: AddParam name i o
     , -- The scope inside a lambda
       _fBodyScopes :: ParamScopes
     } deriving Generic

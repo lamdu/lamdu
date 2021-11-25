@@ -196,11 +196,9 @@ instance (a ~ OldName m, b ~ NewName m, i ~ IM m) => Walk m (AddParam a i o) (Ad
     walk x = opRun <&> \run -> x & _AddNext %~ (>>= run . walk)
 
 toFunction :: (MonadNaming m, Walk m v0 v1, Walk m a0 a1) => IsUnambiguous -> WalkBody Function m o v0 v1 a0 a1
-toFunction u func@Function{_fParams, _fBody, _fAddFirstParam} =
-    (\(_fParams, _fBody) _fAddFirstParam ->
-         func{_fParams, _fBody, _fAddFirstParam})
-    <$> unCPS (withBinderParams u _fParams) (toExpression _fBody)
-    <*> walk _fAddFirstParam
+toFunction u func@Function{_fParams, _fBody} =
+    unCPS (withBinderParams u _fParams) (toExpression _fBody)
+    <&> \(_fParams, _fBody) -> func{_fParams, _fBody}
 
 instance ToBody AssignPlain where
     toBody = apBody toBody
@@ -421,11 +419,12 @@ withVarParamInfo ::
     IsUnambiguous ->
     VarParamInfo (OldName m) (IM m) o ->
     CPS m (VarParamInfo (NewName m) (IM m) o)
-withVarParamInfo unambig x@VarParamInfo{_vpiTag, _vpiAddNext} =
-    (,)
+withVarParamInfo unambig x@VarParamInfo{_vpiTag, _vpiAddPrev, _vpiAddNext} =
+    (,,)
     <$> withOptionalTag unambig TaggedVar _vpiTag
+    <*> liftCPS (opRun <&> \run -> _vpiAddPrev & _AddNext %~ (>>= run . walk))
     <*> liftCPS (opRun <&> \run -> _vpiAddNext & _AddNext %~ (>>= run . walk))
-    <&> \(_vpiTag, _vpiAddNext) -> x{_vpiTag, _vpiAddNext}
+    <&> \(_vpiTag, _vpiAddPrev, _vpiAddNext) -> x{_vpiTag, _vpiAddPrev, _vpiAddNext}
 
 withFuncParam ::
     (MonadNaming m, Walk m v0 v1) =>

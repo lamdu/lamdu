@@ -58,10 +58,11 @@ import qualified Lamdu.Sugar.Types as Sugar
 import           Lamdu.Prelude
 
 data Parts i o = Parts
-    { pMParamsEdit :: Maybe (Responsive o)
+    { pAddFirstEventMap :: EventMap (o M.Update)
+    , pMParamsEdit :: Maybe (Responsive o)
     , pMScopesEdit :: Maybe (M.Widget o)
     , pBodyEdit :: Responsive o
-    , pEventMap :: EventMap (o M.Update)
+    , pScopeEventMap :: EventMap (o M.Update)
     , pMLamPayload :: Maybe (ExprGui.Payload i o)
     , pRhsId :: Widget.Id
     }
@@ -221,7 +222,7 @@ makeParamsEdit ::
     Annotation.EvalAnnotationOptions ->
     Widget.Id -> Widget.Id -> Widget.Id ->
     Sugar.BinderParams (Sugar.Annotation (Sugar.EvaluationScopes Name i) Name) Name i o ->
-    GuiM env i o [Responsive o]
+    GuiM env i o (EventMap (o GuiState.Update), [Responsive o])
 makeParamsEdit annotationOpts delVarBackwardsId lhsId rhsId params =
     case params of
     Sugar.NullParam (p, actions) ->
@@ -237,26 +238,24 @@ makeParamsEdit annotationOpts delVarBackwardsId lhsId rhsId params =
                 >>= ParamEdit.addAnnotation annotationOpts p nullParamId
             )
         <&> (:[])
+        <&> (,) mempty
         where
             nullParamId = Widget.joinId lhsId ["param"]
-    Sugar.RecordParams ps ->
-        case ps ^. Sugar.tlItems of
-        Nothing -> error "Empty record params?"
-        Just items -> ParamEdit.makeParams annotationOpts delVarBackwardsId rhsId items
+    Sugar.RecordParams items -> ParamEdit.makeParams annotationOpts delVarBackwardsId rhsId items
     Sugar.VarParam (param, pInfo) ->
         do
-            eventMap <-
-                Lens.view id <&>
-                \env ->
-                TaggedList.delEventMap (has . Texts.parameter) (pInfo ^. Sugar.vpiDelete) delVarBackwardsId rhsId env <>
-                ParamEdit.eventMapAddNextParamOrPickTag widgetId (pInfo ^. Sugar.vpiAddNext) env
-            paramEdit <-
-                TagEdit.makeParamTag (Just (tag ^. Sugar.oPickAnon)) (tag ^. Sugar.oTag)
-                >>= ParamEdit.addAnnotation annotationOpts param widgetId
-                <&> M.weakerEvents eventMap
-            case pInfo ^? Sugar.vpiAddNext . Sugar._AddNext of
-                Nothing -> pure [paramEdit]
-                Just addNext -> ParamEdit.addAddParam addNext widgetId paramEdit
+            env <- Lens.view id
+            let eventMap =
+                    TaggedList.delEventMap (has . Texts.parameter) (pInfo ^. Sugar.vpiDelete) delVarBackwardsId rhsId env <>
+                    ParamEdit.eventMapAddNextParamOrPickTag widgetId (pInfo ^. Sugar.vpiAddNext) env
+            mconcat
+                [ foldMap (`ParamEdit.mkAddParam` lhsId) (pInfo ^? Sugar.vpiAddPrev . Sugar._AddNext)
+                , TagEdit.makeParamTag (Just (tag ^. Sugar.oPickAnon)) (tag ^. Sugar.oTag)
+                    >>= ParamEdit.addAnnotation annotationOpts param widgetId
+                    <&> M.weakerEvents eventMap <&> (:[])
+                , foldMap (`ParamEdit.mkAddParam` widgetId) (pInfo ^? Sugar.vpiAddNext . Sugar._AddNext)
+                ]
+                <&> (,) (ParamEdit.eventMapAddNextParamOrPickTag lhsId (pInfo ^. Sugar.vpiAddPrev) env)
         where
             tag = pInfo ^. Sugar.vpiTag
             widgetId = tag ^. Sugar.oTag . Sugar.tagRefTag . Sugar.tagInstance & WidgetIds.fromEntityId
@@ -267,44 +266,15 @@ makeMParamsEdit ::
     CurAndPrev (Maybe ScopeCursor) -> IsScopeNavFocused ->
     Widget.Id -> Widget.Id ->
     Widget.Id ->
-    Sugar.AddParam Name i o ->
-    Maybe (Sugar.BinderParams (Sugar.Annotation (Sugar.EvaluationScopes Name i) Name) Name i o) ->
-    GuiM env i o (Maybe (Responsive o))
-makeMParamsEdit mScopeCursor isScopeNavFocused delVarBackwardsId myId bodyId addFirstParam mParams =
-    do
-        isPrepend <- GuiState.isSubCursor ?? prependId
-        prependParamEdits <-
-            case addFirstParam of
-            Sugar.AddNext selection | isPrepend ->
-                GuiM.im selection
-                >>= TagEdit.makeTagHoleEdit ParamEdit.mkParamPickResult prependId
-                & local (has . Menu.configKeysPickOptionAndGotoNext <>~ [noMods M.Key'Space])
-                & Styled.withColor TextColors.parameterColor
-                <&> Responsive.fromWithTextPos
-                <&> (:[])
-            _ -> pure []
-        paramEdits <-
-            case mParams of
-            Nothing -> pure []
-            Just params ->
-                makeParamsEdit annotationMode
-                delVarBackwardsId myId bodyId params
-                & GuiM.withLocalMScopeId
-                    ( mScopeCursor
-                        <&> Lens.traversed %~ (^. Sugar.bParamScopeId) . sBinderScope
-                    )
-        case prependParamEdits ++ paramEdits of
-            [] -> pure Nothing
-            edits ->
-                frame
-                <*> (Options.boxSpaced ?? Options.disambiguationNone ?? edits)
-                <&> Just
+    Sugar.BinderParams (Sugar.Annotation (Sugar.EvaluationScopes Name i) Name) Name i o ->
+    GuiM env i o (EventMap (o GuiState.Update), Responsive o)
+makeMParamsEdit mScopeCursor isScopeNavFocused delVarBackwardsId myId bodyId params =
+    makeParamsEdit annotationMode delVarBackwardsId myId bodyId params
+    & GuiM.withLocalMScopeId (mScopeCursor <&> Lens.traversed %~ (^. Sugar.bParamScopeId) . sBinderScope)
+    >>= _2 mAddFrame
     where
-        prependId = TagEdit.addItemId myId
-        frame =
-            case mParams of
-            Just Sugar.RecordParams{} -> Styled.addValFrame
-            _ -> pure id
+        mAddFrame [x] = pure x
+        mAddFrame xs = Styled.addValFrame <*> (Options.boxSpaced ?? Options.disambiguationNone ?? xs)
         mCurCursor =
             do
                 ScopeNavIsFocused == isScopeNavFocused & guard
@@ -336,11 +306,11 @@ makeFunctionParts funcApplyLimit (Ann (Const pl) func) delVarBackwardsId =
                 Just edit | Widget.isFocused edit -> ScopeNavIsFocused
                 _ -> ScopeNavNotFocused
         do
-            paramsEdit <-
+            (lhsEventMap, paramsEdit) <-
                 makeMParamsEdit mScopeCursor isScopeNavFocused delVarBackwardsId myId
-                bodyId (func ^. Sugar.fAddFirstParam) (Just (func ^. Sugar.fParams))
+                bodyId (func ^. Sugar.fParams)
             rhs <- GuiM.makeBinder (func ^. Sugar.fBody)
-            Parts paramsEdit mScopeNavEdit rhs scopeEventMap (Just pl) bodyId & pure
+            Parts lhsEventMap (Just paramsEdit) mScopeNavEdit rhs scopeEventMap (Just pl) bodyId & pure
             & case mScopeNavEdit of
               Nothing -> GuiState.assignCursorPrefix scopesNavId (const destId)
               Just _ -> id
@@ -362,10 +332,17 @@ makePlainParts ::
     _ =>
     ExprGui.Expr Sugar.AssignPlain i o -> GuiM env i o (Parts i o)
 makePlainParts (Ann (Const pl) assignPlain) =
-    assignPlain ^. Sugar.apBody & Ann (Const pl) & GuiM.makeBinder
-    <&> \rhs -> Parts Nothing Nothing rhs mempty Nothing myId
+    do
+        rhs <- assignPlain ^. Sugar.apBody & Ann (Const pl) & GuiM.makeBinder
+        env <- Lens.view id
+        let addParam =
+                E.keysEventMapMovesCursor (env ^. has . Config.addNextParamKeys)
+                (E.toDoc env [has . MomentuTexts.edit, has . Texts.parameter, has . Texts.add])
+                (assignPlain ^. Sugar.apAddFirstParam <&> enterParam)
+        Parts addParam Nothing Nothing rhs mempty Nothing myId & pure
     where
         myId = WidgetIds.fromExprPayload pl
+        enterParam = WidgetIds.tagHoleId . WidgetIds.fromEntityId
 
 makeParts ::
     _ =>
@@ -389,26 +366,6 @@ makeJumpToRhs rhsId =
                 ])
             "="
 
-eventMapAddFirstParam ::
-    _ => Widget.Id -> Sugar.Assignment v name i o a -> m (EventMap (o GuiState.Update))
-eventMapAddFirstParam binderId =
-    \case
-    Sugar.BodyPlain x ->
-        r (x ^. Sugar.apAddFirstParam <&> enterParam) [has . Texts.parameter, has . Texts.add]
-    Sugar.BodyFunction f ->
-        case f ^. Sugar.fAddFirstParam of
-        Sugar.NeedToPickTagToAddNext x ->
-            r (pure (enterParam x)) [has . Texts.nameFirstParameter]
-        Sugar.AddNext{} ->
-            r (pure (TagEdit.addItemId binderId)) [has . Texts.parameter, has . Texts.add]
-    where
-        enterParam = WidgetIds.tagHoleId . WidgetIds.fromEntityId
-        r action doc =
-            Lens.view id <&>
-            \env ->
-            E.keysEventMapMovesCursor (env ^. has . Config.addNextParamKeys)
-            (E.toDoc env (has . MomentuTexts.edit : doc)) action
-
 make ::
     _ =>
     Maybe (i (Property o Meta.PresentationMode)) ->
@@ -417,7 +374,7 @@ make ::
     GuiM env i o (Responsive o)
 make pMode tag color assignment =
     makeParts Sugar.UnlimitedFuncApply assignment delParamDest
-    >>= \(Parts mParamsEdit mScopeEdit bodyEdit eventMap mLamPl rhsId) ->
+    >>= \(Parts lhsEventMap mParamsEdit mScopeEdit bodyEdit eventMap mLamPl rhsId) ->
     do
         rhsJumperEquals <- makeJumpToRhs rhsId
         mPresentationEdit <-
@@ -427,12 +384,10 @@ make pMode tag color assignment =
                 pMode & sequenceA & GuiM.im
                 >>= traverse
                     (PresentationModeEdit.make presentationChoiceId (x ^. Sugar.fParams))
-        addFirstParamEventMap <-
-            eventMapAddFirstParam myId assignmentBody
         (|---|) <- Glue.mkGlue ?? Glue.Vertical
         defNameEdit <-
             TagEdit.makeBinderTagEdit color tag
-            <&> M.tValue %~ Widget.weakerEvents (rhsJumperEquals <> addFirstParamEventMap)
+            <&> M.tValue %~ Widget.weakerEvents (rhsJumperEquals <> lhsEventMap)
             <&> (|---| fromMaybe M.empty mPresentationEdit)
             <&> Responsive.fromWithTextPos
         mParamEdit <-

@@ -3,7 +3,7 @@
 module Lamdu.GUI.TaggedList
     ( Item(..), iTag, iValue, iEventMap, iAddAfter
     , Keys(..), kAdd, kOrderBefore, kOrderAfter
-    , make, itemId, delEventMap, addNextEventMap
+    , make, makeBody, itemId, delEventMap, addNextEventMap
     ) where
 
 import qualified Control.Lens as Lens
@@ -42,9 +42,21 @@ make ::
     Lens.ALens' env Text ->
     Keys [ModKey] ->
     Widget.Id -> Widget.Id ->
+    Sugar.TaggedList name i o a ->
+    m (EventMap (o GuiState.Update), [Item name i o a])
+make cat keys prevId nextId tl =
+    (,)
+    <$> addNextEventMap cat (keys ^. kAdd) prevId
+    <*> foldMap (makeBody cat keys prevId nextId) (tl ^. Sugar.tlItems)
+
+makeBody ::
+    _ =>
+    Lens.ALens' env Text ->
+    Keys [ModKey] ->
+    Widget.Id -> Widget.Id ->
     Sugar.TaggedListBody name i o a ->
     m [Item name i o a]
-make cat keys prevId nextId items =
+makeBody cat keys prevId nextId items =
     do
         env <- Lens.view id
         let addOrderAfter Nothing = id

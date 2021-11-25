@@ -562,6 +562,7 @@ makeVarParamInfo tag binderKind storedLam =
                 <&> AddNext
         pure VarParamInfo
             { _vpiTag = tag
+            , _vpiAddPrev = addNext
             , _vpiAddNext = addNext
             , _vpiDelete = del <* postProcess
             }
