@@ -99,9 +99,11 @@ instance (MonadTransaction m o, MonadTransaction m i) => Order i (Sugar.Lambda v
     order = Sugar.lamFunc order
 
 instance (MonadTransaction m o, MonadTransaction m i) => Order i (Sugar.Function v name i o) where
-    order x =
-        (Sugar.fParams . Sugar._RecordParams) (orderTaggedList [] pure) x
-        >>= Sugar.fBody orderNode
+    order (Sugar.Function chosenScope params body bodyScopes) =
+        Sugar.Function chosenScope
+        <$> Sugar._RecordParams (orderTaggedList [] pure) params
+        <*> orderNode body
+        ?? bodyScopes
 
 tagChoicePick :: Lens.IndexedSetter' T.Tag (Sugar.TagChoice n o) (o ())
 tagChoicePick = SugarLens.tagChoiceOptions . Lens.filteredBy (Sugar.toInfo . Sugar.tagVal) <. Sugar.toPick
