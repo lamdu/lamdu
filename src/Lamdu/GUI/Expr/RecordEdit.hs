@@ -82,9 +82,11 @@ makeUnit pl =
 makeAddField ::
     _ =>
     i (Sugar.TagChoice Name o) -> Widget.Id -> GuiM env i o (Maybe (TaggedItem o))
-makeAddField addField myId =
-    GuiState.isSubCursor ?? TagEdit.addItemId myId <&> guard
+makeAddField addField baseId =
+    GuiState.isSubCursor ?? myId <&> guard
     >>= (Lens._Just . const) (GuiM.im addField >>= makeAddFieldRow myId)
+    where
+        myId = TagEdit.addItemId baseId
 
 makeEmpty ::
     _ =>
@@ -171,7 +173,7 @@ makeAddFieldRow ::
     Widget.Id ->
     Sugar.TagChoice Name o ->
     GuiM env i o (TaggedItem o)
-makeAddFieldRow baseId addField =
+makeAddFieldRow tagHoleId addField =
     TagEdit.makeTagHoleEdit mkPickResult tagHoleId addField
     & Styled.withColor TextColors.recordTagColor
     & local (has . Menu.configKeysPickOptionAndGotoNext <>~ [M.noMods M.Key'Space])
@@ -183,7 +185,6 @@ makeAddFieldRow baseId addField =
     , _tagPost = Just M.empty
     }
     where
-        tagHoleId = TagEdit.addItemId baseId
         mkPickResult dst =
             Menu.PickResult
             { Menu._pickDest = WidgetIds.ofTagValue dst
