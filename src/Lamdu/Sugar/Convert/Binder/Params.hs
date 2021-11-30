@@ -547,22 +547,21 @@ makeVarParamInfo tag binderKind storedLam =
     do
         del <- makeDeleteLambda binderKind storedLam
         postProcess <- ConvertM.postProcessAssert
-        addParamAfter <-
-            convertToRecordParams ?? DataOps.newHole ?? binderKind ?? storedLam
-            ?? NewParamAfter
-            <&> Lens.mapped %~ (<* postProcess)
-        let resultInfo () = ConvertTag.TagResultInfo <$> EntityId.ofTaggedEntity param <*> addParamAfter
         oldParam <- Anchors.assocTag param & getP
-        addNext <-
-            if oldParam == Anchors.anonTag
-            then EntityId.ofTaggedEntity param oldParam & NeedToPickTagToAddNext & pure
-            else
-                ConvertTag.replace (nameWithContext Nothing param) (Set.singleton oldParam) (pure ()) resultInfo
-                >>= ConvertM . lift
-                <&> AddNext
+        let mkAddParam pos
+                | oldParam == Anchors.anonTag = EntityId.ofTaggedEntity param oldParam & NeedToPickTagToAddNext & pure
+                | otherwise =
+                    do
+                        addParamAfter <- convertToRecordParams ?? DataOps.newHole ?? binderKind ?? storedLam ?? pos
+                        let resultInfo () =
+                                ConvertTag.TagResultInfo <$> EntityId.ofTaggedEntity param <*> (addParamAfter <&> (<* postProcess))
+                        ConvertTag.replace (nameWithContext Nothing param) (Set.singleton oldParam) (pure ()) resultInfo
+                            >>= ConvertM . lift <&> AddNext
+        addPrev <- mkAddParam NewParamBefore
+        addNext <- mkAddParam NewParamAfter
         pure VarParamInfo
             { _vpiTag = tag
-            , _vpiAddPrev = addNext
+            , _vpiAddPrev = addPrev
             , _vpiAddNext = addNext
             , _vpiDelete = del <* postProcess
             }
