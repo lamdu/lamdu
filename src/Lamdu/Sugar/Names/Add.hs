@@ -85,7 +85,7 @@ getP0Name internalName =
 ---------- Pass 1 ------------
 ------------------------------
 
-newtype Collider = Collider Clash.Info
+newtype Collider = Collider Clash.Info deriving stock Show
 instance Semigroup Collider where
     Collider x <> Collider y = Collider (x `Clash.collide` y)
 
@@ -107,7 +107,7 @@ data P1Out = P1Out
         -- ^ Type vars met
     , _p1Texts :: Map T.Tag Tag.TextsInLang
     }
-    deriving stock Generic
+    deriving stock (Generic, Show)
     deriving (Semigroup, Monoid) via Generically P1Out
 Lens.makeLenses ''P1Out
 

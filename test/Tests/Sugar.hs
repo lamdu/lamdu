@@ -8,7 +8,7 @@ import qualified Data.Property as Property
 import qualified Lamdu.Annotations as Annotations
 import qualified Lamdu.Calc.Term as V
 import           Lamdu.Data.Db.Layout (ViewM)
-import           Lamdu.Name (Name(..))
+import           Lamdu.Name
 import qualified Lamdu.Sugar.Lens as SugarLens
 import           Lamdu.Sugar.Types as Sugar
 import           Revision.Deltum.Transaction (Transaction)
@@ -49,6 +49,7 @@ test =
     , testParamsOrder
     , testAddToInferredParamList
     , testInfixWithArgParens
+    , testDisambig
     , testGroup "insist-tests"
         [ testInsistFactorial
         , testInsistEq
@@ -593,3 +594,15 @@ testInfixWithArgParens =
     Env.make >>= testProgram "infix-with-args-needs-paren.json" . convertWorkArea
     <&> (^?! replBinder . _BinderTerm . _BodySimpleApply . appArg . annotation . plParenInfo . piNeedParens)
     >>= assertBool "Expected paren"
+
+testDisambig :: Test
+testDisambig =
+    testCase "disambig-operator" $
+    Env.make >>= testProgram "disambig.json" . convertWorkArea
+    <&> Lens.has itemOp
+    >>= assertBool "Expect collsion"
+    where
+        itemOp =
+            replBinder . _BinderTerm . _BodyLabeledApply . aAnnotatedArgs . traverse . aaExpr .
+            hVal . _BodyLabeledApply . aFunc .
+            hVal . Lens._Wrapped . bvNameRef . nrName . _NameTag . tnTagCollision . _Collision
