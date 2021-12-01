@@ -51,19 +51,22 @@ makeLabeledApply func args punnedArgs exprPl =
         let swapAction l r =
                 do
                     do
-                        _ <- DataOps.replace ls (unwrap r)
-                        DataOps.replace rs (unwrap l) & void
+                        _ <- DataOps.replace ls ru
+                        (c0 || c1) <$ DataOps.replace rs lu
                         & ConvertM.typeProtect checkOk & MaybeT & justToLeft
                     do
                         _ <- DataOps.replace ls (rs ^. iref)
-                        DataOps.replace rs (ls ^. iref) & void
+                        False <$ DataOps.replace rs (ls ^. iref)
                         & ConvertM.typeProtect checkOk & MaybeT & justToLeft
                     do
                         maybeWrap ls r
                         maybeWrap rs l
+                        pure True
                         & lift
                 & runMatcherT
                 where
+                    (c0, ru) = unwrap r
+                    (c1, lu) = unwrap l
                     maybeWrap d s =
                         case s ^. hVal of
                         Sugar.BodyLeaf Sugar.LeafHole{} -> DataOps.replace d i
@@ -72,8 +75,10 @@ makeLabeledApply func args punnedArgs exprPl =
                         where
                             i = s ^. annotation . pInput . Input.stored . iref
                     unwrap x =
-                        fromMaybe x (x ^? hVal . Sugar._BodyFragment . Sugar.fExpr)
-                        ^. annotation . pInput . Input.stored . iref
+                        case x ^? hVal . Sugar._BodyFragment . Sugar.fExpr of
+                        Nothing -> (False, x)
+                        Just i -> (True, i)
+                        & _2 %~ (^. annotation . pInput . Input.stored . iref)
                     ls = l ^. annotation . pInput . Input.stored
                     rs = r ^. annotation . pInput . Input.stored
         let (specialArgs, removedKeys) =

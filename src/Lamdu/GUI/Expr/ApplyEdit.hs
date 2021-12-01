@@ -13,6 +13,7 @@ import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.Responsive.Expression as ResponsiveExpr
 import qualified GUI.Momentu.Responsive.Options as Options
 import           GUI.Momentu.Responsive.TaggedList (TaggedItem(..), taggedList)
+import qualified GUI.Momentu.State as GuiState
 import qualified GUI.Momentu.Widget as Widget
 import           GUI.Momentu.Widgets.StdKeys (dirKey)
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
@@ -61,9 +62,10 @@ makeLabeled (Ann (Const pl) apply) =
             do
                 env <- Lens.view id
                 let swapAction order =
-                        E.keysEventMap
-                        (env ^. has . Config.orderDirKeys . Lens.cloneLens (dirKey (env ^. has) Horizontal order))
-                        (E.toDoc env [has . MomentuTexts.edit, has . Texts.swapOperatorArgs]) s
+                        s <&> (\x -> if x then GuiState.updateCursor myId else mempty)
+                        & E.keyPresses
+                            (env ^. has . Config.orderDirKeys . Lens.cloneLens (dirKey (env ^. has) Horizontal order))
+                            (E.toDoc env [has . MomentuTexts.edit, has . Texts.swapOperatorArgs])
                         & Widget.weakerEvents
                 navigateOut <-
                     ExprEventMap.closeParenEvent

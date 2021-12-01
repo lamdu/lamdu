@@ -76,7 +76,7 @@ data AnnotatedArg v name i o k = AnnotatedArg
 data OperatorArgs v name i o k = OperatorArgs
     { _oaLhs :: k :# Term v name i o
     , _oaRhs :: k :# Term v name i o
-    , _oaSwapArguments :: o ()
+    , _oaSwapArguments :: o Bool -- Returns whether fragment were added or removed
     } deriving Generic
 
 -- TODO: func + specialArgs into a single sum type so that field order
