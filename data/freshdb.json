@@ -1136,11 +1136,14 @@
         }
     },
     {
-        "tagOrder": 0,
+        "tagOrder": 1,
         "tag": "6eeb55f76600d4ad08be72ad3ac13d96",
         "names": {
             "hebrew": "תוצאה",
-            "english": "result",
+            "english": {
+                "abbreviation": "res",
+                "name": "result"
+            },
             "italiano": "risultato"
         }
     },
@@ -1492,6 +1495,14 @@
     },
     {
         "tagOrder": 0,
+        "tag": "a82d65c4b77b4868bf690b9edda8a402",
+        "names": {
+            "hebrew": "קלט",
+            "english": "input"
+        }
+    },
+    {
+        "tagOrder": 0,
         "tag": "a8792157cb4f27fb949c035f45518c61",
         "names": {
             "hebrew": "מכפלה",
@@ -1818,7 +1829,10 @@
         "tag": "dbe42cc09c16704aa3d60127c60b4e16",
         "names": {
             "hebrew": "מערך",
-            "english": "array",
+            "english": {
+                "abbreviation": "arr",
+                "name": "array"
+            },
             "italiano": "array"
         }
     },
@@ -1921,6 +1935,17 @@
             "hebrew": "בית_ב",
             "english": "byteAt",
             "italiano": "byteA"
+        }
+    },
+    {
+        "tagOrder": 1,
+        "tag": "f526d897cab5429fb66ebbe0b4b8f34e",
+        "names": {
+            "hebrew": "חלון",
+            "english": {
+                "abbreviation": "win",
+                "name": "window"
+            }
         }
     },
     {
