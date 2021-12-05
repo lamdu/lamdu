@@ -74,7 +74,7 @@ test =
 replExpr ::
     Lens.Traversal' (Sugar.WorkArea v name i o a)
     (Sugar.Term v name i o # Annotated a)
-replExpr = Sugar.waRepl . Sugar.replExpr . hVal . Sugar._BinderTerm
+replExpr = Sugar.waRepl . Sugar.replExpr . hVal . Sugar.bBody . Sugar._BinderTerm
 
 wideFocused :: Lens.Traversal' (Responsive f) (Widget.Surrounding -> Widget.Focused (f GuiState.Update))
 wideFocused = Responsive.rWide . Align.tValue . Widget.wState . Widget._StateFocused
@@ -289,8 +289,8 @@ testPunCursor =
     where
         waRec =
             Sugar.waRepl . Sugar.replExpr . hVal
-            . Sugar._BinderLet . Sugar.lBody . hVal
-            . Sugar._BinderTerm . Sugar._BodyRecord
+            . Sugar.bBody . Sugar._BinderLet . Sugar.lBody . hVal
+            . Sugar.bBody . Sugar._BinderTerm . Sugar._BodyRecord
 
 workAreaEq ::
     forall m v.

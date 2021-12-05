@@ -82,6 +82,9 @@ instance AddEval i n Assignment where
     addToBody r i (BodyPlain x) = x & apBody %~ addToBody r i & BodyPlain
 
 instance AddEval i n Binder where
+    addToBody r i = bBody %~ addToBody r i
+
+instance AddEval i n BinderBody where
     addToBody r i (BinderLet x) = addToBody r i x & BinderLet
     addToBody r i (BinderTerm x) = addToBody r i x & BinderTerm
 
@@ -89,7 +92,7 @@ instance AddEval i n Composite
 
 instance AddEval i n Else where
     addToBody r i (SimpleElse x) = addToBody r i x & SimpleElse
-    addToBody r i (ElseIf x) = addToBody r i x & ElseIf
+    addToBody r i (ElseIf x) = x & eIfElse %~ addToBody r i & ElseIf
 
 instance AddEval i n Function where
     addToBody ctx i x@Function{..} =

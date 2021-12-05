@@ -214,7 +214,7 @@ makeLocal top arg typ val =
 
 toFragOpt :: Annotated (Payload a m) # Binder v name i o -> Annotated (Payload a m) # FragOpt v name i o
 toFragOpt o =
-    case o ^. hVal of
+    case o ^. hVal . bBody of
     BinderTerm (BodyPostfixApply (PostfixApply a f)) ->
         reverse (f : match a)
         <&> annotation . plActions . detach .~ o ^. annotation . plActions . detach

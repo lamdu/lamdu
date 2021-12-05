@@ -76,6 +76,9 @@ instance MarkBodyAnnotations v m e => MarkAnnotations m (e v n i o) (e (ShowAnno
             (showAnn, newBody) = markBodyAnnotations x
 
 instance Functor m => MarkBodyAnnotations v m Binder where
+    markBodyAnnotations = bBody markBodyAnnotations
+
+instance Functor m => MarkBodyAnnotations v m BinderBody where
     markBodyAnnotations (BinderTerm body) =
         markBodyAnnotations body & _2 %~ BinderTerm
     markBodyAnnotations (BinderLet let_) =
@@ -94,7 +97,7 @@ instance Functor m => MarkBodyAnnotations v m Else where
     markBodyAnnotations (SimpleElse body) = markBodyAnnotations body & _2 %~ SimpleElse . markCaseHandler
     markBodyAnnotations (ElseIf x) =
         ( neverShowAnnotations
-        , morphMap (Proxy @(MarkAnnotations m) #?> markNodeAnnotations) x & ElseIf
+        , x & eIfElse %~ morphMap (Proxy @(MarkAnnotations m) #?> markNodeAnnotations) & ElseIf
         )
 
 instance Functor m => MarkBodyAnnotations v m Function where

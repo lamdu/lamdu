@@ -120,7 +120,6 @@ actionsEventMap options exprInfo =
         , extractEventMap ?? actions
         , mkReplaceParent
         , actions ^. Sugar.delete & replaceEventMap
-        , actions ^. Sugar.mNewLet & foldMap addLetEventMap
         , actions ^. Sugar.mApply & foldMap applyEventMap
         , makeLiteralEventMap ?? actions ^. Sugar.setToLiteral
         ] <&> const -- throw away EventContext here

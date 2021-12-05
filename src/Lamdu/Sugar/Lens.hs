@@ -80,6 +80,9 @@ instance SugarExpr (Function v name i o) where
     isForbiddenInLightLam = not . Lens.has (fParams . _NullParam)
 
 instance SugarExpr (Binder v name i o) where
+    isUnfinished = isUnfinished . (^. bBody)
+
+instance SugarExpr (BinderBody v name i o) where
     isUnfinished (BinderTerm x) = isUnfinished x
     isUnfinished BinderLet{} = False
     isForbiddenInLightLam BinderLet{} = True
@@ -118,7 +121,7 @@ defSchemes = drBody . defBodySchemes
 binderResultExpr ::
     Lens.IndexedLens' (Term v name i o # Annotated ()) (Annotated a # Binder v name i o) a
 binderResultExpr f (Ann (Const pl) x) =
-    case x of
+    case x ^. bBody of
     BinderTerm e ->
         Lens.indexed f
         (hmap (Proxy @(Recursively HFunctor) #> hflipped %~ hmap (\_ Const{} -> Const ())) e)
@@ -128,6 +131,7 @@ binderResultExpr f (Ann (Const pl) x) =
     BinderLet l ->
         lBody (binderResultExpr f) l
         <&> BinderLet
+        <&> Binder (x ^. bAddOuterLet)
         <&> Ann (Const pl)
 
 getVarName :: Lens.Traversal' (GetVar a o) a
@@ -224,12 +228,15 @@ instance HAnnotations a b (Assignment a n i o) (Assignment b n i o) where
     hAnnotations f (BodyPlain x) = (apBody . hAnnotations) f x <&> BodyPlain
 
 instance HAnnotations a b (Binder a n i o) (Binder b n i o) where
+    hAnnotations = bBody . hAnnotations
+
+instance HAnnotations a b (BinderBody a n i o) (BinderBody b n i o) where
     hAnnotations f (BinderLet x) = hAnnotations f x <&> BinderLet
     hAnnotations f (BinderTerm x) = hAnnotations f x <&> BinderTerm
 
 instance HAnnotations a b (Else a n i o) (Else b n i o) where
     hAnnotations f (SimpleElse x) = hAnnotations f x <&> SimpleElse
-    hAnnotations f (ElseIf x) = hAnnotations f x <&> ElseIf
+    hAnnotations f (ElseIf x) = (eIfElse . hAnnotations) f x <&> ElseIf
 
 instance HAnnotations a b (Fragment a n i o) (Fragment b n i o) where
     hAnnotations = fExpr . hAnnotations

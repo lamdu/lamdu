@@ -18,7 +18,8 @@ module Lamdu.Sugar.Types.Expression
     , Let(..), lValue, lName, lUsages, lDelete, lBody
     , Meta.DefinitionState(..)
     , BinderParamScopeId(..), bParamScopeId
-    , Binder(..), _BinderLet, _BinderTerm
+    , Binder(..), bBody, bAddOuterLet
+    , BinderBody(..), _BinderLet, _BinderTerm
     , Function(..), fChosenScopeProp, fParams, fBody, fBodyScopes
     , AssignPlain(..), apAddFirstParam, apBody
     , Assignment(..), _BodyFunction, _BodyPlain
@@ -34,6 +35,7 @@ module Lamdu.Sugar.Types.Expression
     -- If/else
     , IfElse(..), iIf, iThen, iElse
     , Else(..), _SimpleElse, _ElseIf
+    , ElseIfBody(..), eAddLet, eIfElse
     -- Record & Cases
     , Composite(..), cList, cPunnedItems, cTail
     , CompositeTail(..), _OpenComposite, _ClosedComposite
@@ -159,8 +161,13 @@ newtype Hole name i o = Hole
 
 data Else v name i o f
     = SimpleElse (Term v name i o f)
-    | ElseIf (IfElse v name i o f)
+    | ElseIf (ElseIfBody v name i o f)
     deriving Generic
+
+data ElseIfBody v name i o k = ElseIfBody
+    { _eAddLet :: o EntityId
+    , _eIfElse :: IfElse v name i o k
+    } deriving Generic
 
 data IfElse v name i o k = IfElse
     { _iIf :: k :# Term v name i o
@@ -226,9 +233,14 @@ data Let v name i o k = Let
 -- * ToNom: "«X [[THIS]]"
 -- * Definition or let item value: "x = [[THIS]]"
 -- * Let-item/redex: "let x = y in [[THIS]]"
-data Binder v name i o f
-    = BinderLet (Let v name i o f)
-    | BinderTerm (Term v name i o f)
+data Binder v name i o k = Binder
+    { _bAddOuterLet :: o EntityId
+    , _bBody :: BinderBody v name i o k
+    } deriving Generic
+
+data BinderBody v name i o k
+    = BinderLet (Let v name i o k)
+    | BinderTerm (Term v name i o k)
     deriving Generic
 
 data Function v name i o k = Function
@@ -250,18 +262,18 @@ data Assignment v name i o f
     deriving Generic
 
 traverse Lens.makeLenses
-    [ ''AnnotatedArg, ''AssignPlain
+    [ ''AnnotatedArg, ''AssignPlain, ''Binder
     , ''Composite, ''Fragment, ''FragOperator
     , ''Function, ''Hole, ''Option, ''Query, ''QueryLangInfo
-    , ''IfElse, ''LabeledApply, ''Lambda, ''Let
+    , ''IfElse, ''ElseIfBody, ''LabeledApply, ''Lambda, ''Let
     , ''Nominal, ''OperatorArgs, ''PostfixApply
     ] <&> concat
 traverse Lens.makePrisms
-    [''Assignment, ''Binder, ''CompositeTail, ''Else, ''FragOpt, ''Leaf, ''PostfixFunc, ''Term] <&> concat
+    [''Assignment, ''BinderBody, ''CompositeTail, ''Else, ''FragOpt, ''Leaf, ''PostfixFunc, ''Term] <&> concat
 
 traverse makeHTraversableAndBases
-    [ ''AnnotatedArg, ''Assignment, ''AssignPlain, ''Binder
-    , ''Composite, ''CompositeTail, ''Else
+    [ ''AnnotatedArg, ''Assignment, ''AssignPlain, ''Binder, ''BinderBody
+    , ''Composite, ''CompositeTail, ''Else, ''ElseIfBody
     , ''Fragment, ''FragOperator, ''FragOpt, ''Function, ''IfElse
     , ''LabeledApply, ''Lambda, ''Let, ''Nominal
     , ''OperatorArgs, ''PostfixApply, ''PostfixFunc, ''Term

@@ -152,9 +152,6 @@ makeActions exprPl =
     do
         ext <- mkExtract exprPl
         postProcess <- ConvertM.postProcessAssert
-        outerPos <-
-            Lens.view (ConvertM.scScopeInfo . ConvertM.siMOuter)
-            <&> (^? Lens._Just . ConvertM.osiPos)
         setToLit <- makeSetToLiteral exprPl
         apply <- makeApply stored
         pure NodeActions
@@ -163,7 +160,6 @@ makeActions exprPl =
             , _setToLiteral = setToLit
             , _extract = ext
             , _mReplaceParent = Nothing
-            , _mNewLet = outerPos <&> DataOps.redexWrap <&> fmap EntityId.ofValI
             , _mApply = Just apply
             }
     where
@@ -225,8 +221,8 @@ instance FixReplaceParent (PostfixFunc v name i o) where
 -- TODO: These instances have a repeating pattern
 instance FixReplaceParent (Binder v name i o) where
     fixReplaceParent setToExpr =
-        (hVal . _BinderTerm . typeMismatchPayloads %~ join setToExpr) .
-        ((bodyIndex . Lens.filteredByIndex _BinderTerm . fragmentAnnIndex) <. annotation %@~ setToExpr)
+        (hVal . bBody . _BinderTerm . typeMismatchPayloads %~ join setToExpr) .
+        ((bodyIndex . Lens.filteredByIndex (bBody . _BinderTerm) . fragmentAnnIndex) <. annotation %@~ setToExpr)
 
 instance FixReplaceParent (Term v name i o) where
     fixReplaceParent setToExpr =

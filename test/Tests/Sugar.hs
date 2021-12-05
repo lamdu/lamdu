@@ -81,10 +81,10 @@ testSugarActions program actions =
 
 replBinder ::
     Lens.Traversal' (WorkArea v name i o a)
-    ( Binder v name i o #
+    ( BinderBody v name i o #
         Annotated a
     )
-replBinder = waRepl . replExpr . hVal
+replBinder = waRepl . replExpr . hVal . bBody
 
 replBody ::
     Lens.Traversal' (WorkArea v name i o a)
@@ -134,8 +134,8 @@ testReorderLets =
             & testCase (takeWhile (/= '.') program)
         extractSecondLetItemInLambda =
             replBody . _BodyLam . lamFunc . fBody .
-            hVal . _BinderLet . lBody .
-            hVal . _BinderLet . lValue .
+            hVal . bBody . _BinderLet . lBody .
+            hVal . bBody . _BinderLet . lValue .
             annotation . plActions . extract
 
 -- Test for issue #395
@@ -162,12 +162,12 @@ testInline =
                     result <-
                         workArea ^?!
                         replBody . _BodyLam . lamFunc . fBody .
-                        hVal . _BinderLet . lBody . hVal . _BinderTerm . _BodyLeaf . _LeafHole
+                        hVal . bBody . _BinderLet . lBody . hVal . bBody . _BinderTerm . _BodyLeaf . _LeafHole
                         . holeOptions
                         >>= (Query queryLangInfo "num" &)
                         <&> fromMaybe (error "expected option") . (^? traverse)
                     result ^. optionPick & lift
-                    result ^?! optionExpr . hVal . _BinderTerm
+                    result ^?! optionExpr . hVal . bBody . _BinderTerm
                         . _BodyLeaf . _LeafGetVar . _GetBinder . bvInline . _InlineVar
                         & lift & void
         testSugarActions "let-item-inline.json" [inline, verify]
@@ -178,7 +178,7 @@ testInline =
             | otherwise = error "Expected inline result"
         afterInline =
             replBody . _BodyLam . lamFunc . fBody .
-            hVal . _BinderTerm . _BodyLeaf . _LeafLiteral . _LiteralNum
+            hVal . bBody . _BinderTerm . _BodyLeaf . _LeafLiteral . _LiteralNum
 
 paramAnnotations :: Test
 paramAnnotations =
@@ -251,18 +251,18 @@ testInsistFactorial =
         ifElse =
             waPanes . traverse . SugarLens.paneBinder .
             hVal . _BodyFunction . fBody .
-            hVal . _BinderTerm . _BodyIfElse
+            hVal . bBody . _BinderTerm . _BodyIfElse
         insist =
             Lens.cloneTraversal ifElse . iThen .
             hVal . _BodyLam . lamFunc . fBody .
-            hVal . _BinderTerm . _BodyFragment . fHeal
+            hVal . bBody . _BinderTerm . _BodyFragment . fHeal
         verify workArea
             | Lens.has unexpected workArea = error "fragment created at unexpected position"
             | otherwise = pure ()
         unexpected =
             Lens.cloneTraversal ifElse . iElse .
             hVal . _SimpleElse . _BodyLam . lamFunc . fBody .
-            hVal . _BinderTerm . _BodySimpleApply . appFunc .
+            hVal . bBody . _BinderTerm . _BodySimpleApply . appFunc .
             hVal . _BodyFragment
 
 testInsistEq :: Test
@@ -294,14 +294,14 @@ testInsistIf =
         insist =
             replBody . _BodyIfElse . iThen .
             hVal . _BodyLam . lamFunc . fBody .
-            hVal . _BinderTerm . _BodyFragment . fHeal
+            hVal . bBody . _BinderTerm . _BodyFragment . fHeal
         verify workArea
             | Lens.has expected workArea = pure ()
             | otherwise = error "fragment not created at expected position"
         expected =
             replBody . _BodyIfElse . iElse .
             hVal . _SimpleElse . _BodyLam . lamFunc . fBody .
-            hVal . _BinderTerm . _BodyFragment
+            hVal . bBody . _BinderTerm . _BodyFragment
 
 testInsistSubsets :: Test
 testInsistSubsets =
@@ -315,17 +315,17 @@ testInsistSubsets =
         consArgs =
             waPanes . traverse . SugarLens.paneBinder .
             hVal . _BodyFunction . fBody .
-            hVal . _BinderTerm . _BodyPostfixApply . pFunc .
+            hVal . bBody . _BinderTerm . _BodyPostfixApply . pFunc .
             hVal . _PfCase . cList . tlItems . Lens._Just . tlTail . Lens.ix 0 . tsiItem . tiValue .
             hVal . _BodyLam . lamFunc . fBody .
-            hVal . _BinderTerm . _BodyLabeledApply . aMOpArgs . Lens._Just
+            hVal . bBody . _BinderTerm . _BodyLabeledApply . aMOpArgs . Lens._Just
         insist =
             Lens.cloneTraversal consArgs . oaRhs .
             hVal . _BodyLam . lamFunc . fBody .
-            hVal . _BinderLet . lBody .
-            hVal . _BinderTerm . _BodyLabeledApply . aMOpArgs . Lens._Just . oaRhs .
+            hVal . bBody . _BinderLet . lBody .
+            hVal . bBody . _BinderTerm . _BodyLabeledApply . aMOpArgs . Lens._Just . oaRhs .
             hVal . _BodyLam . lamFunc . fBody .
-            hVal . _BinderTerm . _BodyLabeledApply . aMOpArgs . Lens._Just . oaLhs .
+            hVal . bBody . _BinderTerm . _BodyLabeledApply . aMOpArgs . Lens._Just . oaLhs .
             hVal . _BodyFragment . fHeal
         verify workArea
             | Lens.has expected workArea = pure ()
@@ -378,7 +378,7 @@ updateDef =
         action =
             waPanes . traverse . SugarLens.paneBinder .
             hVal . _BodyFunction . fBody .
-            hVal . _BinderTerm . _BodyLabeledApply . aFunc .
+            hVal . bBody . _BinderTerm . _BodyLabeledApply . aFunc .
             hVal . Lens._Wrapped . bvForm . _GetDefinition . _DefTypeChanged . defTypeUseCurrent
 
 testReplaceParent :: Test
@@ -408,7 +408,7 @@ testReplaceParentFragment =
 floatLetWithGlobalRef :: Test
 floatLetWithGlobalRef =
     testSugarActions "let-with-global-reference.json"
-    [ lift . (^?! replLet . lBody . hVal . _BinderLet . lValue . annotation . plActions . extract)
+    [ lift . (^?! replLet . lBody . hVal . bBody . _BinderLet . lValue . annotation . plActions . extract)
     ]
     & testCase "float-let-with-global-ref"
 
@@ -425,7 +425,7 @@ setHoleToHole =
         setToHole :: Lens.Traversal' (WorkArea v name i o (Payload v o)) (o EntityId)
         setToHole =
             replBody . _BodyLam . lamFunc . fBody .
-            hVal . _BinderLet . lValue .
+            hVal . bBody . _BinderLet . lValue .
             annotation . plActions . delete . _SetToHole
 
 assertEq :: (Monad m, Show a, Eq a) => String -> a -> a -> m ()
@@ -459,37 +459,34 @@ testFloatToRepl =
 
         innerLet ::
             Lens.Traversal' (WorkArea v name i o a) (Annotated a # Assignment v name i o)
-        innerLet = replLet . lBody . hVal . _BinderLet . lValue
-        literalVal = hVal . _BodyPlain . apBody . _BinderTerm . _BodyLeaf . _LeafLiteral . _LiteralNum . Property.pVal
+        innerLet = replLet . lBody . hVal . bBody . _BinderLet . lValue
+        literalVal =
+            hVal . _BodyPlain . apBody . bBody . _BinderTerm .
+            _BodyLeaf . _LeafLiteral . _LiteralNum . Property.pVal
 
 testCreateLetInLetVal :: Test
 testCreateLetInLetVal =
-    testCase "create-let-in-let-hVal" $
+    testCase "create-let-in-let-val" $
     do
         env <- Env.make
         result <-
             testProgram "let-item-inline.json" $
                 do
-                    workArea <- convertWorkArea env
-                    _ <-
-                        workArea ^?!
-                        theLet . lValue . annotation . plActions . mNewLet . Lens._Just
-                        & lift
-                    newWorkArea <- convertWorkArea env
-                    Lens.has
-                        ( theLet . lValue . hVal . _BodyPlain
-                        . apBody . _BinderLet
-                        ) newWorkArea & pure
+                    _ <- convertWorkArea env >>= lift . (^?! theLetVal . bAddOuterLet)
+                    convertWorkArea env
+            <&> Lens.has (theLetVal . bBody . _BinderLet)
         assertBool "Let was not created inside the let-value" result
     where
         -- | Extract from:
         -- >>> \x -> let y = 0 in <hole>
         --           ^^^^^^^^^^^^^^^^^^^
-        theLet ::
+        theLetVal ::
             Lens.Traversal'
             (WorkArea v name i o a)
-            (Let v name i o # Annotated a)
-        theLet = replBody . _BodyLam . lamFunc . fBody . hVal . _BinderLet
+            (Binder v name i o # Annotated a)
+        theLetVal =
+            replBody . _BodyLam . lamFunc . fBody .
+            hVal . bBody . _BinderLet . lValue . hVal . _BodyPlain . apBody
 
 testHoleTypeShown :: Test
 testHoleTypeShown =
@@ -510,8 +507,8 @@ testPunnedIso :: Test
 testPunnedIso =
     testCase "punned-iso" $
     Env.make >>= testProgram "punned-fields.json" . convertWorkArea
-    <&> (^.. replBinder . _BinderLet . lBody . hVal . _BinderLet . lBody .
-            hVal . _BinderTerm . _BodyRecord . cList . SugarLens.taggedListItems)
+    <&> (^.. replBinder . _BinderLet . lBody . hVal . bBody . _BinderLet . lBody .
+            hVal . bBody . _BinderTerm . _BodyRecord . cList . SugarLens.taggedListItems)
     <&> Lens.mapped %~
         (\x -> (x ^. tiTag . tagRefTag . tagName, x ^? tiValue . hVal . _BodyLeaf . _LeafGetVar . _GetBinder . bvNameRef . nrName))
     >>= assertEqual "Record items expected to be punned" []
@@ -530,7 +527,7 @@ testPunnedLightParam =
     Env.make >>= testProgram "punned-light-param.json" . convertWorkArea
     <&> Lens.has
         ( replBinder . _BinderTerm . _BodyLam . lamFunc . fBody . hVal .
-            _BinderTerm . _BodyRecord . cPunnedItems . traverse . pvVar . hVal .
+            bBody . _BinderTerm . _BodyRecord . cPunnedItems . traverse . pvVar . hVal .
             Lens._Wrapped . _GetParam . pBinderMode . _LightLambda
         )
     >>= assertBool "Null param only if unused"
@@ -562,7 +559,9 @@ testParamsOrder =
                 assertEq "params should be same" params0 params2
     where
         funcParams :: Lens.Traversal' (WorkArea v n i o a) (TaggedListBody n i o (FuncParam v))
-        funcParams = replBinder . _BinderLet . lValue . hVal . _BodyFunction . fParams . _RecordParams . tlItems . Lens._Just
+        funcParams =
+            replBinder . _BinderLet . lValue .
+            hVal . _BodyFunction . fParams . _RecordParams . tlItems . Lens._Just
 
 testAddToInferredParamList :: Test
 testAddToInferredParamList =
@@ -582,9 +581,9 @@ testAddToInferredParamList =
         elseClause :: Lens.Traversal' (WorkArea v n i o a) (Term v n i o # Annotated a)
         elseClause =
             replBinder . _BinderLet . lBody .
-            hVal . _BinderTerm . _BodyIfElse . iElse .
+            hVal . bBody . _BinderTerm . _BodyIfElse . iElse .
             hVal . _SimpleElse . _BodyLam . lamFunc . fBody .
-            hVal . _BinderTerm
+            hVal . bBody . _BinderTerm
         lamBodyParams :: Lens.Traversal' (Term v n i o # k) (TaggedItem n i o (FuncParam v))
         lamBodyParams = _BodyLam . lamFunc . fParams . _RecordParams . SugarLens.taggedListItems
 

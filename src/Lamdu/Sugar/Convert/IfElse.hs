@@ -46,13 +46,17 @@ convertIfElse setToVal postApp =
             { _iIf = cond
             , _iThen = altTrue ^. tiValue
             , _iElse =
-                case altFalse ^?
+                case altFalse ^@?
                      tiValue . hVal . _BodyLam . lamFunc .
-                     fBody . hVal . _BinderTerm . _BodyIfElse
+                     fBody . Lens.filteredBy hAnn <. hVal . bBody . _BinderTerm . _BodyIfElse
                 of
-                Just innerIfElse ->
+                Just (Const innerPl, innerIfElse) ->
                     Ann
-                    { _hVal = ElseIf innerIfElse
+                    { _hVal =
+                        ElseIf ElseIfBody
+                        { _eAddLet = DataOps.redexWrap (innerPl ^. pInput . Input.stored) <&> EntityId.ofValI
+                        , _eIfElse = innerIfElse
+                        }
                     , _hAnn =
                         altFalse ^. tiValue . annotation
                         & pLambdas .~ [altFalse ^. tiValue . hAnn . Lens._Wrapped . pInput . Input.stored . iref & toUUID]
@@ -71,5 +75,5 @@ convertIfElse setToVal postApp =
                 mkElseDel x = x
                 thenBody =
                     altTrue ^? tiValue . hVal . _BodyLam . lamFunc . fBody
-                    . Lens.filteredBy (hVal . _BinderTerm) . annotation
+                    . Lens.filteredBy (hVal . bBody . _BinderTerm) . annotation
                     & fromMaybe (altTrue ^. tiValue . annotation)

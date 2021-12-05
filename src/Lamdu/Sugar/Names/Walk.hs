@@ -189,6 +189,9 @@ instance ToBody Let where
             pure let_{_lName, _lBody, _lValue}
 
 instance ToBody Binder where
+    toBody = bBody toBody
+
+instance ToBody BinderBody where
     toBody (BinderLet l) = toBody l <&> BinderLet
     toBody (BinderTerm e) = toBody e <&> BinderTerm
 
@@ -339,7 +342,7 @@ instance ToBody Nominal where
 
 instance ToBody Else where
     toBody (SimpleElse x) = toBody x <&> SimpleElse
-    toBody (ElseIf x) = toBody x <&> ElseIf
+    toBody (ElseIf x) = eIfElse toBody x <&> ElseIf
 
 instance ToBody IfElse where
     toBody (IfElse i t e) = IfElse <$> toExpression i <*> toExpression t <*> toExpression e

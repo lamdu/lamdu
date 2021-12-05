@@ -3,6 +3,7 @@ module Lamdu.GUI.Expr.BinderEdit
     ) where
 
 import qualified Control.Lens as Lens
+import           Hyper (annValue)
 import qualified GUI.Momentu as M
 import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.I18N as MomentuTexts
@@ -71,14 +72,21 @@ makeLetEdit item =
         binder = item ^. Sugar.lValue
 
 make :: _ => ExprGui.Expr Sugar.Binder i o -> GuiM env i o (Responsive o)
-make (Ann (Const pl) (Sugar.BinderTerm assignmentBody)) =
+make x =
+    do
+        letEventMap <- x ^. hVal . Sugar.bAddOuterLet & ExprEventMap.addLetEventMap
+        makeBody (x & annValue %~ (^. Sugar.bBody))
+            <&> M.weakerEvents letEventMap
+
+makeBody :: _ => ExprGui.Expr Sugar.BinderBody i o -> GuiM env i o (Responsive o)
+makeBody (Ann (Const pl) (Sugar.BinderTerm assignmentBody)) =
     Ann (Const pl) assignmentBody & GuiM.makeSubexpression
-make (Ann (Const pl) (Sugar.BinderLet l)) =
+makeBody (Ann (Const pl) (Sugar.BinderLet l)) =
     do
         env <- Lens.view id
         let moveToInnerEventMap =
                 body
-                ^? hVal . Sugar._BinderLet
+                ^? hVal . Sugar.bBody . Sugar._BinderLet
                 . Sugar.lValue . annotation . Sugar.plActions
                 . Sugar.extract
                 & foldMap
