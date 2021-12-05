@@ -154,11 +154,11 @@ def typ var tag body =
         emptyForalls = T.Types (QVars mempty) (QVars mempty)
 
 repl ::
-    Annotated a # Sugar.Term v name i o ->
-    Sugar.Repl v name i o a
+    Annotated a # Sugar.Term v name i Unit ->
+    Sugar.Repl v name i Unit a
 repl (Ann (Const pl) x) =
     Sugar.Repl
-    { Sugar._replExpr = Ann (Const pl) (Sugar.BinderTerm x)
+    { Sugar._replExpr = Ann (Const pl) (Sugar.Binder Unit (Sugar.BinderTerm x))
     , Sugar._replVarInfo = Sugar.VarGeneric
     , Sugar._replResult = CurAndPrev Nothing Nothing
     }
@@ -176,7 +176,7 @@ funcExpr paramVar paramTag (Ann (Const ba) bx) =
         , Sugar.VarParamInfo (Sugar.OptionalTag (mkTag (Just paramVar) paramTag) Unit)
             (Sugar.AddNext (Identity tagRefReplace)) (Sugar.AddNext (Identity tagRefReplace)) Unit
         )
-    , Sugar._fBody = Ann (Const ba) (Sugar.BinderTerm bx)
+    , Sugar._fBody = Ann (Const ba) (Sugar.Binder Unit (Sugar.BinderTerm bx))
     }
 
 expr ::
@@ -207,7 +207,6 @@ nodeActions =
     , Sugar._setToLiteral = pure Unit
     , Sugar._extract = Unit
     , Sugar._mReplaceParent = Nothing
-    , Sugar._mNewLet = Nothing
     , Sugar._mApply = Nothing
     }
 

@@ -10,8 +10,7 @@ module Lamdu.Sugar.Types.Parts
     -- Node actions
     , DetachAction(..), _FragmentedAlready, _DetachAction
     , Delete(..), _SetToHole, _Delete, _CannotDelete
-    , NodeActions(..)
-        , detach, delete, setToLiteral, extract, mReplaceParent, mNewLet, mApply
+    , NodeActions(..), detach, delete, setToLiteral, extract, mReplaceParent, mApply
     , -- Let
       ExtractDestination(..)
     , -- TaggedList
@@ -102,7 +101,6 @@ data NodeActions o = NodeActions
     , _setToLiteral :: Literal Identity -> o EntityId
     , _extract :: o ExtractDestination
     , _mReplaceParent :: Maybe (o EntityId)
-    , _mNewLet :: Maybe (o EntityId)
     , _mApply :: Maybe (o EntityId)
     } deriving Generic
 

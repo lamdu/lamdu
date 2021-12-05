@@ -80,6 +80,9 @@ instance HasPrecedence name => AddParens (Assignment v name i o) where
     parenInfo _ (BodyFunction x) = (False, unambiguousBody x & BodyFunction)
 
 instance HasPrecedence name => AddParens (Binder v name i o) where
+    parenInfo p = bBody (parenInfo p)
+
+instance HasPrecedence name => AddParens (BinderBody v name i o) where
     parenInfo parentPrec (BinderTerm x) = parenInfo parentPrec x & _2 %~ BinderTerm
     parenInfo _ (BinderLet x) = (False, unambiguousBody x & BinderLet)
 

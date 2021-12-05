@@ -17,6 +17,7 @@ import           Hyper.Type.Prune (Prune)
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Data.Anchors as Anchors
+import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Data.Ops.Subexprs as SubExprs
 import           Lamdu.Expr.IRef (DefI, HRef)
 import qualified Lamdu.Expr.IRef as ExprIRef
@@ -66,7 +67,7 @@ convertLet ::
     (Monad m, Monoid a) =>
     Input.Payload m a # V.Term ->
     Redex # Input.Payload m a ->
-    ConvertM m (Annotated (ConvertPayload m a) # Binder EvalPrep InternalName (OnceT (T m)) (T m))
+    ConvertM m (Annotated (ConvertPayload m a) # BinderBody EvalPrep InternalName (OnceT (T m)) (T m))
 convertLet pl redex =
     do
         float <- makeFloatLetToOuterScope (pl ^. Input.stored . ExprIRef.setIref) redex
@@ -134,7 +135,15 @@ convertBinder ::
     (Monad m, Monoid a) =>
     Ann (Input.Payload m a) # V.Term ->
     ConvertM m (Annotated (ConvertPayload m a) # Binder EvalPrep InternalName (OnceT (T m)) (T m))
-convertBinder expr@(Ann pl body) =
+convertBinder expr =
+    convertBinderBody expr
+    <&> annValue %~ Binder (DataOps.redexWrap (expr ^. hAnn . Input.stored) <&> EntityId.ofValI)
+
+convertBinderBody ::
+    (Monad m, Monoid a) =>
+    Ann (Input.Payload m a) # V.Term ->
+    ConvertM m (Annotated (ConvertPayload m a) # BinderBody EvalPrep InternalName (OnceT (T m)) (T m))
+convertBinderBody expr@(Ann pl body) =
     Lens.view (ConvertM.scConfig . Config.sugarsEnabled . Config.letExpression) >>=
     \case
     False -> convertExpr
@@ -301,7 +310,7 @@ instance GetParam (Assignment v InternalName i o) where
     getParam x = x ^? _BodyPlain . apBody >>= getParam
 
 instance GetParam (Binder v InternalName i o) where
-    getParam x = x ^? _BinderTerm >>= getParam
+    getParam x = x ^? bBody . _BinderTerm >>= getParam
 
 instance GetParam (Term v InternalName i o) where
     getParam x = x ^? _BodyLeaf . _LeafGetVar <&> Const >>= getParam
@@ -348,6 +357,9 @@ instance MarkLightParams (Assignment v InternalName i o) where
     markLightParams ps (BodyFunction x) = markLightParams ps x & BodyFunction
 
 instance MarkLightParams (Binder v InternalName i o) where
+    markLightParams ps = bBody %~ markLightParams ps
+
+instance MarkLightParams (BinderBody v InternalName i o) where
     markLightParams ps (BinderTerm x) = markLightParams ps x & BinderTerm
     markLightParams ps (BinderLet x) = markLightParams ps x & BinderLet
 

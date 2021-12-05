@@ -92,11 +92,10 @@ makeElse parentAnimId (Ann (Const pl) (Sugar.SimpleElse expr)) =
     <&> pure
     where
         elseAnimId = parentAnimId <> ["else"]
-makeElse _ (Ann (Const pl) (Sugar.ElseIf content)) =
+makeElse _ (Ann (Const pl) (Sugar.ElseIf (Sugar.ElseIfBody addLet content))) =
     do
         -- TODO: green evaluation backgrounds, "◗"?
-        letEventMap <-
-            foldMap ExprEventMap.addLetEventMap (pl ^. Sugar.plActions . Sugar.mNewLet)
+        letEventMap <- ExprEventMap.addLetEventMap addLet
         (:)
             <$> ( makeIfThen ElseIf animId content
                   <&> Lens.mapped %~ M.weakerEvents letEventMap
