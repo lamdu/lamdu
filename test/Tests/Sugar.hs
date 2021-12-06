@@ -598,3 +598,17 @@ testDisambig =
             replBinder . _BinderTerm . _BodyLabeledApply . aAnnotatedArgs . traverse . aaExpr .
             hVal . _BodyLabeledApply . aFunc .
             hVal . Lens._Wrapped . bvNameRef . nrName . _NameTag . tnTagCollision . _Collision
+
+getHoleResults ::
+    FilePath ->
+    Lens.ATraversal'
+    TestWorkArea
+    (Term v0 name (OnceT (T ViewM)) o k0) ->
+    IO [Option Binder name (OnceT (T ViewM)) o]
+getHoleResults progName traversal =
+    do
+        env <- Env.make
+        testProgram progName $
+            convertWorkArea env
+            >>= (^?! Lens.cloneTraversal traversal . _BodyLeaf . _LeafHole . holeOptions)
+            >>= ($ Query (hasQueryLangInfo env) "")
