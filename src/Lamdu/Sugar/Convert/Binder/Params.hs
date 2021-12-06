@@ -41,6 +41,7 @@ import qualified Lamdu.Sugar.Convert.Input as Input
 import           Lamdu.Sugar.Convert.Monad (ConvertM(..))
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
 import qualified Lamdu.Sugar.Convert.TId as ConvertTId
+import qualified Lamdu.Sugar.Convert.TaggedList as ConvertTaggedList
 import qualified Lamdu.Sugar.Convert.Tag as ConvertTag
 import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
@@ -394,7 +395,7 @@ convertRecordParams ::
     ConvertM m (ConventionalParams m)
 convertRecordParams mPresMode binderKind fieldParams lam@(V.TypedLam param _ _) lamPl =
     do
-        ~(p:ps) <- traverse mkParam fieldParams
+        ps <- traverse mkParam fieldParams
         postProcess <- ConvertM.postProcessAssert
         add <- addFieldParam
         let resultInfo () tag =
@@ -406,11 +407,7 @@ convertRecordParams mPresMode binderKind fieldParams lam@(V.TypedLam param _ _) 
         pure ConventionalParams
             { cpTags = Set.fromList tags
             , _cpParamInfos = fieldParams <&> mkParInfo & mconcat
-            , _cpParams =
-                RecordParams TaggedList
-                { _tlAddFirst = addFirstSelection
-                , _tlItems = Just (TaggedListBody p (ps <&> (`TaggedSwappableItem` pure ())))
-                } & Just
+            , _cpParams = ConvertTaggedList.convert addFirstSelection ps & RecordParams & Just
             , _cpAddFirstParam = AddNext addFirstSelection
             , cpMLamParam = Just (entityId, param)
             }
