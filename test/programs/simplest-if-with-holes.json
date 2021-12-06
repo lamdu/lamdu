@@ -1,0 +1,99 @@
+[
+    {
+        "schemaVersion": 15
+    },
+    {
+        "tagOrder": 1,
+        "tag": "42493a66616c73650000000000000000",
+        "names": {
+            "hebrew": "כזב",
+            "english": "false",
+            "italiano": "falso"
+        }
+    },
+    {
+        "tagOrder": 0,
+        "tag": "42493a74727565000000000000000000",
+        "names": {
+            "hebrew": "אמת",
+            "english": "true",
+            "italiano": "vero"
+        }
+    },
+    {
+        "nomType": {
+            "schemeType": {
+                "variant": [
+                    {
+                        "record": [],
+                        "rowTag": "42493a66616c73650000000000000000"
+                    },
+                    {
+                        "record": [],
+                        "rowTag": "42493a74727565000000000000000000"
+                    }
+                ]
+            }
+        },
+        "tag": "b760f44fa5965c2474a3b471467a22c4",
+        "nom": "426f6f6c000000000000000000000000"
+    },
+    {
+        "repl": {
+            "frozenDeps": {
+                "nominals": {
+                    "426f6f6c000000000000000000000000": {
+                        "nomType": {
+                            "schemeType": {
+                                "variant": [
+                                    {
+                                        "record": [],
+                                        "rowTag": "42493a66616c73650000000000000000"
+                                    },
+                                    {
+                                        "record": [],
+                                        "rowTag": "42493a74727565000000000000000000"
+                                    }
+                                ]
+                            }
+                        }
+                    }
+                }
+            },
+            "val": {
+                "applyFunc": {
+                    "caseRest": {
+                        "caseRest": {
+                            "id": "4bef3645-b805-4ea2-9f2f-10be97f4458c",
+                            "absurd": {}
+                        },
+                        "caseHandler": {
+                            "hole": {},
+                            "id": "43df228f-6994-4210-a8ec-72d0d8138451"
+                        },
+                        "caseTag": "42493a66616c73650000000000000000",
+                        "id": "61bf59c2-c0f4-43ba-a67d-c3491f5b870b"
+                    },
+                    "caseHandler": {
+                        "hole": {},
+                        "id": "a971fe21-b6e5-4907-9c21-6057b43fbbd1"
+                    },
+                    "caseTag": "42493a74727565000000000000000000",
+                    "id": "6140b464-9a09-44ce-88c7-d04adfc91ca6"
+                },
+                "applyArg": {
+                    "applyFunc": {
+                        "fromNomId": "426f6f6c000000000000000000000000",
+                        "id": "acae2b8e-96e3-4232-a147-cc9e6ab5929e"
+                    },
+                    "applyArg": {
+                        "hole": {},
+                        "id": "c0d32522-2581-4b85-87c9-892730e8e541"
+                    },
+                    "id": "afebaf58-8c52-42ac-8607-66a9c2f5cf68"
+                },
+                "id": "3d5642b4-92f2-4a4c-bb42-72357a853a5b"
+            }
+        }
+    }
+]

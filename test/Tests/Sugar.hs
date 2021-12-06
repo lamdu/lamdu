@@ -50,6 +50,7 @@ test =
     , testAddToInferredParamList
     , testInfixWithArgParens
     , testDisambig
+    , testSuspendedHoleResultSimple
     , testGroup "insist-tests"
         [ testInsistFactorial
         , testInsistEq
@@ -610,5 +611,24 @@ getHoleResults progName traversal =
         env <- Env.make
         testProgram progName $
             convertWorkArea env
-            >>= (^?! Lens.cloneTraversal traversal . _BodyLeaf . _LeafHole . holeOptions)
+            <&> (^? Lens.cloneTraversal traversal)
+            <&> fromMaybe (error "getHoleResults: Inexistent path")
+            <&> (^? _BodyLeaf) <&> fromMaybe (error "getHoleResults: Not a leaf")
+            <&> (^? _LeafHole . holeOptions)
+            >>= fromMaybe (error "getHoleResults: Not a hole")
             >>= ($ Query (hasQueryLangInfo env) "")
+
+testSuspendedHoleResultSimple :: Test
+testSuspendedHoleResultSimple =
+    testCase "suspended-hole-result-simple" $
+    do
+        opts <- getHoleResults "simplest-if-with-holes.json" replHole
+        let opt = head opts
+        opt ^. optionTypeMatch & assertBool "First opt is not a type match"
+        let optLam =
+                opt ^? optionExpr . hVal . bBody . _BinderTerm . _BodyLam
+                & fromMaybe (error "First opt is not a lam")
+        Lens.has (lamFunc . fParams . _NullParam) optLam
+            & assertBool "First opt is not being sugared as a null param lambda"
+    where
+        replHole = replBinder . _BinderTerm . _BodyIfElse . iThen . hVal
