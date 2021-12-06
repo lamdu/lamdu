@@ -126,14 +126,14 @@ instance Eq (Sugar.TagPane f) where
     , ''Sugar.DefinitionBuiltin, ''Sugar.DefinitionForm
     , ''Sugar.GetVar, ''Sugar.Leaf, ''Sugar.NameRef, ''Sugar.VarParamInfo, ''Sugar.ParamRef
     , ''Sugar.ResVal, ''Sugar.Scheme, ''Sugar.TagRef, ''Sugar.TagChoice, ''Sugar.TagOption
-    , ''Sugar.NominalPane, ''Sugar.NominalParam, ''Sugar.ParamKind
+    , ''Sugar.NominalPane
     ] & sequenceA <&> concat
 
 makeInstances [''NFData]
     [ ''Sugar.TId, ''Sugar.Tag, ''Sugar.TagPane, ''Sugar.ParamsRecordVarRef
     , ''Sugar.ScopeId, ''Sugar.DefinitionState, ''Sugar.ParenInfo, ''Sugar.VarInfo
     , ''Sugar.BinderMode, ''Sugar.BinderParamScopeId, ''Sugar.FuncApplyLimit, ''Sugar.Error
-    , ''Sugar.CompiledErrorType, ''ShowAnnotation, ''LangId, ''EntityId
+    , ''Sugar.CompiledErrorType, ''ShowAnnotation, ''LangId, ''EntityId, ''Sugar.ParamKind
     , ''Name, ''Name.Collision, ''Name.TagName, ''Name.TagText
     , ''Tag.TextsInLang, ''Def.FFIName, ''Tag.DirOp, ''Tag.Symbol, ''Tag.Tag, ''CurAndPrev
     , ''Unit

@@ -25,7 +25,9 @@
             "else_": "אחרת",
             "elseIf": "או אם",
             "paramsRecordOpener": "פרמטרים }",
-            "variantTypeSep": "או: "
+            "variantTypeSep": "או: ",
+            "typ": "טיפוס",
+            "row": "שורה"
         },
         "collaborationTexts": {
             "collaboration": "שיתוף",

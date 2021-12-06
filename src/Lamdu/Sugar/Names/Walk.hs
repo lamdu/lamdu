@@ -12,6 +12,7 @@ module Lamdu.Sugar.Names.Walk
 
 import qualified Control.Lens as Lens
 import           Data.Kind (Type)
+import           Data.Property (Property)
 import qualified Data.Set as Set
 import           Hyper.Class.Morph (morphTraverse1)
 import           Hyper.Syntax (FuncType(..))
@@ -65,8 +66,8 @@ class (Monad m, Monad (IM m)) => MonadNaming m where
 class Walk m s t where
     walk :: MonadNaming m => s -> m t
 
-instance Walk m () () where
-    walk = pure
+instance Walk m () () where walk = pure
+instance Walk m (Property o ParamKind) (Property o ParamKind) where walk = pure
 
 instance Walk m s t => Walk m (s, x) (t, x) where
     walk = _1 walk
@@ -482,14 +483,11 @@ instance
             _drBody <- walk _drBody
             pure def{_drName, _drBody}
 
-instance (a ~ OldName m, b ~ NewName m, IM m ~ i) => Walk m (NominalParam a i o) (NominalParam b i o) where
-    walk = pName walk
-
 instance (a ~ OldName m, b ~ NewName m, i ~ IM m) => Walk m (NominalPane a i o) (NominalPane b i o) where
     walk nomPane@NominalPane{_npName, _npParams, _npBody} =
         do
             _npName <- toOptionalTag TaggedNominal _npName
-            _npParams <- traverse walk _npParams
+            _npParams <- walk _npParams
             _npBody <- Lens._Just walk _npBody
             pure nomPane{_npName, _npParams, _npBody}
 

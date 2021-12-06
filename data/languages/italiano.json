@@ -24,7 +24,9 @@
             "else_": "altrimenti",
             "elseIf": "altse",
             "paramsRecordOpener": "Parametri {",
-            "variantTypeSep": "oppure: "
+            "variantTypeSep": "oppure: ",
+            "typ": "tipi",
+            "row": "riga"
         },
         "collaborationTexts": {
             "collaboration": "Collaborazione",

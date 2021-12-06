@@ -9,7 +9,6 @@ module Lamdu.Sugar.Types
     , WorkArea(..), waPanes, waRepl, waGlobals
     , Globals(..), allGlobals, globalDefs, globalNominals, globalTags
     , ParamKind(..), _TypeParam, _RowParam
-    , NominalParam(..), pName, pKind
     , NominalPane(..), npName, npParams, npNominalId, npEntityId, npBody
     , Definition(..), drName, drBody, drDefI
     , DefinitionBody(..), _DefinitionBodyExpression, _DefinitionBodyBuiltin
@@ -82,18 +81,13 @@ data TagPane o = TagPane
     , _tpSetOrder :: Int -> o ()
     } deriving Generic
 
-data ParamKind = TypeParam | RowParam deriving Generic
-
-data NominalParam name i o = NominalParam
-    { _pName :: TagRef name i o
-    , _pKind :: ParamKind -- TODO: Support changing kind
-    } deriving Generic
+data ParamKind = TypeParam | RowParam deriving (Eq, Ord, Generic)
 
 data NominalPane name i o = NominalPane
     { _npName :: OptionalTag name i o
     , _npNominalId :: T.NominalId
     , _npEntityId :: EntityId
-    , _npParams :: [NominalParam name i o]
+    , _npParams :: TaggedList name i o (Property o ParamKind)
     , _npBody :: Maybe (Scheme name o)
     } deriving Generic
 
@@ -147,7 +141,6 @@ data WorkArea v name i o a = WorkArea
     } deriving (Functor, Foldable, Traversable, Generic)
 
 traverse Lens.makeLenses
-    [''Definition, ''DefinitionBuiltin, ''Pane, ''TagPane, ''Globals, ''WorkArea
-    , ''NominalPane, ''NominalParam]
+    [''Definition, ''DefinitionBuiltin, ''Pane, ''TagPane, ''Globals, ''WorkArea, ''NominalPane]
     <&> concat
 traverse Lens.makePrisms [''DefinitionBody, ''PaneBody, ''ParamKind] <&> concat

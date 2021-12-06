@@ -40,6 +40,9 @@ data Code a = Code
       -- Types
     , _variantTypeOpener :: a
     , _variantTypeSep :: a
+      -- Kinds
+    , _typ :: a
+    , _row :: a
     }
     deriving stock (Generic, Generic1, Eq, Functor, Foldable, Traversable)
     deriving anyclass ElemIds

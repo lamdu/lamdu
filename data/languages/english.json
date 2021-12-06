@@ -24,7 +24,9 @@
             "else_": "else",
             "elseIf": "elif",
             "paramsRecordOpener": "Params {",
-            "variantTypeSep": "or: "
+            "variantTypeSep": "or: ",
+            "typ": "type",
+            "row": "row"
         },
         "collaborationTexts": {
             "collaboration": "Collaboration",
