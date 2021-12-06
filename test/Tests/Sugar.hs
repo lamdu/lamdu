@@ -51,6 +51,7 @@ test =
     , testInfixWithArgParens
     , testDisambig
     , testSuspendedHoleResultSimple
+    , testSuspendedHoleResult
     , testGroup "insist-tests"
         [ testInsistFactorial
         , testInsistEq
@@ -632,3 +633,17 @@ testSuspendedHoleResultSimple =
             & assertBool "First opt is not being sugared as a null param lambda"
     where
         replHole = replBinder . _BinderTerm . _BodyIfElse . iThen . hVal
+
+testSuspendedHoleResult :: Test
+testSuspendedHoleResult =
+    testCase "suspended-hole-result" $
+    do
+        opts <- getHoleResults "suspended-hole-result.json" replHole
+        let opt = head opts
+        opt ^. optionTypeMatch & assertBool "First opt is not a type match"
+        Lens.has (optionExpr . hVal . bBody . _BinderTerm . _BodyLam . lamFunc . fParams . _NullParam) opt
+            & assertBool "First opt is not a null param lambda"
+    where
+        replHole =
+            replBinder . _BinderTerm . _BodyLam . lamFunc . fBody .
+            hVal . bBody . _BinderTerm . _BodyIfElse . iThen . hVal
