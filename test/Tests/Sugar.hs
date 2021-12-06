@@ -154,9 +154,7 @@ testExtract =
 testInline :: Test
 testInline =
     do
-        queryLangInfo <-
-            Env.make <&>
-            \env -> QueryLangInfo (env ^. has) (env ^. has) (env ^. has) (env ^. has) (env ^. has)
+        queryLangInfo <- Env.make <&> hasQueryLangInfo
         let inline workArea =
                 do
                     result <-

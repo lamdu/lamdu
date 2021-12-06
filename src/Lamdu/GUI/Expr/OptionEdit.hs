@@ -23,11 +23,10 @@ import qualified Lamdu.Sugar.Types as Sugar
 import           Lamdu.Prelude
 
 makeQuery :: _ => SearchMenu.ResultsContext -> f (Sugar.Query Text)
-makeQuery ctx = 
-    Lens.view id <&>
-    \env ->
-    Sugar.Query
-    { Sugar._qLangInfo = Sugar.QueryLangInfo (env ^. has) (env ^. has) (env ^. has) (env ^. has) (env ^. has)
+makeQuery ctx =
+    Lens.view id <&> Sugar.hasQueryLangInfo
+    <&> \langInfo -> Sugar.Query
+    { Sugar._qLangInfo = langInfo
     , Sugar._qSearchTerm = ctx ^. SearchMenu.rSearchTerm
     }
 

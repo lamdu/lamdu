@@ -27,6 +27,7 @@ module Lamdu.Sugar.Types.Expression
     , Hole(..), holeOptions
     , Query(..), qLangInfo, qSearchTerm
     , QueryLangInfo(..), qLangId, qLangDir, qCodeTexts, qUITexts, qNameTexts
+        , hasQueryLangInfo
     , Option(..), optionExpr, optionPick, optionTypeMatch
     -- Fragments
     , Fragment(..), fExpr, fHeal, fTypeMismatch, fOptions
@@ -144,6 +145,9 @@ data QueryLangInfo a = QueryLangInfo
     , _qUITexts :: Texts.CodeUI a
     , _qNameTexts :: Texts.Name a
     } deriving (Functor, Foldable, Traversable)
+
+hasQueryLangInfo :: _ => a -> QueryLangInfo b
+hasQueryLangInfo env = QueryLangInfo (env ^. has) (env ^. has) (env ^. has) (env ^. has) (env ^. has)
 
 data Query a = Query
     { _qLangInfo :: QueryLangInfo a
