@@ -34,7 +34,6 @@ import qualified Lamdu.Sugar.Convert.Tag as ConvertTag
 import qualified Lamdu.Sugar.Convert.Type as ConvertType
 import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
-import qualified Lamdu.Sugar.OrderTags as OrderTags
 import           Lamdu.Sugar.Types
 import           Revision.Deltum.Transaction (Transaction)
 import qualified Revision.Deltum.Transaction as Transaction
@@ -191,17 +190,10 @@ repl env =
                     Property (defExpr ^. Definition.exprFrozenDeps) setFrozenDeps
                 , scConvertSubexpression = ConvertExpr.convert
                 }
-        let typ = valInferred ^. hAnn . Input.inferredType
-        expr <-
-            convertBinder valInferred
-            & ConvertM.run context
-            >>= OrderTags.orderNode
-        vinfo <- runReaderT (mkVarInfo typ) env
-        pure Repl
-            { _replExpr = expr
-            , _replVarInfo = vinfo
-            , _replResult = CurAndPrev Nothing Nothing
-            }
+        Repl
+            <$> (convertBinder valInferred & ConvertM.run context)
+            <*> runReaderT (mkVarInfo (valInferred ^. hAnn . Input.inferredType)) env
+            ?? CurAndPrev Nothing Nothing
     where
         cachedInfer = Cache.infer (env ^. has)
         postProcess = PostProcess.expr cachedInfer (env ^. has) prop
@@ -214,15 +206,10 @@ pane ::
     (Has Debug.Monitors env, Has Cache.Functions env, Has Config env, Monad m, Typeable m, Anchors.HasCodeAnchors env m) =>
     env -> DefI m -> OnceT (T m) (PaneBody EvalPrep InternalName (OnceT (T m)) (T m) (ConvertPayload m [EntityId]))
 pane env defI =
-    do
-        bodyS <-
-            ExprLoad.def defI & lift <&> Definition.defPayload .~ defI
-            >>= convertDefBody env
-        tag <- ConvertTag.taggedEntityWith (env ^. Anchors.codeAnchors) Nothing defVar & join
-        OrderTags.orderDef Definition
-            { _drName = tag
-            , _drBody = bodyS
-            , _drDefI = defVar
-            } <&> PaneDefinition
+    Definition
+    <$> (ConvertTag.taggedEntityWith (env ^. Anchors.codeAnchors) Nothing defVar & join)
+    <*> pure defVar
+    <*> (ExprLoad.def defI & lift <&> Definition.defPayload .~ defI >>= convertDefBody env)
+    <&> PaneDefinition
     where
         defVar = ExprIRef.globalId defI

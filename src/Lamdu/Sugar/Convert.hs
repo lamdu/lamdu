@@ -21,6 +21,7 @@ import qualified Lamdu.Sugar.Convert.Nominal as ConvertNominal
 import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import qualified Lamdu.Sugar.Lens as SugarLens
+import           Lamdu.Sugar.OrderTags (orderWorkArea)
 import           Lamdu.Sugar.Types
 import           Revision.Deltum.Transaction (Transaction)
 import qualified Revision.Deltum.Transaction as Transaction
@@ -146,7 +147,7 @@ loadWorkArea env =
         panes <-
             repl ^. replExpr . SugarLens.binderResultExpr . pInput . Input.entityId
             & loadPanes env
-        pure WorkArea
+        orderWorkArea WorkArea
             { _waRepl = repl
             , _waPanes = panes
             , _waGlobals = globals cp

@@ -1,7 +1,7 @@
 {-# LANGUAGE TypeApplications, FlexibleInstances, MultiParamTypeClasses, DefaultSignatures, ScopedTypeVariables, UndecidableInstances #-}
 
 module Lamdu.Sugar.OrderTags
-    ( orderDef, orderType, orderNode
+    ( orderWorkArea
     ) where
 
 import qualified Control.Lens as Lens
@@ -217,3 +217,10 @@ orderDef def =
                 let setToVerbose = (presModeProp ^. pSet) Sugar.Verbose & transaction
                 orderTaggedList (presModeProp ^.. pVal . Sugar._Operator . Lens.both) pure orig
                     <&> Sugar.tlItems . Lens._Just %~ setVerboseWhenNeeded setToVerbose
+
+orderWorkArea :: (MonadTransaction m o, MonadTransaction m i) => OrderT i (Sugar.WorkArea v name i o a)
+orderWorkArea (Sugar.WorkArea panes repl globs) =
+    Sugar.WorkArea
+    <$> (traverse . Sugar.paneBody . Sugar._PaneDefinition) orderDef panes
+    <*> Sugar.replExpr orderNode repl
+    ?? globs
