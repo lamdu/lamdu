@@ -1,4 +1,5 @@
-{-# LANGUAGE TypeApplications, FlexibleInstances, MultiParamTypeClasses, DefaultSignatures, ScopedTypeVariables, UndecidableInstances #-}
+{-# LANGUAGE TypeApplications, FlexibleInstances, MultiParamTypeClasses, DefaultSignatures #-}
+{-# LANGUAGE ScopedTypeVariables, UndecidableInstances #-}
 
 module Lamdu.Sugar.OrderTags
     ( orderWorkArea
@@ -218,9 +219,17 @@ orderDef def =
                 orderTaggedList (presModeProp ^.. pVal . Sugar._Operator . Lens.both) pure orig
                     <&> Sugar.tlItems . Lens._Just %~ setVerboseWhenNeeded setToVerbose
 
+orderPaneBody :: (MonadTransaction m o, MonadTransaction m i) => OrderT i (Sugar.PaneBody v name i o a)
+orderPaneBody (Sugar.PaneDefinition x) = orderDef x <&> Sugar.PaneDefinition
+orderPaneBody (Sugar.PaneNominal x) =
+    Sugar.npParams (orderTaggedList [] pure) x
+    >>= (Sugar.npBody . Lens._Just . Sugar.schemeType) orderType
+    <&> Sugar.PaneNominal
+orderPaneBody x@Sugar.PaneTag{} = pure x
+
 orderWorkArea :: (MonadTransaction m o, MonadTransaction m i) => OrderT i (Sugar.WorkArea v name i o a)
 orderWorkArea (Sugar.WorkArea panes repl globs) =
     Sugar.WorkArea
-    <$> (traverse . Sugar.paneBody . Sugar._PaneDefinition) orderDef panes
+    <$> (traverse . Sugar.paneBody) orderPaneBody panes
     <*> Sugar.replExpr orderNode repl
     ?? globs
