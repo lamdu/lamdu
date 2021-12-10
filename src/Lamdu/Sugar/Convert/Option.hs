@@ -24,8 +24,8 @@ import qualified Data.Text as Text
 import qualified Data.UUID as UUID
 import           GUI.Momentu.Direction (Layout(..))
 import           Hyper
-import           Hyper.Recurse
 import           Hyper.Infer
+import           Hyper.Recurse
 import           Hyper.Syntax (FuncType(..), funcIn, funcOut)
 import           Hyper.Syntax.Nominal (NominalInst, nId, nScheme)
 import           Hyper.Syntax.Row (RowExtend(..), freExtends)
@@ -39,15 +39,15 @@ import           Lamdu.Calc.Identifier (Identifier(..))
 import qualified Lamdu.Calc.Infer as Infer
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
+import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Definition as Def
+import qualified Lamdu.Data.Tag as Tag
+import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Load as Load
 import           Lamdu.Expr.UniqueId (ToUUID)
 import qualified Lamdu.I18N.Code as Texts
 import qualified Lamdu.I18N.CodeUI as Texts
 import qualified Lamdu.I18N.Name as Texts
-import qualified Lamdu.Data.Anchors as Anchors
-import qualified Lamdu.Data.Tag as Tag
-import qualified Lamdu.Expr.IRef as ExprIRef
 import           Lamdu.Sugar.Convert.Binder (convertBinder)
 import           Lamdu.Sugar.Convert.Binder.Params (mkVarInfo)
 import           Lamdu.Sugar.Convert.Expression.Actions (convertPayload)
@@ -357,15 +357,23 @@ makeOption dstPl res =
                 (Infer.loadDeps (res ^. rDeps) ?? dstPl ^. Input.inferScope)
                 ^?! Lens._Right
         let errInfo = res ^.. rExpr . traverse . _2 <&> (hPlain #) . unwrap (const (^. hVal)) & show
-        let ((ctx1, i), (inferred, _)) =
+        let ((iExpr, ctx1, i), (inferred, _)) =
                 ((res ^. rExpr <&> _2 %~ Infer.runPureInfer scope ctx0 . infer)
                     ^@.. traverse . Lens.filteredBy _1 <. _2 . Lens._Right <&>
                     \(idx, (e, ctx)) ->
-                    Infer.runPureInfer () ctx (inferUVarsApplyBindings e) <&> (,) (ctx, idx)
+                    Infer.runPureInfer () ctx (inferUVarsApplyBindings e) <&> (,) (e, ctx, idx)
                 ) ^? traverse . Lens._Right
                 & fromMaybe (error ("inference of all options failed: " <> errInfo))
+        let unifyResult =
+                Infer.runPureInfer () ctx1
+                (unify (dstPl ^. Input.inferredTypeUVar) (inferred ^. hAnn . _2 . inferResult . _2)
+                    *> inferUVarsApplyBindings iExpr)
+        let inferred1 =
+                case unifyResult of
+                Left _err -> inferred
+                Right (newInferred, _) -> newInferred
         (written, changes) <-
-            inferred & hflipped %~ hmap (const markToPrune)
+            inferred1 & hflipped %~ hmap (const markToPrune)
             & hAnn . _2 . _1 .~ Const False
             -- The forked transaction serves two purposes:
             -- No actual data is written to the db for generating an option
@@ -394,10 +402,7 @@ makeOption dstPl res =
                         Transaction.merge changes
                         pick (written ^. hAnn . Input.stored . ExprIRef.iref)
                 , _optionExpr = s
-                , _optionTypeMatch =
-                    Lens.has Lens._Right
-                    (Infer.runPureInfer () ctx1
-                        (unify (dstPl ^. Input.inferredTypeUVar) (inferred ^. hAnn . _2 . inferResult . _2)))
+                , _optionTypeMatch = Lens.has Lens._Right unifyResult
                 }
             ) & pure
     where
