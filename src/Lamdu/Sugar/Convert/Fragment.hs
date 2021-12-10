@@ -90,7 +90,7 @@ convertAppliedHole app@(V.App funcI argI) exprPl argS =
                             makeLocals (makeLocal topRef argI) (exprPl ^. Input.inferScope)
                             <&> traverse %~ sequenceA <&> (^.. traverse . Lens._Just)
                         , gInjects = makeTagRes "'" (Pure . V.BLeaf . V.LInject) <&> funcOpt
-                        , gToNoms = makeNoms [] "" (makeToNom argI <&> Lens.mapped . Lens.mapped %~ (:[]) . (Result mempty ?? mempty))
+                        , gToNoms = makeNoms [] "" (makeToNom argI <&> Lens.mapped . Lens.mapped %~ (:[]) . (simpleResult ?? mempty))
                         , gFromNoms =
                             makeNoms (forType ^.. Lens.folded . _1 . Lens._Just)
                             "." (makeFromNom exprPl argI <&> Lens.mapped . Lens.mapped %~ (:[]))
@@ -154,10 +154,10 @@ makeResultsSyntax top arg =
     sequenceA
     [ genLamVar <&>
         \v ->
-        Result mempty
+        simpleResult
         (emplaceArg arg <&> _2 %~ Ann WriteNew . V.BLam . V.TypedLam v (Ann WriteNew (HCompose Pruned)))
         lamTexts
-    , Result mempty
+    , simpleResult
         (emplaceArg arg <&> _2 %~ Ann (ExistingRef top) . V.BApp . V.App (Ann WriteNew (V.BLeaf V.LAbsurd))) caseTexts
         & pure
     ]
@@ -180,7 +180,7 @@ transformArg topPl arg =
             s ^.. _Pure . nScheme . sTyp . _Pure . T._TVariant
             & Lens.traverse %%~
             \r ->
-            Result (mempty & depsNominals . Lens.at tid ?~ s)
+            simpleResult
             <$> ( suggestCase r topType <&>
                     \c ->
                     emplaceArg arg
@@ -189,6 +189,7 @@ transformArg topPl arg =
                         Ann WriteNew . V.BApp . App (Ann WriteNew (V.BLeaf (V.LFromNom tid)))
                 )
             <*> (symTexts "." tid <&> (<> caseTexts))
+            <&> rDeps . depsNominals . Lens.at tid ?~ s
         <&> Lens.mapped %~ (,) (Just tid)
     Nothing -> replaceFunc <&> Lens.mapped %~ (,) Nothing
     where
@@ -300,10 +301,10 @@ makeFromNom topPl arg t tid =
     T.TVariant r ->
         suggestCase r (topPl ^. Input.inferredType) <&>
         \c ->
-        Result mempty
+        simpleResult
         (fromNom WriteNew <&> _2 %~ Ann WriteNew . V.BApp . App (writeNew c))
         (if tid == Builtins.boolTid then ifTexts else caseTexts)
-    _ -> Result mempty (fromNom (ExistingRef (topPl ^. Input.stored . ExprIRef.iref))) mempty & pure
+    _ -> simpleResult (fromNom (ExistingRef (topPl ^. Input.stored . ExprIRef.iref))) mempty & pure
     where
         fromNom w =
             emplaceArg arg

@@ -48,7 +48,7 @@ convert posInfo holePl =
                 <&> filtForType
             , gToNoms = makeNoms [] "" makeToNoms
             , gFromNoms =
-                makeNoms [] "." (\_ x -> pure [Result mempty (_Pure . V._BLeaf . V._LFromNom # x) mempty])
+                makeNoms [] "." (\_ x -> pure [simpleResult (_Pure . V._BLeaf . V._LFromNom # x) mempty])
                 <&> filtForType
             , gForType = pure forType
             , gGetFields = makeTagRes "." (Pure . V.BLeaf . V.LGetField)
@@ -75,10 +75,10 @@ makeToNoms t tid =
         where
             f = r ^. T.flatRow
             mkVariant (tag, typ) =
-                Result mempty
+                simpleResult
                 <$> (suggestVal typ <&> (_Pure . V._BApp #) . V.App (_Pure . V._BLeaf . V._LInject # tag))
                 <*> (ExprIRef.readTagData tag <&> tagTexts <&> Lens.mapped %~ (>>= injTexts))
-    _ -> suggestVal t <&> (:[]) . (Result mempty ?? mempty)
+    _ -> suggestVal t <&> (:[]) . (simpleResult ?? mempty)
     <&> traverse . rExpr %~ Pure . V.BToNom . V.ToNom tid
     where
         -- "t" will be prefix for "Bool 'true" too,
@@ -121,7 +121,7 @@ makeResultsSyntax posInfo =
                     }]
             else pure []
     where
-        r f t = Result mempty (t ^. hPlain) f
+        r f t = simpleResult (t ^. hPlain) f
 
 makeGetDef :: Monad m => V.Var -> Pure # T.Type -> T m (Maybe (Pure # V.Term))
 makeGetDef v t =

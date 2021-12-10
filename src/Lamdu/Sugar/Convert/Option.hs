@@ -2,6 +2,7 @@
 
 module Lamdu.Sugar.Convert.Option
     ( Result(..), rTexts, rExpr, rDeps
+    , simpleResult
     , ResultGroups(..), filterResults
     , Matches, matchResult
     , TypeMatch(..)
@@ -75,11 +76,18 @@ data Matches a = Matches
 Lens.makeLenses ''Matches
 
 data Result a = Result
-    { _rDeps :: Deps
-    , _rExpr :: a
-    , _rTexts :: QueryLangInfo Text -> [Text]
+    { _rDeps :: !Deps
+    , _rExpr :: !a
+    , _rTexts :: !(QueryLangInfo Text -> [Text])
     } deriving (Functor, Foldable, Traversable)
 Lens.makeLenses ''Result
+
+simpleResult :: a -> (QueryLangInfo Text -> [Text]) -> Result a
+simpleResult expr texts = Result
+    { _rDeps = mempty
+    , _rExpr = expr
+    , _rTexts = texts
+    }
 
 data TypeMatch = TypeMatches | TypeMismatch deriving (Eq, Ord)
 
@@ -231,7 +239,7 @@ makeTagRes prefix f =
     where
         mk tag =
             ExprIRef.readTagData tag & transaction <&> tagTexts <&> Lens.mapped . traverse %~ (prefix <>)
-            <&> Result mempty (f tag)
+            <&> simpleResult (f tag)
 
 symTexts :: (Monad m, ToUUID a) => Text -> a -> T m (QueryLangInfo Text -> [Text])
 symTexts prefix tid =
@@ -274,12 +282,12 @@ makeGlobals f =
             <&> (^.. traverse . Lens._Just)
     where
         addRecRef r = Lens.at (ExprIRef.globalId  (r ^. ConvertM.rrDefI)) ?~ r ^. ConvertM.rrDefType
-        existingGlobal (x, s) = f x (s ^. _Pure . sTyp) >>= Lens._Just (\r -> symTexts "" x <&> Result mempty r)
+        existingGlobal (x, s) = f x (s ^. _Pure . sTyp) >>= Lens._Just (\r -> symTexts "" x <&> simpleResult r)
         newGlobal x =
             do
                 s <- Transaction.readIRef x <&> (^. Def.defType)
                 f v (s ^. _Pure . sTyp)
-                    >>= Lens._Just (\r -> symTexts "" x <&> Result (mempty & depsGlobalTypes . Lens.at v ?~ s) r)
+                    >>= Lens._Just (\r -> symTexts "" x <&> (simpleResult r <&> rDeps . depsGlobalTypes . Lens.at v ?~ s))
             where
                 v = ExprIRef.globalId x
 
@@ -295,7 +303,7 @@ getListing anchor =
 makeForType :: Monad m => Pure # T.Type -> T m [Result (Pure # V.Term)]
 makeForType t =
     suggestTopLevelVal t
-    >>= traverse (\(deps, v) -> mkTexts v <&> Result deps v)
+    >>= traverse (\(deps, v) -> mkTexts v <&> (simpleResult v <&> rDeps .~ deps))
     where
         mkTexts v =
             case v ^. _Pure of
@@ -449,11 +457,11 @@ makeLocals f scope =
             <&> (<> fieldParams)
     where
         mkVar (var, typ) =
-            Result mempty
+            simpleResult
             <$> transaction (f typ (_Pure . V._BLeaf . V._LVar # var))
             <*> localName typ var
         mkGetField ctx (tag, var) =
-            Result mempty
+            simpleResult
             <$> f typ (V.BLeafP (V.LGetField tag) `V.BAppP` V.BLeafP (V.LVar var) ^. hPlain)
             <*> (ExprIRef.readTagData tag <&> tagTexts)
             where
