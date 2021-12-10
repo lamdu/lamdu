@@ -342,7 +342,7 @@ caseTexts :: QueryLangInfo Text -> [Text]
 caseTexts = (<&> ("." <>)) . (^.. qCodeTexts . Texts.case_)
 
 lamTexts :: QueryLangInfo Text -> [Text]
-lamTexts = (^.. qUITexts . Texts.lambda) <> const ["\\"]
+lamTexts = (^.. qUITexts . Texts.lambda) <> const ["\\"] <> const ["|"]
 
 ifTexts :: QueryLangInfo Text -> [Text]
 ifTexts = (^.. qCodeTexts . Texts.if_)
