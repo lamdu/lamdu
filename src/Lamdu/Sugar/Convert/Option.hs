@@ -109,7 +109,7 @@ filterResults ::
     ResultGroups (OnceT (T m) [Result (a, Option t name i o)]) -> Query Text ->
     OnceT (T m) [Option t name i o]
 filterResults order res query
-    | "" == query ^. qSearchTerm = groups (gForType <> gLocals <> gSyntax) <&> (^. traverse)
+    | "" == query ^. qSearchTerm = groups (gForType <> gSyntax <> gLocals) <&> (^. traverse)
     | "." `Text.isPrefixOf` (query ^. qSearchTerm) =
         groups (gForType <> gSyntax <> gDefs <> gFromNoms <> gGetFields) <&> (^. traverse)
     | "'" `Text.isPrefixOf` (query ^. qSearchTerm) = groups (gForType <> gToNoms <> gInjects) <&> (^. traverse)
