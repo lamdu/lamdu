@@ -1,7 +1,7 @@
 {-# LANGUAGE TemplateHaskell, TypeApplications, ScopedTypeVariables, GADTs, DerivingVia #-}
 
 module Lamdu.Sugar.Convert.Option
-    ( Result(..), rTexts, rExpr, rDeps
+    ( Result(..), rTexts, rExpr, rDeps, rAllowEmptyQuery
     , simpleResult
     , ResultGroups(..), filterResults
     , Matches, matchResult
@@ -79,6 +79,7 @@ data Result a = Result
     { _rDeps :: !Deps
     , _rExpr :: !a
     , _rTexts :: !(QueryLangInfo Text -> [Text])
+    , _rAllowEmptyQuery :: !Bool
     } deriving (Functor, Foldable, Traversable)
 Lens.makeLenses ''Result
 
@@ -87,6 +88,7 @@ simpleResult expr texts = Result
     { _rDeps = mempty
     , _rExpr = expr
     , _rTexts = texts
+    , _rAllowEmptyQuery = True
     }
 
 data TypeMatch = TypeMatches | TypeMismatch deriving (Eq, Ord)
@@ -139,6 +141,7 @@ unicodeAlts haystack =
 
 matchResult :: Query Text -> Result a -> Matches [a]
 matchResult query result
+    | query ^. qSearchTerm == "" && not (result ^. rAllowEmptyQuery) = mempty
     | s `elem` texts = mempty & mExact .~ e
     | any (Text.isPrefixOf s) texts = mempty & mPrefix .~ e
     | any (Text.isInfixOf s) texts = mempty & mInfix .~ e

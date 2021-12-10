@@ -110,6 +110,7 @@ makeResultsSyntax posInfo =
                 f <- genLamVar
                 pure [Result
                     { _rTexts = ifTexts
+                    , _rAllowEmptyQuery = False
                     , _rExpr =
                         ( V.BLeafP V.LAbsurd
                         & V.BCaseP Builtins.falseTag (V.BLamP f Pruned (V.BLeafP V.LHole))
