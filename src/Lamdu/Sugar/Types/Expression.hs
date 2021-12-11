@@ -119,6 +119,7 @@ data FragOpt v name i o k
     | FragOp (FragOperator v name i o k)
     | FragToNom (TId name o)
     | FragLam
+    | FragDefer
     | FragIf (k :# Term v name i o)
     deriving Generic
 

@@ -305,6 +305,7 @@ instance ToBody FragOpt where
     toBody (FragToNom x) = walk x <&> FragToNom
     toBody (FragIf x) = toExpression x <&> FragIf
     toBody FragLam = pure FragLam
+    toBody FragDefer = pure FragDefer
 
 instance ToBody FragOperator where
     toBody (FragOperator f a) =

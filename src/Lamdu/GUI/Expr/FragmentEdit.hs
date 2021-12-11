@@ -144,6 +144,7 @@ makeFragOpt (Ann (Const a) b) =
         (grammar (label Texts.if_) M./|/ grammar (Label.make ":")) M./|/
         Spacer.stdHSpace M./|/ GuiM.makeSubexpression t
     Sugar.FragLam -> grammar (label Texts.lam) & fromView
+    Sugar.FragDefer -> grammar (label Texts.defer) & fromView
     Sugar.FragWrapInRec x ->
         grammar (label Texts.recordOpener) M./|/ TagView.make (x ^. Sugar.tagRefTag) & fromView
     -- Reproduction of behaviour from Lamdu.GUI.Expr.make,
