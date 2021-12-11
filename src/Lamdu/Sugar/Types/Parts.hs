@@ -19,7 +19,7 @@ module Lamdu.Sugar.Types.Parts
     , TaggedListBody(..), tlHead, tlTail
     , TaggedItem(..), tiTag, tiDelete, tiValue, tiAddAfter
     , -- Binders
-      BinderParams(..), _NullParam, _VarParam, _RecordParams
+      Params(..), _NullParam, _VarParam, _RecordParams
     , FuncParam(..), fpAnnotation, fpVarInfo
     , NullParamActions(..), npDeleteLambda
     , VarParamInfo(..), vpiTag, vpiAddPrev, vpiAddNext, vpiDelete
@@ -127,8 +127,7 @@ data TaggedList name i o a = TaggedList
     , _tlItems :: Maybe (TaggedListBody name i o a)
     } deriving (Generic, Functor, Foldable, Traversable)
 
--- TODO: rename BinderParams -> Params
-data BinderParams v name i o
+data Params v name i o
     = -- null param represents a lambda whose parameter's type is inferred
       -- to be the empty record.
       -- This is often used to represent "deferred execution"
@@ -185,7 +184,7 @@ traverse Lens.makeLenses
     , ''TaggedList, ''TaggedListBody, ''TaggedItem, ''TaggedSwappableItem
     ] <&> concat
 traverse Lens.makePrisms
-    [ ''AddParam, ''Annotation, ''BinderParams, ''Delete
+    [ ''AddParam, ''Annotation, ''Params, ''Delete
     , ''DetachAction, ''FuncApplyLimit, ''Literal, ''VarInfo
     ] <&> concat
 traverse makeHTraversableAndBases [''NullaryInject, ''PunnedVar] <&> concat

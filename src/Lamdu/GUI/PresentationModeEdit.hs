@@ -31,7 +31,7 @@ lens mode =
 make ::
     _ =>
     Widget.Id ->
-    Sugar.BinderParams v name i o ->
+    Sugar.Params v name i o ->
     Property f Sugar.PresentationMode ->
     m (Align.TextWidget f)
 make myId (Sugar.RecordParams params) prop =

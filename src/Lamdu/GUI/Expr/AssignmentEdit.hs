@@ -221,7 +221,7 @@ makeParamsEdit ::
     _ =>
     Annotation.EvalAnnotationOptions ->
     Widget.Id -> Widget.Id -> Widget.Id ->
-    Sugar.BinderParams (Sugar.Annotation (Sugar.EvaluationScopes Name i) Name) Name i o ->
+    Sugar.Params (Sugar.Annotation (Sugar.EvaluationScopes Name i) Name) Name i o ->
     GuiM env i o (EventMap (o GuiState.Update), [Responsive o])
 makeParamsEdit annotationOpts delVarBackwardsId lhsId rhsId params =
     case params of
@@ -266,7 +266,7 @@ makeMParamsEdit ::
     CurAndPrev (Maybe ScopeCursor) -> IsScopeNavFocused ->
     Widget.Id -> Widget.Id ->
     Widget.Id ->
-    Sugar.BinderParams (Sugar.Annotation (Sugar.EvaluationScopes Name i) Name) Name i o ->
+    Sugar.Params (Sugar.Annotation (Sugar.EvaluationScopes Name i) Name) Name i o ->
     GuiM env i o (EventMap (o GuiState.Update), Responsive o)
 makeMParamsEdit mScopeCursor isScopeNavFocused delVarBackwardsId myId bodyId params =
     makeParamsEdit annotationMode delVarBackwardsId myId bodyId params

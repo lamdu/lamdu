@@ -141,8 +141,8 @@ getVarName _ (GetParamsRecord x) = GetParamsRecord x & pure
 
 binderParamsFuncParams ::
     Traversal
-    (BinderParams v0 name i o)
-    (BinderParams v1 name i o)
+    (Params v0 name i o)
+    (Params v1 name i o)
     (FuncParam v0)
     (FuncParam v1)
 binderParamsFuncParams f (NullParam x) = _1 f x <&> NullParam
@@ -196,7 +196,7 @@ instance Annotations a b (i (TagChoice n o)) (i (TagChoice n o)) where annotatio
 instance Annotations a b s0 t0 => Annotations a b (s0, x) (t0, x) where
     annotations = _1 . annotations
 
-instance Annotations a b (BinderParams a n i o) (BinderParams b n i o) where
+instance Annotations a b (Params a n i o) (Params b n i o) where
     annotations = binderParamsFuncParams . fpAnnotation
 
 instance Annotations a b (Payload a o) (Payload b o) where

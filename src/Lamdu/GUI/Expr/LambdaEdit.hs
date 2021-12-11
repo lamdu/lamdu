@@ -83,7 +83,7 @@ mkShrunk paramIds myId =
 
 mkLightLambda ::
     _ =>
-    Sugar.BinderParams v a i o -> Widget.Id ->
+    Sugar.Params v a i o -> Widget.Id ->
     f (Maybe (Responsive o) -> Maybe (M.Widget o) -> [Responsive o])
 mkLightLambda params myId =
     do

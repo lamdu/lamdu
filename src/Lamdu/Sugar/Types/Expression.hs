@@ -249,7 +249,7 @@ data BinderBody v name i o k
 
 data Function v name i o k = Function
     { _fChosenScopeProp :: i (Property o (Maybe BinderParamScopeId))
-    , _fParams :: BinderParams v name i o
+    , _fParams :: Params v name i o
     , _fBody :: k :# Binder v name i o
     , -- The scope inside a lambda
       _fBodyScopes :: ParamScopes

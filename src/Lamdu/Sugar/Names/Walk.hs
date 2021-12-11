@@ -201,7 +201,7 @@ instance (a ~ OldName m, b ~ NewName m, i ~ IM m) => Walk m (AddParam a i o) (Ad
 
 toFunction :: (MonadNaming m, Walk m v0 v1, Walk m a0 a1) => IsUnambiguous -> WalkBody Function m o v0 v1 a0 a1
 toFunction u func@Function{_fParams, _fBody} =
-    unCPS (withBinderParams u _fParams) (toExpression _fBody)
+    unCPS (withParams u _fParams) (toExpression _fBody)
     <&> \(_fParams, _fBody) -> func{_fParams, _fBody}
 
 instance ToBody AssignPlain where
@@ -436,17 +436,17 @@ withFuncParam ::
     CPS m (FuncParam v1)
 withFuncParam = fpAnnotation (liftCPS . walk)
 
-withBinderParams ::
+withParams ::
     (MonadNaming m, Walk m v0 v1) =>
     IsUnambiguous ->
-    BinderParams v0 (OldName m) (IM m) o ->
-    CPS m (BinderParams v1 (NewName m) (IM m) o)
-withBinderParams _ (NullParam (funcParam, info)) = withFuncParam funcParam <&> (,) ?? info <&> NullParam
-withBinderParams u (RecordParams (TaggedList addFirst items)) =
+    Params v0 (OldName m) (IM m) o ->
+    CPS m (Params v1 (NewName m) (IM m) o)
+withParams _ (NullParam (funcParam, info)) = withFuncParam funcParam <&> (,) ?? info <&> NullParam
+withParams u (RecordParams (TaggedList addFirst items)) =
     TaggedList
     <$> liftCPS (opRun <&> \run -> addFirst >>= run . walk)
     <*> (Lens._Just . SugarLens.taggedListBodyItems) (withRecordParam u) items <&> RecordParams
-withBinderParams u (VarParam (funcParam, info)) =
+withParams u (VarParam (funcParam, info)) =
     (,)
     <$> withFuncParam funcParam
     <*> withVarParamInfo u info
