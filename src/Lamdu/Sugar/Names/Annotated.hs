@@ -2,7 +2,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 module Lamdu.Sugar.Names.Annotated
     ( Name(..), internal, disambiguator, nameType
-      , tag
+    , tag
     ) where
 
 import qualified Control.Lens as Lens

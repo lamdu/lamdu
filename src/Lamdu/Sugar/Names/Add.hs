@@ -296,6 +296,7 @@ initialP2Env env (P1Out globals locals contexts tvs texts) =
     , _p2TagsAbove = uncolliders globals
         -- all globals are "above" everything, and locals add up as
         -- we descend
+    , _p2AutoNames = mempty
     , _p2Tags = top
     , _p2NameTexts = env ^. has
     }
@@ -333,6 +334,7 @@ data P2Env = P2Env
     , _p2TagSuffixes :: Map TaggedVarId Int
         -- ^ When tags collide in the overlapping scopes, the tag gets
         -- a different suffix for each of its entities in ALL scopes
+    , _p2AutoNames :: Map UUID T.Tag
     , _p2TagsAbove :: MMap T.Tag Clash.Info
         -- ^ All global tags AND local tags from above -- used to
         -- generate "UnknownCollision" inside hole results
@@ -396,6 +398,13 @@ instance Monad i => MonadNaming (Pass2MakeNames i o) where
     opWithName u _ = p2cpsNameConvertor u
     opGetName _ = p2nameConvertor
 
+getTag :: Bool -> Annotated.Name -> Pass2MakeNames i o T.Tag
+getTag autoGen aName =
+    case aName ^. Annotated.internal . inContext of
+    Just uuid | autoGen -> Lens.view (p2AutoNames . Lens.at uuid)
+    _ -> pure Nothing
+    <&> fromMaybe (aName ^. Annotated.tag)
+
 getTagText :: T.Tag -> Tag.TextsInLang -> Pass2MakeNames i o TagText
 getTagText tag texts =
     Lens.view id
@@ -414,17 +423,17 @@ p2tagName ::
     Annotated.Name -> Tag.TextsInLang -> Bool -> Tag.IsOperator ->
     Pass2MakeNames i o Name
 p2tagName u tagsBelow aName texts isAutoGen isOp =
-    TagName
-    <$> getTagText tag texts
-    <*> c
-    ?? isAutoGen
-    ?? isOp == Tag.IsAnOperator
-    <&> NameTag
-    where
-        tag = aName ^. Annotated.tag
-        c = case u of
-            Walk.Unambiguous -> pure NoCollision
-            Walk.MayBeAmbiguous -> getCollision tagsBelow aName
+    do
+        tag <- getTag isAutoGen aName
+        let aNameNew = aName & Annotated.tag .~ tag
+        TagName
+            <$> getTagText tag texts
+            <*> case u of
+                Walk.Unambiguous -> pure NoCollision
+                Walk.MayBeAmbiguous -> getCollision tagsBelow aNameNew
+            ?? isAutoGen
+            ?? isOp == Tag.IsAnOperator
+            <&> NameTag
 
 p2globalAnon :: UUID -> Pass2MakeNames i o Name
 p2globalAnon uuid =
@@ -454,11 +463,16 @@ p2cpsNameConvertor u (P1Name (P1TagName aName isOp texts) tagsBelow isAutoGen) =
     CPS $ \inner ->
     (,)
     <$> p2tagName u tagsBelow aName texts isAutoGen isOp
-    <*> local l inner
+    <*> local (addToTagsAbove . addAutoName) inner
     where
         isClash = Clash.infoOf aName
         tag = aName ^. Annotated.tag
-        l = case u of
+        mUuid = aName ^. Annotated.internal . inContext
+        addAutoName =
+            case mUuid of
+            Just uuid | isAutoGen -> p2AutoNames . Lens.at uuid ?~ tag
+            _ -> id
+        addToTagsAbove = case u of
             Walk.Unambiguous -> id
             Walk.MayBeAmbiguous -> p2TagsAbove . Lens.at tag %~ Just . maybe isClash (Clash.collide isClash)
 
