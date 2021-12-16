@@ -8,6 +8,7 @@
         "names": {
             "hebrew": "ממערך",
             "english": "fromArray",
+            "spanish": "desdeArreglo",
             "italiano": "daArray"
         }
     },
@@ -17,6 +18,7 @@
         "names": {
             "hebrew": "חבר_שורות",
             "english": "unlines",
+            "spanish": "unlines",
             "italiano": "unlines"
         }
     },
@@ -26,6 +28,7 @@
         "names": {
             "hebrew": "כולם_מ",
             "english": "allOf",
+            "spanish": "todoDe",
             "italiano": "tuttiDi"
         }
     },
@@ -35,6 +38,7 @@
         "names": {
             "hebrew": "ש",
             "english": "that",
+            "spanish": "que",
             "italiano": "che"
         }
     },
@@ -44,6 +48,7 @@
         "names": {
             "hebrew": "סכום",
             "english": "sum",
+            "spanish": "suma",
             "italiano": "somma"
         }
     },
@@ -53,6 +58,7 @@
         "names": {
             "hebrew": "טקסטים",
             "english": "texts",
+            "spanish": "textos",
             "italiano": "testi"
         }
     },
@@ -65,6 +71,7 @@
                 "abbreviation": "len",
                 "name": "length"
             },
+            "spanish": "longitud",
             "italiano": "lunghezza"
         }
     },
@@ -77,6 +84,7 @@
                 "abbreviation": "ceil",
                 "name": "ceiling"
             },
+            "spanish": "aproximado",
             "italiano": "arrotonda"
         }
     },
@@ -86,6 +94,7 @@
         "names": {
             "hebrew": "קרא_קובץ",
             "english": "readFile",
+            "spanish": "leerArchivo",
             "italiano": "leggiFile"
         }
     },
@@ -95,6 +104,7 @@
         "names": {
             "hebrew": "פסע",
             "english": "traverse",
+            "spanish": "recorrer",
             "italiano": "scorri"
         }
     },
@@ -104,6 +114,7 @@
         "names": {
             "hebrew": "רצף_",
             "english": "sequence_",
+            "spanish": "secuencia_",
             "italiano": "sequenza_"
         }
     },
@@ -113,6 +124,7 @@
         "names": {
             "hebrew": "טקסט",
             "english": "text",
+            "spanish": "texto",
             "italiano": "testo"
         }
     },
@@ -122,6 +134,7 @@
         "names": {
             "hebrew": "נסוג",
             "english": "recurse",
+            "spanish": "recurrente",
             "italiano": "ricorrente"
         }
     },
@@ -134,6 +147,7 @@
                 "abbreviation": "num",
                 "name": "number"
             },
+            "spanish": "número",
             "italiano": "numero"
         }
     },
@@ -143,6 +157,7 @@
         "names": {
             "hebrew": "שיוכים",
             "english": "assocs",
+            "spanish": "assocs",
             "italiano": "assocs"
         }
     },
@@ -152,6 +167,7 @@
         "names": {
             "hebrew": "רשימה",
             "english": "list",
+            "spanish": "lista",
             "italiano": "lista"
         }
     },
@@ -161,6 +177,7 @@
         "names": {
             "hebrew": "קצר_מערך_משתנה",
             "english": "truncateMutArray",
+            "spanish": "truncaArregloMut",
             "italiano": "troncaArrayMut"
         }
     },
@@ -178,6 +195,7 @@
         "names": {
             "hebrew": "פ",
             "english": "f",
+            "spanish": "f",
             "italiano": "f"
         }
     },
@@ -187,6 +205,7 @@
         "names": {
             "hebrew": "לולאה",
             "english": "loop",
+            "spanish": "ciclo",
             "italiano": "ciclo"
         }
     },
@@ -196,6 +215,7 @@
         "names": {
             "hebrew": "לא",
             "english": "not",
+            "spanish": "no",
             "italiano": "non"
         }
     },
@@ -205,6 +225,7 @@
         "names": {
             "hebrew": "קפל",
             "english": "fold",
+            "spanish": "fold",
             "italiano": "fold"
         }
     },
@@ -214,6 +235,7 @@
         "names": {
             "hebrew": "חזור",
             "english": "repeat",
+            "spanish": "repetir",
             "italiano": "ripeti"
         }
     },
@@ -223,6 +245,7 @@
         "names": {
             "hebrew": "משתנה_חדש",
             "english": "newMutRef",
+            "spanish": "nuevaRefMut",
             "italiano": "nuovoRifMut"
         }
     },
@@ -232,6 +255,7 @@
         "names": {
             "hebrew": "שלח",
             "english": "send",
+            "spanish": "envía",
             "italiano": "invia"
         }
     },
@@ -241,6 +265,7 @@
         "names": {
             "hebrew": "חפש",
             "english": "lookup",
+            "spanish": "busca",
             "italiano": "cerca"
         }
     },
@@ -250,6 +275,7 @@
         "names": {
             "hebrew": "מיקום_ציר",
             "english": "pivotPos",
+            "spanish": "pivotPos",
             "italiano": "pivotPos"
         }
     },
@@ -259,6 +285,7 @@
         "names": {
             "hebrew": "מצב_ראשוני",
             "english": "initialState",
+            "spanish": "estadoInicial",
             "italiano": "statoIniziale"
         }
     },
@@ -268,6 +295,7 @@
         "names": {
             "hebrew": "למערך",
             "english": "toArray",
+            "spanish": "aArreglo",
             "italiano": "aArray"
         }
     },
@@ -280,6 +308,7 @@
                 "abbreviation": "mutRef",
                 "name": "mutableReference"
             },
+            "spanish": "refMut",
             "italiano": "rifMut"
         }
     },
@@ -289,6 +318,7 @@
         "names": {
             "hebrew": "מיקום_ציר_חדש",
             "english": "newPivotPos",
+            "spanish": "nuevoPivotPos",
             "italiano": "nuovoPivotPos"
         }
     },
@@ -308,6 +338,7 @@
         "names": {
             "hebrew": "מבתים",
             "english": "fromBytes",
+            "spanish": "desdeBytes",
             "italiano": "daBytes"
         }
     },
@@ -338,6 +369,7 @@
                 "abbreviation": "runMut",
                 "name": "runMutableProcess"
             },
+            "spanish": "ejecutarProcesoMutable",
             "italiano": "eseguiProcessoMutabile"
         }
     },
@@ -347,6 +379,7 @@
         "names": {
             "hebrew": "אחרון",
             "english": "last",
+            "spanish": "último",
             "italiano": "ultimo"
         }
     },
@@ -356,6 +389,7 @@
         "names": {
             "hebrew": "שמור",
             "english": "keep",
+            "spanish": "mantener",
             "italiano": "tieni"
         }
     },
@@ -376,6 +410,7 @@
         "names": {
             "hebrew": "צעד",
             "english": "step",
+            "spanish": "paso",
             "italiano": "passo"
         }
     },
@@ -385,6 +420,7 @@
         "names": {
             "hebrew": "השווה",
             "english": "compare",
+            "spanish": "comparar",
             "italiano": "confronta"
         }
     },
@@ -394,6 +430,7 @@
         "names": {
             "hebrew": "ב",
             "english": "y",
+            "spanish": "s",
             "italiano": "s"
         }
     },
@@ -406,6 +443,7 @@
                 "abbreviation": "subLen",
                 "name": "subLength"
             },
+            "spanish": "subLongitud",
             "italiano": "sottoLunghezza"
         }
     },
@@ -420,6 +458,7 @@
         "names": {
             "hebrew": "כל_עוד",
             "english": "while",
+            "spanish": "mientras",
             "italiano": "mentre"
         }
     },
@@ -432,6 +471,7 @@
                 "abbreviation": "connHandler",
                 "name": "connectionHandler"
             },
+            "spanish": "gestorConexión",
             "italiano": "gestoreConnessione"
         }
     },
@@ -441,6 +481,7 @@
         "names": {
             "hebrew": "לא_ריק",
             "english": "nonEmpty",
+            "spanish": "noVacío",
             "italiano": "nonVuoto"
         }
     },
@@ -450,6 +491,7 @@
         "names": {
             "hebrew": "מידע",
             "english": "data",
+            "spanish": "datos",
             "italiano": "dati"
         }
     },
@@ -459,6 +501,7 @@
         "names": {
             "hebrew": "טיפול_במידע",
             "english": "dataHandler",
+            "spanish": "gestorDatos",
             "italiano": "gestoreDati"
         }
     },
@@ -468,6 +511,7 @@
         "names": {
             "hebrew": "מסד_נתונים",
             "english": "database",
+            "spanish": "database",
             "italiano": "database"
         }
     },
@@ -480,6 +524,7 @@
                 "abbreviation": "dstPath",
                 "name": "destinationPath"
             },
+            "spanish": "rutaDestinación",
             "italiano": "percorsoDiDestinazione"
         }
     },
@@ -492,6 +537,7 @@
                 "abbreviation": "env",
                 "name": "environment"
             },
+            "spanish": "entorno",
             "italiano": "ambiente"
         }
     },
@@ -504,6 +550,7 @@
                 "abbreviation": "err",
                 "name": "error"
             },
+            "spanish": "error",
             "italiano": "errore"
         }
     },
@@ -513,6 +560,7 @@
         "names": {
             "hebrew": "בלעדיות",
             "english": "exclusive",
+            "spanish": "exclusivo",
             "italiano": "esclusivo"
         }
     },
@@ -522,6 +570,7 @@
         "names": {
             "hebrew": "הרץ",
             "english": "execute",
+            "spanish": "ejecutar",
             "italiano": "esegui"
         }
     },
@@ -531,6 +580,7 @@
         "names": {
             "hebrew": "כזב",
             "english": "false",
+            "spanish": "falso",
             "italiano": "falso"
         }
     },
@@ -540,6 +590,7 @@
         "names": {
             "hebrew": "שדות",
             "english": "fields",
+            "spanish": "campos",
             "italiano": "campi"
         }
     },
@@ -552,6 +603,7 @@
                 "abbreviation": "fileDesc",
                 "name": "fileDescriptor"
             },
+            "spanish": "descriptorArchivo",
             "italiano": "descrittoreFile"
         }
     },
@@ -561,6 +613,7 @@
         "names": {
             "hebrew": "מסלול_לקובץ",
             "english": "filePath",
+            "spanish": "rutaArchivo",
             "italiano": "percorsoFile"
         }
     },
@@ -570,6 +623,7 @@
         "names": {
             "hebrew": "דגלים",
             "english": "flags",
+            "spanish": "parámetros",
             "italiano": "parametri"
         }
     },
@@ -581,6 +635,7 @@
                 "abbreviation": "func",
                 "name": "function"
             },
+            "spanish": "función",
             "italiano": "funzione"
         }
     },
@@ -590,6 +645,7 @@
         "names": {
             "hebrew": "ראש",
             "english": "head",
+            "spanish": "cabeza",
             "italiano": "testa"
         }
     },
@@ -599,6 +655,7 @@
         "names": {
             "hebrew": "שרת",
             "english": "host",
+            "spanish": "host",
             "italiano": "host"
         }
     },
@@ -608,6 +665,7 @@
         "names": {
             "hebrew": "אינדקס",
             "english": "index",
+            "spanish": "índice",
             "italiano": "indice"
         }
     },
@@ -653,6 +711,7 @@
         "names": {
             "hebrew": "מצב",
             "english": "mode",
+            "spanish": "modalidad",
             "italiano": "modalità"
         }
     },
@@ -662,6 +721,7 @@
         "names": {
             "hebrew": "מסלול_חדש",
             "english": "newPath",
+            "spanish": "nuevaRuta",
             "italiano": "nuovoPercorso"
         }
     },
@@ -671,6 +731,7 @@
         "names": {
             "hebrew": "ריק",
             "english": "empty",
+            "spanish": "vacío",
             "italiano": "vuoto"
         }
     },
@@ -680,6 +741,7 @@
         "names": {
             "hebrew": "כלום",
             "english": "nothing",
+            "spanish": "nada",
             "italiano": "niente"
         }
     },
@@ -692,6 +754,7 @@
                 "abbreviation": "obj",
                 "name": "object"
             },
+            "spanish": "objeto",
             "italiano": "oggetto"
         }
     },
@@ -701,6 +764,7 @@
         "names": {
             "hebrew": "מסלול_ישן",
             "english": "oldPath",
+            "spanish": "viejaRuta",
             "italiano": "vecchioPercorso"
         }
     },
@@ -710,6 +774,7 @@
         "names": {
             "hebrew": "סיסמא",
             "english": "password",
+            "spanish": "password",
             "italiano": "password"
         }
     },
@@ -719,6 +784,7 @@
         "names": {
             "hebrew": "פורט",
             "english": "port",
+            "spanish": "port",
             "italiano": "porta"
         }
     },
@@ -747,6 +813,7 @@
         "names": {
             "hebrew": "גודל",
             "english": "size",
+            "spanish": "tamaño",
             "italiano": "dimensione"
         }
     },
@@ -756,6 +823,7 @@
         "names": {
             "hebrew": "שקע",
             "english": "socket",
+            "spanish": "socket",
             "italiano": "socket"
         }
     },
@@ -768,6 +836,7 @@
                 "abbreviation": "srcPath",
                 "name": "sourcePath"
             },
+            "spanish": "rutaFuente",
             "italiano": "percorsoSorgente"
         }
     },
@@ -777,6 +846,7 @@
         "names": {
             "hebrew": "התחלה",
             "english": "start",
+            "spanish": "inicio",
             "italiano": "inizio"
         }
     },
@@ -786,7 +856,8 @@
         "names": {
             "hebrew": "מצב",
             "english": "state",
-            "italiano": "statop"
+            "spanish": "estado",
+            "italiano": "stato"
         }
     },
     {
@@ -795,6 +866,7 @@
         "names": {
             "hebrew": "עצירה",
             "english": "stop",
+            "spanish": "stop",
             "italiano": "stop"
         }
     },
@@ -804,6 +876,7 @@
         "names": {
             "hebrew": "תתי_עצים",
             "english": "subTrees",
+            "spanish": "subÁrboles",
             "italiano": "sottoAlberi"
         }
     },
@@ -813,6 +886,7 @@
         "names": {
             "hebrew": "הצלחה",
             "english": "success",
+            "spanish": "éxito",
             "italiano": "successo"
         }
     },
@@ -822,6 +896,7 @@
         "names": {
             "hebrew": "זנב",
             "english": "tail",
+            "spanish": "cola",
             "italiano": "coda"
         }
     },
@@ -831,6 +906,7 @@
         "names": {
             "hebrew": "אמת",
             "english": "true",
+            "spanish": "verdadero",
             "italiano": "vero"
         }
     },
@@ -848,6 +924,7 @@
         "names": {
             "hebrew": "משתמש",
             "english": "user",
+            "spanish": "usuario",
             "italiano": "utente"
         }
     },
@@ -857,6 +934,7 @@
         "names": {
             "hebrew": "ערך",
             "english": "value",
+            "spanish": "valor",
             "italiano": "valore"
         }
     },
@@ -865,6 +943,7 @@
         "tag": "42493a76617269616e74000000000000",
         "names": {
             "english": "variant",
+            "spanish": "variante",
             "italiano": "variante"
         }
     },
@@ -889,6 +968,7 @@
         "names": {
             "hebrew": "רשימה_ב",
             "english": "listB",
+            "spanish": "listaB",
             "italiano": "listaB"
         }
     },
@@ -901,6 +981,7 @@
                 "abbreviation": "concat",
                 "name": "concatenate"
             },
+            "spanish": "concatenar",
             "italiano": "concatena"
         }
     },
@@ -910,6 +991,7 @@
         "names": {
             "hebrew": "פעולה",
             "english": "action",
+            "spanish": "acción",
             "italiano": "azione"
         }
     },
@@ -922,6 +1004,7 @@
                 "abbreviation": "init",
                 "name": "initial"
             },
+            "spanish": "inicial",
             "italiano": "iniziale"
         }
     },
@@ -934,6 +1017,7 @@
                 "abbreviation": "localMutArray",
                 "name": "localMutableArray"
             },
+            "spanish": "ArregloMutableLocal",
             "italiano": "ArrayMutabileLocale"
         }
     },
@@ -943,6 +1027,7 @@
         "names": {
             "hebrew": "מכפלה_פנימית",
             "english": "dotProduct",
+            "spanish": "productoEscalar",
             "italiano": "prodottoScalare"
         }
     },
@@ -957,6 +1042,7 @@
         "names": {
             "hebrew": "צרף",
             "english": "join",
+            "spanish": "unir",
             "italiano": "unisci"
         }
     },
@@ -966,6 +1052,7 @@
         "names": {
             "hebrew": "שורות",
             "english": "lines",
+            "spanish": "líneas",
             "italiano": "linee"
         }
     },
@@ -976,6 +1063,7 @@
         "names": {
             "hebrew": "עד",
             "english": "to",
+            "spanish": "a",
             "italiano": "a"
         }
     },
@@ -985,6 +1073,7 @@
         "names": {
             "hebrew": "מפה",
             "english": "map",
+            "spanish": "mapear",
             "italiano": "mappa"
         }
     },
@@ -996,6 +1085,10 @@
             "english": {
                 "abbreviation": "elem",
                 "name": "element"
+            },
+            "spanish": {
+                "abbreviation": "elem",
+                "name": "elemento"
             },
             "italiano": {
                 "abbreviation": "elem",
@@ -1017,6 +1110,7 @@
         "names": {
             "hebrew": "שנה_שם_קובץ",
             "english": "renameFile",
+            "spanish": "renombrarArchivo",
             "italiano": "rinominaFile"
         }
     },
@@ -1029,6 +1123,7 @@
                 "abbreviation": "mut",
                 "name": "mutable"
             },
+            "spanish": "mutable",
             "italiano": "mutabile"
         }
     },
@@ -1038,6 +1133,7 @@
         "names": {
             "hebrew": "הוסף_לקובץ",
             "english": "appendFile",
+            "spanish": "agregarArchivo",
             "italiano": "aggiungiFile"
         }
     },
@@ -1047,6 +1143,7 @@
         "names": {
             "hebrew": "א",
             "english": "a",
+            "spanish": "a",
             "italiano": "a"
         }
     },
@@ -1056,6 +1153,7 @@
         "names": {
             "hebrew": "קובץ",
             "english": "file",
+            "spanish": "archivo",
             "italiano": "file"
         }
     },
@@ -1073,6 +1171,7 @@
                 "abbreviation": "localMut",
                 "name": "localMutation"
             },
+            "spanish": "cambioLocale",
             "italiano": "mutazioneLocale"
         }
     },
@@ -1085,6 +1184,7 @@
                 "abbreviation": "min",
                 "name": "minimum"
             },
+            "spanish": "mínimo",
             "italiano": "minimo"
         }
     },
@@ -1094,6 +1194,7 @@
         "names": {
             "hebrew": "מיפוי",
             "english": "mapping",
+            "spanish": "mapeo",
             "italiano": "mappatura"
         }
     },
@@ -1111,6 +1212,7 @@
                 "abbreviation": "binop",
                 "name": "binaryOperator"
             },
+            "spanish": "operadorBinario",
             "italiano": "operatoreBinario"
         }
     },
@@ -1123,6 +1225,7 @@
                 "abbreviation": "net",
                 "name": "network"
             },
+            "spanish": "red",
             "italiano": "rete"
         }
     },
@@ -1132,6 +1235,7 @@
         "names": {
             "hebrew": "המר_לווב",
             "english": "renderHtml",
+            "spanish": "generarHtml",
             "italiano": "generaHtml"
         }
     },
@@ -1144,6 +1248,7 @@
                 "abbreviation": "res",
                 "name": "result"
             },
+            "spanish": "resultado",
             "italiano": "risultato"
         }
     },
@@ -1153,6 +1258,7 @@
         "names": {
             "hebrew": "מיין",
             "english": "sort",
+            "spanish": "ordenar",
             "italiano": "ordina"
         }
     },
@@ -1165,6 +1271,7 @@
                 "abbreviation": "os",
                 "name": "operatingSystem"
             },
+            "spanish": "sistemaOperativo",
             "italiano": "sistemaOperativo"
         }
     },
@@ -1174,6 +1281,7 @@
         "names": {
             "hebrew": "אולי",
             "english": "maybe",
+            "spanish": "quizás",
             "italiano": "forse"
         }
     },
@@ -1186,6 +1294,7 @@
                 "abbreviation": "runMutArray",
                 "name": "runMutableArray"
             },
+            "spanish": "ejecutarArregloMutable",
             "italiano": "eseguiArrayMutabile"
         }
     },
@@ -1200,6 +1309,7 @@
         "names": {
             "hebrew": "החזר",
             "english": "return",
+            "spanish": "retornar",
             "italiano": "ritorna"
         }
     },
@@ -1209,6 +1319,7 @@
         "names": {
             "hebrew": "נתק_קובץ",
             "english": "unlinkFile",
+            "spanish": "desvincularArchivo",
             "italiano": "disconnettiFile"
         }
     },
@@ -1228,6 +1339,7 @@
         "names": {
             "hebrew": "לבתים",
             "english": "toBytes",
+            "spanish": "aBytes",
             "italiano": "aBytes"
         }
     },
@@ -1248,6 +1360,7 @@
                 "abbreviation": "appendMutArray",
                 "name": "appendToMutableArray"
             },
+            "spanish": "agregarAArregloMutable",
             "italiano": "aggiungiAdArrayMutabile"
         }
     },
@@ -1257,6 +1370,7 @@
         "names": {
             "hebrew": "קשר_קובץ",
             "english": "linkFile",
+            "spanish": "vincularArchivo",
             "italiano": "collegaFile"
         }
     },
@@ -1277,6 +1391,7 @@
                 "abbreviation": "sqrt",
                 "name": "squareRoot"
             },
+            "spanish": "raízCuadrada",
             "italiano": "radiceQuadrata"
         }
     },
@@ -1286,6 +1401,7 @@
         "names": {
             "hebrew": "כתוב_קובץ",
             "english": "writeFile",
+            "spanish": "escribirArchivo",
             "italiano": "scriviFile"
         }
     },
@@ -1298,6 +1414,7 @@
                 "abbreviation": "cur",
                 "name": "current"
             },
+            "spanish": "corriente",
             "italiano": "corrente"
         }
     },
@@ -1307,6 +1424,7 @@
         "names": {
             "hebrew": "חלק_מ",
             "english": "anyOf",
+            "spanish": "cualquieraDe",
             "italiano": "qualunqueDi"
         }
     },
@@ -1316,6 +1434,7 @@
         "names": {
             "hebrew": "התחבר",
             "english": "connect",
+            "spanish": "conectar",
             "italiano": "connetti"
         }
     },
@@ -1333,6 +1452,7 @@
         "names": {
             "hebrew": "בהתייחסות_עצמית",
             "english": "recursively",
+            "spanish": "recursivamente",
             "italiano": "ricorsivamente"
         }
     },
@@ -1345,6 +1465,7 @@
                 "abbreviation": "max",
                 "name": "maximum"
             },
+            "spanish": "máximo",
             "italiano": "massimo"
         }
     },
@@ -1357,6 +1478,7 @@
                 "abbreviation": "newMutArray",
                 "name": "newMutableArray"
             },
+            "spanish": "nuevoArregloMutable",
             "italiano": "nuovoArrayMutabile"
         }
     },
@@ -1366,6 +1488,7 @@
         "names": {
             "hebrew": "הבא",
             "english": "next",
+            "spanish": "próximo",
             "italiano": "prossimo"
         }
     },
@@ -1380,6 +1503,7 @@
         "names": {
             "hebrew": "שנה_מוד_קובץ",
             "english": "chmodFile",
+            "spanish": "chmodArchivo",
             "italiano": "chmodFile"
         }
     },
@@ -1389,6 +1513,7 @@
         "names": {
             "hebrew": "בתים",
             "english": "bytes",
+            "spanish": "bytes",
             "italiano": "bytes"
         }
     },
@@ -1401,6 +1526,7 @@
                 "abbreviation": "readMutRef",
                 "name": "readMutableRef"
             },
+            "spanish": "leerRefMutable",
             "italiano": "leggiRifMutabile"
         }
     },
@@ -1423,6 +1549,7 @@
         "names": {
             "hebrew": "א",
             "english": "x",
+            "spanish": "x",
             "italiano": "x"
         }
     },
@@ -1432,6 +1559,7 @@
         "names": {
             "hebrew": "ממילים",
             "english": "unwords",
+            "spanish": "unwords",
             "italiano": "unwords"
         }
     },
@@ -1441,6 +1569,7 @@
         "names": {
             "hebrew": "רצפה",
             "english": "floor",
+            "spanish": "aproximaciónPorDefecto",
             "italiano": "arrotondaPerDifetto"
         }
     },
@@ -1453,6 +1582,7 @@
                 "abbreviation": "id",
                 "name": "identity"
             },
+            "spanish": "id",
             "italiano": "id"
         }
     },
@@ -1465,6 +1595,7 @@
                 "abbreviation": "mutArray",
                 "name": "mutableArray"
             },
+            "spanish": "arregloMutable",
             "italiano": "arrayMutabile"
         }
     },
@@ -1473,6 +1604,7 @@
         "tag": "a59adbafb2f7abc303d62cfac267c9e8",
         "names": {
             "english": "pivotPosRef",
+            "spanish": "pivotPosRef",
             "italiano": "pivotPosRef",
             "hebrew:": "מייחס_ציר_מיקום"
         }
@@ -1490,6 +1622,7 @@
         "names": {
             "hebrew": "ראשון",
             "english": "first",
+            "spanish": "primer",
             "italiano": "primo"
         }
     },
@@ -1507,6 +1640,7 @@
         "names": {
             "hebrew": "מכפלה",
             "english": "product",
+            "spanish": "producto",
             "italiano": "prodotto"
         }
     },
@@ -1527,6 +1661,7 @@
         "names": {
             "hebrew": "פצל",
             "english": "split",
+            "spanish": "dividir",
             "italiano": "dividi"
         }
     },
@@ -1536,6 +1671,7 @@
         "names": {
             "hebrew": "מפריד",
             "english": "seperator",
+            "spanish": "separador",
             "italiano": "separatore"
         }
     },
@@ -1545,6 +1681,7 @@
         "names": {
             "hebrew": "כמות",
             "english": "count",
+            "spanish": "contar",
             "italiano": "conta"
         }
     },
@@ -1554,6 +1691,7 @@
         "names": {
             "hebrew": "שכפל",
             "english": "replicate",
+            "spanish": "duplicar",
             "italiano": "replica"
         }
     },
@@ -1566,6 +1704,7 @@
                 "abbreviation": "writeMutArray",
                 "name": "writeToMutableArray"
             },
+            "spanish": "escribirAArregloMutable",
             "italiano": "scriviInArrayMutabile"
         }
     },
@@ -1575,6 +1714,7 @@
         "names": {
             "hebrew": "אחורנית",
             "english": "reverse",
+            "spanish": "invertir",
             "italiano": "inverti"
         }
     },
@@ -1595,6 +1735,7 @@
                 "abbreviation": "writeMutRef",
                 "name": "writeToMutableReference"
             },
+            "spanish": "escribirARefMutable",
             "italiano": "scriviInRiferimentoMutabile"
         }
     },
@@ -1604,6 +1745,7 @@
         "names": {
             "hebrew": "דמה",
             "english": "dummy",
+            "spanish": "dummy",
             "italiano": "finto"
         }
     },
@@ -1624,6 +1766,7 @@
                 "abbreviation": "bool",
                 "name": "boolean"
             },
+            "spanish": "booleano",
             "italiano": "booleano"
         }
     },
@@ -1633,6 +1776,7 @@
         "names": {
             "hebrew": "מפתח",
             "english": "key",
+            "spanish": "llave",
             "italiano": "chiave"
         }
     },
@@ -1642,6 +1786,7 @@
         "names": {
             "hebrew": "המשך",
             "english": "continue",
+            "spanish": "continuar",
             "italiano": "continua"
         }
     },
@@ -1651,6 +1796,7 @@
         "names": {
             "hebrew": "סגור_שרת_טיסיפי",
             "english": "closeTcpServer",
+            "spanish": "cerrarServidorTcp",
             "italiano": "chiudiServerTcp"
         }
     },
@@ -1671,6 +1817,7 @@
         "names": {
             "hebrew": "מכיל",
             "english": "contains",
+            "spanish": "contiene",
             "italiano": "contiene"
         }
     },
@@ -1680,6 +1827,7 @@
         "names": {
             "hebrew": "רצף",
             "english": "sequence",
+            "spanish": "secuencia",
             "italiano": "sequenza"
         }
     },
@@ -1689,6 +1837,7 @@
         "names": {
             "hebrew": "גלגל",
             "english": "cycle",
+            "spanish": "ciclo",
             "italiano": "ciclo"
         }
     },
@@ -1698,6 +1847,7 @@
         "names": {
             "hebrew": "פרוסה",
             "english": "slice",
+            "spanish": "slice",
             "italiano": "slice"
         }
     },
@@ -1707,6 +1857,7 @@
         "names": {
             "hebrew": "מקיים",
             "english": "satisfy",
+            "spanish": "satisface",
             "italiano": "soddisfa"
         }
     },
@@ -1716,6 +1867,7 @@
         "names": {
             "hebrew": "איטרציה",
             "english": "iterate",
+            "spanish": "iterar",
             "italiano": "itera"
         }
     },
@@ -1728,6 +1880,7 @@
                 "abbreviation": "acc",
                 "name": "accumulator"
             },
+            "spanish": "accumulador",
             "italiano": "accumulatore"
         }
     },
@@ -1742,6 +1895,7 @@
         "names": {
             "hebrew": "שאילתא",
             "english": "query",
+            "spanish": "consulta",
             "italiano": "query"
         }
     },
@@ -1751,6 +1905,7 @@
         "names": {
             "hebrew": "פתח_שרת_טיסיפי",
             "english": "openTcpServer",
+            "spanish": "abrirServidorTcp",
             "italiano": "apriServerTcp"
         }
     },
@@ -1760,6 +1915,7 @@
         "names": {
             "hebrew": "קח",
             "english": "take",
+            "spanish": "tomar",
             "italiano": "prendi"
         }
     },
@@ -1769,6 +1925,7 @@
         "names": {
             "hebrew": "שרת_טיסיפי",
             "english": "tcpServer",
+            "spanish": "servidorTcp",
             "italiano": "serverTcp"
         }
     },
@@ -1778,6 +1935,7 @@
         "names": {
             "hebrew": "אקראי",
             "english": "random",
+            "spanish": "random",
             "italiano": "random"
         }
     },
@@ -1795,6 +1953,7 @@
         "names": {
             "hebrew": "זרוק",
             "english": "drop",
+            "spanish": "dejar",
             "italiano": "lascia"
         }
     },
@@ -1812,6 +1971,7 @@
         "names": {
             "hebrew": "שאר",
             "english": "rest",
+            "spanish": "resto",
             "italiano": "resto"
         }
     },
@@ -1821,6 +1981,7 @@
         "names": {
             "hebrew": "מילים",
             "english": "words",
+            "spanish": "palabras",
             "italiano": "parole"
         }
     },
@@ -1833,6 +1994,7 @@
                 "abbreviation": "arr",
                 "name": "array"
             },
+            "spanish": "arreglo",
             "italiano": "array"
         }
     },
@@ -1842,6 +2004,7 @@
         "names": {
             "hebrew": "עץ",
             "english": "tree",
+            "spanish": "árbol",
             "italiano": "albero"
         }
     },
@@ -1851,6 +2014,7 @@
         "names": {
             "hebrew": "מנע_שיתוף",
             "english": "unshare",
+            "spanish": "unshare",
             "italiano": "unshare"
         }
     },
@@ -1860,6 +2024,7 @@
         "names": {
             "hebrew": "סנן",
             "english": "filter",
+            "spanish": "filtro",
             "italiano": "filtro"
         }
     },
@@ -1869,6 +2034,7 @@
         "names": {
             "hebrew": "שקע_טיסיפי",
             "english": "tcpSocket",
+            "spanish": "socketTcp",
             "italiano": "socketTcp"
         }
     },
@@ -1878,6 +2044,7 @@
         "names": {
             "hebrew": "מצא",
             "english": "find",
+            "spanish": "buscar",
             "italiano": "filtro"
         }
     },
@@ -1890,6 +2057,7 @@
                 "abbreviation": "io",
                 "name": "inputOutput"
             },
+            "spanish": "io",
             "italiano": "io"
         }
     },
@@ -1899,6 +2067,7 @@
         "names": {
             "hebrew": "לעומת",
             "english": "than",
+            "spanish": "respectoDe",
             "italiano": "rispettoA"
         }
     },
@@ -1916,6 +2085,7 @@
                 "abbreviation": "prev",
                 "name": "previous"
             },
+            "spanish": "precedente",
             "italiano": "precedente"
         }
     },
@@ -1925,6 +2095,7 @@
         "names": {
             "hebrew": "ציר",
             "english": "pivot",
+            "spanish": "pivot",
             "italiano": "pivot"
         }
     },
@@ -1934,6 +2105,7 @@
         "names": {
             "hebrew": "בית_ב",
             "english": "byteAt",
+            "spanish": "byteEn",
             "italiano": "byteA"
         }
     },
@@ -1954,6 +2126,7 @@
         "names": {
             "hebrew": "איבר",
             "english": "item",
+            "spanish": "elemento",
             "italiano": "elemento"
         }
     },
@@ -1966,6 +2139,7 @@
                 "abbreviation": "popLastMutArray",
                 "name": "popLastItemFromMutableArray"
             },
+            "spanish": "removerÚltimoElementoDeArregloMutable",
             "italiano": "rimuoviUltimoElementoDaArrayMutabile"
         }
     },
@@ -1982,7 +2156,9 @@
         "tag": "fa2eecfc22cdb3d6ce328806e66c7838",
         "names": {
             "hebrew": "רשימה_א",
-            "english": "listA"
+            "english": "listA",
+            "spanish": "listaA",
+            "italiano": "listaA"
         }
     },
     {
@@ -2001,6 +2177,7 @@
                 "abbreviation": "readMutArray",
                 "name": "readFromMutableArray"
             },
+            "spanish": "leerDesdeArregloMutable",
             "italiano": "leggiDaArrayMutabile"
         }
     },
@@ -2010,6 +2187,7 @@
         "names": {
             "hebrew": "נגטיב",
             "english": "negate",
+            "spanish": "negar",
             "italiano": "nega"
         }
     },
