@@ -71,7 +71,10 @@
                 "abbreviation": "len",
                 "name": "length"
             },
-            "spanish": "longitud",
+            "spanish":{
+                "abbreviation": "lon",
+                "name": "longitud"
+            },
             "italiano": "lunghezza"
         }
     },
@@ -84,7 +87,10 @@
                 "abbreviation": "ceil",
                 "name": "ceiling"
             },
-            "spanish": "aproximado",
+            "spanish":{
+                "abbreviation": "aprox",
+                "name": "aproximado"
+            },
             "italiano": "arrotonda"
         }
     },
@@ -147,7 +153,10 @@
                 "abbreviation": "num",
                 "name": "number"
             },
-            "spanish": "número",
+            "spanish":  {
+                "abbreviation": "núm",
+                "name": "número"
+            },
             "italiano": "numero"
         }
     },
@@ -308,7 +317,10 @@
                 "abbreviation": "mutRef",
                 "name": "mutableReference"
             },
-            "spanish": "refMut",
+            "spanish": {
+                "abbreviation": "refMut",
+                "name": "referenceMutable"
+            },
             "italiano": "rifMut"
         }
     },
@@ -369,7 +381,10 @@
                 "abbreviation": "runMut",
                 "name": "runMutableProcess"
             },
-            "spanish": "ejecutarProcesoMutable",
+            "spanish": {
+                "abbreviation": "ejecMut",
+                "name": "ejecutarProcesoMutable"
+            },
             "italiano": "eseguiProcessoMutabile"
         }
     },
@@ -443,7 +458,10 @@
                 "abbreviation": "subLen",
                 "name": "subLength"
             },
-            "spanish": "subLongitud",
+            "spanish": {
+                "abbreviation": "subLon",
+                "name": "subLongitud"
+            },
             "italiano": "sottoLunghezza"
         }
     },
@@ -471,7 +489,10 @@
                 "abbreviation": "connHandler",
                 "name": "connectionHandler"
             },
-            "spanish": "gestorConexión",
+            "spanish": {
+                "abbreviation": "gestorCxn",
+                "name": "gestorConexión"
+            },
             "italiano": "gestoreConnessione"
         }
     },
@@ -524,7 +545,10 @@
                 "abbreviation": "dstPath",
                 "name": "destinationPath"
             },
-            "spanish": "rutaDestinación",
+            "spanish":  {
+                "abbreviation": "rutaDst",
+                "name": "rutaDestinación"
+            },
             "italiano": "percorsoDiDestinazione"
         }
     },
@@ -537,7 +561,10 @@
                 "abbreviation": "env",
                 "name": "environment"
             },
-            "spanish": "entorno",
+            "spanish":  {
+                "abbreviation": "ent",
+                "name": "entorno"
+            },
             "italiano": "ambiente"
         }
     },
@@ -550,7 +577,10 @@
                 "abbreviation": "err",
                 "name": "error"
             },
-            "spanish": "error",
+            "spanish": {
+                "abbreviation": "err",
+                "name": "error"
+            },
             "italiano": "errore"
         }
     },
@@ -603,7 +633,10 @@
                 "abbreviation": "fileDesc",
                 "name": "fileDescriptor"
             },
-            "spanish": "descriptorArchivo",
+            "spanish":  {
+                "abbreviation": "decrArchivo",
+                "name": "descriptorArchivo"
+            },
             "italiano": "descrittoreFile"
         }
     },
@@ -635,7 +668,10 @@
                 "abbreviation": "func",
                 "name": "function"
             },
-            "spanish": "función",
+            "spanish": {
+                "abbreviation": "func",
+                "name": "función"
+            },
             "italiano": "funzione"
         }
     },
@@ -694,6 +730,10 @@
             "english": {
                 "abbreviation": "rhs",
                 "name": "rightHandSide"
+            },
+            "spanish": {
+                "abbreviation": "lmd",
+                "name": "ladoManoDerecha"
             }
         }
     },
@@ -754,7 +794,10 @@
                 "abbreviation": "obj",
                 "name": "object"
             },
-            "spanish": "objeto",
+            "spanish":  {
+                "abbreviation": "obj",
+                "name": "objeto"
+            },
             "italiano": "oggetto"
         }
     },
@@ -796,6 +839,10 @@
             "english": {
                 "abbreviation": "rec",
                 "name": "record"
+            },
+            "spanish": {
+                "abbreviation": "reg",
+                "name": "registro"
             }
         }
     },
@@ -836,7 +883,10 @@
                 "abbreviation": "srcPath",
                 "name": "sourcePath"
             },
-            "spanish": "rutaFuente",
+            "spanish": {
+                "abbreviation": "rutaFue",
+                "name": "rutaFuente"
+            },
             "italiano": "percorsoSorgente"
         }
     },
@@ -981,7 +1031,10 @@
                 "abbreviation": "concat",
                 "name": "concatenate"
             },
-            "spanish": "concatenar",
+            "spanish":  {
+                "abbreviation": "concat",
+                "name": "concatenar"
+            },
             "italiano": "concatena"
         }
     },
@@ -1004,7 +1057,10 @@
                 "abbreviation": "init",
                 "name": "initial"
             },
-            "spanish": "inicial",
+            "spanish": {
+                "abbreviation": "ini",
+                "name": "inicial"
+            },
             "italiano": "iniziale"
         }
     },
@@ -1017,7 +1073,10 @@
                 "abbreviation": "localMutArray",
                 "name": "localMutableArray"
             },
-            "spanish": "ArregloMutableLocal",
+            "spanish": {
+                "abbreviation": "arrMutLocal",
+                "name": "arregloMutableLocal"
+            },
             "italiano": "ArrayMutabileLocale"
         }
     },
@@ -1123,7 +1182,10 @@
                 "abbreviation": "mut",
                 "name": "mutable"
             },
-            "spanish": "mutable",
+            "spanish": {
+                "abbreviation": "mut",
+                "name": "mutable"
+            },
             "italiano": "mutabile"
         }
     },
@@ -1171,7 +1233,10 @@
                 "abbreviation": "localMut",
                 "name": "localMutation"
             },
-            "spanish": "cambioLocale",
+            "spanish": {
+                "abbreviation": "mutLocal",
+                "name": "mutaciónLocal"
+            },
             "italiano": "mutazioneLocale"
         }
     },
@@ -1184,7 +1249,10 @@
                 "abbreviation": "min",
                 "name": "minimum"
             },
-            "spanish": "mínimo",
+            "spanish":  {
+                "abbreviation": "min",
+                "name": "mínimo"
+            },
             "italiano": "minimo"
         }
     },
@@ -1212,7 +1280,10 @@
                 "abbreviation": "binop",
                 "name": "binaryOperator"
             },
-            "spanish": "operadorBinario",
+            "spanish":  {
+                "abbreviation": "binop",
+                "name": "operadorBinario"
+            },
             "italiano": "operatoreBinario"
         }
     },
@@ -1248,7 +1319,10 @@
                 "abbreviation": "res",
                 "name": "result"
             },
-            "spanish": "resultado",
+            "spanish":  {
+                "abbreviation": "res",
+                "name": "resultado"
+            },
             "italiano": "risultato"
         }
     },
@@ -1271,7 +1345,10 @@
                 "abbreviation": "os",
                 "name": "operatingSystem"
             },
-            "spanish": "sistemaOperativo",
+            "spanish": {
+                "abbreviation": "so",
+                "name": "sistemaOperativo"
+            },
             "italiano": "sistemaOperativo"
         }
     },
@@ -1294,7 +1371,10 @@
                 "abbreviation": "runMutArray",
                 "name": "runMutableArray"
             },
-            "spanish": "ejecutarArregloMutable",
+            "spanish":  {
+                "abbreviation": "ejecArrMut",
+                "name": "ejecutarArregloMutable"
+            },
             "italiano": "eseguiArrayMutabile"
         }
     },
@@ -1360,7 +1440,10 @@
                 "abbreviation": "appendMutArray",
                 "name": "appendToMutableArray"
             },
-            "spanish": "agregarAArregloMutable",
+            "spanish":  {
+                "abbreviation": "agregarAArrMut",
+                "name": "agregarAArregloMutable"
+            },
             "italiano": "aggiungiAdArrayMutabile"
         }
     },
@@ -1391,7 +1474,10 @@
                 "abbreviation": "sqrt",
                 "name": "squareRoot"
             },
-            "spanish": "raízCuadrada",
+            "spanish": {
+                "abbreviation": "raíz2",
+                "name": "raízCuadrada"
+            },
             "italiano": "radiceQuadrata"
         }
     },
@@ -1414,7 +1500,10 @@
                 "abbreviation": "cur",
                 "name": "current"
             },
-            "spanish": "corriente",
+            "spanish":  {
+                "abbreviation": "corr",
+                "name": "corriente"
+            },
             "italiano": "corrente"
         }
     },
@@ -1465,7 +1554,10 @@
                 "abbreviation": "max",
                 "name": "maximum"
             },
-            "spanish": "máximo",
+            "spanish":  {
+                "abbreviation": "max",
+                "name": "máximo"
+            },
             "italiano": "massimo"
         }
     },
@@ -1478,7 +1570,10 @@
                 "abbreviation": "newMutArray",
                 "name": "newMutableArray"
             },
-            "spanish": "nuevoArregloMutable",
+            "spanish":  {
+                "abbreviation": "nvoArrMut",
+                "name": "nuevoArregloMutable"
+            },
             "italiano": "nuovoArrayMutabile"
         }
     },
@@ -1526,7 +1621,10 @@
                 "abbreviation": "readMutRef",
                 "name": "readMutableRef"
             },
-            "spanish": "leerRefMutable",
+            "spanish": {
+                "abbreviation": "leerRefMut",
+                "name": "leerRefMutable"
+            },
             "italiano": "leggiRifMutabile"
         }
     },
@@ -1582,7 +1680,10 @@
                 "abbreviation": "id",
                 "name": "identity"
             },
-            "spanish": "id",
+            "spanish":  {
+                "abbreviation": "id",
+                "name": "identidad"
+            },
             "italiano": "id"
         }
     },
@@ -1595,7 +1696,10 @@
                 "abbreviation": "mutArray",
                 "name": "mutableArray"
             },
-            "spanish": "arregloMutable",
+            "spanish":  {
+                "abbreviation": "arrMut",
+                "name": "arregloMutable"
+            },
             "italiano": "arrayMutabile"
         }
     },
@@ -1652,6 +1756,10 @@
             "english": {
                 "abbreviation": "unsafeRunMut",
                 "name": "unsafeRunMutation"
+            },
+            "spanish": {
+                "abbreviation": "ejecMutInseg",
+                "name": "ejecturaMutaciónInsegura"
             }
         }
     },
@@ -1704,7 +1812,10 @@
                 "abbreviation": "writeMutArray",
                 "name": "writeToMutableArray"
             },
-            "spanish": "escribirAArregloMutable",
+            "spanish":  {
+                "abbreviation": "escrArrMut",
+                "name": "escribirAArregloMutable"
+            },
             "italiano": "scriviInArrayMutabile"
         }
     },
@@ -1735,7 +1846,10 @@
                 "abbreviation": "writeMutRef",
                 "name": "writeToMutableReference"
             },
-            "spanish": "escribirARefMutable",
+            "spanish":  {
+                "abbreviation": "escrMutRef",
+                "name": "escribirARefMutable"
+            },
             "italiano": "scriviInRiferimentoMutabile"
         }
     },
@@ -1766,7 +1880,10 @@
                 "abbreviation": "bool",
                 "name": "boolean"
             },
-            "spanish": "booleano",
+            "spanish":  {
+                "abbreviation": "bool",
+                "name": "booleano"
+            },
             "italiano": "booleano"
         }
     },
@@ -1880,7 +1997,10 @@
                 "abbreviation": "acc",
                 "name": "accumulator"
             },
-            "spanish": "accumulador",
+            "spanish": {
+                "abbreviation": "acc",
+                "name": "accumulador"
+            },
             "italiano": "accumulatore"
         }
     },
@@ -1994,7 +2114,10 @@
                 "abbreviation": "arr",
                 "name": "array"
             },
-            "spanish": "arreglo",
+            "spanish": {
+                "abbreviation": "arr",
+                "name": "arreglo"
+            },
             "italiano": "array"
         }
     },
@@ -2057,7 +2180,10 @@
                 "abbreviation": "io",
                 "name": "inputOutput"
             },
-            "spanish": "io",
+            "spanish":  {
+                "abbreviation": "io",
+                "name": "entradaSalida"
+            },
             "italiano": "io"
         }
     },
@@ -2085,7 +2211,10 @@
                 "abbreviation": "prev",
                 "name": "previous"
             },
-            "spanish": "precedente",
+            "spanish":  {
+                "abbreviation": "prev",
+                "name": "precedente"
+            },
             "italiano": "precedente"
         }
     },
@@ -2117,6 +2246,10 @@
             "english": {
                 "abbreviation": "win",
                 "name": "window"
+            },
+            "spanish": {
+                "abbreviation": "vent",
+                "name": "ventana"
             }
         }
     },
@@ -2139,7 +2272,10 @@
                 "abbreviation": "popLastMutArray",
                 "name": "popLastItemFromMutableArray"
             },
-            "spanish": "removerÚltimoElementoDeArregloMutable",
+            "spanish":  {
+                "abbreviation": "popArrMut",
+                "name": "removerÚltimoElementoDeArregloMutable"
+            },
             "italiano": "rimuoviUltimoElementoDaArrayMutabile"
         }
     },
@@ -2177,7 +2313,10 @@
                 "abbreviation": "readMutArray",
                 "name": "readFromMutableArray"
             },
-            "spanish": "leerDesdeArregloMutable",
+            "spanish":  {
+                "abbreviation": "leerArrMut",
+                "name": "leerDesdeArregloMutable"
+            },
             "italiano": "leggiDaArrayMutabile"
         }
     },
