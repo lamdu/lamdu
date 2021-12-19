@@ -1584,7 +1584,10 @@
             "hebrew": "הבא",
             "english": "next",
             "italiano": "prossimo",
-            "spanish": "próximo"
+            "spanish": {
+                "abbreviation": "próx",
+                "name": "próximo"
+            }
         }
     },
     {
