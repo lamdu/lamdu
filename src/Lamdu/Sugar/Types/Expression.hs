@@ -28,7 +28,6 @@ module Lamdu.Sugar.Types.Expression
     , Query(..), qLangInfo, qSearchTerm
     , QueryLangInfo(..), qLangId, qLangDir, qCodeTexts, qUITexts, qNameTexts
         , hasQueryLangInfo
-    , Option(..), optionExpr, optionPick, optionTypeMatch
     -- Fragments
     , Fragment(..), fExpr, fHeal, fTypeMismatch, fOptions
     , FragOpt(..), _FragPostfix, _FragInject, _FragGetVar, _FragOp
@@ -49,15 +48,10 @@ import qualified Control.Lens as Lens
 import           Control.Monad.Unit (Unit)
 import           Data.Property (Property)
 import           Data.Kind (Type)
-import           GUI.Momentu.Direction (Layout)
 import           Hyper
 import           Hyper.Syntax (App(..), appFunc, appArg)
 import           Lamdu.Data.Anchors (BinderParamScopeId(..), bParamScopeId)
 import qualified Lamdu.Data.Meta as Meta
-import qualified Lamdu.I18N.Code as Texts
-import qualified Lamdu.I18N.CodeUI as Texts
-import qualified Lamdu.I18N.Name as Texts
-import           Lamdu.I18N.LangId (LangId)
 import           Lamdu.Sugar.Internal.EntityId (EntityId)
 import           Lamdu.Sugar.Types.Eval (ParamScopes)
 import           Lamdu.Sugar.Types.GetVar (GetVar, BinderVarRef, BinderMode)
@@ -68,7 +62,6 @@ import qualified Lamdu.Sugar.Types.Type as T
 
 import           Lamdu.Prelude
 
-type Expr e v name (i :: Type -> Type) o = Annotated (Payload v o) # e v name i o
 type Body e v name (i :: Type -> Type) o = e v name i o # Annotated (Payload v o)
 
 data AnnotatedArg v name i o k = AnnotatedArg
@@ -129,31 +122,6 @@ data FragOperator v name i o k = FragOperator
       -- (usually a hole, but may be completed to other values)
       _oRightArg :: k :# Term v name i o
     } deriving Generic
-
-data Option t name i o = Option
-    { _optionExpr :: Expr t (Annotation () name) name i o
-    , _optionPick :: o ()
-    , -- Whether option expr fits the destination or will it be fragmented?
-      -- Note that for fragments, this doesn't indicate whether the emplaced fragmented expr
-      -- within stays fragmented.
-      _optionTypeMatch :: Bool
-    } deriving Generic
-
-data QueryLangInfo a = QueryLangInfo
-    { _qLangId :: LangId
-    , _qLangDir :: Layout
-    , _qCodeTexts :: Texts.Code a
-    , _qUITexts :: Texts.CodeUI a
-    , _qNameTexts :: Texts.Name a
-    } deriving (Functor, Foldable, Traversable)
-
-hasQueryLangInfo :: _ => a -> QueryLangInfo b
-hasQueryLangInfo env = QueryLangInfo (env ^. has) (env ^. has) (env ^. has) (env ^. has) (env ^. has)
-
-data Query a = Query
-    { _qLangInfo :: QueryLangInfo a
-    , _qSearchTerm :: a
-    } deriving (Functor, Foldable, Traversable)
 
 newtype Hole name i o = Hole
     { _holeOptions ::
@@ -269,7 +237,7 @@ data Assignment v name i o f
 traverse Lens.makeLenses
     [ ''AnnotatedArg, ''AssignPlain, ''Binder
     , ''Composite, ''Fragment, ''FragOperator
-    , ''Function, ''Hole, ''Option, ''Query, ''QueryLangInfo
+    , ''Function, ''Hole
     , ''IfElse, ''ElseIfBody, ''LabeledApply, ''Lambda, ''Let
     , ''Nominal, ''OperatorArgs, ''PostfixApply
     ] <&> concat

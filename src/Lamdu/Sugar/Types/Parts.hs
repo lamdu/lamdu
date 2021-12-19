@@ -29,20 +29,32 @@ module Lamdu.Sugar.Types.Parts
     , ClosedCompositeActions(..), closedCompositeOpen
     , PunnedVar(..), pvVar, pvTagEntityId
     , NullaryInject(..), iInject, iContent
-
+    , Option(..), optionExpr, optionPick, optionTypeMatch
+    , Query(..), qLangInfo, qSearchTerm
+    , QueryLangInfo(..), qLangId, qLangDir, qCodeTexts, qUITexts, qNameTexts
+        , hasQueryLangInfo
+    , Expr
     , ParenInfo(..), piNeedParens, piMinOpPrec
     ) where
 
 import qualified Control.Lens as Lens
 import           Control.Monad.Unit (Unit)
+import           Data.Kind (Type)
+import           GUI.Momentu.Direction (Layout)
 import           Hyper (makeHTraversableAndBases, makeHMorph)
 import qualified Lamdu.Calc.Type as T
+import qualified Lamdu.I18N.Code as Texts
+import qualified Lamdu.I18N.CodeUI as Texts
+import qualified Lamdu.I18N.Name as Texts
+import           Lamdu.I18N.LangId (LangId)
 import           Lamdu.Sugar.Internal.EntityId (EntityId)
 import           Lamdu.Sugar.Types.GetVar
 import           Lamdu.Sugar.Types.Tag
-import           Lamdu.Sugar.Types.Type
+import qualified Lamdu.Sugar.Types.Type as SugarType
 
 import           Lamdu.Prelude
+
+type Expr e v name (i :: Type -> Type) o = Annotated (Payload v o) # e v name i o
 
 -- Can a lambda be called more than once?
 -- Used to avoid showing scope selector presentations for case alternative lambdas.
@@ -50,7 +62,7 @@ data FuncApplyLimit = UnlimitedFuncApply | AtMostOneFuncApply
     deriving (Eq, Ord, Generic)
 
 data Annotation v name
-    = AnnotationType (Annotated EntityId # Type name Unit)
+    = AnnotationType (Annotated EntityId # SugarType.Type name Unit)
     | AnnotationVal v
     | AnnotationNone
     deriving Generic
@@ -140,7 +152,7 @@ data Params v name i o
 -- * Differentiating Mut actions so UI can suggest executing them
 -- * Name pass giving parameters names according to types
 data VarInfo
-    = VarNominal (TId T.Tag Unit)
+    = VarNominal (SugarType.TId T.Tag Unit)
     | VarGeneric | VarFunction | VarRecord | VarUnit | VarVariant | VarVoid
     deriving (Generic, Eq)
 
@@ -178,9 +190,35 @@ data ParenInfo = ParenInfo
     , _piNeedParens :: !Bool
     } deriving (Eq, Show, Generic)
 
+data Option t name i o = Option
+    { _optionExpr :: Expr t (Annotation () name) name i o
+    , _optionPick :: o ()
+    , -- Whether option expr fits the destination or will it be fragmented?
+      -- Note that for fragments, this doesn't indicate whether the emplaced fragmented expr
+      -- within stays fragmented.
+      _optionTypeMatch :: Bool
+    } deriving Generic
+
+data QueryLangInfo a = QueryLangInfo
+    { _qLangId :: LangId
+    , _qLangDir :: Layout
+    , _qCodeTexts :: Texts.Code a
+    , _qUITexts :: Texts.CodeUI a
+    , _qNameTexts :: Texts.Name a
+    } deriving (Functor, Foldable, Traversable)
+
+hasQueryLangInfo :: _ => a -> QueryLangInfo b
+hasQueryLangInfo env = QueryLangInfo (env ^. has) (env ^. has) (env ^. has) (env ^. has) (env ^. has)
+
+data Query a = Query
+    { _qLangInfo :: QueryLangInfo a
+    , _qSearchTerm :: a
+    } deriving (Functor, Foldable, Traversable)
+
 traverse Lens.makeLenses
     [ ''ClosedCompositeActions, ''FuncParam, ''NodeActions
-    , ''NullParamActions, ''NullaryInject, ''VarParamInfo, ''ParenInfo, ''Payload, ''PunnedVar
+    , ''NullParamActions, ''NullaryInject, ''VarParamInfo, ''Option, ''ParenInfo, ''Payload, ''PunnedVar
+    , ''Query, ''QueryLangInfo
     , ''TaggedList, ''TaggedListBody, ''TaggedItem, ''TaggedSwappableItem
     ] <&> concat
 traverse Lens.makePrisms
