@@ -12,8 +12,12 @@ unicodeAlts haystack =
     <&> Text.pack
     where
         alts x = [x] : extras x
+        -- TODO: Consider using unidecode (https://hackage.haskell.org/package/unidecode)
         extras '≥' = [">="]
         extras '≤' = ["<="]
         extras '≠' = ["/=", "!=", "<>"]
         extras '⋲' = ["<{"]
+        extras 'ó' = ["o"]
+        extras 'á' = ["a"]
+        extras 'ñ' = ["n"]
         extras _ = []
