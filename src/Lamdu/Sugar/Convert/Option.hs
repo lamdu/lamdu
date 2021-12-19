@@ -48,6 +48,7 @@ import           Lamdu.Expr.UniqueId (ToUUID)
 import qualified Lamdu.I18N.Code as Texts
 import qualified Lamdu.I18N.CodeUI as Texts
 import qualified Lamdu.I18N.Name as Texts
+import           Lamdu.I18N.UnicodeAlts (unicodeAlts)
 import           Lamdu.Sugar.Convert.Binder (convertBinder)
 import           Lamdu.Sugar.Convert.Binder.Params (mkVarInfo)
 import           Lamdu.Sugar.Convert.Expression.Actions (convertPayload)
@@ -125,19 +126,6 @@ filterResults order res query
         groups f =
             f res <&> fmap ((^.. traverse . _2) . sortOn s) . foldMap (matchResult query)
         s (i, opt) = order (if opt ^. optionTypeMatch then TypeMatches else TypeMismatch) i
-
-unicodeAlts :: Text -> [Text]
-unicodeAlts haystack =
-    traverse alts (Text.unpack haystack)
-    <&> concat
-    <&> Text.pack
-    where
-        alts x = [x] : extras x
-        extras '≥' = [">="]
-        extras '≤' = ["<="]
-        extras '≠' = ["/=", "!=", "<>"]
-        extras '⋲' = ["<{"]
-        extras _ = []
 
 matchResult :: Query Text -> Result a -> Matches [a]
 matchResult query result
