@@ -17,4 +17,4 @@ test =
     & testCase "fuzzy"
     where
         match i = matches ^? Lens.ix i . Lens._1
-        matches = Fuzzy.memoableMake fuzzyMaker (["num", "not"] <&> join (,)) "n"
+        matches = Fuzzy.memoableMake fuzzyMaker (["num", "not"] <&> (\x -> ([x], x))) "n"

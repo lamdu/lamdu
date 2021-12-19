@@ -27,6 +27,7 @@ import qualified Lamdu.GUI.StatusBar.Common as StatusBar
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.I18N.Name as Texts
 import qualified Lamdu.I18N.Navigation as Texts
+import           Lamdu.I18N.UnicodeAlts (unicodeAlts)
 import           Lamdu.Name (Name)
 import qualified Lamdu.Name as Name
 import qualified Lamdu.Sugar.Types as Sugar
@@ -58,11 +59,12 @@ allowSearchTerm text =
 fuzzyMaker :: [(Text, Int)] -> Fuzzy (Set Int)
 fuzzyMaker = memo Fuzzy.make
 
-nameToText :: _ => Name -> m Text
+nameToText :: _ => Name -> m [Text]
 nameToText name =
     Name.visible name <&>
     \(Name.TagText text textCol, tagCol) ->
-    text <> collisionText textCol <> collisionText tagCol
+    unicodeAlts text
+    <&> (<> (collisionText textCol <> collisionText tagCol))
     where
         collisionText Name.NoCollision = ""
         collisionText (Name.Collision i) = Text.pack (show i)
@@ -121,16 +123,16 @@ makeOptions globals (SearchMenu.ResultsContext searchTerm prefix)
                     <$> (globals ^. Sugar.globalDefs <&> map ((,,) "" TextColors.definitionColor))
                     <*> (globals ^. Sugar.globalNominals <&> map ((,,) "" TextColors.nomColor))
             Lens.imap toGlobal globs
-                & traverse withText
+                & traverse withTexts
                 <&> (Fuzzy.memoableMake fuzzyMaker ?? searchTerm)
                 <&> map (makeOption . snd)
                 <&> Menu.OptionList isTruncated
     where
         mTagPrefix = getTagPrefix searchTerm
         isTruncated = False
-        withText global =
+        withTexts global =
             nameToText (global ^. globalNameRef . Sugar.nrName) <&>
-            \text -> (maybe id Text.cons mTagPrefix text, global)
+            \texts -> (texts <&> maybe id Text.cons mTagPrefix, global)
         toPickResult x = Menu.PickResult x (Just x)
 
 make :: _ => Sugar.Globals Name m o -> m (StatusBar.StatusWidget o)

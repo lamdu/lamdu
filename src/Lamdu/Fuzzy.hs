@@ -96,7 +96,7 @@ matches :: Semigroup a => Text -> Fuzzy a -> MMap Text a
 matches = trieMatch allowedSkips . Text.unpack
 
 memoableMake ::
-    ([(Text, Int)] -> Fuzzy (Set Int)) -> [(Text, a)] -> Text -> [(Distance, a)]
+    ([(Text, Int)] -> Fuzzy (Set Int)) -> [([Text], a)] -> Text -> [(Distance, a)]
 memoableMake memoMake pairs =
     -- Keep as explicit lambda syntax (not in LHS) for
     -- performance/sharing reasons (where clauses do not depend on
@@ -112,6 +112,6 @@ memoableMake memoMake pairs =
         flatten (dist, indices) = indices ^.. Lens.folded <&> (,) dist
         f =
             pairs ^@.. Lens.ifolded
-            <&> (\(idx, (text, _)) -> (text, idx))
+            >>= (\(idx, (texts, _)) -> texts <&> (,) ?? idx)
             & memoMake
         v = pairs <&> snd & Vector.fromList

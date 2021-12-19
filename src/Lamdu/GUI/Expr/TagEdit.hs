@@ -38,6 +38,7 @@ import qualified Lamdu.GUI.TagView as TagView
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.I18N.CodeUI as Texts
 import qualified Lamdu.I18N.Navigation as Texts
+import           Lamdu.I18N.UnicodeAlts (unicodeAlts)
 import           Lamdu.Name (Name(..))
 import qualified Lamdu.Name as Name
 import qualified Lamdu.Style as Style
@@ -186,8 +187,8 @@ makeOptions tagRefReplace newTagOpt mkPickResult ctx
                 & (\(list, isTrunc) -> Menu.OptionList isTrunc list)
                 & pure
     where
-        results = Fuzzy.memoableMake fuzzyMaker (tagRefReplace ^. Sugar.tcOptions >>= withText) searchTerm
-        withText tagOption = tagOption ^.. nameText <&> ((,) ?? tagOption)
+        results = Fuzzy.memoableMake fuzzyMaker (tagRefReplace ^. Sugar.tcOptions <&> withTexts) searchTerm
+        withTexts tagOption = (tagOption ^.. nameText >>= unicodeAlts, tagOption)
         searchTerm = ctx ^. SearchMenu.rSearchTerm
 
 allowedSearchTerm :: Text -> Bool
