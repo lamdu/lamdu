@@ -9,9 +9,10 @@ module Lamdu.Fuzzy
 import qualified Control.Lens as Lens
 import           Control.Lens.Extended ((~~>))
 import           Data.Char (toLower)
-import           Data.List (sortOn)
+import           Data.List (sortOn, groupBy)
 import           Data.MMap (MMap)
 import qualified Data.Text as Text
+import           Data.Tuple (swap)
 import           Data.Vector ((!))
 import qualified Data.Vector as Vector
 import qualified Text.EditDistance as EditDistance
@@ -104,6 +105,7 @@ memoableMake memoMake pairs =
     \text ->
     matches text f ^@.. Lens.ifolded
     <&> _1 %~ distance text
+    & sortOn swap & groupBy (\(_, x) (_, y) -> x == y) <&> head
     & sortOn fst
     >>= flatten
     <&> _2 %~ (v !)
