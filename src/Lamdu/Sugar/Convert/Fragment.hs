@@ -79,26 +79,28 @@ convertAppliedHole app@(V.App funcI argI) exprPl argS =
                     Actions.makeTypeAnnotation
                         (EntityId.ofFragmentArg (argPl ^. Input.entityId))
                         (argPl ^. Input.inferredType) <&> Just
+            tagsProp <- Lens.view Anchors.codeAnchors <&> Anchors.tags
             opts <-
                 do
                     forType <- transformArg exprPl argI & transaction
+                    newTag <- DataOps.genNewTag & transaction
                     ResultGroups
                         { gDefs =
                             makeGlobals (makeGetDef topRef argI)
-                            <&> traverse . rTexts . Lens.mapped . traverse %~ toOpName
+                            <&> traverse . rTexts . _QueryTexts . Lens.mapped . traverse %~ toOpName
                         , gLocals =
                             makeLocals (makeLocal topRef argI) (exprPl ^. Input.inferScope)
                             <&> traverse %~ sequenceA <&> (^.. traverse . Lens._Just)
-                        , gInjects = makeTagRes "'" (Pure . V.BLeaf . V.LInject) <&> funcOpt
+                        , gInjects = makeTagRes newTag "'" (Pure . V.BLeaf . V.LInject) <&> funcOpt
                         , gToNoms = makeNoms [] "" (makeToNom argI <&> Lens.mapped . Lens.mapped %~ (:[]) . (simpleResult ?? mempty))
                         , gFromNoms =
                             makeNoms (forType ^.. Lens.folded . _1 . Lens._Just)
                             "." (makeFromNom exprPl argI <&> Lens.mapped . Lens.mapped %~ (:[]))
                         , gForType = forType ^.. Lens.folded . _2 & pure
-                        , gGetFields = makeTagRes "." (Pure . V.BLeaf . V.LGetField) <&> funcOpt
+                        , gGetFields = makeTagRes newTag "." (Pure . V.BLeaf . V.LGetField) <&> funcOpt
                         , gSyntax = makeResultsSyntax topRef argI & transaction
                         , gWrapInRecs =
-                            makeTagRes "{"
+                            makeTagRes newTag "{"
                             (\t ->
                                 [ (TypeMatches
                                     , V.RowExtend t
@@ -111,7 +113,7 @@ convertAppliedHole app@(V.App funcI argI) exprPl argS =
                         } <&> (>>= traverse (makeOption exprPl))
                         <&> Lens.mapped . traverse . rExpr . _2 . optionExpr %~ toFragOpt isDeferred
                         & traverse ConvertM.convertOnce
-                <&> filterResults (\outerMatch innerMatch -> (innerMatch, outerMatch))
+                <&> filterResults tagsProp (\outerMatch innerMatch -> (innerMatch, outerMatch))
                 & ConvertM.convertOnce
             apply <-
                 argI ^. hAnn . Input.stored

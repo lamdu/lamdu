@@ -14,6 +14,8 @@ import qualified Lamdu.Builtins.Anchors as Builtins
 import           Lamdu.Calc.Definition (depsNominals)
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
+import qualified Lamdu.Data.Anchors as Anchors
+import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Load as Load
 import qualified Lamdu.I18N.Code as Texts
@@ -39,24 +41,26 @@ convert posInfo holePl =
     do
         forType <- makeForType (holePl ^. Input.inferredType) & transaction
         let filtForType = filter (\x -> x ^. rExpr `notElem` (forType <&> (^. rExpr)))
+        newTag <- DataOps.genNewTag & transaction
+        tagsProp <- Lens.view Anchors.codeAnchors <&> Anchors.tags
         ResultGroups
             { gSyntax = makeResultsSyntax posInfo & transaction <&> filtForType
             , gDefs = makeGlobals makeGetDef
             , gLocals = makeLocals (const pure) (holePl ^. Input.inferScope)
             , gInjects =
-                makeTagRes "'" ((^. hPlain) . (`V.BAppP` V.BLeafP V.LRecEmpty) . V.BLeafP . V.LInject)
+                makeTagRes newTag "'" ((^. hPlain) . (`V.BAppP` V.BLeafP V.LRecEmpty) . V.BLeafP . V.LInject)
                 <&> filtForType
             , gToNoms = makeNoms [] "" makeToNoms
             , gFromNoms =
                 makeNoms [] "." (\_ x -> pure [simpleResult (_Pure . V._BLeaf . V._LFromNom # x) mempty])
                 <&> filtForType
             , gForType = pure forType
-            , gGetFields = makeTagRes "." (Pure . V.BLeaf . V.LGetField)
+            , gGetFields = makeTagRes newTag "." (Pure . V.BLeaf . V.LGetField)
             , gWrapInRecs = pure [] -- Only used in fragments
             }
             <&> (>>= traverse (makeOption holePl . fmap (\x -> [((), wrap (const (Ann ExprIRef.WriteNew)) x)])))
             & traverse ConvertM.convertOnce
-    <&> filterResults const
+            <&> filterResults tagsProp const
     -- The call to convertOnce makes the result expressions consistent.
     -- If we remove all calls to convertOnce (replacing with "fmap pure"),
     -- they would flicker when editing the search term.
@@ -109,7 +113,7 @@ makeResultsSyntax posInfo =
                 t <- genLamVar
                 f <- genLamVar
                 pure [Result
-                    { _rTexts = ifTexts
+                    { _rTexts = QueryTexts ifTexts
                     , _rAllowEmptyQuery = False
                     , _rExpr =
                         ( V.BLeafP V.LAbsurd

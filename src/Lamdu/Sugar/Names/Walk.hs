@@ -17,6 +17,7 @@ import qualified Data.Set as Set
 import           Hyper.Class.Morph (morphTraverse1)
 import           Hyper.Syntax (FuncType(..))
 import qualified Lamdu.Calc.Type as T
+import           Lamdu.Sugar.Names.NewTag (newTagName)
 import           Lamdu.Sugar.Convert.Input (userData)
 import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Lens as SugarLens
@@ -62,6 +63,7 @@ class (Monad m, Monad (IM m)) => MonadNaming m where
 
     opWithName :: IsUnambiguous -> NameType -> CPSNameConvertor m
     opGetName :: Maybe Disambiguator -> IsUnambiguous -> NameType -> NameConvertor m
+    opWithNewTag :: T.Tag -> Text -> m a -> m a
 
 class Walk m s t where
     walk :: MonadNaming m => s -> m t
@@ -225,13 +227,21 @@ instance (a ~ OldName m, b ~ NewName m, i ~ IM m) => Walk m (TagChoice a o) (Tag
         <$> (traverse . toInfo) (toTagOf Tag) opts
         <*> toInfo (toTagOf Tag) new
 
+walkOpts ::
+    (ToBody t, MonadNaming m, a ~ OldName m, b ~ NewName m, i ~ IM m) =>
+    m ((Query -> i [Option t (OldName m) i o]) -> Query -> i [Option t (NewName m) i o])
+walkOpts =
+    opRun <&>
+    \run -> Lens.imapped %@~ (\query results -> results >>= run . traverse (onResult query))
+    where
+        onResult query opt =
+            optionExpr toExpression opt &
+            case opt ^. optionMNewTag of
+            Nothing -> id
+            Just tag -> opWithNewTag tag (newTagName (query ^. qSearchTerm))
+
 instance (a ~ OldName m, b ~ NewName m, i ~ IM m) => Walk m (Hole a i o) (Hole b i o) where
-    walk (Hole opts) =
-        opRun <&>
-        \run ->
-        opts
-        <&> Lens.mapped %~ (>>= run . (traverse . optionExpr) toExpression)
-        & Hole
+    walk = holeOptions ((walkOpts <&>) . flip fmap)
 
 toTagRefOf ::
     MonadNaming m =>
@@ -286,14 +296,12 @@ instance ToBody Fragment where
         do
             newTypeMismatch <- Lens._Just walk _fTypeMismatch
             newExpr <- toExpression _fExpr
-            run <- opRun
+            w <- walkOpts
             pure Fragment
                 { _fExpr = newExpr
                 , _fTypeMismatch = newTypeMismatch
                 , _fHeal
-                , _fOptions =
-                    _fOptions
-                    <&> Lens.mapped %~ (>>= run . (traverse . optionExpr) toExpression)
+                , _fOptions = _fOptions <&> w
                 }
 
 instance ToBody FragOpt where

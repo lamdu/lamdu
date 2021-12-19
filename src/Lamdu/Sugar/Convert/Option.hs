@@ -2,6 +2,7 @@
 
 module Lamdu.Sugar.Convert.Option
     ( Result(..), rTexts, rExpr, rDeps, rAllowEmptyQuery
+    , ResultQuery(..), _QueryTexts, _QueryNewTag
     , simpleResult
     , ResultGroups(..), filterResults
     , Matches, matchResult
@@ -19,7 +20,7 @@ import           Control.Monad.Once (OnceT)
 import           Control.Monad.Transaction (MonadTransaction(..))
 import qualified Data.ByteString.Extended as BS
 import           Data.List (sortOn)
-import           Data.Property (MkProperty', getP, pureModify, pVal)
+import           Data.Property (MkProperty', getP, modP, pureModify, pVal)
 import qualified Data.Text as Text
 import qualified Data.UUID as UUID
 import           GUI.Momentu.Direction (Layout(..))
@@ -72,23 +73,30 @@ data Matches a = Matches
     { _mExact :: a
     , _mPrefix :: a
     , _mInfix :: a
+    , _mCreateNew :: a
     } deriving (Functor, Foldable, Generic, Traversable)
     deriving (Monoid, Semigroup) via (Generically (Matches a))
 Lens.makeLenses ''Matches
 
+data ResultQuery
+    = QueryTexts !(QueryLangInfo -> [Text])
+    | QueryNewTag T.Tag
+Lens.makePrisms ''ResultQuery
+
 data Result a = Result
     { _rDeps :: !Deps
     , _rExpr :: !a
-    , _rTexts :: !(QueryLangInfo -> [Text])
+    , _rTexts :: !ResultQuery
     , _rAllowEmptyQuery :: !Bool
     } deriving (Functor, Foldable, Traversable)
 Lens.makeLenses ''Result
 
 simpleResult :: a -> (QueryLangInfo -> [Text]) -> Result a
-simpleResult expr texts = Result
+simpleResult expr texts =
+    Result
     { _rDeps = mempty
     , _rExpr = expr
-    , _rTexts = texts
+    , _rTexts = QueryTexts texts
     , _rAllowEmptyQuery = True
     }
 
@@ -108,10 +116,11 @@ data ResultGroups a = ResultGroups
 
 filterResults ::
     (Monad m, Ord b) =>
+    MkProperty' (T m) (Set T.Tag) ->
     (TypeMatch -> a -> b) ->
-    ResultGroups (OnceT (T m) [Result (a, Option t name i o)]) -> Query ->
-    OnceT (T m) [Option t name i o]
-filterResults order res query =
+    ResultGroups (OnceT (T m) [Result (a, Option t name i (T m))]) -> Query ->
+    OnceT (T m) [Option t name i (T m)]
+filterResults tagsProp order res query =
     resGroups <&> (^. traverse)
     where
         resGroups
@@ -126,19 +135,28 @@ filterResults order res query =
                 -- prefer locals over globals even for type mismatches
                 groups (gForType <> gLocals) <> groups (gSyntax <> gDefs <> gToNoms)
         groups f =
-            f res <&> fmap ((^.. traverse . _2) . sortOn s) . foldMap (matchResult query)
+            f res
+            <&> Lens.mapped . Lens.filteredBy (rTexts . _QueryNewTag) <. rExpr . _2 . optionPick %@~
+                (\t -> (modP tagsProp (Lens.contains t .~ True) <>))
+            <&> foldMap (matchResult query)
+            <&> fmap ((^.. traverse . _2) . sortOn s)
         s (i, opt) = order (if opt ^. optionTypeMatch then TypeMatches else TypeMismatch) i
 
 matchResult :: Query -> Result a -> Matches [a]
 matchResult query result
     | query ^. qSearchTerm == "" && not (result ^. rAllowEmptyQuery) = mempty
-    | s `elem` texts = mempty & mExact .~ e
-    | any (Text.isPrefixOf s) texts = mempty & mPrefix .~ e
-    | any (Text.isInfixOf s) texts = mempty & mInfix .~ e
-    | otherwise = mempty
+    | otherwise =
+        case result ^. rTexts of
+        QueryTexts makeTexts
+            | s `elem` texts -> mempty & mExact .~ e
+            | any (Text.isPrefixOf s) texts -> mempty & mPrefix .~ e
+            | any (Text.isInfixOf s) texts -> mempty & mInfix .~ e
+            | otherwise -> mempty
+            where
+                texts = makeTexts (query ^. qLangInfo) <&> Text.toLower >>= unicodeAlts
+        QueryNewTag{} -> mempty & mCreateNew .~ e
     where
         e = [result ^. rExpr]
-        texts = (result ^. rTexts) (query ^. qLangInfo) <&> Text.toLower >>= unicodeAlts
         s = query ^. qSearchTerm & Text.toLower
 
 -- Suggest expression to fit a type.
@@ -223,15 +241,24 @@ genLamVar = Transaction.newKey <&> V.Var . Identifier . BS.strictify . UUID.toBy
 
 makeTagRes ::
     Monad m =>
+    T.Tag ->
     Text ->
     (T.Tag -> a) ->
     ConvertM m [Result a]
-makeTagRes prefix f =
+makeTagRes newTag prefix f =
     getListing Anchors.tags >>= traverse mk
+    <&> (newTagRes :)
     where
         mk tag =
             ExprIRef.readTagData tag & transaction <&> tagTexts <&> Lens.mapped . traverse %~ (prefix <>)
             <&> simpleResult (f tag)
+        newTagRes =
+            Result
+            { _rDeps = mempty
+            , _rAllowEmptyQuery = False
+            , _rExpr = f newTag
+            , _rTexts = QueryNewTag newTag
+            }
 
 symTexts :: (Monad m, ToUUID a) => Text -> a -> T m (QueryLangInfo -> [Text])
 symTexts prefix tid =
@@ -255,7 +282,7 @@ makeNoms avoid prefix f =
                 do
                     texts <- symTexts prefix tid
                     f (d ^. _Pure . nScheme . sTyp) tid
-                        <&> traverse %~ (rDeps . depsNominals . Lens.at tid ?~ d) . (rTexts <>~ texts)
+                        <&> traverse %~ (rDeps . depsNominals . Lens.at tid ?~ d) . (rTexts . _QueryTexts <>~ texts)
 
 makeGlobals :: Monad m => (V.Var -> Pure # T.Type -> T m (Maybe a)) -> ConvertM m [Result a]
 makeGlobals f =
@@ -395,6 +422,7 @@ makeOption dstPl res =
                         pick (written ^. hAnn . Input.stored . ExprIRef.iref)
                 , _optionExpr = s
                 , _optionTypeMatch = Lens.has Lens._Right unifyResult
+                , _optionMNewTag = res ^? rTexts . _QueryNewTag
                 }
             ) & pure
     where

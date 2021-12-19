@@ -3,10 +3,12 @@
 module Lamdu.GUI.Expr.OptionEdit where
 
 import qualified Control.Lens as Lens
+import qualified Data.Property as Property
 import           Hyper
 import qualified GUI.Momentu as M
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.EventMap (EventMap)
+import qualified GUI.Momentu.Glue as Glue
 import qualified GUI.Momentu.I18N as MomentuTexts
 import qualified GUI.Momentu.ModKey as ModKey
 import qualified GUI.Momentu.Responsive as Responsive
@@ -14,10 +16,15 @@ import qualified GUI.Momentu.State as GuiState
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Menu as Menu
 import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
+import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified Lamdu.Config as Config
+import qualified Lamdu.GUI.Monad as GuiM
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
+import qualified Lamdu.GUI.Styled as Styled
+import qualified Lamdu.I18N.CodeUI as Texts
 import           Lamdu.Name (Name)
 import qualified Lamdu.Sugar.Lens as SugarLens
+import           Lamdu.Sugar.Names.NewTag (newTagName)
 import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
@@ -58,6 +65,19 @@ makeResult mkGui ctx res =
     , Menu._oRender =
         do
             chooseText <- Lens.view (has . MomentuTexts.choose)
+            (mCreateNew, pickAction) <-
+                case res ^. Sugar.optionMNewTag of
+                Nothing -> pure (id, mempty)
+                Just tag ->
+                    do
+                        label <- Styled.label Texts.createNew <&> (^. M.tValue)
+                        space <- Spacer.stdHSpace
+                        (|||) <- Glue.mkGlue ?? Glue.Horizontal
+                        assocTagName <- GuiM.assocTagName
+                        pure
+                            ( \x -> x ||| space ||| label
+                            , Property.setP (assocTagName tag) (newTagName (ctx ^. SearchMenu.rSearchTerm))
+                            )
             remUnwanted <- removeUnwanted
             res ^. Sugar.optionExpr
                 & SugarLens.hAnnotations
@@ -71,13 +91,14 @@ makeResult mkGui ctx res =
                 Menu.RenderedOption
                 { Menu._rWidget =
                     w ^. Responsive.rWide & M.tValue . Widget.enterResultCursor .~ resId
+                    <&> mCreateNew
                     <&> Widget.widget . Widget.eventMapMaker . Lens.mapped %~ remUnwanted
                     <&> -- Disable strolling between hole results
                         Widget.widget %~ Widget.disableStroll
                 , Menu._rPick =
                     Widget.PreEvent
                     { Widget._pDesc = chooseText
-                    , Widget._pAction = Menu.PickResult dstId innerHole <$ res ^. Sugar.optionPick
+                    , Widget._pAction = Menu.PickResult dstId innerHole <$ pickAction <> res ^. Sugar.optionPick
                     , Widget._pTextRemainder = ""
                     }
                 }

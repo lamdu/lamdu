@@ -29,7 +29,7 @@ module Lamdu.Sugar.Types.Parts
     , ClosedCompositeActions(..), closedCompositeOpen
     , PunnedVar(..), pvVar, pvTagEntityId
     , NullaryInject(..), iInject, iContent
-    , Option(..), optionExpr, optionPick, optionTypeMatch
+    , Option(..), optionExpr, optionPick, optionTypeMatch, optionMNewTag
     , Query(..), qLangInfo, qSearchTerm
     , QueryLangInfo(..), qLangId, qLangDir, qCodeTexts, qUITexts, qNameTexts
         , hasQueryLangInfo
@@ -197,6 +197,8 @@ data Option t name i o = Option
       -- Note that for fragments, this doesn't indicate whether the emplaced fragmented expr
       -- within stays fragmented.
       _optionTypeMatch :: Bool
+    , -- Whether option includes creation of new tag for the given search string
+      _optionMNewTag :: Maybe T.Tag
     } deriving Generic
 
 data QueryLangInfo = QueryLangInfo

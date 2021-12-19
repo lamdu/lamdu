@@ -72,6 +72,7 @@ instance Monad i => MonadNaming (Pass0LoadNames i) where
     opRun = Reader.ask <&> runPass0LoadNames
     opWithName _ _ n = CPS $ \inner -> (,) <$> getP0Name n <*> inner
     opGetName _ _ _ = getP0Name
+    opWithNewTag _ _ = id
 
 p0lift :: Monad i => i a -> Pass0LoadNames i a
 p0lift = Pass0LoadNames . lift
@@ -139,6 +140,7 @@ instance Monad i => MonadNaming (Pass1PropagateUp i o) where
     opWithName = p1Name Nothing
     opGetName mDisambiguator u nameType p0Name =
         p1Name mDisambiguator u nameType p0Name & runcps
+    opWithNewTag _ _ = id
 
 displayOf :: Has (Texts.Name Text) env => env -> Text -> Text
 displayOf env text
@@ -397,6 +399,7 @@ instance Monad i => MonadNaming (Pass2MakeNames i o) where
     opRun = Lens.view id <&> flip (runReader . runPass2MakeNames) <&> (pure .)
     opWithName u _ = p2cpsNameConvertor u
     opGetName _ = p2nameConvertor
+    opWithNewTag tag text = local (p2TagTexts . Lens.at tag ?~ TagText text NoCollision)
 
 getTag :: Bool -> Annotated.Name -> Pass2MakeNames i o T.Tag
 getTag autoGen aName =
