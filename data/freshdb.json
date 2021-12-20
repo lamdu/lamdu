@@ -87,11 +87,8 @@
                 "abbreviation": "ceil",
                 "name": "ceiling"
             },
-            "italiano": "arrotonda",
-            "spanish": {
-                "abbreviation": "aprox",
-                "name": "aproximado"
-            }
+            "italiano": "arrotondaPerEccesso",
+            "spanish": "redondearHaciaArriba"
         }
     },
     {
@@ -1671,7 +1668,7 @@
             "hebrew": "רצפה",
             "english": "floor",
             "italiano": "arrotondaPerDifetto",
-            "spanish": "aproximaciónPorDefecto"
+            "spanish": "redondearHaciaAbajo"
         }
     },
     {
