@@ -366,14 +366,14 @@ makeOption dstPl res =
         (written, changes) <-
             inferred1 & hflipped %~ hmap (const markToPrune)
             & hAnn . _2 . _1 .~ Const False
+            & writeRecursively
+            <&> prune
+            <&> ExprIRef.toHRefs (dstPl ^. Input.stored . ExprIRef.setIref)
+            <&> hflipped %~ hmap (const mkPayload)
             -- The forked transaction serves two purposes:
             -- No actual data is written to the db for generating an option
             -- The results cache is not invalidated due to writing to the database
-            & writeRecursively & Transaction.fork & transaction
-            <&> _1 %~
-                (hflipped %~ hmap (const mkPayload)) .
-                ExprIRef.toHRefs (dstPl ^. Input.stored . ExprIRef.setIref) .
-                prune
+            & Transaction.fork & transaction
         s <-
             Input.preprocess (dstPl ^. Input.inferScope) (dstPl ^. Input.localsInScope) written
             & convertBinder
