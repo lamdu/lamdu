@@ -79,12 +79,12 @@ Lens.makeLenses ''Matches
 data Result a = Result
     { _rDeps :: !Deps
     , _rExpr :: !a
-    , _rTexts :: !(QueryLangInfo Text -> [Text])
+    , _rTexts :: !(QueryLangInfo -> [Text])
     , _rAllowEmptyQuery :: !Bool
     } deriving (Functor, Foldable, Traversable)
 Lens.makeLenses ''Result
 
-simpleResult :: a -> (QueryLangInfo Text -> [Text]) -> Result a
+simpleResult :: a -> (QueryLangInfo -> [Text]) -> Result a
 simpleResult expr texts = Result
     { _rDeps = mempty
     , _rExpr = expr
@@ -138,7 +138,7 @@ matchResult query result
     | otherwise = mempty
     where
         e = [result ^. rExpr]
-        texts = (result ^. rTexts) (query ^. qLangInfo <&> Text.toLower) <&> Text.toLower >>= unicodeAlts
+        texts = (result ^. rTexts) (query ^. qLangInfo) <&> Text.toLower >>= unicodeAlts
         s = query ^. qSearchTerm & Text.toLower
 
 -- Suggest expression to fit a type.
@@ -233,7 +233,7 @@ makeTagRes prefix f =
             ExprIRef.readTagData tag & transaction <&> tagTexts <&> Lens.mapped . traverse %~ (prefix <>)
             <&> simpleResult (f tag)
 
-symTexts :: (Monad m, ToUUID a) => Text -> a -> T m (QueryLangInfo Text -> [Text])
+symTexts :: (Monad m, ToUUID a) => Text -> a -> T m (QueryLangInfo -> [Text])
 symTexts prefix tid =
     getP (Anchors.assocTag tid) >>= ExprIRef.readTagData <&> tagTexts
     <&> Lens.mapped . traverse %~ (prefix <>)
@@ -309,7 +309,7 @@ makeForType t =
             V.BApp (V.App (Pure (V.BLeaf (V.LInject tag))) _) -> symTexts "'" tag
             _ -> pure (const [])
 
-tagTexts :: Tag.Tag -> QueryLangInfo Text -> [Text]
+tagTexts :: Tag.Tag -> QueryLangInfo -> [Text]
 tagTexts t l
     | null names = l ^.. qNameTexts . Texts.unnamed
     | otherwise = names
@@ -324,16 +324,16 @@ tagTexts t l
             LeftToRight -> Tag.opLeftToRight
             RightToLeft -> Tag.opRightToLeft
 
-recTexts :: QueryLangInfo Text -> [Text]
+recTexts :: QueryLangInfo -> [Text]
 recTexts = (^.. qCodeTexts . Texts.recordOpener) <> (^.. qCodeTexts . Texts.recordCloser)
 
-caseTexts :: QueryLangInfo Text -> [Text]
+caseTexts :: QueryLangInfo -> [Text]
 caseTexts = (<&> ("." <>)) . (^.. qCodeTexts . Texts.case_)
 
-lamTexts :: QueryLangInfo Text -> [Text]
+lamTexts :: QueryLangInfo -> [Text]
 lamTexts = (^.. qUITexts . Texts.lambda) <> const ["\\"] <> const ["|"]
 
-ifTexts :: QueryLangInfo Text -> [Text]
+ifTexts :: QueryLangInfo -> [Text]
 ifTexts = (^.. qCodeTexts . Texts.if_)
 
 makeOption ::
@@ -468,7 +468,7 @@ makeLocals f scope =
                     ^?! Lens._Right . _1 . _Pure . T._TRecord . T.flatRow . freExtends . Lens.ix tag
 
  -- Duplicate name-gen behaviour for locals
-localName :: MonadTransaction n m => Pure # T.Type -> V.Var -> m (QueryLangInfo Text -> [Text])
+localName :: MonadTransaction n m => Pure # T.Type -> V.Var -> m (QueryLangInfo -> [Text])
 localName typ var =
     do
         tag <- Anchors.assocTag var & getP & transaction

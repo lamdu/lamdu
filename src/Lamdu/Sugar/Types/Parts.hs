@@ -199,19 +199,19 @@ data Option t name i o = Option
       _optionTypeMatch :: Bool
     } deriving Generic
 
-data QueryLangInfo a = QueryLangInfo
+data QueryLangInfo = QueryLangInfo
     { _qLangId :: LangId
     , _qLangDir :: Layout
-    , _qCodeTexts :: Texts.Code a
-    , _qUITexts :: Texts.CodeUI a
-    , _qNameTexts :: Texts.Name a
-    } deriving (Functor, Foldable, Traversable)
+    , _qCodeTexts :: Texts.Code Text
+    , _qUITexts :: Texts.CodeUI Text
+    , _qNameTexts :: Texts.Name Text
+    }
 
-hasQueryLangInfo :: _ => a -> QueryLangInfo b
+hasQueryLangInfo :: _ => a -> QueryLangInfo
 hasQueryLangInfo env = QueryLangInfo (env ^. has) (env ^. has) (env ^. has) (env ^. has) (env ^. has)
 
 data Query = Query
-    { _qLangInfo :: QueryLangInfo Text
+    { _qLangInfo :: QueryLangInfo
     , _qSearchTerm :: Text
     }
 
