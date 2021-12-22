@@ -239,7 +239,11 @@ toFragOpt o =
         } & Ann (Const (o ^. annotation))
     BinderTerm (BodyToNom n) -> n ^. nTId & FragToNom & Ann (Const (o ^. annotation))
     BinderTerm (BodyIfElse i) -> i ^. iThen & FragIf & Ann (Const (o ^. annotation))
-    BinderTerm BodyLam{} -> o & annValue .~ FragLam
+    BinderTerm (BodyLam l) ->
+        o & annValue .~
+        case l ^. lamFunc . fParams of
+        NullParam{} -> FragDefer
+        _ -> FragLam
     BinderTerm (BodyRecord r) ->
         r ^?! cList . tlItems . Lens._Just . tlHead . tiTag & FragWrapInRec & Ann (Const (o ^. annotation))
     BinderTerm x -> error ("unexpected result in fragment result: " <> show (gconIndex x))
