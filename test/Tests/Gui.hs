@@ -523,7 +523,7 @@ testWYTIWYS =
     , wytiwys "2*(3+4)" "14"
     , wytiwys "2*(3+4" "14" -- Don't have to close paren
 
-    , wytiwys "sum(1..10)" "45"
+    , wytiwys "sum (1..10)" "45" -- Debatable issue: Space is necessary here!
     , wytiwys "sum 1..10" "45" -- An Ergonomic WYTIWIS violation: types cause fragment
     , wytiwys "sum 1..10.map n*2" "90"
     , wytiwys "sum 1..10.map 2*num\n" "90" -- TODO: Would be better without requiring the enter at the end
