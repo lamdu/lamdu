@@ -111,7 +111,7 @@ convertAppliedHole app@(V.App funcI argI) exprPl argS =
                                 ]
                             )
                         } <&> (>>= traverse (makeOption exprPl))
-                        <&> Lens.mapped . traverse . rExpr . _2 . optionExpr %~ toFragOpt isDeferred
+                        <&> Lens.mapped . traverse . rExpr . _2 . optionExpr %~ toFragOpt
                         & traverse ConvertM.convertOnce
                 <&> filterResults tagsProp (\outerMatch innerMatch -> (innerMatch, outerMatch))
                 & ConvertM.convertOnce
@@ -140,10 +140,7 @@ convertAppliedHole app@(V.App funcI argI) exprPl argS =
             & lift
         <&> annotation . pActions . detach .~ FragmentedAlready storedEntityId
     where
-        funcParam = _Pure . T._TFun . funcIn
-        emptyRecordType = _Pure . T._TRecord . _Pure . T._REmpty
-        isDeferred = Lens.has (Input.inferredType . funcParam . emptyRecordType) exprPl
-        topRef = stored ^. ExprIRef.iref
+        topRef = exprPl ^. Input.stored . ExprIRef.iref
         funcOpt = traverse . rExpr %~ makeFuncOpts
         argPl = argS ^. annotation . pInput
         argIRef = argI ^. hAnn . Input.stored . iref
@@ -218,8 +215,8 @@ makeLocal top arg typ val =
     where
         r = Ann (ExistingRef top) . V.BApp . App (writeNew val)
 
-toFragOpt :: Bool -> Annotated (Payload a m) # Binder v name i o -> Annotated (Payload a m) # FragOpt v name i o
-toFragOpt isDeferred o =
+toFragOpt :: Annotated (Payload a m) # Binder v name i o -> Annotated (Payload a m) # FragOpt v name i o
+toFragOpt o =
     case o ^. hVal . bBody of
     BinderTerm (BodyPostfixApply (PostfixApply a f)) ->
         reverse (f : match a)
@@ -242,7 +239,6 @@ toFragOpt isDeferred o =
         } & Ann (Const (o ^. annotation))
     BinderTerm (BodyToNom n) -> n ^. nTId & FragToNom & Ann (Const (o ^. annotation))
     BinderTerm (BodyIfElse i) -> i ^. iThen & FragIf & Ann (Const (o ^. annotation))
-    BinderTerm BodyLam{} | isDeferred -> o & annValue .~ FragDefer
     BinderTerm BodyLam{} -> o & annValue .~ FragLam
     BinderTerm (BodyRecord r) ->
         r ^?! cList . tlItems . Lens._Just . tlHead . tiTag & FragWrapInRec & Ann (Const (o ^. annotation))
