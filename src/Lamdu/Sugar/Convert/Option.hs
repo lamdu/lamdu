@@ -111,18 +111,20 @@ filterResults ::
     (TypeMatch -> a -> b) ->
     ResultGroups (OnceT (T m) [Result (a, Option t name i o)]) -> Query Text ->
     OnceT (T m) [Option t name i o]
-filterResults order res query
-    | "" == query ^. qSearchTerm = groups (gForType <> gSyntax <> gLocals) <&> (^. traverse)
-    | "." `Text.isPrefixOf` (query ^. qSearchTerm) =
-        groups (gForType <> gSyntax <> gDefs <> gFromNoms <> gGetFields) <&> (^. traverse)
-    | "'" `Text.isPrefixOf` (query ^. qSearchTerm) = groups (gForType <> gToNoms <> gInjects) <&> (^. traverse)
-    | "{" `Text.isPrefixOf` (query ^. qSearchTerm) =
-        groups (gForType <> gSyntax <> gWrapInRecs) <&> (^. traverse)
-    | otherwise =
-        -- Within certain search-term matching level (exact/prefix/infix),
-        -- prefer locals over globals even for type mismatches
-        groups (gForType <> gLocals) <> groups (gSyntax <> gDefs <> gToNoms) <&> (^. traverse)
+filterResults order res query =
+    resGroups <&> (^. traverse)
     where
+        resGroups
+            | "" == query ^. qSearchTerm = groups (gForType <> gSyntax <> gLocals)
+            | "." `Text.isPrefixOf` (query ^. qSearchTerm) =
+                groups (gForType <> gSyntax <> gDefs <> gFromNoms <> gGetFields)
+            | "'" `Text.isPrefixOf` (query ^. qSearchTerm) = groups (gForType <> gToNoms <> gInjects)
+            | "{" `Text.isPrefixOf` (query ^. qSearchTerm) =
+                groups (gForType <> gSyntax <> gWrapInRecs)
+            | otherwise =
+                -- Within certain search-term matching level (exact/prefix/infix),
+                -- prefer locals over globals even for type mismatches
+                groups (gForType <> gLocals) <> groups (gSyntax <> gDefs <> gToNoms)
         groups f =
             f res <&> fmap ((^.. traverse . _2) . sortOn s) . foldMap (matchResult query)
         s (i, opt) = order (if opt ^. optionTypeMatch then TypeMatches else TypeMismatch) i
