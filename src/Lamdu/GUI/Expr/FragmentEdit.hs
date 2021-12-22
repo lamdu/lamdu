@@ -115,7 +115,7 @@ make (Ann (Const pl) fragment) =
 
 makeResults ::
     _ =>
-    i (Sugar.Query Text -> i [Sugar.Option Sugar.FragOpt Name i o]) ->
+    i (Sugar.Query -> i [Sugar.Option Sugar.FragOpt Name i o]) ->
     SearchMenu.ResultsContext ->
     GuiM env i o (Menu.OptionList (Menu.Option (GuiM env i o) o))
 makeResults opts ctx =

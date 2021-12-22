@@ -101,7 +101,7 @@ data Fragment v name i o k = Fragment
     { _fExpr :: k :# Term v name i o
     , _fHeal :: o EntityId
     , _fTypeMismatch :: Maybe (Annotated EntityId # T.Type name Unit)
-    , _fOptions :: i (Query Text -> i [Option FragOpt name i o])
+    , _fOptions :: i (Query -> i [Option FragOpt name i o])
     } deriving Generic
 
 data FragOpt v name i o k
@@ -125,7 +125,7 @@ data FragOperator v name i o k = FragOperator
 
 newtype Hole name i o = Hole
     { _holeOptions ::
-        i (Query Text -> i [Option Binder name i o])
+        i (Query -> i [Option Binder name i o])
         -- Inner `i` serves two purposes:
         -- Name walk requires monadic place to process names.
         -- Hole can prepare results depending on the query and avoid doing work

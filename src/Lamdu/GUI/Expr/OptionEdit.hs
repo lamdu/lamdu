@@ -22,7 +22,7 @@ import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
 
-makeQuery :: _ => SearchMenu.ResultsContext -> f (Sugar.Query Text)
+makeQuery :: _ => SearchMenu.ResultsContext -> f Sugar.Query
 makeQuery ctx =
     Lens.view id <&> Sugar.hasQueryLangInfo
     <&> \langInfo -> Sugar.Query

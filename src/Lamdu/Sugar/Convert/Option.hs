@@ -109,7 +109,7 @@ data ResultGroups a = ResultGroups
 filterResults ::
     (Monad m, Ord b) =>
     (TypeMatch -> a -> b) ->
-    ResultGroups (OnceT (T m) [Result (a, Option t name i o)]) -> Query Text ->
+    ResultGroups (OnceT (T m) [Result (a, Option t name i o)]) -> Query ->
     OnceT (T m) [Option t name i o]
 filterResults order res query =
     resGroups <&> (^. traverse)
@@ -129,7 +129,7 @@ filterResults order res query =
             f res <&> fmap ((^.. traverse . _2) . sortOn s) . foldMap (matchResult query)
         s (i, opt) = order (if opt ^. optionTypeMatch then TypeMatches else TypeMismatch) i
 
-matchResult :: Query Text -> Result a -> Matches [a]
+matchResult :: Query -> Result a -> Matches [a]
 matchResult query result
     | query ^. qSearchTerm == "" && not (result ^. rAllowEmptyQuery) = mempty
     | s `elem` texts = mempty & mExact .~ e
@@ -138,9 +138,8 @@ matchResult query result
     | otherwise = mempty
     where
         e = [result ^. rExpr]
-        texts = (result ^. rTexts) (q ^. qLangInfo) <&> Text.toLower >>= unicodeAlts
-        q = query <&> Text.toLower
-        s = q ^. qSearchTerm
+        texts = (result ^. rTexts) (query ^. qLangInfo <&> Text.toLower) <&> Text.toLower >>= unicodeAlts
+        s = query ^. qSearchTerm & Text.toLower
 
 -- Suggest expression to fit a type.
 -- Not used for subexpressions of suggested expression,

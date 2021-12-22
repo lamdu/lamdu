@@ -210,10 +210,10 @@ data QueryLangInfo a = QueryLangInfo
 hasQueryLangInfo :: _ => a -> QueryLangInfo b
 hasQueryLangInfo env = QueryLangInfo (env ^. has) (env ^. has) (env ^. has) (env ^. has) (env ^. has)
 
-data Query a = Query
-    { _qLangInfo :: QueryLangInfo a
-    , _qSearchTerm :: a
-    } deriving (Functor, Foldable, Traversable)
+data Query = Query
+    { _qLangInfo :: QueryLangInfo Text
+    , _qSearchTerm :: Text
+    }
 
 traverse Lens.makeLenses
     [ ''ClosedCompositeActions, ''FuncParam, ''NodeActions
