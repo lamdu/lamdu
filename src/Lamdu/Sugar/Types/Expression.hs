@@ -114,6 +114,7 @@ data FragOpt v name i o k
     | FragLam
     | FragDefer
     | FragIf (k :# Term v name i o)
+    | FragArgument (k :# Term v name i o) -- Apply fragmented expr with argument
     deriving Generic
 
 data FragOperator v name i o k = FragOperator
