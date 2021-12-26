@@ -312,7 +312,7 @@ instance ToBody FragOpt where
     toBody (FragOp x) = toBody x <&> FragOp
     toBody (FragToNom x) = walk x <&> FragToNom
     toBody (FragIf x) = toExpression x <&> FragIf
-    toBody (FragArgument x) = toExpression x <&> FragIf
+    toBody (FragArgument x) = toBody x <&> FragArgument
     toBody FragLam = pure FragLam
     toBody FragDefer = pure FragDefer
 

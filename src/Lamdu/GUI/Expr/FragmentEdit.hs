@@ -143,7 +143,7 @@ makeFragOpt (Ann (Const a) b) =
     Sugar.FragIf t ->
         (grammar (label Texts.if_) M./|/ grammar (Label.make ":")) M./|/
         Spacer.stdHSpace M./|/ GuiM.makeSubexpression t
-    Sugar.FragArgument x -> GuiM.makeSubexpression x
+    Sugar.FragArgument x -> GuiM.makeSubexpression (Ann (Const a) x)
     Sugar.FragLam -> grammar (label Texts.lam) & fromView
     Sugar.FragDefer -> grammar (label Texts.defer) & fromView
     Sugar.FragWrapInRec x ->

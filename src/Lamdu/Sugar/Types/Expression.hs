@@ -114,7 +114,7 @@ data FragOpt v name i o k
     | FragLam
     | FragDefer
     | FragIf (k :# Term v name i o)
-    | FragArgument (k :# Term v name i o) -- Apply fragmented expr with argument
+    | FragArgument (Term v name i o k) -- Apply fragmented expr with argument
     deriving Generic
 
 data FragOperator v name i o k = FragOperator
@@ -254,7 +254,7 @@ traverse makeHTraversableAndBases
     ] <&> concat
 
 traverse makeHMorph
-    [ ''Composite, ''FragOpt, ''IfElse, ''LabeledApply, ''Let, ''OperatorArgs, ''PostfixApply, ''PostfixFunc
+    [ ''Composite, ''FragOperator, ''IfElse, ''LabeledApply, ''Let, ''OperatorArgs, ''PostfixApply, ''PostfixFunc
     ] <&> concat
 
 -- TODO: Replace boilerplate below with TH

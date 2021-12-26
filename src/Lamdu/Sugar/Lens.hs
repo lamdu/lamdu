@@ -221,7 +221,18 @@ instance HAnnotations a b (LabeledApply a n i o) (LabeledApply b n i o)
 instance HAnnotations a b (Let a n i o) (Let b n i o)
 instance HAnnotations a b (PostfixApply a n i o) (PostfixApply b n i o)
 instance HAnnotations a b (PostfixFunc a n i o) (PostfixFunc b n i o)
-instance HAnnotations a b (FragOpt a n i o) (FragOpt b n i o)
+
+instance HAnnotations a b (FragOpt a n i o) (FragOpt b n i o) where
+    hAnnotations f (FragPostfix x) = (traverse . hAnnotations) f x <&> FragPostfix
+    hAnnotations _ (FragInject x) = FragInject x & pure
+    hAnnotations _ (FragWrapInRec x) = FragWrapInRec x & pure
+    hAnnotations _ (FragGetVar x) = FragGetVar x & pure
+    hAnnotations f (FragOp x) = morphTraverse (Proxy @(HAnnotations a b) #?> hAnnotations f) x <&> FragOp
+    hAnnotations _ (FragToNom x) = FragToNom x & pure
+    hAnnotations _ FragLam = pure FragLam
+    hAnnotations _ FragDefer = pure FragDefer
+    hAnnotations f (FragIf x) = hAnnotations f x <&> FragIf
+    hAnnotations f (FragArgument x) = hAnnotations f x <&> FragArgument
 
 instance HAnnotations a b (Assignment a n i o) (Assignment b n i o) where
     hAnnotations f (BodyFunction x) = hAnnotations f x <&> BodyFunction
