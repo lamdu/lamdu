@@ -226,7 +226,7 @@ instance HAnnotations a b (FragOpt a n i o) (FragOpt b n i o) where
     hAnnotations f (FragPostfix x) = (traverse . hAnnotations) f x <&> FragPostfix
     hAnnotations _ (FragInject x) = FragInject x & pure
     hAnnotations _ (FragWrapInRec x) = FragWrapInRec x & pure
-    hAnnotations _ (FragGetVar x) = FragGetVar x & pure
+    hAnnotations _ (FragApplyFunc x) = FragApplyFunc x & pure
     hAnnotations f (FragOp x) = morphTraverse (Proxy @(HAnnotations a b) #?> hAnnotations f) x <&> FragOp
     hAnnotations _ (FragToNom x) = FragToNom x & pure
     hAnnotations _ FragLam = pure FragLam

@@ -308,7 +308,7 @@ instance ToBody FragOpt where
     toBody (FragPostfix x) = traverse toExpression x <&> FragPostfix
     toBody (FragInject x) = walk x <&> FragInject
     toBody (FragWrapInRec x) = walk x <&> FragWrapInRec
-    toBody (FragGetVar x) = walk x <&> FragGetVar
+    toBody (FragApplyFunc x) = walk x <&> FragApplyFunc
     toBody (FragOp x) = toBody x <&> FragOp
     toBody (FragToNom x) = walk x <&> FragToNom
     toBody (FragIf x) = toExpression x <&> FragIf

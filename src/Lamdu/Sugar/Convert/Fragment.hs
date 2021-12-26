@@ -230,7 +230,7 @@ toFragOpt o =
         & annValue %~
         \case
         BodyLeaf (LeafInject x) -> FragInject x
-        BodyLeaf (LeafGetVar x) -> FragGetVar x
+        BodyLeaf (LeafGetVar x) -> FragApplyFunc x
         _ -> error "unexpected result in fragment apply"
     BinderTerm (BodyLabeledApply x) ->
         FragOp FragOperator

@@ -4,6 +4,7 @@ module Lamdu.GUI.Expr.FragmentEdit
 
 import qualified Control.Lens as Lens
 import qualified GUI.Momentu as M
+import           GUI.Momentu ((/|/))
 import qualified GUI.Momentu.Animation as Anim
 import qualified GUI.Momentu.Direction as Dir
 import qualified GUI.Momentu.Element as Element
@@ -137,17 +138,17 @@ makeFragOpt (Ann (Const a) b) =
         (ResponsiveExpr.boxSpacedMDisamb ?? Nothing)
         <*> traverse ApplyEdit.makePostfixFunc x
     Sugar.FragInject x -> InjectEdit.make (Ann (Const a) (Const x))
-    Sugar.FragGetVar x -> GetVarEdit.make (Ann (Const a) (Const x))
+    Sugar.FragApplyFunc x -> GetVarEdit.make (Ann (Const a) (Const x)) /|/ grammar (Label.make " _")
     Sugar.FragOp x -> makeFragOperator x
     Sugar.FragToNom x -> NominalEdit.makeTIdView x & fromView
     Sugar.FragIf t ->
-        (grammar (label Texts.if_) M./|/ grammar (Label.make ":")) M./|/
-        Spacer.stdHSpace M./|/ GuiM.makeSubexpression t
+        (grammar (label Texts.if_) /|/ grammar (Label.make ":")) /|/
+        Spacer.stdHSpace /|/ GuiM.makeSubexpression t
     Sugar.FragArgument x -> GuiM.makeSubexpression (Ann (Const a) x)
     Sugar.FragLam -> grammar (label Texts.lam) & fromView
     Sugar.FragDefer -> grammar (label Texts.defer) & fromView
     Sugar.FragWrapInRec x ->
-        grammar (label Texts.recordOpener) M./|/ TagView.make (x ^. Sugar.tagRefTag) & fromView
+        grammar (label Texts.recordOpener) /|/ TagView.make (x ^. Sugar.tagRefTag) & fromView
     -- Reproduction of behaviour from Lamdu.GUI.Expr.make,
     -- otherwise fragment editors would have clashing anim ids
     & local (M.animIdPrefix .~ Widget.toAnimId myId)

@@ -30,7 +30,7 @@ module Lamdu.Sugar.Types.Expression
         , hasQueryLangInfo
     -- Fragments
     , Fragment(..), fExpr, fHeal, fTypeMismatch, fOptions
-    , FragOpt(..), _FragPostfix, _FragInject, _FragGetVar, _FragOp
+    , FragOpt(..), _FragPostfix, _FragInject, _FragApplyFunc, _FragOp
     , FragOperator(..), oFunc, oRightArg
     -- If/else
     , IfElse(..), iIf, iThen, iElse
@@ -108,7 +108,7 @@ data FragOpt v name i o k
     = FragPostfix [k :# PostfixFunc v name i o] -- a single option can suggest chaining of multiple post-fix applications
     | FragInject (TagRef name i o)
     | FragWrapInRec (TagRef name i o)
-    | FragGetVar (GetVar name o)
+    | FragApplyFunc (GetVar name o)
     | FragOp (FragOperator v name i o k)
     | FragToNom (TId name o)
     | FragLam
