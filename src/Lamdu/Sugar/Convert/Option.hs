@@ -112,7 +112,8 @@ data ResultGroups a = ResultGroups
     , gForType :: a
     , gGetFields :: a
     , gWrapInRecs :: a
-    } deriving (Functor, Foldable, Traversable)
+    } deriving (Functor, Foldable, Traversable, Generic)
+    deriving (Semigroup, Monoid) via (Generically (ResultGroups a))
 
 filterResults ::
     (Monad m, Ord b) =>
@@ -403,7 +404,17 @@ makeOption dstPl res =
             -- The results cache is not invalidated due to writing to the database
             & Transaction.fork & transaction
         s <-
-            Input.preprocess (dstPl ^. Input.inferScope) (dstPl ^. Input.localsInScope) written
+            case written ^? hVal . V._BApp of
+            Just (V.App (Ann _ f) x) ->
+                -- For applying arguments to fragmented funcs,
+                -- prune replaces the func in the expr with a hole or fragmented hole.
+                -- We extract the argument of it.
+                case f of
+                V.BLeaf V.LHole -> x
+                V.BApp (V.App (Ann _ (V.BLeaf V.LHole)) (Ann _ (V.BLeaf V.LHole))) -> x
+                _ -> written
+            _ -> written
+            & Input.preprocess (dstPl ^. Input.inferScope) (dstPl ^. Input.localsInScope)
             & convertBinder
             & local (ConvertM.scInferContext .~ ctx1)
             & -- Updated deps are required to sugar labeled apply

@@ -1,5 +1,5 @@
 module Lamdu.Sugar.Convert.Hole
-    ( convert
+    ( convert, results
     ) where
 
 import qualified Control.Lens.Extended as Lens

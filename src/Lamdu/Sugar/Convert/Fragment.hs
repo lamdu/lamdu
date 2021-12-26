@@ -35,6 +35,7 @@ import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Load as Load
 import qualified Lamdu.Sugar.Config as Config
 import qualified Lamdu.Sugar.Convert.Expression.Actions as Actions
+import qualified Lamdu.Sugar.Convert.Hole as Hole
 import           Lamdu.Sugar.Convert.Fragment.Heal (healMismatch)
 import qualified Lamdu.Sugar.Convert.Input as Input
 import           Lamdu.Sugar.Convert.Monad (ConvertM)
@@ -113,8 +114,21 @@ convertAppliedHole app@(V.App funcI argI) exprPl argS =
                         } <&> (>>= traverse (makeOption exprPl))
                         <&> Lens.mapped . traverse . rExpr . _2 . optionExpr %~ toFragOpt
                         & traverse ConvertM.convertOnce
-                <&> filterResults tagsProp (\outerMatch innerMatch -> (innerMatch, outerMatch))
                 & ConvertM.convertOnce
+            argOpts <-
+                case argI ^? hAnn . Input.inferredType . _Pure . T._TFun . funcIn of
+                Just t | Lens.nullOf (hVal . V._BLam) argI ->
+                    Hole.results ConvertM.ExpressionPos t (exprPl ^. Input.inferScope)
+                    <&> Lens.mapped %~
+                        (Lens.mapped . traverse . rExpr . _2 . optionExpr . annValue %~ FragArgument . (^?! bBody . _BinderTerm)) .
+                        (>>= traverse (makeOption exprPl . fmap
+                            (\x ->
+                                emplaceArg argI
+                                <&> _2 %~ Ann ExprIRef.WriteNew . V.BApp . (`V.App` wrap (const (Ann ExprIRef.WriteNew)) x)
+                            )))
+                    >>= traverse ConvertM.convertOnce
+                    & ConvertM.convertOnce
+                _ -> pure mempty
             apply <-
                 argI ^. hAnn . Input.stored
                 & ExprIRef.setIref .~ exprPl ^. Input.stored . ExprIRef.setIref
@@ -134,7 +148,7 @@ convertAppliedHole app@(V.App funcI argI) exprPl argS =
                     )
                     <&> EntityId.ofValI
                 , _fTypeMismatch = typeMismatch
-                , _fOptions = opts
+                , _fOptions = opts <> argOpts <&> filterResults tagsProp (\outerMatch innerMatch -> (innerMatch, outerMatch))
                 } & pure
             >>= Actions.addActions app exprPl
             & lift
@@ -270,8 +284,8 @@ emplaceTag r v =
 
 emplaceArg :: Ann (Input.Payload m a) # V.Term -> [(TypeMatch, Ann (Write m) # V.Term)]
 emplaceArg arg =
-    [ (TypeMatches , a)
-    , (TypeMismatch , App (Ann WriteNew (V.BLeaf V.LHole)) a & V.BApp & Ann WriteNew)
+    [ (TypeMatches, a)
+    , (TypeMismatch, App (Ann WriteNew (V.BLeaf V.LHole)) a & V.BApp & Ann WriteNew)
     ]
     where
         a = arg & hflipped %~ hmap (const (ExistingRef . (^. Input.stored . ExprIRef.iref)))
