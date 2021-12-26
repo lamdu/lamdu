@@ -10,6 +10,7 @@ import           Hyper.Recurse (wrap)
 import           Hyper.Syntax (FuncType(..))
 import           Hyper.Syntax.Row (freExtends, freRest)
 import           Hyper.Type.Prune (Prune(..))
+import           Hyper.Unify (UVar)
 import qualified Lamdu.Builtins.Anchors as Builtins
 import           Lamdu.Calc.Definition (depsNominals)
 import qualified Lamdu.Calc.Term as V
@@ -32,21 +33,20 @@ import           Lamdu.Prelude
 
 type T = Transaction.Transaction
 
-convert ::
-    (Monad m, Monoid a, Typeable m) =>
+results ::
+    Monad m =>
     ConvertM.PositionInfo ->
-    Input.Payload m a # V.Term ->
-    ConvertM m (ExpressionU EvalPrep m a)
-convert posInfo holePl =
+    Pure # T.Type -> V.Scope # UVar ->
+    ConvertM m (ResultGroups (ConvertM m [Result (Pure # V.Term)]))
+results posInfo typ scope =
     do
-        forType <- makeForType (holePl ^. Input.inferredType) & transaction
+        forType <- makeForType typ & transaction
         let filtForType = filter (\x -> x ^. rExpr `notElem` (forType <&> (^. rExpr)))
         newTag <- DataOps.genNewTag & transaction
-        tagsProp <- Lens.view Anchors.codeAnchors <&> Anchors.tags
-        ResultGroups
+        pure ResultGroups
             { gSyntax = makeResultsSyntax posInfo & transaction <&> filtForType
             , gDefs = makeGlobals makeGetDef
-            , gLocals = makeLocals (const pure) (holePl ^. Input.inferScope)
+            , gLocals = makeLocals (const pure) scope
             , gInjects =
                 makeTagRes newTag "'" ((^. hPlain) . (`V.BAppP` V.BLeafP V.LRecEmpty) . V.BLeafP . V.LInject)
                 <&> filtForType
@@ -58,8 +58,18 @@ convert posInfo holePl =
             , gGetFields = makeTagRes newTag "." (Pure . V.BLeaf . V.LGetField)
             , gWrapInRecs = pure [] -- Only used in fragments
             }
-            <&> (>>= traverse (makeOption holePl . fmap (\x -> [((), wrap (const (Ann ExprIRef.WriteNew)) x)])))
-            & traverse ConvertM.convertOnce
+
+convert ::
+    (Monad m, Monoid a, Typeable m) =>
+    ConvertM.PositionInfo ->
+    Input.Payload m a # V.Term ->
+    ConvertM m (ExpressionU EvalPrep m a)
+convert posInfo holePl =
+    do
+        tagsProp <- Lens.view Anchors.codeAnchors <&> Anchors.tags
+        results posInfo (holePl ^. Input.inferredType) (holePl ^. Input.inferScope)
+            <&> Lens.mapped %~ (>>= traverse (makeOption holePl . fmap (\x -> [((), wrap (const (Ann ExprIRef.WriteNew)) x)])))
+            >>= traverse ConvertM.convertOnce
             <&> filterResults tagsProp const
     -- The call to convertOnce makes the result expressions consistent.
     -- If we remove all calls to convertOnce (replacing with "fmap pure"),
