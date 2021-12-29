@@ -102,7 +102,7 @@ data P1Out = P1Out
         -- ^ Used in P2 to check against local hole results
     , _p1Locals :: MMap T.Tag Clash.Info
         -- ^ Used in P2 to check against global hole results
-    , _p1Contexts :: MMap T.Tag (Set UUID)
+    , _p1Contexts :: MMap T.Tag (MMap Walk.NameType (OrderedSet UUID))
         -- ^ Needed to generate suffixes
     , _p1TypeVars :: OrderedSet UUID
         -- ^ Type vars met
@@ -189,7 +189,7 @@ p1Name mDisambiguator u nameType (P0Name texts isOp internalName) =
             | nameType == Walk.TypeVar =
                 tellSome p1TypeVars (OrderedSet.singleton x)
             | otherwise =
-                tellSome p1Contexts (tag ~~> Set.singleton x)
+                tellSome p1Contexts (tag ~~> (nameType ~~> OrderedSet.singleton x))
         InternalName ctx tag _ = internalName
         aName =
             Annotated.Name
@@ -268,7 +268,7 @@ isReserved env name =
             env ^.. (has @(Texts.Code Text) . Lens.folded <> has @(Texts.Name Text) . Lens.folded)
             & Set.fromList
 
-toSuffixMap :: MMap T.Tag (Set UUID) -> Map TaggedVarId Int
+toSuffixMap :: MMap T.Tag (OrderedSet UUID) -> Map TaggedVarId Int
 toSuffixMap tagContexts =
     tagContexts & Lens.imapped %@~ eachTag & (^.. Lens.folded) & mconcat
     where
@@ -305,13 +305,12 @@ initialP2Env env P1Out{_p1Globals, _p1Locals, _p1Contexts, _p1TypeVars, _p1Texts
     where
         tagTexts = makeTagTexts env _p1Texts
         top = colliders _p1Locals <> _p1Globals & uncolliders
-        -- TODO: Use OrderedSet for nice ordered suffixes
         collisions =
             MMap.filter Clash.isClash top
             & Lens.imapped %@~ \tag _ -> toContexts tag
         toContexts k =
-            _p1Contexts ^. Lens.at k
-            & fromMaybe (error "No Contexts for clashing tag??")
+            fromMaybe (error "No Contexts for clashing tag??") (_p1Contexts ^. Lens.at k)
+            ^. traverse
 
 
 ------------------------------
