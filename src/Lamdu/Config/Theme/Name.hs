@@ -10,8 +10,7 @@ import qualified GUI.Momentu.Draw as Draw
 import           Lamdu.Prelude
 
 data Name = Name
-    { _tagCollisionSuffixBGColor :: Draw.Color
-    , _textCollisionSuffixBGColor :: Draw.Color
+    { _textCollisionSuffixBGColor :: Draw.Color
     , _collisionSuffixScaleFactor :: Vector2 Double
     } deriving (Eq, Show, Generic)
 JsonTH.derivePrefixed "_" ''Name

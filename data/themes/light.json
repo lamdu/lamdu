@@ -83,7 +83,6 @@
         }
     },
     "name": {
-        "tagCollisionSuffixBGColor"  : [1.0, 0.7, 0.7, 1.0],
         "textCollisionSuffixBGColor" : [0.7, 0.7, 1.0, 1.0]
     },
     "indent": {

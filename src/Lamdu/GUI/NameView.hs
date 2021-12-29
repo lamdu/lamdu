@@ -1,3 +1,5 @@
+{-# LANGUAGE TypeFamilies #-}
+
 module Lamdu.GUI.NameView
     ( make
     ) where
@@ -20,41 +22,34 @@ import qualified Lamdu.Name as Name
 
 import           Lamdu.Prelude
 
-makeCollisionSuffixLabel ::
-    _ => Lens.ALens' NameTheme.Name Draw.Color -> Name.Collision -> m (Maybe View)
-makeCollisionSuffixLabel collisionColor mCollision =
+makeCollisionSuffixLabel :: _ => Name.Collision -> m (Maybe (WithTextPos View))
+makeCollisionSuffixLabel mCollision =
     case mCollision of
     Name.NoCollision -> pure Nothing
-    Name.Collision suffix -> mk suffix
-    Name.UnknownCollision -> mk "?"
-    where
-        mk text =
-            do
-                nameTheme <- Lens.view (has . Theme.name)
-                (Draw.backgroundColor ?? nameTheme ^# collisionColor)
-                    <*>
-                    (Label.make text
-                     & Styled.withColor TextColors.collisionSuffixTextColor
-                     <&> Element.scale (nameTheme ^. NameTheme.collisionSuffixScaleFactor))
-            <&> (^. Align.tValue)
-            <&> Just
+    Name.Collision suffix -> Label.make suffix <&> Just
+    Name.UnknownCollision -> Label.make "?" <&> Just
+
+mGlueRight :: (MonadReader env m, Glue.Glue env b a, Glue.Glued a b ~ b) => Maybe a -> b -> m (Glue.Glued a b)
+mGlueRight Nothing x = pure x
+mGlueRight (Just r) l = Glue.mkGlue ?? Glue.Horizontal ?? l ?? r
 
 make :: _ => Name -> m (WithTextPos View)
 make name =
     do
         (Name.TagText visibleName textCollision, tagCollision) <- Name.visible name
+        nameTheme <- Lens.view (has . Theme.name)
         mTextSuffixLabel <-
-            makeCollisionSuffixLabel NameTheme.textCollisionSuffixBGColor textCollision
-            <&> Lens._Just %~ Aligned 0.5
+            (Draw.backgroundColor ?? nameTheme ^. NameTheme.textCollisionSuffixBGColor <&> (Lens._Just %~))
+            <*> makeCollisionSuffixLabel textCollision
+            & Styled.withColor TextColors.collisionSuffixTextColor
+            <&> Lens._Just %~ Aligned 0.5 . Element.scale (nameTheme ^. NameTheme.collisionSuffixScaleFactor) . (^. Align.tValue)
             & local (Element.animIdPrefix <>~ ["text-suffix"])
         mTagSuffixLabel <-
-            makeCollisionSuffixLabel NameTheme.tagCollisionSuffixBGColor tagCollision
-            <&> Lens._Just %~ Aligned 0.5
+            makeCollisionSuffixLabel tagCollision
             & local (Element.animIdPrefix <>~ ["tag-suffix"])
         animId <- Lens.view Element.animIdPrefix
-        (|||) <- Glue.mkGlue ?? Glue.Horizontal
         TextView.make ?? visibleName ?? animId
             <&> Aligned 0.5
-            <&> maybe id (flip (|||)) mTextSuffixLabel
-            <&> maybe id (flip (|||)) mTagSuffixLabel
+            >>= mGlueRight mTextSuffixLabel
             <&> (^. Align.value)
+            >>= mGlueRight mTagSuffixLabel

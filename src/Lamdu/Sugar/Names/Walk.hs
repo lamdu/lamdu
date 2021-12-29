@@ -184,12 +184,13 @@ class ToBody t where
 
 instance ToBody Let where
     toBody let_@Let{_lName, _lBody, _lValue} =
-        do
-            (_lName, _lBody) <-
-                unCPS (withOptionalTag MayBeAmbiguous TaggedVar _lName)
-                (toExpression _lBody)
-            _lValue <- toExpression _lValue
-            pure let_{_lName, _lBody, _lValue}
+        -- In "let x = let x = _"
+        -- There isn't a real collision between the inner and outer "x"s
+        -- because they don't live in the same scopes.
+        -- However to avoid confusion we do treat it as a collision anyhow.
+        (,) <$> toExpression _lValue <*> toExpression _lBody
+        & unCPS (withOptionalTag MayBeAmbiguous TaggedVar _lName)
+        <&> \(_lName, (_lValue, _lBody)) -> let_{_lName, _lBody, _lValue}
 
 instance ToBody Binder where
     toBody = bBody toBody
