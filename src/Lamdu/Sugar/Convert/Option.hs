@@ -472,8 +472,8 @@ makeLocals f scope =
     do
         ctx <- Lens.view ConvertM.scInferContext
         fieldParams <-
-            Lens.view (ConvertM.scScopeInfo . ConvertM.siTagParamInfos)
-            <&> (^@.. Lens.itraversed . ConvertM._TagFieldParam . Lens.to ConvertM.tpiFromParameters)
+            Lens.view (ConvertM.scScopeInfo . ConvertM.siRecordParams)
+            <&> (^@.. Lens.itraversed <. Lens.folded)
             >>= transaction . traverse (mkGetField ctx)
         recRef <-
             Lens.view (ConvertM.scScopeInfo . ConvertM.siRecursiveRef)
@@ -496,7 +496,7 @@ makeLocals f scope =
             simpleResult
             <$> transaction (f typ (_Pure . V._BLeaf . V._LVar # var))
             <*> localName typ var
-        mkGetField ctx (tag, var) =
+        mkGetField ctx (var, tag) =
             simpleResult
             <$> f typ (V.BLeafP (V.LGetField tag) `V.BAppP` V.BLeafP (V.LVar var) ^. hPlain)
             <*> (ExprIRef.readTagData tag <&> tagTexts)

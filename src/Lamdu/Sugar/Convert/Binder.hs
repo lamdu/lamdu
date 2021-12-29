@@ -25,7 +25,7 @@ import           Lamdu.Expr.UniqueId (ToUUID(..))
 import qualified Lamdu.Sugar.Config as Config
 import           Lamdu.Sugar.Convert.Binder.Float (makeFloatLetToOuterScope)
 import           Lamdu.Sugar.Convert.Binder.Inline (inlineLet)
-import           Lamdu.Sugar.Convert.Binder.Params (ConventionalParams(..), convertLamParams, convertEmptyParams, convertNonEmptyParams, cpParams, mkVarInfo)
+import           Lamdu.Sugar.Convert.Binder.Params (ConventionalParams(..), convertLamParams, convertEmptyParams, convertNonEmptyParams, cpParams, cpMLamParam, mkVarInfo)
 import           Lamdu.Sugar.Convert.Binder.Redex (Redex(..))
 import qualified Lamdu.Sugar.Convert.Binder.Redex as Redex
 import           Lamdu.Sugar.Convert.Binder.Types (BinderKind(..))
@@ -190,11 +190,20 @@ makeFunction chosenScopeProp params funcBody =
             }
         addParams ctx =
             ctx
-            & ConvertM.siTagParamInfos <>~ _cpParamInfos params
+            & ConvertM.siRecordParams <>~
+                ( case params ^. cpParams of
+                    Just (RecordParams r) ->
+                        p
+                        <&> (,) ?? Set.fromList (r ^.. SugarLens.taggedListItems . tiTag . tagRefTag . tagVal)
+                        & Map.fromList
+                    _ -> Map.empty
+                )
             & ConvertM.siNullParams <>~
             case params ^. cpParams of
-            Just NullParam{} -> Set.fromList (cpMLamParam params ^.. Lens._Just . _2)
+            Just NullParam{} -> Set.fromList p
             _ -> Set.empty
+            where
+                p = params ^.. cpMLamParam .Lens._Just . _2
 
 makeAssignment ::
     (Monad m, Monoid a) =>

@@ -27,7 +27,7 @@ import qualified Lamdu.Expr.IRef as ExprIRef
 import           Lamdu.Sugar.Convert.Binder.Params (mkVarInfo)
 import           Lamdu.Sugar.Convert.Expression.Actions (addActions)
 import qualified Lamdu.Sugar.Convert.Input as Input
-import           Lamdu.Sugar.Convert.Monad (ConvertM, siTagParamInfos, tpiFromParameters)
+import           Lamdu.Sugar.Convert.Monad (ConvertM, siRecordParams)
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
 import qualified Lamdu.Sugar.Convert.NameRef as NameRef
 import           Lamdu.Sugar.Internal
@@ -153,10 +153,8 @@ convertParamsRecord param exprPl =
     } <$ check
     where
         check =
-            Lens.view (ConvertM.scScopeInfo . siTagParamInfos)
-            <&> (^.. Lens.traversed . ConvertM._TagFieldParam)
-            <&> map tpiFromParameters
-            <&> elem param
+            Lens.view (ConvertM.scScopeInfo . siRecordParams)
+            <&> Lens.has (Lens.ix param)
             >>= guard
 
 convertLocalNameRef ::

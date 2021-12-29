@@ -50,7 +50,7 @@ assertInferSuccess =
 emptyScopeInfo :: Maybe (RecursiveRef m) -> ScopeInfo m
 emptyScopeInfo recursiveRef =
     ScopeInfo
-    { _siTagParamInfos = mempty
+    { _siRecordParams = mempty
     , _siNullParams = mempty
     , _siLetItems = mempty
     , _siMOuter = Nothing

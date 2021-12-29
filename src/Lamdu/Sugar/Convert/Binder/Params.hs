@@ -1,6 +1,6 @@
 {-# LANGUAGE TemplateHaskell, TupleSections, TypeFamilies, TypeApplications #-}
 module Lamdu.Sugar.Convert.Binder.Params
-    ( ConventionalParams(..), cpParams, cpAddFirstParam
+    ( ConventionalParams(..), cpParams, cpAddFirstParam, cpMLamParam
     , convertLamParams, convertNonEmptyParams, convertEmptyParams
     , mkStoredLam, makeDeleteLambda
     , convertBinderToFunction
@@ -15,7 +15,6 @@ import qualified Control.Lens.Extended as Lens
 import           Control.Monad.Once (OnceT)
 import           Control.Monad.Transaction (MonadTransaction, getP, setP)
 import qualified Data.List.Extended as List
-import qualified Data.Map as Map
 import           Data.Maybe.Extended (unsafeUnjust)
 import           Data.Property (MkProperty', modP)
 import qualified Data.Set as Set
@@ -55,10 +54,9 @@ type T = Transaction
 
 data ConventionalParams m = ConventionalParams
     { cpTags :: Set T.Tag
-    , _cpParamInfos :: Map T.Tag ConvertM.TagFieldParam
     , _cpParams :: Maybe (Params EvalPrep InternalName (OnceT (T m)) (T m))
     , _cpAddFirstParam :: AddParam InternalName (OnceT (T m)) (T m)
-    , cpMLamParam :: Maybe ({- lambda's -}EntityId, V.Var)
+    , _cpMLamParam :: Maybe ({- lambda's -}EntityId, V.Var)
     }
 Lens.makeLenses ''ConventionalParams
 
@@ -308,13 +306,6 @@ fieldParamInfo binderKind tags fp storedLam tag =
     where
         param = storedLam ^. slLam . V.tlIn
 
-fpIdEntityId :: V.Var -> FieldParam -> EntityId
-fpIdEntityId param = EntityId.ofTaggedEntity param . fpTag
-
-mkParamInfo :: V.Var -> FieldParam -> Map T.Tag ConvertM.TagParamInfo
-mkParamInfo param fp =
-    fpTag fp Lens.~~> ConvertM.TagParamInfo param (fpIdEntityId param fp)
-
 changeGetFieldTags ::
     Monad m =>
     V.Var -> T.Tag -> T.Tag -> Ann (HRef m) # V.Term -> T m ()
@@ -406,15 +397,13 @@ convertRecordParams mPresMode binderKind fieldParams lam@(V.TypedLam param _ _) 
             ConvertTag.replace (nameWithContext Nothing param) (Set.fromList tags) (pure ()) resultInfo >>= ConvertM . lift
         pure ConventionalParams
             { cpTags = Set.fromList tags
-            , _cpParamInfos = fieldParams <&> mkParInfo & mconcat
             , _cpParams = ConvertTaggedList.convert addFirstSelection ps & RecordParams & Just
             , _cpAddFirstParam = AddNext addFirstSelection
-            , cpMLamParam = Just (entityId, param)
+            , _cpMLamParam = Just (entityId, param)
             }
     where
         entityId = lamPl ^. Input.entityId
         tags = fieldParams <&> fpTag
-        mkParInfo fp = mkParamInfo param fp <&> ConvertM.TagFieldParam
         storedLam = mkStoredLam lam lamPl
         mkParam fp =
             do
@@ -636,10 +625,9 @@ convertNonRecordParam binderKind lam@(V.TypedLam param _ _) lamExprPl =
                         <&> AddNext
         pure ConventionalParams
             { cpTags = mempty
-            , _cpParamInfos = mempty
             , _cpParams = Just funcParam
             , _cpAddFirstParam = addFirstParam
-            , cpMLamParam = Just (lamExprPl ^. Input.entityId, param)
+            , _cpMLamParam = Just (lamExprPl ^. Input.entityId, param)
             }
     where
         storedLam = mkStoredLam lam lamExprPl
@@ -676,9 +664,6 @@ convertNonEmptyParams ::
     ConvertM m (ConventionalParams m)
 convertNonEmptyParams mPresMode binderKind lambda lambdaPl =
     do
-        tagsInOuterScope <-
-            Lens.view (ConvertM.scScopeInfo . ConvertM.siTagParamInfos)
-            <&> Map.keysSet
         sugarParamsRecord <- Lens.view (ConvertM.scConfig . Config.sugarsEnabled . Config.parametersRecord)
         case lambdaPl ^. Input.inferredType . _Pure of
             T.TFun (FuncType (Pure (T.TRecord composite)) _)
@@ -687,18 +672,9 @@ convertNonEmptyParams mPresMode binderKind lambda lambdaPl =
                 , let fields = fieldsMap ^@.. Lens.itraversed
                 , List.isLengthAtLeast 2 fields
                 , isParamAlwaysUsedWithGetField lambda
-                , let myTags = fields <&> fst & Set.fromList
                 , let fieldParams = fields <&> uncurry FieldParam
-                ->
-                    if Set.null (tagsInOuterScope `Set.intersection` myTags)
-                    then convertRecordParams mPresMode binderKind fieldParams lambda lambdaPl
-                    else
-                        convertNonRecordParam binderKind lambda lambdaPl
-                        <&> cpParamInfos <>~ (fieldParams & map mkCollidingInfo & mconcat)
+                -> convertRecordParams mPresMode binderKind fieldParams lambda lambdaPl
             _ -> convertNonRecordParam binderKind lambda lambdaPl
-    where
-        param = lambda ^. V.tlIn
-        mkCollidingInfo fp = mkParamInfo param fp <&> ConvertM.CollidingFieldParam
 
 convertVarToCalls ::
     Monad m => T m (ValI m) -> V.Var -> Ann (HRef m) # V.Term -> T m ()

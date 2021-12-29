@@ -25,15 +25,15 @@ convertGetFieldParam ::
     ConvertM m (Maybe (ExpressionU v m a))
 convertGetFieldParam (V.App g@(Ann _ (V.BLeaf (V.LGetField tag))) recExpr) exprPl =
     do
-        tagParamInfos <- Lens.view (ConvertM.scScopeInfo . ConvertM.siTagParamInfos)
+        recParams <- Lens.view (ConvertM.scScopeInfo . ConvertM.siRecordParams)
         do
-            paramInfo <- tagParamInfos ^? Lens.ix tag . ConvertM._TagFieldParam
             param <- recExpr ^? ExprLens.valVar
-            guard $ param == ConvertM.tpiFromParameters paramInfo
+            tags <- recParams ^. Lens.at param
+            guard (tags ^. Lens.contains tag)
             GetParam ParamRef
                 { _pNameRef = NameRef
                   { _nrName = nameWithContext Nothing param tag
-                  , _nrGotoDefinition = ConvertM.tpiJumpTo paramInfo & pure
+                  , _nrGotoDefinition = EntityId.ofTaggedEntity param tag & pure
                   }
                 , _pBinderMode = NormalBinder
                 } & LeafGetVar & BodyLeaf & Just

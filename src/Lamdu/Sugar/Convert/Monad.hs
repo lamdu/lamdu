@@ -1,11 +1,9 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving, TemplateHaskell, PolymorphicComponents #-}
 {-# LANGUAGE FlexibleInstances, MultiParamTypeClasses #-}
 module Lamdu.Sugar.Convert.Monad
-    ( TagParamInfo(..)
-    , TagFieldParam(..), _TagFieldParam, _CollidingFieldParam
-    , OuterScopeInfo(..), osiPos, osiScope
+    ( OuterScopeInfo(..), osiPos, osiScope
     , RecursiveRef(..), rrDefI, rrDefType
-    , ScopeInfo(..), siTagParamInfos, siNullParams, siLetItems, siMOuter
+    , ScopeInfo(..), siRecordParams, siNullParams, siLetItems, siMOuter
 
     , Context(..)
     , scInferContext, scTopLevelExpr, scPostProcessRoot, siRecursiveRef, scConfig
@@ -49,17 +47,6 @@ import           Lamdu.Prelude
 
 type T = Transaction
 
-data TagParamInfo = TagParamInfo
-    { tpiFromParameters :: V.Var -- TODO: Rename "From" to something else
-    , tpiJumpTo :: Sugar.EntityId
-    }
-
-data TagFieldParam
-    = -- Sugared field param:
-      TagFieldParam TagParamInfo
-    | -- Colliding (and thus non-sugared) field param
-      CollidingFieldParam TagParamInfo
-
 data OuterScopeInfo m = OuterScopeInfo
     { _osiPos :: ExprIRef.HRef m # V.Term
     , _osiScope :: V.Scope # UVar
@@ -73,7 +60,7 @@ data RecursiveRef m = RecursiveRef
 Lens.makeLenses ''RecursiveRef
 
 data ScopeInfo m = ScopeInfo
-    { _siTagParamInfos :: Map T.Tag TagFieldParam -- tag uuids
+    { _siRecordParams :: Map V.Var (Set T.Tag)
     , _siNullParams :: Set V.Var
     , -- Each let item potentially has an inline action
       _siLetItems :: Map V.Var (Sugar.EntityId -> Sugar.BinderVarInline (T m))
@@ -114,7 +101,6 @@ data Context m = Context
         ConvertM m (ExpressionU EvalPrep m a)
     }
 Lens.makeLenses ''Context
-Lens.makePrisms ''TagFieldParam
 
 instance Anchors.HasCodeAnchors (Context m) m where codeAnchors = scCodeAnchors
 
