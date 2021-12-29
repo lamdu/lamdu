@@ -1,5 +1,5 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving, TypeFamilies, TemplateHaskell #-}
-{-# LANGUAGE NoMonomorphismRestriction, TupleSections, DerivingVia #-}
+{-# LANGUAGE NoMonomorphismRestriction, TupleSections, DerivingVia, NamedFieldPuns #-}
 {-# LANGUAGE MultiParamTypeClasses, FlexibleInstances, TypeApplications #-}
 
 module Lamdu.Sugar.Names.Add
@@ -286,16 +286,16 @@ initialP2Env ::
     , Has (Texts.Code Text) env
     ) =>
     env -> P1Out -> P2Env
-initialP2Env env (P1Out globals locals contexts tvs texts) =
+initialP2Env env P1Out{_p1Globals, _p1Locals, _p1Contexts, _p1TypeVars, _p1Texts} =
     P2Env
     { _p2TypeVars =
         numberCycle ["a", "b", "c"]
-        & zip (tvs ^.. Lens.folded)
+        & zip (_p1TypeVars ^.. Lens.folded)
         & Map.fromList
     , _p2TagTexts = tagTexts
-    , _p2Texts = texts ^. traverse . Tag.name . Lens.to Set.singleton
+    , _p2Texts = _p1Texts ^. traverse . Tag.name . Lens.to Set.singleton
     , _p2TagSuffixes = toSuffixMap collisions
-    , _p2TagsAbove = uncolliders globals
+    , _p2TagsAbove = uncolliders _p1Globals
         -- all globals are "above" everything, and locals add up as
         -- we descend
     , _p2AutoNames = mempty
@@ -303,14 +303,14 @@ initialP2Env env (P1Out globals locals contexts tvs texts) =
     , _p2NameTexts = env ^. has
     }
     where
-        tagTexts = makeTagTexts env texts
-        top = colliders locals <> globals & uncolliders
+        tagTexts = makeTagTexts env _p1Texts
+        top = colliders _p1Locals <> _p1Globals & uncolliders
         -- TODO: Use OrderedSet for nice ordered suffixes
         collisions =
             MMap.filter Clash.isClash top
             & Lens.imapped %@~ \tag _ -> toContexts tag
         toContexts k =
-            contexts ^. Lens.at k
+            _p1Contexts ^. Lens.at k
             & fromMaybe (error "No Contexts for clashing tag??")
 
 
