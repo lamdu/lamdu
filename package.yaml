@@ -95,6 +95,7 @@ library:
   - inline-js-core
   - OpenGL
   - optparse-applicative >= 0.12
+  - ordered-containers
   - pretty >=1.1.2 && <1.2
   - process
   - random >= 1.0.0

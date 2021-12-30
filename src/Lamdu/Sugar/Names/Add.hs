@@ -25,7 +25,7 @@ import           Data.MMap (MMap(..))
 import qualified Data.MMap as MMap
 import qualified Data.Map as Map
 import qualified Data.Set as Set
-import           Data.Set.Ordered (OrderedSet)
+import           Data.Set.Ordered (OSet, Bias(..), L)
 import qualified Data.Set.Ordered as OrderedSet
 import qualified Data.Text as Text
 import qualified Data.Tuple as Tuple
@@ -104,9 +104,9 @@ data P1Out = P1Out
         -- ^ Used in P2 to check against local hole results
     , _p1Locals :: MMap T.Tag Clash.Info
         -- ^ Used in P2 to check against global hole results
-    , _p1Contexts :: MMap T.Tag (MMap Walk.NameType (OrderedSet UUID))
+    , _p1Contexts :: MMap T.Tag (MMap Walk.NameType (Bias L (OSet UUID)))
         -- ^ Needed to generate suffixes
-    , _p1TypeVars :: OrderedSet UUID
+    , _p1TypeVars :: Bias L (OSet UUID)
         -- ^ Type vars met
     , _p1Texts :: Map T.Tag Tag.TextsInLang
     }
@@ -189,9 +189,9 @@ p1Name mDisambiguator u nameType (P0Name texts isOp internalName) =
                 myTags = tag ~~> Collider (Clash.infoOf aName)
         tellCtx x
             | nameType == Walk.TypeVar =
-                tellSome p1TypeVars (OrderedSet.singleton x)
+                tellSome p1TypeVars (Bias (OrderedSet.singleton x))
             | otherwise =
-                tellSome p1Contexts (tag ~~> (nameType ~~> OrderedSet.singleton x))
+                tellSome p1Contexts (tag ~~> (nameType ~~> Bias (OrderedSet.singleton x)))
         InternalName ctx tag _ = internalName
         aName =
             Annotated.Name
@@ -272,7 +272,7 @@ isReserved env name =
 
 toSuffixMap ::
     Map T.Tag TagText ->
-    MMap T.Tag (MMap Walk.NameType (OrderedSet UUID)) ->
+    MMap T.Tag (MMap Walk.NameType (Bias L (OSet UUID))) ->
     MMap T.Tag Clash.Info ->
     Map TaggedVarId Int
 toSuffixMap tagTexts contexts top =
@@ -282,7 +282,7 @@ toSuffixMap tagTexts contexts top =
             do
                 texts <- Lens.use id
                 let indices = filter (\i -> not (texts ^. Lens.contains (addSuf i))) [0 ..]
-                zipWithM item indices (ctx ^.. Lens.folded)
+                zipWithM item indices (ctx ^.. Lens.folded . Lens.folded)
             <&> Map.fromList
             where
                 addSuf :: Int -> Text
@@ -316,7 +316,7 @@ initialP2Env env P1Out{_p1Globals, _p1Locals, _p1Contexts, _p1TypeVars, _p1Texts
     P2Env
     { _p2TypeVars =
         numberCycle ["a", "b", "c"]
-        & zip (_p1TypeVars ^.. Lens.folded)
+        & zip (_p1TypeVars ^.. Lens.folded . Lens.folded)
         & Map.fromList
     , _p2TagTexts = tagTexts
     , _p2Texts = _p1Texts ^. traverse . Tag.name . Lens.to Set.singleton

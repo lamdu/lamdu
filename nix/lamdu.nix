@@ -5,7 +5,7 @@
 , executable-path, filepath, generic-data, GLFW-b
 , graphics-drawingcombinators, hashable, HUnit, lamdu-calculus, momentu
 , language-ecmascript, lattices, lens, lens-aeson, leveldb-haskell, List, mtl
-, inline-js-core, OpenGL, optparse-applicative, pretty, process
+, inline-js-core, OpenGL, optparse-applicative, ordered-containers, pretty, process
 , random, safe-exceptions, split, StateVar, stb-image, hypertypes
 , template-haskell, temporary, test-framework, test-framework-hunit
 , text, time, timeit, transformers, generic-constraints
@@ -46,7 +46,7 @@ mkDerivation {
     ekg-core executable-path filepath GLFW-b
     graphics-drawingcombinators hashable lamdu-calculus momentu
     language-ecmascript lattices lens lens-aeson leveldb-haskell List mtl
-    inline-js-core OpenGL optparse-applicative pretty process random
+    inline-js-core OpenGL optparse-applicative ordered-containers pretty process random
     safe-exceptions split StateVar stb-image hypertypes temporary text time timeit
     transformers unicode-properties unordered-containers uuid uuid-types vector
     zip-archive generic-constraints
