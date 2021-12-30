@@ -12,8 +12,10 @@ module Lamdu.Sugar.Names.Add
 import           Control.Lens (ALens)
 import qualified Control.Lens as Lens
 import           Control.Lens.Extended ((~~>))
+import           Control.Monad (zipWithM)
 import           Control.Monad.Reader (ReaderT(..), Reader, runReader)
 import qualified Control.Monad.Reader as Reader
+import           Control.Monad.State (evalState)
 import qualified Control.Monad.Writer as Writer
 import           Control.Monad.Trans.FastWriter (Writer, runWriter, MonadWriter)
 import qualified Data.Char as Char
@@ -269,17 +271,32 @@ isReserved env name =
             & Set.fromList
 
 toSuffixMap ::
+    Map T.Tag TagText ->
     MMap T.Tag (MMap Walk.NameType (OrderedSet UUID)) ->
     MMap T.Tag Clash.Info ->
     Map TaggedVarId Int
-toSuffixMap contexts top =
-    (collisions & Lens.imapped %@~ eachTag) ^. Lens.folded
+toSuffixMap tagTexts contexts top =
+    evalState (Lens.itraverse eachTag collisions) nonCollisionTexts ^. Lens.folded
     where
-        eachTag tag ctx = ctx ^.. Lens.folded & Lens.imap (item tag) & Map.fromList
-        item tag idx uuid = (TaggedVarId uuid tag, idx)
+        eachTag tag ctx =
+            do
+                texts <- Lens.use id
+                let indices = filter (\i -> not (texts ^. Lens.contains (addSuf i))) [0 ..]
+                zipWithM item indices (ctx ^.. Lens.folded)
+            <&> Map.fromList
+            where
+                addSuf :: Int -> Text
+                addSuf i = txt <> Text.pack (show i)
+                txt = tagTexts ^?! Lens.ix tag . ttText
+                item idx uuid =
+                    (TaggedVarId uuid tag, idx) <$ (Lens.contains (addSuf idx) .= True)
         collisions =
             MMap.filter Clash.isClash top
             & Lens.imapped %@~ \tag _ -> toContexts tag
+        nonCollisionTexts =
+            MMap.filter (not . Clash.isClash) top ^.. Lens.ifolded . Lens.asIndex
+            & foldMap (\t -> tagTexts ^.. Lens.ix t . ttText)
+            & Set.fromList
         toContexts k =
             fromMaybe (error "No Contexts for clashing tag??") (contexts ^. Lens.at k)
             ^. traverse
@@ -303,7 +320,7 @@ initialP2Env env P1Out{_p1Globals, _p1Locals, _p1Contexts, _p1TypeVars, _p1Texts
         & Map.fromList
     , _p2TagTexts = tagTexts
     , _p2Texts = _p1Texts ^. traverse . Tag.name . Lens.to Set.singleton
-    , _p2TagSuffixes = toSuffixMap _p1Contexts top
+    , _p2TagSuffixes = toSuffixMap tagTexts _p1Contexts top
     , _p2TagsAbove = uncolliders _p1Globals
         -- all globals are "above" everything, and locals add up as
         -- we descend
