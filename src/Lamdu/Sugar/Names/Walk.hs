@@ -28,7 +28,7 @@ import           Lamdu.Sugar.Types hiding (Tag(..), Type)
 import           Lamdu.Prelude
 
 -- TODO: Maybe remove "TaggedNominal", make it a disambiguation context?
-data NameType = GlobalDef | TaggedVar | TaggedNominal | Tag | TypeVar
+data NameType = Tag | TaggedNominal | GlobalDef | TaggedVar | TypeVar
     deriving (Eq, Ord, Show)
 
 Lens.makePrisms ''NameType
