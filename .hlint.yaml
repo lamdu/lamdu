@@ -69,6 +69,8 @@
     - warn: {lhs: "a ^? Control.Lens.failing b c", rhs: "a ^? b <> c"}
     - warn: {lhs: "a ^.. b <> a ^.. c", rhs: "a ^.. b <> c"}
     - warn: {lhs: "a ^.. b . c <> a ^.. b . d", rhs: "a ^.. b . (c <> d)"}
+    - warn: {lhs: "mconcat (a ^.. b)", rhs: "a ^. b"}
+    - warn: {lhs: "a ^.. b & mconcat", rhs: "a ^. b"}
     - warn: {lhs: "Control.Lens.at a . Control.Lens._Just", rhs: "Control.Lens.ix a"}
     - warn: {lhs: "(b .~ (a ^. b)) a", rhs: "a"}
     - warn: {lhs: "(c .~ (a ^. (b . c))) (a ^. b)", rhs: "a ^. b"}

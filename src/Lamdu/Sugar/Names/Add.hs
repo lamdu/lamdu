@@ -273,7 +273,7 @@ toSuffixMap ::
     MMap T.Tag Clash.Info ->
     Map TaggedVarId Int
 toSuffixMap contexts top =
-    collisions & Lens.imapped %@~ eachTag & (^.. Lens.folded) & mconcat
+    (collisions & Lens.imapped %@~ eachTag) ^. Lens.folded
     where
         eachTag tag ctx = ctx ^.. Lens.folded & Lens.imap (item tag) & Map.fromList
         item tag idx uuid = (TaggedVarId uuid tag, idx)
