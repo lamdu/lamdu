@@ -268,12 +268,21 @@ isReserved env name =
             env ^.. (has @(Texts.Code Text) . Lens.folded <> has @(Texts.Name Text) . Lens.folded)
             & Set.fromList
 
-toSuffixMap :: MMap T.Tag (OrderedSet UUID) -> Map TaggedVarId Int
-toSuffixMap tagContexts =
-    tagContexts & Lens.imapped %@~ eachTag & (^.. Lens.folded) & mconcat
+toSuffixMap ::
+    MMap T.Tag (MMap Walk.NameType (OrderedSet UUID)) ->
+    MMap T.Tag Clash.Info ->
+    Map TaggedVarId Int
+toSuffixMap contexts top =
+    collisions & Lens.imapped %@~ eachTag & (^.. Lens.folded) & mconcat
     where
-        eachTag tag contexts = contexts ^.. Lens.folded & Lens.imap (item tag) & Map.fromList
+        eachTag tag ctx = ctx ^.. Lens.folded & Lens.imap (item tag) & Map.fromList
         item tag idx uuid = (TaggedVarId uuid tag, idx)
+        collisions =
+            MMap.filter Clash.isClash top
+            & Lens.imapped %@~ \tag _ -> toContexts tag
+        toContexts k =
+            fromMaybe (error "No Contexts for clashing tag??") (contexts ^. Lens.at k)
+            ^. traverse
 
 numberCycle :: [Text] -> [Text]
 numberCycle s =
@@ -294,7 +303,7 @@ initialP2Env env P1Out{_p1Globals, _p1Locals, _p1Contexts, _p1TypeVars, _p1Texts
         & Map.fromList
     , _p2TagTexts = tagTexts
     , _p2Texts = _p1Texts ^. traverse . Tag.name . Lens.to Set.singleton
-    , _p2TagSuffixes = toSuffixMap collisions
+    , _p2TagSuffixes = toSuffixMap _p1Contexts top
     , _p2TagsAbove = uncolliders _p1Globals
         -- all globals are "above" everything, and locals add up as
         -- we descend
@@ -305,12 +314,6 @@ initialP2Env env P1Out{_p1Globals, _p1Locals, _p1Contexts, _p1TypeVars, _p1Texts
     where
         tagTexts = makeTagTexts env _p1Texts
         top = colliders _p1Locals <> _p1Globals & uncolliders
-        collisions =
-            MMap.filter Clash.isClash top
-            & Lens.imapped %@~ \tag _ -> toContexts tag
-        toContexts k =
-            fromMaybe (error "No Contexts for clashing tag??") (_p1Contexts ^. Lens.at k)
-            ^. traverse
 
 
 ------------------------------
