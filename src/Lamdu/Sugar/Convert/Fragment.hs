@@ -34,6 +34,7 @@ import           Lamdu.Expr.IRef (iref)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Load as Load
 import qualified Lamdu.Sugar.Config as Config
+import           Lamdu.Sugar.Convert.Annotation (makeTypeAnnotation)
 import qualified Lamdu.Sugar.Convert.Expression.Actions as Actions
 import qualified Lamdu.Sugar.Convert.Hole as Hole
 import           Lamdu.Sugar.Convert.Fragment.Heal (healMismatch)
@@ -77,7 +78,7 @@ convertAppliedHole app@(V.App funcI argI) exprPl argS =
                 if isTypeMatch
                 then pure Nothing
                 else
-                    Actions.makeTypeAnnotation
+                    makeTypeAnnotation
                         (EntityId.ofFragmentArg (argPl ^. Input.entityId))
                         (argPl ^. Input.inferredType) <&> Just
             tagsProp <- Lens.view Anchors.codeAnchors <&> Anchors.tags

@@ -8,7 +8,6 @@ module Lamdu.Sugar
 import qualified Control.Lens as Lens
 import           Control.Monad.Once (OnceT, Typeable)
 import           Control.Monad.Reader (ReaderT(..))
-import           Control.Monad.Transaction (MonadTransaction)
 import           Data.CurAndPrev (CurAndPrev(..))
 import qualified Data.Map as Map
 import           Data.Tuple (swap)
@@ -26,7 +25,7 @@ import           Lamdu.Name (Name)
 import           Lamdu.Sugar.Annotations
 import qualified Lamdu.Sugar.Config as SugarConfig
 import qualified Lamdu.Sugar.Convert as SugarConvert
-import           Lamdu.Sugar.Convert.Expression.Actions (makeTypeAnnotation)
+import           Lamdu.Sugar.Convert.Annotation (makeAnnotation)
 import qualified Lamdu.Sugar.Convert.Input as Input
 import           Lamdu.Sugar.Eval (addEvaluationResults)
 import           Lamdu.Sugar.Internal
@@ -49,23 +48,6 @@ markAnnotations workArea =
     { Sugar._waPanes = workArea ^. Sugar.waPanes <&> SugarLens.paneBinder %~ markNodeAnnotations
     , Sugar._waRepl = workArea ^. Sugar.waRepl & Sugar.replExpr %~ markNodeAnnotations
     }
-
-typeAnnotationFromEvalRes ::
-    MonadTransaction n f => EvalPrep -> f (Sugar.Annotation v AddNames.InternalName)
-typeAnnotationFromEvalRes x =
-    makeTypeAnnotation (x ^. eEvalId) (x ^. eType) <&> Sugar.AnnotationType
-
-makeAnnotation ::
-    MonadTransaction n m =>
-    Annotations.Mode ->
-    (ShowAnnotation, EvalPrep) ->
-    m (Sugar.Annotation EvalPrep AddNames.InternalName)
-makeAnnotation annMode (showAnn, x) =
-    case annMode of
-    _ | showAnn ^. showTypeAlways -> typeAnnotationFromEvalRes x
-    Annotations.Types | showAnn ^. showInTypeMode -> typeAnnotationFromEvalRes x
-    Annotations.Evaluation | showAnn ^. showInEvalMode -> Sugar.AnnotationVal x & pure
-    _ -> pure Sugar.AnnotationNone
 
 redirectLams :: [UUID] -> EvalResults -> EvalResults
 redirectLams lams results =

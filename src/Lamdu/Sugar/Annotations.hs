@@ -4,7 +4,6 @@
 module Lamdu.Sugar.Annotations
     ( ShowAnnotation(..), showTypeAlways, showInTypeMode, showInEvalMode
     , MarkAnnotations(..)
-    , neverShowAnnotations, alwaysShowAnnotations
     ) where
 
 import qualified Control.Lens as Lens

@@ -2,15 +2,13 @@
 
 module Lamdu.Sugar.Convert.Expression.Actions
     ( subexprPayloads, addActionsWith, addActions, makeActions
-    , makeTypeAnnotation, convertPayload, makeApply
+    , convertPayload, makeApply
     ) where
 
 import           Control.Applicative ((<|>))
 import qualified Control.Lens.Extended as Lens
 import           Control.Monad.Once (OnceT)
-import           Control.Monad.Unit (Unit)
 import           Control.Monad.Trans.Maybe (MaybeT(..))
-import           Control.Monad.Transaction (MonadTransaction)
 import qualified Data.Map as Map
 import qualified Data.Property as Property
 import qualified Data.Set as Set
@@ -38,7 +36,6 @@ import qualified Lamdu.Sugar.Convert.Input as Input
 import           Lamdu.Sugar.Convert.Monad (ConvertM(..))
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
 import qualified Lamdu.Sugar.Convert.PostProcess as PostProcess
-import           Lamdu.Sugar.Convert.Type (convertType)
 import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import           Lamdu.Sugar.Lens (childPayloads)
@@ -315,11 +312,6 @@ addActions ::
 addActions subexprs exprPl bodyS =
     addActionsWith (mconcat (subexprPayloads subexprs (bodyS ^.. childPayloads)))
     exprPl bodyS
-
-makeTypeAnnotation ::
-    MonadTransaction n m =>
-    EntityId -> Pure # T.Type -> m (Annotated EntityId # Type InternalName Unit)
-makeTypeAnnotation = convertType . EntityId.ofTypeOf
 
 mkEvalPrep :: ConvertPayload m a -> EvalPrep
 mkEvalPrep pl =
