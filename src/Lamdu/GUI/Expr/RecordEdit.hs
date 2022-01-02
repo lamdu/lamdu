@@ -39,6 +39,7 @@ import qualified Lamdu.I18N.Code as Texts
 import qualified Lamdu.I18N.CodeUI as Texts
 import qualified Lamdu.I18N.Navigation as Texts
 import           Lamdu.Name (Name(..))
+import qualified Lamdu.Sugar.Lens as SugarLens
 import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
@@ -131,14 +132,19 @@ make (Ann (Const pl) (Sugar.Composite (Sugar.TaggedList addField mTlBody) punned
             , case punned of
                 [] -> pure []
                 _ ->
-                    GetVarEdit.makePunnedVars punned
-                    <&> (\x -> [TaggedItem Nothing x Nothing])
-            ]
+                    M.weakerEvents
+                    <$> TaggedList.addNextEventMap (has . Texts.field) (keys ^. TaggedList.kAdd) punAddId
+                    <*> GetVarEdit.makePunnedVars punned
+                    <&> (:[]) . (TaggedItem Nothing ?? Nothing)
+                ]
             >>= makeRecord postProcess
             <&> Widget.weakerEvents (goToRecordEventMap <> tailEventMap)
             & stdWrapParentExpr pl
     where
         myId = WidgetIds.fromExprPayload pl
+        punAddId =
+            mTlBody >>= Lens.lastOf (SugarLens.taggedListBodyItems . Sugar.tiTag)
+            & maybe myId TaggedList.itemId
         postProcess =
             case recordTail of
             Sugar.OpenComposite restExpr -> makeOpenRecord restExpr
