@@ -83,7 +83,7 @@ makeResult mkGui ctx res =
                 & SugarLens.hAnnotations
                     @(Sugar.Annotation () Name)
                     @(Sugar.Annotation (Sugar.EvaluationScopes Name i) Name)
-                    .~ Sugar.AnnotationNone
+                    . Sugar._AnnotationVal .~ mempty
                 & mkGui
                 & GuiState.assignCursor resId dstId
                 <&>
