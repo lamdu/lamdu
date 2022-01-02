@@ -69,6 +69,7 @@ test =
     , testPrograms
     , testTagPanes
     , testWYTIWYS
+    , testPunnedRecordAddField
     ]
 
 replExpr ::
@@ -266,6 +267,27 @@ testOpPrec =
         workArea' <- convertWorkArea baseEnv
         unless (workAreaEq workArea workArea') (error "bad operator precedence")
 
+letBody :: Lens.Traversal' (Ann a # Sugar.Binder v n i o) (Ann a # Sugar.Binder v n i o)
+letBody = hVal . Sugar.bBody . Sugar._BinderLet . Sugar.lBody
+
+testPunnedRecordAddField :: HasCallStack => Test
+testPunnedRecordAddField =
+    testCase "punned-record-add-field" $
+    Env.make >>=
+    \baseEnv ->
+    do
+        punnedId <-
+            fromWorkArea baseEnv
+            ( Sugar.waRepl . Sugar.replExpr . letBody . letBody
+            . hVal . Sugar.bBody . Sugar._BinderTerm . Sugar._BodyRecord
+            . Sugar.cPunnedItems . traverse . Sugar.pvVar
+            . annotation . Sugar.plEntityId
+            )
+        applyEvent (baseEnv & cursor .~ WidgetIds.tagHoleId (WidgetIds.fromEntityId punnedId))
+            dummyVirt (EventKey (KeyEvent GLFW.Key'Comma 0 GLFW.KeyState'Pressed mempty))
+            & void
+    & testProgram "punned-fields.json"
+
 -- | Test for
 -- https://trello.com/c/uLlMpi5g/509-when-picking-record-tag-makes-the-field-pun-it-causes-red-cursor
 testPunCursor :: HasCallStack => Test
@@ -290,9 +312,8 @@ testPunCursor =
     >>= assertEqual "Item should be punned" (Just 1)
     where
         waRec =
-            Sugar.waRepl . Sugar.replExpr . hVal
-            . Sugar.bBody . Sugar._BinderLet . Sugar.lBody . hVal
-            . Sugar.bBody . Sugar._BinderTerm . Sugar._BodyRecord
+            Sugar.waRepl . Sugar.replExpr . letBody .
+            hVal . Sugar.bBody . Sugar._BinderTerm . Sugar._BodyRecord
 
 workAreaEq ::
     forall m v.
