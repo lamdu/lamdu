@@ -132,6 +132,7 @@ makeResultsSyntax typ posInfo =
                         ) `V.BAppP`
                         (V.BLeafP (V.LFromNom Builtins.boolTid) `V.BAppP` V.BLeafP V.LHole)
                         ^. hPlain
+                    , _rWithTypeAnnotations = False
                     , _rDeps = deps
                     }]
             else pure []

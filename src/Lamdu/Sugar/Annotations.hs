@@ -3,7 +3,7 @@
 
 module Lamdu.Sugar.Annotations
     ( ShowAnnotation(..), showTypeAlways, showInTypeMode, showInEvalMode
-    , MarkAnnotations(..)
+    , MarkAnnotations(..), alwaysShowAnnotations
     ) where
 
 import qualified Control.Lens as Lens

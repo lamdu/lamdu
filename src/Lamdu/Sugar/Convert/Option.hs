@@ -1,7 +1,7 @@
 {-# LANGUAGE TemplateHaskell, TypeApplications, ScopedTypeVariables, GADTs, DerivingVia #-}
 
 module Lamdu.Sugar.Convert.Option
-    ( Result(..), rTexts, rExpr, rDeps, rAllowEmptyQuery
+    ( Result(..), rTexts, rExpr, rDeps, rAllowEmptyQuery, rWithTypeAnnotations
     , ResultQuery(..), _QueryTexts, _QueryNewTag
     , simpleResult
     , ResultGroups(..), filterResults
@@ -35,6 +35,7 @@ import           Hyper.Type.Functor (_F)
 import           Hyper.Type.Prune (Prune(..))
 import           Hyper.Unify (UVar, applyBindings, unify)
 import           Hyper.Unify.Generalize (instantiate)
+import qualified Lamdu.Annotations as Annotations
 import           Lamdu.Calc.Definition (Deps, depsNominals, depsGlobalTypes)
 import           Lamdu.Calc.Identifier (Identifier(..))
 import qualified Lamdu.Calc.Infer as Infer
@@ -50,6 +51,8 @@ import qualified Lamdu.I18N.Code as Texts
 import qualified Lamdu.I18N.CodeUI as Texts
 import qualified Lamdu.I18N.Name as Texts
 import           Lamdu.I18N.UnicodeAlts (unicodeAlts)
+import           Lamdu.Sugar.Annotations (ShowAnnotation, MarkAnnotations(..), alwaysShowAnnotations)
+import           Lamdu.Sugar.Convert.Annotation (makeAnnotation)
 import           Lamdu.Sugar.Convert.Binder (convertBinder)
 import           Lamdu.Sugar.Convert.Binder.Params (mkVarInfo)
 import           Lamdu.Sugar.Convert.Expression.Actions (convertPayload)
@@ -87,6 +90,7 @@ data Result a = Result
     { _rDeps :: !Deps
     , _rExpr :: !a
     , _rTexts :: !ResultQuery
+    , _rWithTypeAnnotations :: !Bool
     , _rAllowEmptyQuery :: !Bool
     } deriving (Functor, Foldable, Traversable)
 Lens.makeLenses ''Result
@@ -97,6 +101,7 @@ simpleResult expr texts =
     { _rDeps = mempty
     , _rExpr = expr
     , _rTexts = QueryTexts texts
+    , _rWithTypeAnnotations = False
     , _rAllowEmptyQuery = True
     }
 
@@ -258,6 +263,7 @@ makeTagRes newTag prefix f =
             { _rDeps = mempty
             , _rAllowEmptyQuery = False
             , _rExpr = f newTag
+            , _rWithTypeAnnotations = False
             , _rTexts = QueryNewTag newTag
             }
 
@@ -300,6 +306,7 @@ makeGlobals f =
             , getListing Anchors.globals <&> filter filt >>= transaction . traverse newGlobal
             ] <&> mconcat
             <&> (^.. traverse . Lens._Just)
+            <&> Lens.mapped %~ rWithTypeAnnotations .~ True
     where
         addRecRef r = Lens.at (ExprIRef.globalId  (r ^. ConvertM.rrDefI)) ?~ r ^. ConvertM.rrDefType
         existingGlobal (x, s) = f x (s ^. _Pure . sTyp) >>= Lens._Just (\r -> symTexts "" x <&> simpleResult r)
@@ -368,6 +375,7 @@ ifTexts :: QueryLangInfo -> [Text]
 ifTexts = (^.. qCodeTexts . Texts.if_)
 
 makeOption ::
+    forall a m b.
     Monad m =>
     Input.Payload m b # V.Term ->
     Result [(a, Ann (Write m) # V.Term)] ->
@@ -422,8 +430,19 @@ makeOption dstPl res =
             & local (ConvertM.scInferContext .~ ctx1)
             & -- Updated deps are required to sugar labeled apply
                 Lens.locally (ConvertM.scFrozenDeps . pVal) (<> res ^. rDeps)
-            <&> hflipped %~ hmap (const (Lens._Wrapped %~ convertPayload . (pInput . Input.userData .~ (ParenInfo 0 False, []))))
-            <&> SugarLens.hAnnotations @EvalPrep @(Annotation () InternalName) .~ AnnotationNone
+            <&> markNodeAnnotations @_ @_ @(Binder (ShowAnnotation, EvalPrep) InternalName (OnceT (T m)) (T m))
+            <&> hflipped %~ hmap (const (Lens._Wrapped %~
+                \x ->
+                convertPayload (x & pInput . Input.userData .~ (ParenInfo 0 False, []))
+                & plAnnotation %~ (,) (x ^. pInput . Input.userData . _1)
+                ))
+            -- We explicitly do want annotations of variables such as global defs to appear
+            <&> Lens.filteredBy (hVal . bBody . _BinderTerm . _BodyLeaf . _LeafGetVar) .
+                annotation . plAnnotation . _1 .~ alwaysShowAnnotations
+            <&> hVal . bBody . _BinderTerm . _BodySimpleApply . appFunc .
+                Lens.filteredBy (hVal . _BodyLeaf . _LeafGetVar) .
+                annotation . plAnnotation . _1 .~ alwaysShowAnnotations
+            >>= SugarLens.hAnnotations mkAnn
         depsProp <- Lens.view ConvertM.scFrozenDeps
         pick <- ConvertM.typeProtectedSetToVal ?? dstPl ^. Input.stored <&> Lens.mapped %~ void
         res & rExpr .~
@@ -440,6 +459,9 @@ makeOption dstPl res =
                 }
             ) & pure
     where
+        mkAnn x
+            | res ^. rWithTypeAnnotations = makeAnnotation Annotations.Evaluation x <&> _AnnotationVal .~ ()
+            | otherwise = pure AnnotationNone
         mkPayload (stored :*: inferRes) =
             Input.Payload
             { Input._entityId = stored ^. ExprIRef.iref . _F & IRef.uuid & EntityId
