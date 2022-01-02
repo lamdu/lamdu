@@ -140,10 +140,12 @@ mApplyEvent env virtCursor event workArea =
 
 applyEventWith :: HasCallStack => String -> Env -> VirtualCursor -> Event -> OnceT (T ViewM) Env
 applyEventWith msg env virtCursor event =
-    convertWorkArea env
-    >>= mApplyEvent env virtCursor event
-    <&> fromMaybe (error msg)
-    <&> (`GuiState.update` env)
+    do
+        r <- convertWorkArea env
+            >>= mApplyEvent env virtCursor event
+            <&> fromMaybe (error msg)
+            <&> (`GuiState.update` env)
+        r `seq` pure r
 
 applyEvent :: HasCallStack => Env -> VirtualCursor -> Event -> OnceT (T ViewM) Env
 applyEvent = applyEventWith "no event in applyEvent"
