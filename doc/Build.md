@@ -14,10 +14,10 @@ If you do not install NodeJS, Lamdu's installation will build it from source.
 
 ### macOS
 
-requires [brew](http://brew.sh/) and [git](https://git-scm.com/):
+requires an x86_64 [brew](http://brew.sh/) setup and [git](https://git-scm.com/):
 
 ```shell
-brew install leveldb haskell-stack
+arch -arch x86_64 /usr/local/bin/brew install leveldb haskell-stack
 git clone --recursive https://github.com/lamdu/lamdu
 cd lamdu
 stack setup
