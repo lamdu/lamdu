@@ -44,7 +44,7 @@ results posInfo typ scope =
         let filtForType = filter (\x -> x ^. rExpr `notElem` (forType <&> (^. rExpr)))
         newTag <- DataOps.genNewTag & transaction
         pure ResultGroups
-            { gSyntax = makeResultsSyntax posInfo & transaction <&> filtForType
+            { gSyntax = makeResultsSyntax typ posInfo & transaction <&> filtForType
             , gDefs = makeGlobals makeGetDef
             , gLocals = makeLocals (const pure) scope
             , gInjects =
@@ -99,10 +99,10 @@ makeToNoms t tid =
         -- so that one doesn't have to type the "'" prefix
         injTexts x = [x, "'" <> x]
 
-makeResultsSyntax :: Monad m => ConvertM.PositionInfo -> T m [Result (Pure # V.Term)]
-makeResultsSyntax posInfo =
+makeResultsSyntax :: Monad m => Pure # T.Type -> ConvertM.PositionInfo -> T m [Result (Pure # V.Term)]
+makeResultsSyntax typ posInfo =
     sequenceA
-    [ genLamVar <&> \v -> r lamTexts (V.BLamP v Pruned (V.BLeafP V.LHole))
+    [ genLamVar <&> \v -> r (lamTexts typ) (V.BLamP v Pruned (V.BLeafP V.LHole))
     , r recTexts (V.BLeafP V.LRecEmpty) & pure
     , r caseTexts (V.BLeafP V.LAbsurd) & pure
     ] <>

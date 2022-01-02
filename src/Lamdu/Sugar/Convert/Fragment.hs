@@ -100,7 +100,7 @@ convertAppliedHole app@(V.App funcI argI) exprPl argS =
                             "." (makeFromNom exprPl argI <&> Lens.mapped . Lens.mapped %~ (:[]))
                         , gForType = forType ^.. Lens.folded . _2 & pure
                         , gGetFields = makeTagRes newTag "." (Pure . V.BLeaf . V.LGetField) <&> funcOpt
-                        , gSyntax = makeResultsSyntax topRef argI & transaction
+                        , gSyntax = makeResultsSyntax exprPl argI & transaction
                         , gWrapInRecs =
                             makeTagRes newTag "{"
                             (\t ->
@@ -165,7 +165,7 @@ convertAppliedHole app@(V.App funcI argI) exprPl argS =
 
 makeResultsSyntax ::
     Monad m =>
-    ExprIRef.ValI m -> Ann (Input.Payload m a) # V.Term ->
+    Input.Payload m a # V.Term -> Ann (Input.Payload m a) # V.Term ->
     T m [Result [(TypeMatch, Ann (Write m) # V.Term)]]
 makeResultsSyntax top arg =
     sequenceA
@@ -173,9 +173,12 @@ makeResultsSyntax top arg =
         \v ->
         simpleResult
         (emplaceArg arg <&> _2 %~ Ann WriteNew . V.BLam . V.TypedLam v (Ann WriteNew (HCompose Pruned)))
-        lamTexts
+        (lamTexts (top ^. Input.inferredType))
     , simpleResult
-        (emplaceArg arg <&> _2 %~ Ann (ExistingRef top) . V.BApp . V.App (Ann WriteNew (V.BLeaf V.LAbsurd))) caseTexts
+        (emplaceArg arg <&> _2 %~
+            Ann (ExistingRef (top ^. Input.stored . ExprIRef.iref)) .
+            V.BApp . V.App (Ann WriteNew (V.BLeaf V.LAbsurd)))
+            caseTexts
         & pure
     ]
 

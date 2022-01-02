@@ -358,8 +358,11 @@ recTexts = (^.. qCodeTexts . Texts.recordOpener) <> (^.. qCodeTexts . Texts.reco
 caseTexts :: QueryLangInfo -> [Text]
 caseTexts = (<&> ("." <>)) . (^.. qCodeTexts . Texts.case_)
 
-lamTexts :: QueryLangInfo -> [Text]
-lamTexts = (^.. qUITexts . Texts.lambda) <> const ["\\"] <> const ["|"]
+lamTexts :: Pure # T.Type -> QueryLangInfo -> [Text]
+lamTexts typ =
+    (^.. qUITexts . Texts.lambda) <> const ("\\" : pipe)
+    where
+        pipe = ["|" | Lens.has (_Pure . T._TFun . funcIn . _Pure . T._TRecord . _Pure . T._REmpty) typ]
 
 ifTexts :: QueryLangInfo -> [Text]
 ifTexts = (^.. qCodeTexts . Texts.if_)
