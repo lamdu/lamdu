@@ -154,7 +154,7 @@ applyEventWith msg virtCursor event env =
         r `seq` pure r
 
 applyEvent :: HasCallStack => VirtualCursor -> Event -> Env -> OnceT (T ViewM) Env
-applyEvent = applyEventWith "no event in applyEvent"
+applyEvent v e = applyEventWith ("no event in applyEvent: " <> show e) v e
 
 fromWorkArea ::
     Env ->
