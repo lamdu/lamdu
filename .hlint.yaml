@@ -7,6 +7,7 @@
     name: default
     rules:
     - warn: {lhs: traverse (pure . a), rhs: (fmap . fmap) a}
+    - warn: {lhs: foldr (\a b c -> d c >>= b) pure, rhs: flip (foldM (flip (\a -> d)))}
 
 - group:
     name: lamdu-style

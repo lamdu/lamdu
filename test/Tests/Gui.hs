@@ -3,6 +3,7 @@
 module Tests.Gui where
 
 import qualified Control.Lens as Lens
+import           Control.Monad (foldM)
 import           Control.Monad.Once (OnceT, _OnceT)
 import           Control.Monad.State (mapStateT)
 import           Control.Monad.Unit (Unit(..))
@@ -523,16 +524,15 @@ charEvent ',' = noMods GLFW.Key'Comma & simpleKeyEvent
 charEvent '⌫' = noMods GLFW.Key'Backspace & simpleKeyEvent
 charEvent x = EventChar x
 
-applyActions :: HasCallStack => String -> Env.Env -> OnceT (T ViewM) Env.Env
+applyActions :: HasCallStack => Env.Env -> String -> OnceT (T ViewM) Env.Env
 applyActions =
-    foldr
-    (\x f e -> applyEventWith ("No char " <> show x) dummyVirt (charEvent x) e >>= f)
-    pure
+    flip (\x -> applyEventWith ("No char " <> show x) dummyVirt (charEvent x))
+    & foldM
 
 wytiwys :: HasCallStack => String -> ByteString -> Test
 wytiwys src result =
     Env.make
-    >>= testFresh . (>> lift (readRepl >>= ExportJS.compile)) . applyActions src
+    >>= testFresh . (>> lift (readRepl >>= ExportJS.compile)) . (`applyActions` src)
     >>= runJS
     >>= assertEqual "Expected output" (result <> "\n")
     & testCase src
