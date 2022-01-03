@@ -71,6 +71,7 @@ test =
     , testTagPanes
     , testWYTIWYS
     , testPunnedRecordAddField
+    , testChooseTagAndAddNext
     ]
 
 replExpr ::
@@ -138,10 +139,10 @@ mApplyEvent env virtCursor event workArea =
                 { Widget._eVirtualCursor = virtCursor
                 , Widget._ePrevTextRemainder = ""
                 }
-        E.lookup (Identity Nothing) event eventMap
-            & runIdentity
-            <&> (^. E.dhHandler)
-            & sequenceA & lift
+        let r = E.lookup (Identity Nothing) event eventMap & runIdentity
+        -- When trying to figure out which event is selected,
+        -- this is a good place to "traceM (show (r ^? Lens._Just . E.dhDoc))"
+        r ^? Lens._Just . E.dhHandler & sequenceA & lift
 
 applyEventWith :: HasCallStack => String -> VirtualCursor -> Event -> Env -> OnceT (T ViewM) Env
 applyEventWith msg virtCursor event env =
@@ -289,6 +290,23 @@ testPunnedRecordAddField =
             & applyEvent dummyVirt (simpleKeyEvent (noMods GLFW.Key'Comma))
             & void
     & testProgram "punned-fields.json"
+
+testChooseTagAndAddNext :: HasCallStack => Test
+testChooseTagAndAddNext =
+    testCase "choose-tag-and-add-next" $
+    Env.make >>=
+    \baseEnv ->
+    do
+        tagId <-
+            fromWorkArea baseEnv
+            ( Sugar.waRepl . Sugar.replExpr . hVal . Sugar.bBody . Sugar._BinderTerm . Sugar._BodyRecord
+            . Sugar.cList . SugarLens.taggedListItems . Sugar.tiTag . Sugar.tagRefTag . Sugar.tagInstance
+            )
+        baseEnv & cursor .~ WidgetIds.tagHoleId (WidgetIds.fromEntityId tagId)
+            & applyEvent dummyVirt (EventChar 'x')
+            >>= applyEvent dummyVirt (simpleKeyEvent (noMods GLFW.Key'Comma))
+            >>= convertAndMakeGui "" & void
+    & testProgram "record.json"
 
 -- | Test for
 -- https://trello.com/c/uLlMpi5g/509-when-picking-record-tag-makes-the-field-pun-it-causes-red-cursor
