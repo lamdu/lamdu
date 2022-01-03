@@ -109,6 +109,9 @@ makeGui afterDoc env workArea =
             then pure gui
             else error ("Red cursor after " ++ afterDoc ++ ": " ++ show (env ^. cursor))
 
+convertAndMakeGui :: HasCallStack => String -> Env -> OnceT (T ViewM) (Responsive (T ViewM))
+convertAndMakeGui afterDoc env = convertWorkArea env >>= makeGui afterDoc env
+
 focusedWidget ::
     HasCallStack =>
     Responsive f -> Either String (Widget.Focused (f GuiState.Update))
@@ -139,16 +142,17 @@ mApplyEvent env virtCursor event workArea =
             <&> (^. E.dhHandler)
             & sequenceA & lift
 
-applyEventWith :: HasCallStack => String -> Env -> VirtualCursor -> Event -> OnceT (T ViewM) Env
-applyEventWith msg env virtCursor event =
+applyEventWith :: HasCallStack => String -> VirtualCursor -> Event -> Env -> OnceT (T ViewM) Env
+applyEventWith msg virtCursor event env =
     do
-        r <- convertWorkArea env
+        r <-
+            convertWorkArea env
             >>= mApplyEvent env virtCursor event
             <&> fromMaybe (error msg)
             <&> (`GuiState.update` env)
         r `seq` pure r
 
-applyEvent :: HasCallStack => Env -> VirtualCursor -> Event -> OnceT (T ViewM) Env
+applyEvent :: HasCallStack => VirtualCursor -> Event -> Env -> OnceT (T ViewM) Env
 applyEvent = applyEventWith "no event in applyEvent"
 
 fromWorkArea ::
@@ -197,11 +201,10 @@ testLambdaDelete =
     do
         paramCursor <- topLevelLamParamCursor baseEnv
         let delEvent = noMods GLFW.Key'Backspace & simpleKeyEvent
-        env0 <- applyEvent (baseEnv & cursor .~ paramCursor) dummyVirt delEvent
-        -- One delete replaces the param tag, next delete deletes param
-        env1 <- applyEvent env0 dummyVirt delEvent
-        _ <- convertWorkArea env1 >>= makeGui "" env1
-        pure ()
+        baseEnv & cursor .~ paramCursor & applyEvent dummyVirt delEvent
+            -- One delete replaces the param tag, next delete deletes param
+            >>= applyEvent dummyVirt delEvent
+            >>= convertAndMakeGui "" & void
 
 -- | Test for regression in creating new tags when there are tags matching the search string.
 -- (regression introduced at 2020.11.12 in 7bf691ce675f897)
@@ -213,11 +216,9 @@ testNewTag =
     testProgram "simple-lambda.json" $
     do
         paramCursor <- topLevelLamParamCursor baseEnv
-        env0 <- applyEvent (baseEnv & cursor .~ paramCursor) dummyVirt (EventChar 'f')
-        let upEvent = noMods GLFW.Key'Up & simpleKeyEvent
-        env1 <- applyEvent env0 dummyVirt upEvent
-        _ <- convertWorkArea env1 >>= makeGui "" env1
-        pure ()
+        baseEnv & cursor .~ paramCursor & applyEvent dummyVirt (EventChar 'f')
+            >>= applyEvent dummyVirt (simpleKeyEvent (noMods GLFW.Key'Up))
+            >>= convertAndMakeGui "" & void
 
 topLevelLamParamCursor :: Env -> OnceT (T ViewM) WidgetId.Id
 topLevelLamParamCursor env =
@@ -239,11 +240,11 @@ testFragmentSize =
         frag <-
             fromWorkArea baseEnv
             (Sugar.waRepl . Sugar.replExpr . annotation)
-        let env1 =
+        let env0 =
                 baseEnv
                 & cursor .~ WidgetIds.fromExprPayload frag
-        guiCursorOnFrag <- convertWorkArea env1 >>= makeGui "" env1
-        guiCursorElseWhere <- convertWorkArea baseEnv >>= makeGui "" baseEnv
+        guiCursorOnFrag <- convertAndMakeGui "" env0
+        guiCursorElseWhere <- convertAndMakeGui "" baseEnv
         unless (guiCursorOnFrag ^. sz == guiCursorElseWhere ^. sz) (error "fragment size inconsistent")
     where
         sz = Responsive.rWide . Align.tValue . Element.size
@@ -263,7 +264,7 @@ testOpPrec =
              Sugar.fBody . annotation . Sugar.plEntityId)
             <&> WidgetIds.fromEntityId
         workArea <- convertWorkArea baseEnv
-        _ <- applyEvent (baseEnv & cursor .~ holeId) dummyVirt (EventChar '&')
+        _ <- baseEnv & cursor .~ holeId & applyEvent dummyVirt (EventChar '&')
         workArea' <- convertWorkArea baseEnv
         unless (workAreaEq workArea workArea') (error "bad operator precedence")
 
@@ -283,8 +284,8 @@ testPunnedRecordAddField =
             . Sugar.cPunnedItems . traverse . Sugar.pvVar
             . annotation . Sugar.plEntityId
             )
-        applyEvent (baseEnv & cursor .~ WidgetIds.tagHoleId (WidgetIds.fromEntityId punnedId))
-            dummyVirt (simpleKeyEvent (noMods GLFW.Key'Comma))
+        baseEnv & cursor .~ WidgetIds.tagHoleId (WidgetIds.fromEntityId punnedId)
+            & applyEvent dummyVirt (simpleKeyEvent (noMods GLFW.Key'Comma))
             & void
     & testProgram "punned-fields.json"
 
@@ -302,11 +303,11 @@ testPunCursor =
             . Lens._Just . Sugar.tlHead . Sugar.tiTag . Sugar.tagRefTag . Sugar.tagInstance
             )
         env0 <-
-            applyEvent (baseEnv & cursor .~ WidgetIds.tagHoleId (WidgetIds.fromEntityId tagId))
-            dummyVirt (EventChar 'x')
-        env1 <- noMods GLFW.Key'Enter & simpleKeyEvent & applyEvent env0 dummyVirt
-        workArea <- convertWorkArea env1
-        _ <- makeFocusedWidget "" env1 workArea
+            baseEnv & cursor .~ WidgetIds.tagHoleId (WidgetIds.fromEntityId tagId)
+            & applyEvent dummyVirt (EventChar 'x')
+            >>= applyEvent dummyVirt (simpleKeyEvent (noMods GLFW.Key'Enter))
+        workArea <- convertWorkArea env0
+        _ <- makeFocusedWidget "" env0 workArea
         workArea ^? Lens.cloneTraversal waRec . Sugar.cPunnedItems <&> length & pure
     & testProgram "rec-with-let.json"
     >>= assertEqual "Item should be punned" (Just 1)
@@ -447,9 +448,8 @@ testActions env virtCursor =
     where
         exampleChars f = [f 'a', f '1', f '_', f '+'] ^.. traverse . Lens._Just
         testEvent (doc, event) =
-            do
-                newEnv <- event <&> (`GuiState.update` env) & lift
-                convertWorkArea newEnv >>= makeGui (show doc <> " from " <> show (env ^. cursor)) newEnv
+            event <&> (`GuiState.update` env) & lift
+            >>= convertAndMakeGui (show doc <> " from " <> show (env ^. cursor))
             & _OnceT %~ mapStateT (fmap fst . Transaction.fork) & void
 
 docHandler ::
@@ -479,7 +479,7 @@ programTest ::
 programTest baseEnv filename =
     testProgram filename $
     do
-        baseGui <- convertWorkArea baseEnv >>= makeGui "" baseEnv
+        baseGui <- convertAndMakeGui "" baseEnv
         let size = baseGui ^. Responsive.rWide . Align.tValue . Widget.wSize
         let narrowSize =
                 (baseGui ^. Responsive.rNarrow) (Responsive.NarrowLayoutParams 0 False)
@@ -524,10 +524,10 @@ charEvent '⌫' = noMods GLFW.Key'Backspace & simpleKeyEvent
 charEvent x = EventChar x
 
 applyActions :: HasCallStack => String -> Env.Env -> OnceT (T ViewM) Env.Env
-applyActions [] env = pure env
-applyActions (x:xs) env =
-    applyEventWith ("No char " <> show x) env dummyVirt (charEvent x)
-    >>= applyActions xs
+applyActions =
+    foldr
+    (\x f e -> applyEventWith ("No char " <> show x) dummyVirt (charEvent x) e >>= f)
+    pure
 
 wytiwys :: HasCallStack => String -> ByteString -> Test
 wytiwys src result =
