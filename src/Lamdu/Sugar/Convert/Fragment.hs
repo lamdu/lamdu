@@ -254,6 +254,7 @@ toFragOpt o =
         FragOp FragOperator
         { _oFunc = x ^. aFunc
         , _oRightArg = x ^?! (aMOpArgs . Lens._Just . oaRhs <> aAnnotatedArgs . Lens.ix 1 . aaExpr)
+        , _oAnnotatedArgs = x ^.. aAnnotatedArgs . traverse . aaTag
         } & Ann (Const (o ^. annotation))
     BinderTerm (BodyToNom n) -> n ^. nTId & FragToNom & Ann (Const (o ^. annotation))
     BinderTerm (BodyIfElse i) -> i ^. iThen & FragIf & Ann (Const (o ^. annotation))

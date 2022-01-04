@@ -318,10 +318,11 @@ instance ToBody FragOpt where
     toBody FragDefer = pure FragDefer
 
 instance ToBody FragOperator where
-    toBody (FragOperator f a) =
+    toBody (FragOperator f a t) =
         FragOperator
         <$> toNode (Lens._Wrapped (toBinderVarRef Nothing)) f
         <*> toExpression a
+        <*> traverse (toTagOf Tag) t
 
 instance
     (Walk m v0 v1, Walk m p0 p1, i ~ IM m, a ~ OldName m, b ~ NewName m) =>

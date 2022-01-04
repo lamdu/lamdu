@@ -31,7 +31,7 @@ module Lamdu.Sugar.Types.Expression
     -- Fragments
     , Fragment(..), fExpr, fHeal, fTypeMismatch, fOptions
     , FragOpt(..), _FragPostfix, _FragInject, _FragApplyFunc, _FragOp
-    , FragOperator(..), oFunc, oRightArg
+    , FragOperator(..), oFunc, oRightArg, oAnnotatedArgs
     -- If/else
     , IfElse(..), iIf, iThen, iElse
     , Else(..), _SimpleElse, _ElseIf
@@ -122,6 +122,7 @@ data FragOperator v name i o k = FragOperator
     , -- Argument on right-hand-side (LTR) of operator.
       -- (usually a hole, but may be completed to other values)
       _oRightArg :: k :# Term v name i o
+    , _oAnnotatedArgs :: [Tag name]
     } deriving Generic
 
 newtype Hole name i o = Hole

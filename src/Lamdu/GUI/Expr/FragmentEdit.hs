@@ -15,6 +15,7 @@ import qualified GUI.Momentu.ModKey as ModKey
 import           GUI.Momentu.Responsive (Responsive(..))
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.Responsive.Expression as ResponsiveExpr
+import qualified GUI.Momentu.Responsive.Options as Options
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Label as Label
 import qualified GUI.Momentu.Widgets.Menu as Menu
@@ -30,6 +31,7 @@ import qualified Lamdu.GUI.Expr.GetVarEdit as GetVarEdit
 import qualified Lamdu.GUI.Expr.InjectEdit as InjectEdit
 import qualified Lamdu.GUI.Expr.NominalEdit as NominalEdit
 import           Lamdu.GUI.Expr.OptionEdit
+import qualified Lamdu.GUI.Expr.TagEdit as TagEdit
 import           Lamdu.GUI.Monad (GuiM)
 import qualified Lamdu.GUI.Monad as GuiM
 import           Lamdu.GUI.Styled (label, grammar)
@@ -157,4 +159,6 @@ makeFragOpt (Ann (Const a) b) =
         fromView act = (Widget.makeFocusableWidget ?? myId <&> (Widget.widget %~)) <*> (act <&> Responsive.fromTextView) & stdWrap a
 
 makeFragOperator :: _ => ExprGui.Body Sugar.FragOperator i o -> GuiM env i o (Responsive o)
-makeFragOperator (Sugar.FragOperator f arg) = ApplyEdit.makeOperatorRow id f arg
+makeFragOperator (Sugar.FragOperator f rArg aArgs) =
+    (Options.boxSpaced ?? Options.disambiguationNone)
+    <*> sequenceA (ApplyEdit.makeOperatorRow id f rArg : (aArgs <&> fmap Responsive.fromTextView . TagEdit.makeArgTag))
