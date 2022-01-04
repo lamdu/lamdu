@@ -386,13 +386,13 @@ makeParamTag =
         onPickNext pos = WidgetIds.fromEntityId pos & addItemId & Just
 
 -- | Unfocusable tag view (e.g: in apply args)
-makeArgTag :: _ => Name -> Sugar.EntityId -> m (M.WithTextPos M.View)
-makeArgTag name tagInstance =
-    NameView.make name
+makeArgTag :: _ => Sugar.Tag Name -> m (M.WithTextPos M.View)
+makeArgTag tag =
+    NameView.make (tag ^. Sugar.tagName)
     & Styled.withColor TextColors.argTagColor
     & local (M.animIdPrefix .~ animId)
     where
-        animId = WidgetIds.fromEntityId tagInstance & Widget.toAnimId
+        animId = WidgetIds.fromEntityId (tag ^. Sugar.tagInstance) & Widget.toAnimId
 
 makeBinderTagEdit ::
     _ =>

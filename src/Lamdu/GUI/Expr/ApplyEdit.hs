@@ -103,10 +103,7 @@ makeArgRow :: _ => ExprGui.Body Sugar.AnnotatedArg i o -> GuiM env i o (TaggedIt
 makeArgRow arg =
     do
         expr <- GuiM.makeSubexpression (arg ^. Sugar.aaExpr)
-        pre <-
-            TagEdit.makeArgTag (arg ^. Sugar.aaTag . Sugar.tagName)
-            (arg ^. Sugar.aaTag . Sugar.tagInstance)
-            /|/ Spacer.stdHSpace
+        pre <- TagEdit.makeArgTag (arg ^. Sugar.aaTag) /|/ Spacer.stdHSpace
         pure TaggedItem
             { _tagPre = pre <&> Widget.fromView & Just
             , _taggedItem = expr
