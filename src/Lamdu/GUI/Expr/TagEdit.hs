@@ -265,8 +265,8 @@ makeTagHoleEdit mkPickResult holeId tagRefReplace =
     where
         newTagOption = tagRefReplace ^. Sugar.tcNewTag
 
-makeTagRefEdit :: _ => Sugar.TagRef Name i o -> GuiM env i o (M.TextWidget o)
-makeTagRefEdit = makeTagRefEditWith id (const Nothing) Nothing <&> fmap snd
+makeTagRefEdit :: _ => (Sugar.EntityId -> Maybe Widget.Id) -> Sugar.TagRef Name i o -> GuiM env i o (M.TextWidget o)
+makeTagRefEdit onPickNext = makeTagRefEditWith id onPickNext Nothing <&> fmap snd
 
 data TagRefEditType
     = TagHole
@@ -333,14 +333,11 @@ makeTagRefEditWith onView onPickNext mSetToAnon tag =
             Just setAnon -> setAnon <&> WidgetIds.fromEntityId
             <&> WidgetIds.tagHoleId
 
-makeRecordTag :: _ => Sugar.TagRef Name i o -> GuiM env i o (M.TextWidget o)
-makeRecordTag =
-    makeTagRefEdit <&> Styled.withColor TextColors.recordTagColor
+makeRecordTag :: _ => (EntityId -> Maybe Widget.Id) -> Sugar.TagRef Name i o -> GuiM env i o (M.TextWidget o)
+makeRecordTag onPickNext = makeTagRefEdit onPickNext <&> Styled.withColor TextColors.recordTagColor
 
-makeVariantTag :: _ => Sugar.TagRef Name i o -> GuiM env i o (M.TextWidget o)
-makeVariantTag tag =
-    makeTagRefEdit tag
-    & Styled.withColor TextColors.caseTagColor
+makeVariantTag :: _ => (EntityId -> Maybe Widget.Id) -> Sugar.TagRef Name i o -> GuiM env i o (M.TextWidget o)
+makeVariantTag onPickNext = makeTagRefEdit onPickNext <&> Styled.withColor TextColors.caseTagColor
 
 addItemId :: Widget.Id -> Widget.Id
 addItemId = (`Widget.joinId` ["add item"])

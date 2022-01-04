@@ -15,4 +15,4 @@ import qualified Lamdu.Sugar.Types as Sugar
 import           Lamdu.Prelude
 
 make :: _ => Sugar.TagRef Name i o -> GuiM env i o (Responsive o)
-make tag = Styled.grammar (Label.make ".") /|/ TagEdit.makeRecordTag tag <&> Responsive.fromWithTextPos
+make tag = Styled.grammar (Label.make ".") /|/ TagEdit.makeRecordTag (const Nothing) tag <&> Responsive.fromWithTextPos

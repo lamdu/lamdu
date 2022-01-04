@@ -76,10 +76,11 @@ makeAltRow item =
                 (WidgetIds.ofTagValue altId)
                 (item ^. TaggedList.iValue . annotation & WidgetIds.fromExprPayload)
         pre <-
-            ( TagEdit.makeVariantTag (item ^. TaggedList.iTag)
+            ( TagEdit.makeVariantTag (Just . TagEdit.addItemId . WidgetIds.fromEntityId) (item ^. TaggedList.iTag)
                 <&> M.tValue %~ Widget.weakerEvents (item ^. TaggedList.iEventMap)
                 & local (M.animIdPrefix .~ Widget.toAnimId myId)
             ) M./|/ Spacer.stdHSpace
+            & local (\env -> env & has . Menu.configKeysPickOptionAndGotoNext .~ env ^. has . Config.caseAddAltKeys)
         let row =
                 TaggedItem
                 { _tagPre = Just pre
