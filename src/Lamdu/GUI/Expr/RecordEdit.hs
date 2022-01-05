@@ -140,7 +140,11 @@ make (Ann (Const pl) (Sugar.Composite (Sugar.TaggedList addField mTlBody) punned
             >>= makeRecord postProcess
             <&> Widget.weakerEvents (goToRecordEventMap <> tailEventMap)
             & stdWrapParentExpr pl
+    & (foldl assignPunned ?? punned)
     where
+        assignPunned w p =
+            M.assignCursorPrefix
+            (WidgetIds.fromEntityId (p ^. Sugar.pvTagEntityId)) (Widget.joinId punAddId) w
         myId = WidgetIds.fromExprPayload pl
         punAddId =
             mTlBody >>= Lens.lastOf (SugarLens.taggedListBodyItems . Sugar.tiTag)
