@@ -15,6 +15,7 @@ import qualified Hyper.Syntax.Scheme as S
 import           Lamdu.Calc.Definition (depsGlobalTypes)
 import           Lamdu.Calc.Identifier (identHex)
 import           Lamdu.Calc.Infer (alphaEq)
+import           Lamdu.Calc.Lens (valGlobals)
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
 import           Lamdu.Data.Anchors (anonTag)
@@ -103,23 +104,31 @@ verifyNoBrokenDefsTest =
                 assertString ("Definition with no tag: " ++ identHex (V.vvName var))
             | otherwise = pure ()
 
-verifyDefs :: (T.Tag -> Text) -> [Def.Definition v (presMode, T.Tag, V.Var)] -> IO ()
+verifyDefs :: (T.Tag -> Text) -> [Def.Definition (Annotated a # V.Term) (presMode, T.Tag, V.Var)] -> IO ()
 verifyDefs tagName defs =
     defs
-    ^@.. traverse . Def.defBody . Def._BodyExpr . Def.exprFrozenDeps . depsGlobalTypes . Lens.itraversed
+    ^@.. Lens.traverse . Lens.filteredBy (Def.defPayload . _3)
+        <.> Def.defBody . Def._BodyExpr .
+            Lens.filteredBy (Def.expr . Lens.to (Set.fromList . (^.. valGlobals mempty)))
+        <.> Def.exprFrozenDeps . depsGlobalTypes . Lens.itraversed
     & traverse_ (uncurry verifyGlobalType)
     where
         defTypes =
             defs <&> (\x -> (x ^. Def.defPayload . _3, (x ^. Def.defPayload . _2, x ^. Def.defType))) & Map.fromList
-        verifyGlobalType var typ =
-            case defTypes ^. Lens.at var of
-            Nothing -> assertString ("Missing def referred in frozen deps: " ++ identHex (V.vvName var))
-            Just (tag, x)
-                | alphaEq x typ -> pure ()
-                | otherwise ->
-                    assertString
-                    ("Frozen def type mismatch for " ++ show (tagName tag) ++ ":\n" ++
-                    prettyShow x ++ "\nvs\n" ++ prettyShow typ)
+        verifyGlobalType (inDef, (usedDefs, var)) typ
+            | usedDefs ^. Lens.contains var =
+                case defTypes ^. Lens.at var of
+                Nothing ->
+                    "Missing def referred in frozen deps " <> identHex (V.vvName var) <> inText & assertString
+                Just (tag, x)
+                    | alphaEq x typ -> pure ()
+                    | otherwise ->
+                        "Frozen def type mismatch" <> inText <> " for " <> show (tagName tag) <> ":\n" ++
+                        prettyShow x <> "\nvs\n" <> prettyShow typ
+                        & assertString
+            | otherwise = "Stale frozen dep: " <> identHex (V.vvName var) <> inText & assertString
+            where
+                inText = " in " <> identHex (V.vvName inDef)
 
 verifySchemes :: IO ()
 verifySchemes =
