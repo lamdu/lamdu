@@ -1,0 +1,50 @@
+[
+    {
+        "schemaVersion": 15
+    },
+    {
+        "tagOrder": 0,
+        "tag": "a386d980d96f732451f7b7b7ebab441c",
+        "names": {
+            "hebrew": "א",
+            "english": "x",
+            "italiano": "x",
+            "spanish": "x"
+        }
+    },
+    {
+        "tag": "a386d980d96f732451f7b7b7ebab441c",
+        "lamVar": "3ac5d6f8a36f45ef874b264d2e1e1164"
+    },
+    {
+        "repl": {
+            "val": {
+                "applyFunc": {
+                    "lamParamType": {
+                        "id": "9e744b18-53d2-4335-99b5-2293723ea4fc"
+                    },
+                    "lamVar": "3ac5d6f8a36f45ef874b264d2e1e1164",
+                    "id": "9a83d70c-1a50-4693-87e7-8aba25a28258",
+                    "lamBody": {
+                        "extendVal": {
+                            "hole": {},
+                            "id": "1260ca55-9bb5-4068-99c0-284c02712cc2"
+                        },
+                        "extendTag": "a386d980d96f732451f7b7b7ebab441c",
+                        "id": "b1afb7aa-c6aa-460a-a88b-14c27236dc4c",
+                        "extendRest": {
+                            "recEmpty": {},
+                            "id": "141d9c3f-f2b7-4969-93be-fd4c4764faa8"
+                        }
+                    }
+                },
+                "applyArg": {
+                    "primBytes": "0101000000000000000700000000000014ffffffffffffffce",
+                    "primId": "42493a666c6f61740000000000000000",
+                    "id": "1bf55bf2-1dcc-4813-b5e1-6bc38a1ebc84"
+                },
+                "id": "9b06c6f6-f8e8-43b9-97ff-35dc0332e502"
+            }
+        }
+    }
+]

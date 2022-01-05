@@ -71,6 +71,7 @@ test =
     , testTagPanes
     , testWYTIWYS
     , testPunnedRecordAddField
+    , testRecordPunAndAdd
     , testChooseTagAndAddNext
     ]
 
@@ -273,6 +274,9 @@ testOpPrec =
 letBody :: Lens.Traversal' (Ann a # Sugar.Binder v n i o) (Ann a # Sugar.Binder v n i o)
 letBody = hVal . Sugar.bBody . Sugar._BinderLet . Sugar.lBody
 
+binderRec :: Lens.Traversal' (Ann a # Sugar.Binder v n i o) (Sugar.Composite v n i o # Ann a)
+binderRec = hVal . Sugar.bBody . Sugar._BinderTerm . Sugar._BodyRecord
+
 testPunnedRecordAddField :: HasCallStack => Test
 testPunnedRecordAddField =
     testCase "punned-record-add-field" $
@@ -281,8 +285,7 @@ testPunnedRecordAddField =
     do
         punnedId <-
             fromWorkArea baseEnv
-            ( Sugar.waRepl . Sugar.replExpr . letBody . letBody
-            . hVal . Sugar.bBody . Sugar._BinderTerm . Sugar._BodyRecord
+            ( Sugar.waRepl . Sugar.replExpr . letBody . letBody . binderRec
             . Sugar.cPunnedItems . traverse . Sugar.pvVar
             . annotation . Sugar.plEntityId
             )
@@ -290,6 +293,25 @@ testPunnedRecordAddField =
             & applyEvent dummyVirt (simpleKeyEvent (noMods GLFW.Key'Comma))
             & void
     & testProgram "punned-fields.json"
+
+testRecordPunAndAdd :: HasCallStack => Test
+testRecordPunAndAdd =
+    testCase "record-pun-and-add" $
+    Env.make >>=
+    \baseEnv ->
+    do
+        holeId <-
+            fromWorkArea baseEnv
+            ( Sugar.waRepl . Sugar.replExpr . letBody . binderRec
+            . Sugar.cList . SugarLens.taggedListItems . Sugar.tiValue
+            . annotation . Sugar.plEntityId
+            )
+        baseEnv & cursor .~ WidgetIds.fromEntityId holeId
+            & applyEvent dummyVirt (EventChar 'x')
+            >>= applyEvent dummyVirt (simpleKeyEvent (noMods GLFW.Key'Comma))
+            >>= convertAndMakeGui ""
+            & void
+    & testProgram "before-punned-field.json"
 
 testChooseTagAndAddNext :: HasCallStack => Test
 testChooseTagAndAddNext =
@@ -299,7 +321,7 @@ testChooseTagAndAddNext =
     do
         tagId <-
             fromWorkArea baseEnv
-            ( Sugar.waRepl . Sugar.replExpr . hVal . Sugar.bBody . Sugar._BinderTerm . Sugar._BodyRecord
+            ( Sugar.waRepl . Sugar.replExpr . binderRec
             . Sugar.cList . SugarLens.taggedListItems . Sugar.tiTag . Sugar.tagRefTag . Sugar.tagInstance
             )
         baseEnv & cursor .~ WidgetIds.tagHoleId (WidgetIds.fromEntityId tagId)
@@ -331,9 +353,7 @@ testPunCursor =
     & testProgram "rec-with-let.json"
     >>= assertEqual "Item should be punned" (Just 1)
     where
-        waRec =
-            Sugar.waRepl . Sugar.replExpr . letBody .
-            hVal . Sugar.bBody . Sugar._BinderTerm . Sugar._BodyRecord
+        waRec = Sugar.waRepl . Sugar.replExpr . letBody . binderRec
 
 workAreaEq ::
     forall m v.
