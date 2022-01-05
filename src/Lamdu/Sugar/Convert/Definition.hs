@@ -13,6 +13,7 @@ import qualified Data.Property as Property
 import           Hyper
 import qualified Lamdu.Cache as Cache
 import           Lamdu.Calc.Definition (depsGlobalTypes)
+import           Lamdu.Calc.Infer (alphaEq)
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Data.Anchors as Anchors
@@ -223,8 +224,10 @@ nextOutdatedDef :: Monad m => Anchors.CodeAnchors m -> DefI m -> T m (Maybe (Def
 nextOutdatedDef anchors def =
     Property.getP (Anchors.globals anchors) >>= sequenceA . Map.fromSet Transaction.readIRef <&>
     \defs->
-    let checkDef (d, s) =
-            defs ^? Lens.ix (ExprIRef.defI d) . Definition.defType /= Just s
+    let checkDef (v, s) =
+            case defs ^. Lens.at (ExprIRef.defI v) of
+            Nothing -> True
+            Just d -> d ^. Definition.defType /= s && not (alphaEq (d ^. Definition.defType) s)
         isOutdated d =
             any checkDef (deps ^@.. depsGlobalTypes . Lens.ifolded)
             -- TODO: Also check nominals!
