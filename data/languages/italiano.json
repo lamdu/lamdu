@@ -147,7 +147,8 @@
             "leftToRightSymbol": "Da sinistra a destra",
             "rightToLeftSymbol": "Da destra a sinistra",
             "typeOperatorHere": "Operatore tipo qui",
-            "opaque": "opaco"
+            "opaque": "opaco",
+            "gotoNextOutdated": "Vai alla prossima definizione obsoleta"
         },
         "name": {
             "unnamed": "Senza nome",

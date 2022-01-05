@@ -7,10 +7,12 @@ import           Control.Monad.Once (OnceT, Typeable)
 import           Control.Monad.Reader (ReaderT(..))
 import           Control.Monad.Transaction (MonadTransaction)
 import           Data.CurAndPrev (CurAndPrev(..))
+import qualified Data.Map as Map
 import           Data.Property (Property(Property))
 import qualified Data.Property as Property
 import           Hyper
 import qualified Lamdu.Cache as Cache
+import           Lamdu.Calc.Definition (depsGlobalTypes)
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Data.Anchors as Anchors
@@ -29,6 +31,7 @@ import qualified Lamdu.Sugar.Convert.Input as Input
 import qualified Lamdu.Sugar.Convert.Load as Load
 import           Lamdu.Sugar.Convert.Monad (Context(..), ScopeInfo(..), RecursiveRef(..))
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
+import           Lamdu.Sugar.Convert.NameRef (jumpToDefinition)
 import qualified Lamdu.Sugar.Convert.PostProcess as PostProcess
 import qualified Lamdu.Sugar.Convert.Tag as ConvertTag
 import qualified Lamdu.Sugar.Convert.Type as ConvertType
@@ -210,6 +213,25 @@ pane env defI =
     <$> (ConvertTag.taggedEntityWith (env ^. Anchors.codeAnchors) Nothing defVar & join)
     <*> pure defVar
     <*> (ExprLoad.def defI & lift <&> Definition.defPayload .~ defI >>= convertDefBody env)
+    ?? (nextOutdatedDef (env ^. Anchors.codeAnchors) defI
+        >>= Lens._Just (jumpToDefinition (env ^. Anchors.codeAnchors)))
     <&> PaneDefinition
     where
         defVar = ExprIRef.globalId defI
+
+nextOutdatedDef :: Monad m => Anchors.CodeAnchors m -> DefI m -> T m (Maybe (DefI m))
+nextOutdatedDef anchors def =
+    Property.getP (Anchors.globals anchors) >>= sequenceA . Map.fromSet Transaction.readIRef <&>
+    \defs->
+    let checkDef (d, s) =
+            defs ^? Lens.ix (ExprIRef.defI d) . Definition.defType /= Just s
+        isOutdated d =
+            any checkDef (deps ^@.. depsGlobalTypes . Lens.ifolded)
+            -- TODO: Also check nominals!
+            where
+                deps = d ^. Definition.defBody . Definition._BodyExpr . Definition.exprFrozenDeps
+    in
+    case break (== def) (defs ^.. Lens.ifolded . Lens.filtered isOutdated . Lens.asIndex) of
+    (_, _:x:_) -> Just x
+    (x:_, _) -> Just x
+    _ -> Nothing

@@ -149,7 +149,8 @@
             "leftToRightSymbol": "De izquierda a derecha",
             "rightToLeftSymbol": "De derecha a izquierda",
             "typeOperatorHere": "Escriba un operador aquí",
-            "opaque": "Opaco"
+            "opaque": "Opaco",
+            "gotoNextOutdated": "Ir a la siguiente definición obsoleta"
         },
         "name": {
             "unnamed": "Sin nombre",

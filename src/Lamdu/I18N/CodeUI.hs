@@ -86,6 +86,7 @@ data CodeUI a = CodeUI
     , _injectSection :: a
     , _order :: a
     , _opaque :: a
+    , _gotoNextOutdated :: a
     }
     deriving stock (Generic, Generic1, Eq, Functor, Foldable, Traversable)
     deriving anyclass ElemIds

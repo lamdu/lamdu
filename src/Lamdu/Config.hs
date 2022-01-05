@@ -37,6 +37,7 @@ data Pane key = Pane
     , _paneMoveDownKeys :: [key]
     , _paneMoveUpKeys :: [key]
     , _newDefinitionKeys :: [key]
+    , _nextOutdatedKeys :: [key]
     } deriving (Eq, Show, Functor, Foldable, Traversable, Generic)
 deriveJSON Aeson.defaultOptions
     { Aeson.fieldLabelModifier

@@ -148,7 +148,8 @@
             "leftToRightSymbol": "משמאל לימין",
             "rightToLeftSymbol": "מימין לשמאל",
             "typeOperatorHere": "הזן סימן כאן",
-            "opaque": "אטום"
+            "opaque": "אטום",
+            "gotoNextOutdated": "עבור להגדרה המוזנחת הבאה"
         },
         "statusBar": {
             "statusBar": "סרגל מצב",

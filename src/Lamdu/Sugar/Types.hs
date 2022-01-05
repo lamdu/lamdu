@@ -10,7 +10,7 @@ module Lamdu.Sugar.Types
     , Globals(..), allGlobals, globalDefs, globalNominals, globalTags
     , ParamKind(..), _TypeParam, _RowParam
     , NominalPane(..), npName, npParams, npNominalId, npEntityId, npBody
-    , Definition(..), drName, drBody, drDefI
+    , Definition(..), drName, drBody, drDefI, drGotoNextOutdated
     , DefinitionBody(..), _DefinitionBodyExpression, _DefinitionBodyBuiltin
     , DefinitionExpression(..), deContent, dePresentationMode, deType
     , Meta.SpecialArgs(..), Meta.PresentationMode, Meta._Operator, Meta._Verbose
@@ -71,6 +71,9 @@ data Definition v name i o a = Definition
     { _drName :: OptionalTag name i o
     , _drDefI :: V.Var
     , _drBody :: DefinitionBody v name i o a
+    , -- A temporary, inefficient and not ideal UX mechanism to iterate over outdated defs.
+      -- Ideally the user should know ahead of time if there are any and how much.
+      _drGotoNextOutdated :: o (Maybe EntityId)
     } deriving (Functor, Foldable, Traversable, Generic)
 
 data TagPane o = TagPane

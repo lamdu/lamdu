@@ -147,7 +147,8 @@
             "leftToRightSymbol": "Left to Right",
             "rightToLeftSymbol": "Right to left",
             "typeOperatorHere": "Type operator here",
-            "opaque": "Opaque"
+            "opaque": "Opaque",
+            "gotoNextOutdated": "Go to next outdated definition"
         },
         "name": {
             "unnamed": "Unnamed",

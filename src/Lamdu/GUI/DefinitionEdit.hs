@@ -2,13 +2,16 @@ module Lamdu.GUI.DefinitionEdit
     ( make
     ) where
 
+import qualified Control.Lens as Lens
 import           Control.Monad.Unit (Unit)
 import qualified GUI.Momentu as M
+import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Responsive (Responsive)
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.State as GuiState
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Label as Label
+import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Theme.TextColors as TextColors
 import qualified Lamdu.GUI.Expr.AssignmentEdit as AssignmentEdit
 import qualified Lamdu.GUI.Expr.BuiltinEdit as BuiltinEdit
@@ -17,6 +20,7 @@ import           Lamdu.GUI.Monad (GuiM)
 import qualified Lamdu.GUI.TypeView as TypeView
 import qualified Lamdu.GUI.Types as ExprGui
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
+import qualified Lamdu.I18N.CodeUI as Texts
 import           Lamdu.Name (Name(..))
 import qualified Lamdu.Sugar.Types as Sugar
 
@@ -60,11 +64,20 @@ make ::
     M.WidgetId ->
     GuiM env i o (Responsive o)
 make def myId =
-    case def ^. Sugar.drBody of
-    Sugar.DefinitionBodyExpression bodyExpr ->
-        makeExprDefinition def bodyExpr myId
-    Sugar.DefinitionBodyBuiltin builtin ->
-        makeBuiltinDefinition def builtin myId <&> Responsive.fromWithTextPos
+    do
+        env <- Lens.view id
+        let nextOutdated =
+                E.keyPresses
+                (env ^. has . Config.pane . Config.nextOutdatedKeys)
+                (E.Doc [env ^. has . Texts.gotoNextOutdated])
+                (def ^. Sugar.drGotoNextOutdated
+                    <&> foldMap (GuiState.updateCursor . WidgetIds.fromEntityId))
+        case def ^. Sugar.drBody of
+            Sugar.DefinitionBodyExpression bodyExpr ->
+                makeExprDefinition def bodyExpr myId
+            Sugar.DefinitionBodyBuiltin builtin ->
+                makeBuiltinDefinition def builtin myId <&> Responsive.fromWithTextPos
+            <&> M.weakerEvents nextOutdated
     & local (M.animIdPrefix .~ Widget.toAnimId myId)
 
 topLevelSchemeTypeView :: _ => Sugar.Scheme Name Unit -> GuiM env i o (M.WithTextPos M.View)

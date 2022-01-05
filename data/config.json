@@ -49,7 +49,8 @@
         "newDefinitionKeys" : [ "Alt+N", "Alt+L" ],
         "closeKeys"         : [ "Alt+W" ],
         "moveUpKeys"        : [ "Alt+Up" ],
-        "moveDownKeys"      : [ "Alt+Down" ]
+        "moveDownKeys"      : [ "Alt+Down" ],
+        "nextOutdatedKeys"  : [ "F4" ]
     },
     "versionControl": {
         "undoKeys"           : [ "Cmd+Z" ],
