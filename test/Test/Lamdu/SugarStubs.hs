@@ -139,6 +139,7 @@ def typ var tag body =
     Sugar.Definition
     { Sugar._drName = mkOptionalTag (Just var) tag
     , Sugar._drDefI = "def"
+    , Sugar._drGotoNextOutdated = Unit
     , Sugar._drBody =
         Sugar.DefinitionBodyExpression Sugar.DefinitionExpression
         { Sugar._deType =
