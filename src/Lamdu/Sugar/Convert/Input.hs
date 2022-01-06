@@ -11,6 +11,7 @@ module Lamdu.Sugar.Convert.Input
 
 import           Control.Lens.Extended ((~~>))
 import qualified Control.Lens as Lens
+import           Data.MMap (MMap)
 import           Hyper
 import           Hyper.Infer (InferResult, inferResult)
 import           Hyper.Syntax (funcIn)
@@ -49,7 +50,7 @@ class SugarInput t where
     prep ::
         V.Scope # UVar -> [(V.Var, Pure # Type)] ->
         Ann (Payload m a) # t ->
-        (Map V.Var [EntityId], Ann (Payload m a) # t)
+        (MMap V.Var [EntityId], Ann (Payload m a) # t)
     prep _ _ = (,) mempty
 
 preprocess ::
