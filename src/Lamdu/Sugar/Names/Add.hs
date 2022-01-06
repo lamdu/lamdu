@@ -283,7 +283,7 @@ toSuffixMap tagTexts contexts top =
                 texts <- Lens.use id
                 let indices = filter (\i -> not (texts ^. Lens.contains (addSuf i))) [0 ..]
                 zipWithM item indices (ctx ^.. Lens.folded . Lens.folded)
-            <&> Map.fromList
+                <&> Map.fromList
             where
                 addSuf :: Int -> Text
                 addSuf i = txt <> Text.pack (show i)
