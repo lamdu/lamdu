@@ -34,6 +34,7 @@ test =
     , testLightLambda
     , testNotALightLambda
     , testInline
+    , testCannotInline
     , testReorderLets
     , testReplaceParent
     , testReplaceParentFragment
@@ -145,6 +146,24 @@ testExtract =
         action =
             replBody . _BodyLam . lamFunc . fBody . annotation . plActions .
             extract
+
+testCannotInline :: Test
+testCannotInline =
+    testSugarActions "let-used-twice.json" [verify]
+    & testCase "cannot-inline"
+    where
+        verify workArea =
+            case workArea ^? pos of
+            Nothing -> error "expected a getvar!"
+            Just x ->
+                case x ^. bvInline of
+                InlineVar{} -> error "shouldn't be able to inline!"
+                _ -> pure ()
+            where
+                pos =
+                    replLet . lBody
+                    . hVal . bBody . _BinderTerm . _BodyLabeledApply . aMOpArgs . Lens._Just . oaLhs
+                    . hVal . _BodyLeaf . _LeafGetVar . _GetBinder
 
 -- Test for issue #402
 -- https://trello.com/c/ClDnsGQi/402-wrong-result-when-inlining-from-hole-results

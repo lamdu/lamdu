@@ -89,7 +89,7 @@ workAreaLowLevelLoad =
     <*> (getP (panes codeAnchors) >>= traverse loadPane)
 
 validate ::
-    (NFData v, NFData name) =>
+    (HasCallStack, NFData v, NFData name) =>
     WorkArea v name (OnceT (T fa)) (T fb) (Sugar.Payload v (T fb)) ->
     T ViewM (WorkArea v name (OnceT (T fa)) (T fb) (Sugar.Payload v (T fb)))
 validate workArea
@@ -112,7 +112,7 @@ validate workArea
         sugarEntityIdsSet = Set.fromList (sugarEntityIds <&> fst)
 
 convertWorkArea ::
-    _ =>
+    (HasCallStack, _) =>
     env ->
     OnceT (T ViewM)
     ( WorkArea (Annotation (EvaluationScopes Name (OnceT (T ViewM))) Name) Name (OnceT (T ViewM)) (T ViewM)
