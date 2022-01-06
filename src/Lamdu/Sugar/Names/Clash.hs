@@ -3,7 +3,6 @@ module Lamdu.Sugar.Names.Clash
     ( Info, infoOf, isClash, collide
     ) where
 
-import qualified Control.Lens as Lens
 import           Control.Lens.Extended ((~~>))
 import           Control.Monad (foldM)
 import           Data.MMap (MMap)
@@ -38,14 +37,11 @@ instance Semigroup UUIDInfo where
 data GroupNameContext = Ambiguous UUIDInfo | Disambiguated (MMap Disambiguator UUIDInfo)
     deriving Show
 
-combineAD :: (Foldable f, Semigroup a) => a -> f a -> a
-combineAD x y = foldr (<>) x (y ^.. Lens.folded)
-
 instance Semigroup GroupNameContext where
     Ambiguous x <> Ambiguous y = Ambiguous (x <> y)
     Disambiguated x <> Disambiguated y = Disambiguated (x <> y)
-    Ambiguous x <> Disambiguated y = Ambiguous (combineAD x y)
-    Disambiguated x <> Ambiguous y = Ambiguous (combineAD y x)
+    Ambiguous x <> Disambiguated y = Ambiguous (foldr (<>) x y)
+    Disambiguated x <> Ambiguous y = Ambiguous (foldr (<>) y x)
 
 -- A valid (non-clashing) context for a single name where multiple
 -- InternalNames may coexist
