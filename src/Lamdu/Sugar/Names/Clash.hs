@@ -1,14 +1,17 @@
 -- | Name clash logic
 module Lamdu.Sugar.Names.Clash
     ( Info, infoOf, isClash, collide
+    , Collider(..), uncolliders, colliders
     ) where
 
 import           Control.Lens.Extended ((~~>))
 import           Control.Monad (foldM)
+import           Data.Coerce (coerce)
 import           Data.MMap (MMap)
 import qualified Data.MMap as MMap
 import qualified Data.Set as Set
 import           Data.UUID.Types (UUID)
+import qualified Lamdu.Calc.Type as T
 import           Lamdu.Sugar.Internal (InternalName(..))
 import qualified Lamdu.Sugar.Names.Annotated as Annotated
 import           Lamdu.Sugar.Names.Walk (Disambiguator)
@@ -100,9 +103,21 @@ instance Semigroup Info where
 instance Monoid Info where
     mempty = NoClash mempty
 
--- | Collide two Clash Infos with one another. The Infos come from
--- scopes that are above/below one another, and so directly collide,
--- rather than from sibling scopes as in the Semigroup instance
+-- | Newtype for a Semigroup that collides two Clash Infos with one
+-- another. The Infos come from scopes that are above/below one
+-- another, and so directly collide, rather than from sibling scopes
+-- as in the Semigroup instance
+newtype Collider = Collider Info deriving stock Show
+instance Semigroup Collider where
+    Collider x <> Collider y = Collider (x `collide` y)
+
+-- 2 wrappers for coerce for readability/safety
+uncolliders :: MMap T.Tag Collider -> MMap T.Tag Info
+uncolliders = coerce
+
+colliders :: MMap T.Tag Info -> MMap T.Tag Collider
+colliders = coerce
+
 collide :: Info -> Info -> Info
 collide (NoClash x) (NoClash y) = nameContextMatch x y
 collide _ _ = Clash

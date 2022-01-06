@@ -19,7 +19,6 @@ import           Control.Monad.State (evalState)
 import qualified Control.Monad.Writer as Writer
 import           Control.Monad.Trans.FastWriter (Writer, runWriter, MonadWriter)
 import qualified Data.Char as Char
-import           Data.Coerce (coerce)
 import           Data.Foldable (fold)
 import           Data.MMap (MMap(..))
 import qualified Data.MMap as MMap
@@ -88,19 +87,8 @@ getP0Name internalName =
 ---------- Pass 1 ------------
 ------------------------------
 
-newtype Collider = Collider Clash.Info deriving stock Show
-instance Semigroup Collider where
-    Collider x <> Collider y = Collider (x `Clash.collide` y)
-
--- 2 wrappers for coerce for readability/safety
-uncolliders :: MMap T.Tag Collider -> MMap T.Tag Clash.Info
-uncolliders = coerce
-
-colliders :: MMap T.Tag Clash.Info -> MMap T.Tag Collider
-colliders = coerce
-
 data P1Out = P1Out
-    { _p1Globals :: MMap T.Tag Collider
+    { _p1Globals :: MMap T.Tag Clash.Collider
         -- ^ Used in P2 to check against local hole results
     , _p1Locals :: MMap T.Tag Clash.Info
         -- ^ Used in P2 to check against global hole results
@@ -185,8 +173,8 @@ p1Name mDisambiguator u nameType (P0Name texts isOp internalName) =
                 | Walk.isGlobal nameType -> p1Globals <>~ myTags
                 | otherwise -> p1Locals . col <>~ myTags
             where
-                col = Lens.iso colliders uncolliders -- makes it have colliders
-                myTags = tag ~~> Collider (Clash.infoOf aName)
+                col = Lens.iso Clash.colliders Clash.uncolliders -- makes it have colliders
+                myTags = tag ~~> Clash.Collider (Clash.infoOf aName)
         tellCtx x
             | nameType == Walk.TypeVar =
                 tellSome p1TypeVars (Bias (OrderedSet.singleton x))
@@ -321,7 +309,7 @@ initialP2Env env P1Out{_p1Globals, _p1Locals, _p1Contexts, _p1TypeVars, _p1Texts
     , _p2TagTexts = tagTexts
     , _p2Texts = _p1Texts ^. traverse . Tag.name . Lens.to Set.singleton
     , _p2TagSuffixes = toSuffixMap tagTexts _p1Contexts top
-    , _p2TagsAbove = uncolliders _p1Globals
+    , _p2TagsAbove = Clash.uncolliders _p1Globals
         -- all globals are "above" everything, and locals add up as
         -- we descend
     , _p2AutoNames = mempty
@@ -330,7 +318,7 @@ initialP2Env env P1Out{_p1Globals, _p1Locals, _p1Contexts, _p1TypeVars, _p1Texts
     }
     where
         tagTexts = makeTagTexts env _p1Texts
-        top = colliders _p1Locals <> _p1Globals & uncolliders
+        top = Clash.colliders _p1Locals <> _p1Globals & Clash.uncolliders
 
 
 ------------------------------
