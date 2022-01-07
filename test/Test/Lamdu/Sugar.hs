@@ -25,7 +25,7 @@ import           Lamdu.Sugar.Types as Sugar
 import           Lamdu.VersionControl (runAction)
 import           Revision.Deltum.IRef (IRef(..))
 import           Revision.Deltum.Transaction (Transaction)
-import           Test.Lamdu.Db (withDB)
+import           Test.Lamdu.Db (ramDB)
 
 import           Test.Lamdu.Prelude
 
@@ -124,7 +124,7 @@ convertWorkArea env =
 
 testProgramH :: [FilePath] -> OnceT (T ViewM) a -> IO a
 testProgramH paths action =
-    withDB paths (runDbTransaction ?? runAction (evalOnceT action))
+    ramDB paths >>= (runDbTransaction ?? runAction (evalOnceT action))
 
 testProgram :: FilePath -> OnceT (T ViewM) a -> IO a
 testProgram x = testProgramH ["test/programs/builtins.json", "test/programs/" <> x]

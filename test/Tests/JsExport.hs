@@ -11,7 +11,7 @@ import           Lamdu.VersionControl (runAction)
 import           Revision.Deltum.Transaction (Transaction)
 import           System.FilePath ((</>))
 import           Test.Lamdu.Code (readRepl)
-import           Test.Lamdu.Db (withDB)
+import           Test.Lamdu.Db (ramDB)
 import           Test.Lamdu.Exec (runJS)
 
 import           Test.Lamdu.Prelude
@@ -27,8 +27,9 @@ test =
 
 compile :: FilePath -> IO String
 compile program =
-    withDB ["test/programs" </> program] $
-    \db -> runDbTransaction db $ runAction $ readRepl >>= ExportJS.compile
+    do
+        db <- ramDB ["test/programs" </> program]
+        runDbTransaction db $ runAction $ readRepl >>= ExportJS.compile
 
 run :: FilePath -> IO ByteString
 run = compile >=> runJS

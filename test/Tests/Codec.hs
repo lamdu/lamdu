@@ -9,7 +9,7 @@ import           Lamdu.Data.Db.Layout (runDbTransaction)
 import qualified Lamdu.Data.Export.JSON as JsonFormat
 import qualified Lamdu.Data.Export.JSON.Codec as Codec
 import           Lamdu.VersionControl (runAction)
-import           Test.Lamdu.Db (withDB)
+import           Test.Lamdu.Db (ramDB)
 
 import           Test.Lamdu.Prelude
 
@@ -32,7 +32,7 @@ reExportTest :: FilePath -> Test
 reExportTest name =
     do
         src <- LBS.readFile path <&> Aeson.eitherDecode >>= either fail pure
-        dst <- withDB [path] (runDbTransaction ?? runAction JsonFormat.jsonExportRepl)
+        dst <- ramDB [path] >>= (runDbTransaction ?? runAction JsonFormat.jsonExportRepl)
         if src == dst
             then pure ()
             else

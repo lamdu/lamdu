@@ -1,5 +1,5 @@
 module Test.Lamdu.Db
-    ( withDB
+    ( ramDB
     ) where
 
 import qualified Control.Lens as Lens
@@ -16,9 +16,9 @@ import           Test.Lamdu.Prelude
 initFreshDb :: [FilePath] -> Transaction.Store DbM -> IO ()
 initFreshDb paths db = traverse fileImportAll paths <&> (^. traverse . Lens._2) >>= DbInit.initDb db
 
--- | Like Lamdu.Db.withDB but in RAM
-withDB :: [FilePath] -> (Transaction.Store DbM -> IO a) -> IO a
-withDB paths body =
+-- | Like Lamdu.Db.withDB but get a DB in RAM, not bracketed
+ramDB :: [FilePath] -> IO (Transaction.Store DbM)
+ramDB paths =
     do
         db <- newIORef Map.empty
         let store =
@@ -30,6 +30,6 @@ withDB paths body =
                     updates <&> updateKey & foldr (.) id & modifyIORef db
                 }
         initFreshDb paths store
-        body store
+        pure store
     where
         updateKey (k, v) = Lens.at k .~ v
