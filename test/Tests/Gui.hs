@@ -4,7 +4,7 @@ module Tests.Gui where
 
 import qualified Control.Lens as Lens
 import           Control.Monad (foldM)
-import           Control.Monad.Once (OnceT, _OnceT)
+import           Control.Monad.Once (OnceT, _OnceT, evalOnceT)
 import           Control.Monad.State (mapStateT)
 import           Control.Monad.Unit (Unit(..))
 import qualified Data.Map as Map
@@ -28,7 +28,7 @@ import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widget.Id as WidgetId
 import qualified Graphics.UI.GLFW as GLFW
 import qualified Lamdu.Data.Anchors as Anchors
-import           Lamdu.Data.Db.Layout (ViewM)
+import           Lamdu.Data.Db.Layout (ViewM, runDbTransaction)
 import qualified Lamdu.Data.Db.Layout as DbLayout
 import qualified Lamdu.Data.Export.JS as ExportJS
 import qualified Lamdu.Data.Ops as DataOps
@@ -40,17 +40,19 @@ import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Name (Name)
 import qualified Lamdu.Sugar.Lens as SugarLens
 import qualified Lamdu.Sugar.Types as Sugar
+import           Lamdu.VersionControl (runAction)
 import           Revision.Deltum.Transaction (Transaction)
 import qualified Revision.Deltum.Transaction as Transaction
 import           System.Directory (listDirectory)
 import qualified System.Info as SysInfo
 import           Test.Lamdu.Code (readRepl)
+import           Test.Lamdu.Db (ramDB)
 import           Test.Lamdu.Env (Env)
 import qualified Test.Lamdu.Env as Env
 import           Test.Lamdu.Exec (runJS)
 import           Test.Lamdu.Gui (verifyLayers)
 import           Test.Lamdu.Instances ()
-import           Test.Lamdu.Sugar (convertWorkArea, testProgram, testFresh)
+import           Test.Lamdu.Sugar (convertWorkArea, testProgram)
 import           Text.PrettyPrint (($+$))
 import qualified Text.PrettyPrint as Pretty
 import           Unsafe.Coerce (unsafeCoerce)
@@ -567,43 +569,54 @@ applyActions =
     flip (\x -> applyEventWith ("No char " <> show x) dummyVirt (charEvent x))
     & foldM
 
-wytiwys :: HasCallStack => String -> ByteString -> Test
-wytiwys src result =
-    Env.make
-    >>= testFresh . (>> lift (readRepl >>= ExportJS.compile)) . (`applyActions` src)
+wytiwysDb :: HasCallStack => IO (Transaction.Store DbLayout.DbM) -> String -> ByteString -> Test
+wytiwysDb mkDb src result =
+    do
+        env <- Env.make
+        db <- mkDb
+        do
+            _ <- applyActions env src
+            lift (readRepl >>= ExportJS.compile)
+            & evalOnceT
+            & runAction
+            & runDbTransaction db
     >>= runJS
     >>= assertEqual "Expected output" (result <> "\n")
     & testCase src
 
 testWYTIWYS :: HasCallStack => Test
 testWYTIWYS =
-    testGroup "WYTIWYS"
-    [ wytiwys "1+1" "2"
+    do
+        mkDb <- ramDB ["data/freshdb.json"]
+        let wytiwys = wytiwysDb mkDb
+        testGroup "WYTIWYS"
+            [ wytiwys "1+1" "2"
 
-    , wytiwys "2*3+4" "10"
-    , wytiwys "2*(3+4)" "14"
-    , wytiwys "2*(3+4" "14" -- Don't have to close paren
+            , wytiwys "2*3+4" "10"
+            , wytiwys "2*(3+4)" "14"
+            , wytiwys "2*(3+4" "14" -- Don't have to close paren
 
-    , wytiwys "sum (1..10)" "45" -- Debatable issue: Space is necessary here!
-    , wytiwys "sum 1..10" "45" -- An Ergonomic WYTIWIS violation: types cause fragment
-    , wytiwys "sum 1..10.map n*2" "90"
-    , wytiwys "sum 1..10.map 2*num\n" "90" -- TODO: Would be better without requiring the enter at the end
-    , wytiwys "sum 1..10.map 2*(num+1)" "108"
-    , wytiwys "sum 1..10.map 2*(num+1" "108"
+            , wytiwys "sum (1..10)" "45" -- Debatable issue: Space is necessary here!
+            , wytiwys "sum 1..10" "45" -- An Ergonomic WYTIWIS violation: types cause fragment
+            , wytiwys "sum 1..10.map n*2" "90"
+            , wytiwys "sum 1..10.map 2*num\n" "90" -- TODO: Would be better without requiring the enter at the end
+            , wytiwys "sum 1..10.map 2*(num+1)" "108"
+            , wytiwys "sum 1..10.map 2*(num+1" "108"
 
-    , wytiwys "if 1=2:3\t4" "4" -- Type if-expressions without "else:"
+            , wytiwys "if 1=2:3\t4" "4" -- Type if-expressions without "else:"
 
-    , wytiwys "sum 1..10.filter nu>5" "30"
-    , wytiwys "sum 1..10.filter n>5" "30"
-    , wytiwys "sum 1..10.filter 12<(num+1)*12" "45"
+            , wytiwys "sum 1..10.filter nu>5" "30"
+            , wytiwys "sum 1..10.filter n>5" "30"
+            , wytiwys "sum 1..10.filter 12<(num+1)*12" "45"
 
-    , wytiwys "if {={:1\t2" "1" -- "{" expands to "{}"
-    , wytiwys "let {val 1\trec.val\n" "1" -- "let " jumps straight to value of let
+            , wytiwys "if {={:1\t2" "1" -- "{" expands to "{}"
+            , wytiwys "let {val 1\trec.val\n" "1" -- "let " jumps straight to value of let
 
-    , wytiwys "1..10.sort lhs>rhs)).item 2" "7" -- Close parens get out of lambda
+            , wytiwys "1..10.sort lhs>rhs)).item 2" "7" -- Close parens get out of lambda
 
-    , wytiwys "{a 7,b 5}.a\n" "7"
-    , wytiwys "{a 7,b 5}.a+2" "9"
+            , wytiwys "{a 7,b 5}.a\n" "7"
+            , wytiwys "{a 7,b 5}.a+2" "9"
 
-    , wytiwys "if ⌫1+2" "3" -- Backspace after "if " deletes it
-    ]
+            , wytiwys "if ⌫1+2" "3" -- Backspace after "if " deletes it
+            ] & pure
+        & buildTest

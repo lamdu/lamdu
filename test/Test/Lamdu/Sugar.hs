@@ -124,7 +124,7 @@ convertWorkArea env =
 
 testProgramH :: [FilePath] -> OnceT (T ViewM) a -> IO a
 testProgramH paths action =
-    ramDB paths >>= (runDbTransaction ?? runAction (evalOnceT action))
+    ramDB paths & join >>= (runDbTransaction ?? runAction (evalOnceT action))
 
 testProgram :: FilePath -> OnceT (T ViewM) a -> IO a
 testProgram x = testProgramH ["test/programs/builtins.json", "test/programs/" <> x]

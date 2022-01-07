@@ -28,7 +28,7 @@ test =
 compile :: FilePath -> IO String
 compile program =
     do
-        db <- ramDB ["test/programs" </> program]
+        db <- ramDB ["test/programs" </> program] & join
         runDbTransaction db $ runAction $ readRepl >>= ExportJS.compile
 
 run :: FilePath -> IO ByteString
