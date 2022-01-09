@@ -3,7 +3,7 @@
 {-# LANGUAGE TemplateHaskell, FlexibleInstances, TypeFamilies #-}
 {-# LANGUAGE MultiParamTypeClasses, UndecidableInstances, ConstraintKinds #-}
 module Lamdu.I18N.Language
-    ( Language(..), lFonts, lTitle
+    ( Language(..), lFonts, lTitle, lCasing
     ) where
 
 import qualified Control.Lens as Lens
@@ -27,6 +27,8 @@ data Language = Language
           (I18N.Fonts.LightAndBold FilePath)))
     , _lTitle :: Text
     , _lTexts :: Texts Text
+    , -- Whether the language supports capitalization (i.e has upper-case and lower-case)
+      _lCasing :: Bool
     } deriving Eq
 
 Lens.makeLenses ''Language

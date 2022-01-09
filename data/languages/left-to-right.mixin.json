@@ -1,6 +1,7 @@
 {
     "imports": ["base.mixin.json"],
     "direction": "LeftToRight",
+    "casing": true,
     "texts": {
         "code": {
             "punnedFields": "⇒",
