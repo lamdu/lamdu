@@ -19,15 +19,16 @@ import qualified Lamdu.Sugar.Names.Walk as Walk
 
 import           Lamdu.Prelude
 
+data Info = Clash | NoClash NameContext
+    deriving Show
+
+-- A valid (non-clashing) context for a single name where multiple
+-- InternalNames may coexist
+type NameContext = MMap CollisionGroup GroupNameContext
+
 type CollisionGroup = Set Walk.NameType
 
-collisionGroups :: [CollisionGroup]
-collisionGroups =
-    [ [ Walk.GlobalDef, Walk.TaggedVar ]
-    , [ Walk.TaggedNominal ]
-    ] <&> Set.fromList
-
-data Info = Clash | NoClash NameContext
+data GroupNameContext = Ambiguous UUIDInfo | Disambiguated (MMap Disambiguator UUIDInfo)
     deriving Show
 
 data UUIDInfo = Single UUID | Multiple -- no need to store the UUIDs, they clash with any UUID
@@ -37,18 +38,20 @@ instance Semigroup UUIDInfo where
     Single x <> Single y | x == y = Single x
     _ <> _ = Multiple
 
-data GroupNameContext = Ambiguous UUIDInfo | Disambiguated (MMap Disambiguator UUIDInfo)
-    deriving Show
-
 instance Semigroup GroupNameContext where
     Ambiguous x <> Ambiguous y = Ambiguous (x <> y)
     Disambiguated x <> Disambiguated y = Disambiguated (x <> y)
     Ambiguous x <> Disambiguated y = Ambiguous (foldr (<>) x y)
     Disambiguated x <> Ambiguous y = Ambiguous (foldr (<>) y x)
 
--- A valid (non-clashing) context for a single name where multiple
--- InternalNames may coexist
-type NameContext = MMap CollisionGroup GroupNameContext
+instance Monoid GroupNameContext where
+    mempty = Disambiguated mempty
+
+collisionGroups :: [CollisionGroup]
+collisionGroups =
+    [ [ Walk.GlobalDef, Walk.TaggedVar ]
+    , [ Walk.TaggedNominal ]
+    ] <&> Set.fromList
 
 isClash :: Info -> Bool
 isClash Clash = True
