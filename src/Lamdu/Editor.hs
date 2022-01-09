@@ -17,6 +17,7 @@ import qualified Data.Aeson.Config as AesonConfig
 import qualified Data.Bitmap as Bitmap
 import qualified Data.Bitmap.Pure.Pixels as BitmapPixels
 import           Data.CurAndPrev (current)
+import           Data.List (sortOn)
 import           Data.IORef (IORef, newIORef, readIORef, writeIORef)
 import           Data.Property (Property(..), MkProperty', mkProperty)
 import qualified Data.Property as Property
@@ -335,6 +336,7 @@ makeRootWidget env perfMonitors db evaluator sample cacheRef =
         langNames <-
             Folder.getSelections (Proxy @Language)
             >>= traverse titledLangSelection
+            <&> sortOn (^. GUIMain.title)
         let bgColor = env ^. Env.theme . Theme.backgroundColor
         withCache db env cacheRef
             (\cache ->
