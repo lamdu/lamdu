@@ -2,8 +2,8 @@
 -- | Name clash logic
 module Lamdu.Sugar.Names.Clash
     ( Info, _Clash, _NoClash
-    , infoOf, collide
-    , Collider(..), uncolliders, colliders
+    , infoOf
+    , Collider(..), _Collider, uncolliders, colliders
     ) where
 
 import qualified Control.Lens as Lens
@@ -114,7 +114,11 @@ instance Monoid Info where
 -- as in the Semigroup instance
 newtype Collider = Collider Info deriving stock Show
 instance Semigroup Collider where
-    Collider x <> Collider y = Collider (x `collide` y)
+    Collider (NoClash x) <> Collider (NoClash y) = Collider (nameContextMatch x y)
+    _ <> _ = Collider Clash
+instance Monoid Collider where mempty = Collider mempty
+
+Lens.makePrisms ''Collider
 
 -- 2 wrappers for coerce for readability/safety
 uncolliders :: MMap T.Tag Collider -> MMap T.Tag Info
@@ -122,7 +126,3 @@ uncolliders = coerce
 
 colliders :: MMap T.Tag Info -> MMap T.Tag Collider
 colliders = coerce
-
-collide :: Info -> Info -> Info
-collide (NoClash x) (NoClash y) = nameContextMatch x y
-collide _ _ = Clash
