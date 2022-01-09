@@ -13,7 +13,7 @@ import           Data.MMap (MMap)
 import qualified Data.MMap as MMap
 import           Data.UUID.Types (UUID)
 import qualified Lamdu.Calc.Type as T
-import           Lamdu.Sugar.Internal (InternalName(..))
+import           Lamdu.Sugar.Internal (inContext)
 import qualified Lamdu.Sugar.Names.Annotated as Annotated
 import           Lamdu.Sugar.Names.Walk (Disambiguator)
 import qualified Lamdu.Sugar.Names.Walk as Walk
@@ -98,12 +98,10 @@ nameTypeSpace Walk.TaggedVar = nsLower
 nameTypeSpace _ = const pure -- Empty traversal
 
 nameContextOf :: Annotated.Name -> NameContext
-nameContextOf (Annotated.Name (InternalName (Just nameCtx) _tag _) disamb nameType) =
-    mempty & Lens.cloneTraversal (nameTypeSpace nameType) .~ ctx
-    where
-        ctx = groupNameContextOf nameCtx disamb
-nameContextOf (Annotated.Name (InternalName Nothing _tag _) _disamb _nameType) =
-    mempty
+nameContextOf (Annotated.Name name disamb nameType) =
+    foldMap
+    (\c -> mempty & Lens.cloneTraversal (nameTypeSpace nameType) .~ groupNameContextOf c disamb)
+    (name ^. inContext)
 
 instance Semigroup Info where
     NoClash x <> NoClash y = NoClash (x <> y)
