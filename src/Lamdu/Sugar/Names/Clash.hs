@@ -1,7 +1,8 @@
 {-# LANGUAGE TemplateHaskell, DerivingVia #-}
 -- | Name clash logic
 module Lamdu.Sugar.Names.Clash
-    ( Info, infoOf, isClash, collide
+    ( Info, _Clash, _NoClash
+    , infoOf, collide
     , Collider(..), uncolliders, colliders
     ) where
 
@@ -41,6 +42,7 @@ data UUIDInfo = Single UUID | Multiple -- no need to store the UUIDs, they clash
     deriving Show
 
 Lens.makeLenses ''NameSpaces
+Lens.makePrisms ''Info
 
 instance Semigroup UUIDInfo where
     Single x <> Single y | x == y = Single x
@@ -54,10 +56,6 @@ instance Semigroup GroupNameContext where
 
 instance Monoid GroupNameContext where
     mempty = Disambiguated mempty
-
-isClash :: Info -> Bool
-isClash Clash = True
-isClash NoClash {} = False
 
 infoOf :: Annotated.Name -> Info
 infoOf = NoClash . nameContextOf

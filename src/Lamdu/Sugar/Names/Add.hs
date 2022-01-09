@@ -280,10 +280,10 @@ toSuffixMap tagTexts contexts top =
                 item idx uuid =
                     (TaggedVarId uuid tag, idx) <$ (Lens.contains (addSuf idx) .= True)
         collisions =
-            MMap.filter Clash.isClash top
+            MMap.filter (Lens.has Clash._Clash) top
             & Lens.imapped %@~ \tag _ -> toContexts tag
         nonCollisionTexts =
-            MMap.filter (not . Clash.isClash) top ^.. Lens.ifolded . Lens.asIndex
+            MMap.filter (Lens.has Clash._NoClash) top ^.. Lens.ifolded . Lens.asIndex
             & foldMap (\t -> tagTexts ^.. Lens.ix t . ttText)
             & Set.fromList
         toContexts k =
@@ -383,7 +383,7 @@ getCollision tagsBelow aName =
         Nothing ->
             -- In hole results, the collsions suffixes are not precomputed,
             -- but rather computed here:
-            if Clash.collide (tags ^. Lens.ix tag) (Clash.infoOf aName) & Clash.isClash
+            if Clash.collide (tags ^. Lens.ix tag) (Clash.infoOf aName) & Lens.has Clash._Clash
             then
                 -- Once a collision, other non-colliding instances
                 -- also get a suffix, so we have no idea what suffix
