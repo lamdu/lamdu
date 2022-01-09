@@ -1,8 +1,8 @@
 {-# LANGUAGE TemplateHaskell, DerivingVia #-}
 -- | Name clash logic
 module Lamdu.Sugar.Names.Clash
-    ( Info, _Clash, _NoClash
-    , infoOf, toIsClash
+    ( IsClash(..), _Clash, _NoClash
+    , toIsClash
     , Collider(..), _Collider
     , NameSpaces(..), nameTypeSpace
     ) where
@@ -19,8 +19,6 @@ import           Lamdu.Sugar.Names.Walk (Disambiguator)
 import qualified Lamdu.Sugar.Names.Walk as Walk
 
 import           Lamdu.Prelude
-
-type Info = NameSpaces IsClash
 
 data IsClash = Clash | NoClash GroupNameContext
     deriving Show
@@ -55,9 +53,6 @@ instance Semigroup GroupNameContext where
 
 instance Monoid GroupNameContext where
     mempty = Disambiguated mempty
-
-infoOf :: Annotated.Name -> Info
-infoOf n = mempty & nameTypeSpace (n ^. Annotated.nameType) .~ toIsClash n
 
 toIsClash :: Annotated.Name -> IsClash
 toIsClash n =

@@ -88,11 +88,11 @@ getP0Name internalName =
 ------------------------------
 
 data P1Out = P1Out
-    { _p1Globals :: MMap T.Tag (Clash.NameSpaces Clash.Collider)
+    { _p1Globals :: Clash.NameSpaces (MMap T.Tag Clash.Collider)
         -- ^ Used in P2 to check against local hole results
-    , _p1Locals :: MMap T.Tag Clash.Info
+    , _p1Locals :: Clash.NameSpaces (MMap T.Tag Clash.IsClash)
         -- ^ Used in P2 to check against global hole results
-    , _p1Contexts :: MMap T.Tag (Clash.NameSpaces (Bias L (OSet UUID)))
+    , _p1Contexts :: Clash.NameSpaces (MMap T.Tag (Bias L (OSet UUID)))
         -- ^ Needed to generate suffixes
     , _p1TypeVars :: Bias L (OSet UUID)
         -- ^ Type vars met
@@ -108,7 +108,7 @@ data P1KindedName
 
 data P1Name = P1Name
     { p1KindedName :: P1KindedName
-    , p1LocalsBelow :: MMap T.Tag Clash.Info
+    , p1LocalsBelow :: Clash.NameSpaces (MMap T.Tag Clash.IsClash)
         -- ^ Allow checking collisions for names hidden behind monadic
         -- actions.
     , p1IsAutoGen :: Bool
@@ -173,13 +173,13 @@ p1Name mDisambiguator u nameType (P0Name texts isOp internalName) =
                 | Walk.isGlobal nameType -> p1Globals <>~ myTags
                 | otherwise -> p1Locals . Lens.coerced <>~ myTags
             where
-                myTags = tag ~~> (Clash.infoOf aName <&> Clash.Collider)
+                myTags = mempty & Clash.nameTypeSpace nameType .~ (tag ~~> Clash.Collider (Clash.toIsClash aName))
         tellCtx x
             | nameType == Walk.TypeVar =
                 tellSome p1TypeVars (Bias (OrderedSet.singleton x))
             | otherwise =
                 tellSome p1Contexts
-                (tag ~~> (mempty & Clash.nameTypeSpace nameType .~ Bias (OrderedSet.singleton x)))
+                (mempty & Clash.nameTypeSpace nameType .~ (tag ~~> Bias (OrderedSet.singleton x)))
         InternalName ctx tag _ = internalName
         aName =
             Annotated.Name
@@ -309,7 +309,7 @@ initialP2Env env P1Out{_p1Globals, _p1Locals, _p1Contexts, _p1TypeVars, _p1Texts
         & Map.fromList
     , _p2TagTexts = tagTexts
     , _p2Texts = _p1Texts ^. traverse . Tag.name . Lens.to Set.singleton
-    , _p2TagSuffixes = (toSuffixMap tagTexts <$> sequenceA _p1Contexts <*> sequenceA top) ^. Lens.folded
+    , _p2TagSuffixes = (toSuffixMap tagTexts <$> _p1Contexts <*> top) ^. Lens.folded
     , _p2TagsAbove = _p1Globals
         -- all globals are "above" everything, and locals add up as
         -- we descend
@@ -344,10 +344,10 @@ data P2Env = P2Env
         -- ^ When tags collide in the overlapping scopes, the tag gets
         -- a different suffix for each of its entities in ALL scopes
     , _p2AutoNames :: Map UUID T.Tag
-    , _p2TagsAbove :: MMap T.Tag (Clash.NameSpaces Clash.Collider)
+    , _p2TagsAbove :: Clash.NameSpaces (MMap T.Tag Clash.Collider)
         -- ^ All global tags AND local tags from above -- used to
         -- generate "UnknownCollision" inside hole results
-    , _p2Tags :: MMap T.Tag (Clash.NameSpaces Clash.Collider)
+    , _p2Tags :: Clash.NameSpaces (MMap T.Tag Clash.Collider)
         -- ^ All local AND global tags from all scopes everywhere --
         -- used to check collision of globals in hole results with
         -- everything.
@@ -369,7 +369,7 @@ runPass2MakeNamesInitial ::
 runPass2MakeNamesInitial env p1out act =
     initialP2Env env p1out & (runReader . runPass2MakeNames) act
 
-getCollision :: MMap T.Tag (Clash.NameSpaces Clash.Collider) -> Annotated.Name -> Pass2MakeNames i o Collision
+getCollision :: Clash.NameSpaces (MMap T.Tag Clash.Collider) -> Annotated.Name -> Pass2MakeNames i o Collision
 getCollision tagsBelow aName =
     case mCtx of
     Nothing -> pure NoCollision -- simple tag has no tag collisions
@@ -381,7 +381,7 @@ getCollision tagsBelow aName =
         Nothing ->
             -- In hole results, the collsions suffixes are not precomputed,
             -- but rather computed here:
-            if tags ^. Lens.ix tag . Clash.nameTypeSpace (aName ^. Annotated.nameType) <> Clash.Collider (Clash.toIsClash aName)
+            if tags ^. Clash.nameTypeSpace (aName ^. Annotated.nameType) . Lens.ix tag <> Clash.Collider (Clash.toIsClash aName)
                 & Lens.has (Clash._Collider . Clash._Clash)
             then
                 -- Once a collision, other non-colliding instances
@@ -397,7 +397,7 @@ getCollision tagsBelow aName =
                     -- A non-global name needs to be checked against
                     -- names above/below (but not sibling scopes)
                     | otherwise =
-                        MMap.unionWith (<>) tagsBelow (env ^. p2TagsAbove)
+                        MMap.unionWith (<>) <$> tagsBelow <*> env ^. p2TagsAbove
     where
         InternalName mCtx tag _ = aName ^. Annotated.internal
 
@@ -431,7 +431,7 @@ getTagText tag texts =
     & fromMaybe (TagText displayText collision)
 
 p2tagName ::
-    Walk.IsUnambiguous -> MMap T.Tag (Clash.NameSpaces Clash.Collider) ->
+    Walk.IsUnambiguous -> Clash.NameSpaces (MMap T.Tag Clash.Collider) ->
     Annotated.Name -> Tag.TextsInLang -> Bool -> Tag.IsOperator ->
     Pass2MakeNames i o Name
 p2tagName u tagsBelow aName texts isAutoGen isOp =
@@ -487,8 +487,8 @@ p2cpsNameConvertor u (P1Name (P1TagName aName isOp texts) tagsBelow isAutoGen) =
         addToTagsAbove = case u of
             Walk.Unambiguous -> id
             Walk.MayBeAmbiguous ->
-                p2TagsAbove . Lens.at tag %~
-                Just . (Clash.nameTypeSpace (aName ^. Annotated.nameType) <>~ isClash) . (^. Lens._Just)
+                p2TagsAbove . Clash.nameTypeSpace (aName ^. Annotated.nameType) . Lens.at tag %~
+                Just . (<> isClash) . (^. Lens._Just)
 
 runPasses ::
     ( HasCallStack
