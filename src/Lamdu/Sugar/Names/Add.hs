@@ -171,9 +171,8 @@ p1Name mDisambiguator u nameType (P0Name texts isOp internalName) =
             Walk.Unambiguous -> id
             Walk.MayBeAmbiguous
                 | Walk.isGlobal nameType -> p1Globals <>~ myTags
-                | otherwise -> p1Locals . col <>~ myTags
+                | otherwise -> p1Locals . Clash.colliders <>~ myTags
             where
-                col = Lens.iso Clash.colliders Clash.uncolliders -- makes it have colliders
                 myTags = tag ~~> Clash.Collider (Clash.infoOf aName)
         tellCtx x
             | nameType == Walk.TypeVar =
@@ -320,7 +319,7 @@ initialP2Env env P1Out{_p1Globals, _p1Locals, _p1Contexts, _p1TypeVars, _p1Texts
     }
     where
         tagTexts = makeTagTexts env _p1Texts
-        top = Clash.colliders _p1Locals <> _p1Globals
+        top = _p1Locals ^. Clash.colliders <> _p1Globals
 
 
 ------------------------------
@@ -456,7 +455,7 @@ p2globalAnon uuid =
 
 p2nameConvertor :: Walk.IsUnambiguous -> Walk.NameType -> P1Name -> Pass2MakeNames i o Name
 p2nameConvertor u nameType (P1Name (P1TagName aName isOp texts) tagsBelow isAutoGen) =
-    p2tagName u (Clash.colliders tagsBelow) aName texts isAutoGen isOp <&>
+    p2tagName u (tagsBelow ^. Clash.colliders) aName texts isAutoGen isOp <&>
     case nameType of
     Walk.TaggedNominal -> _NameTag . tnDisplayText . ttText . Lens.ix 0 %~ Char.toUpper
     _ -> id
@@ -476,7 +475,7 @@ p2cpsNameConvertor _ (P1Name (P1AnonName uuid) _ _) = p2globalAnon uuid & liftCP
 p2cpsNameConvertor u (P1Name (P1TagName aName isOp texts) tagsBelow isAutoGen) =
     CPS $ \inner ->
     (,)
-    <$> p2tagName u (Clash.colliders tagsBelow) aName texts isAutoGen isOp
+    <$> p2tagName u (tagsBelow ^. Clash.colliders) aName texts isAutoGen isOp
     <*> local (addToTagsAbove . addAutoName) inner
     where
         isClash = Clash.infoOf aName & Clash.Collider

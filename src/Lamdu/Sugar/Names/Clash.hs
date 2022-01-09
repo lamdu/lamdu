@@ -3,13 +3,12 @@
 module Lamdu.Sugar.Names.Clash
     ( Info, _Clash, _NoClash
     , infoOf
-    , Collider(..), _Collider, uncolliders, colliders
+    , Collider(..), _Collider, colliders
     ) where
 
 import qualified Control.Lens as Lens
 import           Control.Lens.Extended ((~~>))
 import           Control.Monad (foldM)
-import           Data.Coerce (coerce)
 import           Data.MMap (MMap)
 import qualified Data.MMap as MMap
 import           Data.UUID.Types (UUID)
@@ -120,9 +119,5 @@ instance Monoid Collider where mempty = Collider mempty
 
 Lens.makePrisms ''Collider
 
--- 2 wrappers for coerce for readability/safety
-uncolliders :: MMap T.Tag Collider -> MMap T.Tag Info
-uncolliders = coerce
-
-colliders :: MMap T.Tag Info -> MMap T.Tag Collider
-colliders = coerce
+colliders :: Lens.Iso' (MMap T.Tag Info) (MMap T.Tag Collider)
+colliders = Lens.coerced
