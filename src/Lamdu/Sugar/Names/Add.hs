@@ -487,7 +487,7 @@ p2cpsNameConvertor u (P1Name (P1TagName aName isOp texts) tagsBelow isAutoGen) =
             _ -> id
         addToTagsAbove = case u of
             Walk.Unambiguous -> id
-            Walk.MayBeAmbiguous -> p2TagsAbove . Lens.at tag %~ Just . maybe isClash (<> isClash)
+            Walk.MayBeAmbiguous -> p2TagsAbove . Lens.at tag %~ Just . (<> isClash) . (^. Lens._Just)
 
 runPasses ::
     ( HasCallStack
