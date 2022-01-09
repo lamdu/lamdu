@@ -1,15 +1,16 @@
+{-# LANGUAGE TemplateHaskell, DerivingVia #-}
 -- | Name clash logic
 module Lamdu.Sugar.Names.Clash
     ( Info, infoOf, isClash, collide
     , Collider(..), uncolliders, colliders
     ) where
 
+import qualified Control.Lens as Lens
 import           Control.Lens.Extended ((~~>))
 import           Control.Monad (foldM)
 import           Data.Coerce (coerce)
 import           Data.MMap (MMap)
 import qualified Data.MMap as MMap
-import qualified Data.Set as Set
 import           Data.UUID.Types (UUID)
 import qualified Lamdu.Calc.Type as T
 import           Lamdu.Sugar.Internal (InternalName(..))
@@ -24,15 +25,22 @@ data Info = Clash | NoClash NameContext
 
 -- A valid (non-clashing) context for a single name where multiple
 -- InternalNames may coexist
-type NameContext = MMap CollisionGroup GroupNameContext
+type NameContext = NameSpaces GroupNameContext
 
-type CollisionGroup = Set Walk.NameType
+data NameSpaces a = NameSpaces
+    { _nsLower :: a
+    , _nsUpper :: a
+    } deriving stock (Functor, Foldable, Traversable, Show, Generic, Generic1)
+    deriving Applicative via Generically1 NameSpaces
+    deriving (Monoid, Semigroup) via Generically (NameSpaces a)
 
 data GroupNameContext = Ambiguous UUIDInfo | Disambiguated (MMap Disambiguator UUIDInfo)
     deriving Show
 
 data UUIDInfo = Single UUID | Multiple -- no need to store the UUIDs, they clash with any UUID
     deriving Show
+
+Lens.makeLenses ''NameSpaces
 
 instance Semigroup UUIDInfo where
     Single x <> Single y | x == y = Single x
@@ -46,12 +54,6 @@ instance Semigroup GroupNameContext where
 
 instance Monoid GroupNameContext where
     mempty = Disambiguated mempty
-
-collisionGroups :: [CollisionGroup]
-collisionGroups =
-    [ [ Walk.GlobalDef, Walk.TaggedVar ]
-    , [ Walk.TaggedNominal ]
-    ] <&> Set.fromList
 
 isClash :: Info -> Bool
 isClash Clash = True
@@ -83,17 +85,21 @@ groupNameContextMatch a b =
             foldM ctxMatch ctx m <&> Ambiguous
 
 nameContextMatch :: NameContext -> NameContext -> Info
-nameContextMatch x y = MMap.unionWithM groupNameContextMatch x y & maybe Clash NoClash
+nameContextMatch x y = groupNameContextMatch <$> x <*> y & sequenceA & maybe Clash NoClash
 
 groupNameContextOf :: UUID -> Maybe Disambiguator -> GroupNameContext
 groupNameContextOf uuid Nothing = Ambiguous (Single uuid)
 groupNameContextOf uuid (Just d) = d ~~> Single uuid & Disambiguated
 
+nameTypeSpace :: Walk.NameType -> Lens.ATraversal' (NameSpaces a) a
+nameTypeSpace Walk.TaggedNominal = nsUpper
+nameTypeSpace Walk.GlobalDef = nsLower
+nameTypeSpace Walk.TaggedVar = nsLower
+nameTypeSpace _ = const pure -- Empty traversal
+
 nameContextOf :: Annotated.Name -> NameContext
 nameContextOf (Annotated.Name (InternalName (Just nameCtx) _tag _) disamb nameType) =
-    filter (nameType `elem`) collisionGroups
-    <&> ((,) ?? ctx)
-    & MMap.fromList
+    mempty & Lens.cloneTraversal (nameTypeSpace nameType) .~ ctx
     where
         ctx = groupNameContextOf nameCtx disamb
 nameContextOf (Annotated.Name (InternalName Nothing _tag _) _disamb _nameType) =
