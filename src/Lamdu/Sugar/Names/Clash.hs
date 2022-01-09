@@ -2,7 +2,7 @@
 -- | Name clash logic
 module Lamdu.Sugar.Names.Clash
     ( Info, _Clash, _NoClash
-    , infoOf
+    , infoOf, toIsClash
     , Collider(..), _Collider, colliders
     , NameSpaces(..), nameTypeSpace
     ) where
@@ -21,12 +21,10 @@ import qualified Lamdu.Sugar.Names.Walk as Walk
 
 import           Lamdu.Prelude
 
-data Info = Clash | NoClash NameContext
-    deriving Show
+type Info = NameSpaces IsClash
 
--- A valid (non-clashing) context for a single name where multiple
--- InternalNames may coexist
-type NameContext = NameSpaces GroupNameContext
+data IsClash = Clash | NoClash GroupNameContext
+    deriving Show
 
 data NameSpaces a = NameSpaces
     { _nsLower :: a
@@ -35,6 +33,8 @@ data NameSpaces a = NameSpaces
     deriving Applicative via Generically1 NameSpaces
     deriving (Monoid, Semigroup) via Generically (NameSpaces a)
 
+-- A valid (non-clashing) context for a single name where multiple
+-- InternalNames may coexist
 data GroupNameContext = Ambiguous UUIDInfo | Disambiguated (MMap Disambiguator UUIDInfo)
     deriving Show
 
@@ -42,7 +42,7 @@ data UUIDInfo = Single UUID | Multiple -- no need to store the UUIDs, they clash
     deriving Show
 
 Lens.makeLenses ''NameSpaces
-Lens.makePrisms ''Info
+Lens.makePrisms ''IsClash
 
 instance Semigroup UUIDInfo where
     Single x <> Single y | x == y = Single x
@@ -58,7 +58,12 @@ instance Monoid GroupNameContext where
     mempty = Disambiguated mempty
 
 infoOf :: Annotated.Name -> Info
-infoOf = NoClash . nameContextOf
+infoOf n = mempty & nameTypeSpace (n ^. Annotated.nameType) .~ toIsClash n
+
+toIsClash :: Annotated.Name -> IsClash
+toIsClash n =
+    foldMap (NoClash . groupNameContextOf (n ^. Annotated.disambiguator))
+    (n ^. Annotated.internal . inContext)
 
 ctxMatch :: UUIDInfo -> UUIDInfo -> Maybe UUIDInfo
 ctxMatch x y =
@@ -82,12 +87,9 @@ groupNameContextMatch a b =
         matchAD ctx m =
             foldM ctxMatch ctx m <&> Ambiguous
 
-nameContextMatch :: NameContext -> NameContext -> Info
-nameContextMatch x y = groupNameContextMatch <$> x <*> y & sequenceA & maybe Clash NoClash
-
-groupNameContextOf :: UUID -> Maybe Disambiguator -> GroupNameContext
-groupNameContextOf uuid Nothing = Ambiguous (Single uuid)
-groupNameContextOf uuid (Just d) = d ~~> Single uuid & Disambiguated
+groupNameContextOf :: Maybe Disambiguator -> UUID -> GroupNameContext
+groupNameContextOf Nothing uuid = Ambiguous (Single uuid)
+groupNameContextOf (Just d) uuid = d ~~> Single uuid & Disambiguated
 
 nameTypeSpace :: Applicative f => Walk.NameType -> Lens.LensLike' f (NameSpaces a) a
 nameTypeSpace Walk.TaggedNominal = nsUpper
@@ -95,30 +97,24 @@ nameTypeSpace Walk.GlobalDef = nsLower
 nameTypeSpace Walk.TaggedVar = nsLower
 nameTypeSpace _ = const pure -- Empty traversal
 
-nameContextOf :: Annotated.Name -> NameContext
-nameContextOf (Annotated.Name name disamb nameType) =
-    foldMap
-    (\c -> mempty & nameTypeSpace nameType .~ groupNameContextOf c disamb)
-    (name ^. inContext)
-
-instance Semigroup Info where
+instance Semigroup IsClash where
     NoClash x <> NoClash y = NoClash (x <> y)
     _ <> _ = Clash
 
-instance Monoid Info where
+instance Monoid IsClash where
     mempty = NoClash mempty
 
 -- | Newtype for a Semigroup that collides two Clash Infos with one
 -- another. The Infos come from scopes that are above/below one
 -- another, and so directly collide, rather than from sibling scopes
 -- as in the Semigroup instance
-newtype Collider = Collider Info deriving stock Show
+newtype Collider = Collider IsClash deriving stock Show
 instance Semigroup Collider where
-    Collider (NoClash x) <> Collider (NoClash y) = Collider (nameContextMatch x y)
+    Collider (NoClash x) <> Collider (NoClash y) = Collider (groupNameContextMatch x y & maybe Clash NoClash)
     _ <> _ = Collider Clash
 instance Monoid Collider where mempty = Collider mempty
 
 Lens.makePrisms ''Collider
 
-colliders :: Lens.Iso' (MMap T.Tag Info) (MMap T.Tag Collider)
+colliders :: Lens.Iso' (MMap T.Tag Info) (MMap T.Tag (NameSpaces Collider))
 colliders = Lens.coerced
