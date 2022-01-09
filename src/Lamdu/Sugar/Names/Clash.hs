@@ -88,7 +88,7 @@ groupNameContextOf :: UUID -> Maybe Disambiguator -> GroupNameContext
 groupNameContextOf uuid Nothing = Ambiguous (Single uuid)
 groupNameContextOf uuid (Just d) = d ~~> Single uuid & Disambiguated
 
-nameTypeSpace :: Walk.NameType -> Lens.ATraversal' (NameSpaces a) a
+nameTypeSpace :: Applicative f => Walk.NameType -> Lens.LensLike' f (NameSpaces a) a
 nameTypeSpace Walk.TaggedNominal = nsUpper
 nameTypeSpace Walk.GlobalDef = nsLower
 nameTypeSpace Walk.TaggedVar = nsLower
@@ -97,7 +97,7 @@ nameTypeSpace _ = const pure -- Empty traversal
 nameContextOf :: Annotated.Name -> NameContext
 nameContextOf (Annotated.Name name disamb nameType) =
     foldMap
-    (\c -> mempty & Lens.cloneTraversal (nameTypeSpace nameType) .~ groupNameContextOf c disamb)
+    (\c -> mempty & nameTypeSpace nameType .~ groupNameContextOf c disamb)
     (name ^. inContext)
 
 instance Semigroup Info where
