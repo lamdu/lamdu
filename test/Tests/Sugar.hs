@@ -69,7 +69,7 @@ type TestWorkArea =
 testSugarActionsWith ::
     FilePath -> [TestWorkArea -> OnceT (T ViewM) a] -> Env -> IO ()
 testSugarActionsWith program actions env =
-    traverse_ (convertWorkArea env >>=) actions <* convertWorkArea env
+    traverse_ (convertWorkArea "" env >>=) actions <* convertWorkArea "" env
     & testProgram program
 
 -- | Verify that a sugar action does not result in a crash
@@ -458,10 +458,10 @@ testFloatToRepl =
         env <- Env.make
         testProgram "repl-2-lets.json" $
             do
-                workArea <- convertWorkArea env
+                workArea <- convertWorkArea "" env
                 assertLetVals workArea 1 2
                 _ <- workArea ^?! innerLet . annotation . plActions . extract & lift
-                newWorkArea <- convertWorkArea env
+                newWorkArea <- convertWorkArea "" env
                 assertLetVals newWorkArea 2 1
     where
         assertLetVals workArea outer inner =
@@ -486,8 +486,8 @@ testCreateLetInLetVal =
         result <-
             testProgram "let-item-inline.json" $
                 do
-                    _ <- convertWorkArea env >>= lift . (^?! theLetVal . bAddOuterLet)
-                    convertWorkArea env
+                    _ <- convertWorkArea "" env >>= lift . (^?! theLetVal . bAddOuterLet)
+                    convertWorkArea "" env
             <&> Lens.has (theLetVal . bBody . _BinderLet)
         assertBool "Let was not created inside the let-value" result
     where
@@ -507,7 +507,7 @@ testHoleTypeShown =
     testCase "hole-type-shown" $
     do
         env <- Env.make <&> has .~ Annotations.None
-        workArea <- testProgram "to-nom.json" (convertWorkArea env)
+        workArea <- testProgram "to-nom.json" (convertWorkArea "" env)
         let x = workArea ^?! replBody . _BodyToNom . nVal
         putStrLn $ case x ^. annotation . plAnnotation of
             AnnotationType {} -> "Type"
@@ -520,7 +520,7 @@ testHoleTypeShown =
 testPunnedIso :: Test
 testPunnedIso =
     testCase "punned-iso" $
-    Env.make >>= testProgram "punned-fields.json" . convertWorkArea
+    Env.make >>= testProgram "punned-fields.json" . convertWorkArea ""
     <&> (^.. replBinder . _BinderLet . lBody . hVal . bBody . _BinderLet . lBody .
             hVal . bBody . _BinderTerm . _BodyRecord . cList . SugarLens.taggedListItems)
     <&> Lens.mapped %~
@@ -530,7 +530,7 @@ testPunnedIso =
 testNullParamUnused :: Test
 testNullParamUnused =
     testCase "null-param-unused" $
-    Env.make >>= testProgram "null-param-cond.json" . convertWorkArea
+    Env.make >>= testProgram "null-param-cond.json" . convertWorkArea ""
     <&> Lens.has (replBinder . _BinderLet . lValue . hVal . _BodyFunction . fParams . _VarParam)
     >>= assertBool "Null param only if unused"
 
@@ -538,7 +538,7 @@ testNullParamUnused =
 testPunnedLightParam :: Test
 testPunnedLightParam =
     testCase "punned-light-param" $
-    Env.make >>= testProgram "punned-light-param.json" . convertWorkArea
+    Env.make >>= testProgram "punned-light-param.json" . convertWorkArea ""
     <&> Lens.has
         ( replBinder . _BinderTerm . _BodyLam . lamFunc . fBody . hVal .
             bBody . _BinderTerm . _BodyRecord . cPunnedItems . traverse . pvVar . hVal .
@@ -555,13 +555,13 @@ testParamsOrder =
         let reorder msg =
                 do
                     mOrderBefore <-
-                        convertWorkArea env
+                        convertWorkArea msg env
                         <&> (^? funcParams . tlTail . traverse . tsiSwapWithPrevious)
                     case mOrderBefore of
                         Just a -> lift a
                         Nothing -> error ("cant reorder before " <> msg)
         let readTags =
-                convertWorkArea env <&> (^.. funcParams . SugarLens.taggedListBodyItems . tiTag . tagRefTag . tagVal)
+                convertWorkArea "" env <&> (^.. funcParams . SugarLens.taggedListBodyItems . tiTag . tagRefTag . tagVal)
         testProgram "func-params.json" $
             do
                 params0 <- readTags
@@ -585,10 +585,10 @@ testAddToInferredParamList =
         workArea <-
             testProgram "func-params.json" $
             do
-                convertWorkArea env
+                convertWorkArea "" env
                     >>= (^?! elseClause . lamBodyParams . tiAddAfter)
                     >>= lift . (^. tcNewTag . toPick)
-                convertWorkArea env
+                convertWorkArea "" env
         let paramList = workArea ^.. elseClause . _BodyFragment . fExpr . hVal . lamBodyParams
         assertEqual "Parameter list length" (length paramList) 3
     where
@@ -604,14 +604,14 @@ testAddToInferredParamList =
 testInfixWithArgParens :: Test
 testInfixWithArgParens =
     testCase "infix-with-arg-parens" $
-    Env.make >>= testProgram "infix-with-args-needs-paren.json" . convertWorkArea
+    Env.make >>= testProgram "infix-with-args-needs-paren.json" . convertWorkArea ""
     <&> (^?! replBinder . _BinderTerm . _BodySimpleApply . appArg . annotation . plParenInfo . piNeedParens)
     >>= assertBool "Expected paren"
 
 testDisambig :: Test
 testDisambig =
     testCase "disambig-operator" $
-    Env.make >>= testProgram "disambig.json" . convertWorkArea
+    Env.make >>= testProgram "disambig.json" . convertWorkArea ""
     <&> Lens.has itemOp
     >>= assertBool "Expect collsion"
     where
@@ -630,7 +630,7 @@ getHoleResults progName traversal =
     do
         env <- Env.make
         testProgram progName $
-            convertWorkArea env
+            convertWorkArea "" env
             <&> (^? Lens.cloneTraversal traversal)
             <&> fromMaybe (error "getHoleResults: Inexistent path")
             <&> (^? _BodyLeaf) <&> fromMaybe (error "getHoleResults: Not a leaf")

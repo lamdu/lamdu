@@ -115,7 +115,7 @@ makeGui afterDoc env workArea =
             else error ("Red cursor after " ++ afterDoc ++ ": " ++ show (env ^. cursor))
 
 convertAndMakeGui :: HasCallStack => String -> Env -> OnceT (T ViewM) (Responsive (T ViewM))
-convertAndMakeGui afterDoc env = convertWorkArea env >>= makeGui afterDoc env
+convertAndMakeGui afterDoc env = convertWorkArea afterDoc env >>= makeGui afterDoc env
 
 focusedWidget ::
     HasCallStack =>
@@ -151,7 +151,7 @@ applyEventWith :: HasCallStack => String -> VirtualCursor -> Event -> Env -> Onc
 applyEventWith msg virtCursor event env =
     do
         r <-
-            convertWorkArea env
+            convertWorkArea msg env
             >>= mApplyEvent env virtCursor event
             <&> fromMaybe (error msg)
             <&> (`GuiState.update` env)
@@ -168,7 +168,7 @@ fromWorkArea ::
         ) a ->
     OnceT (T ViewM) a
 fromWorkArea env path =
-    convertWorkArea env
+    convertWorkArea "" env
     <&> (^?! Lens.cloneTraversal path)
 
 dummyVirt :: VirtualCursor
@@ -184,7 +184,7 @@ testTagPanes =
         fromWorkArea baseEnv (replExpr . Sugar._BodyRecord . Sugar.cList . Sugar.tlItems)
             >>= lift . sequence_ .
                 (^.. Lens._Just . Sugar.tlHead . Sugar.tiTag . Sugar.tagRefJumpTo . Lens._Just)
-        convertWorkArea baseEnv >>= makeFocusedWidget "opened tag panes" baseEnv & void
+        convertWorkArea "" baseEnv >>= makeFocusedWidget "opened tag panes" baseEnv & void
 
 simpleKeyEvent :: ModKey -> E.Event
 simpleKeyEvent (ModKey mods key) =
@@ -268,9 +268,9 @@ testOpPrec =
             (replExpr . Sugar._BodyLam . Sugar.lamFunc .
              Sugar.fBody . annotation . Sugar.plEntityId)
             <&> WidgetIds.fromEntityId
-        workArea <- convertWorkArea baseEnv
+        workArea <- convertWorkArea "" baseEnv
         _ <- baseEnv & cursor .~ holeId & applyEvent dummyVirt (EventChar '&')
-        workArea' <- convertWorkArea baseEnv
+        workArea' <- convertWorkArea "" baseEnv
         unless (workAreaEq workArea workArea') (error "bad operator precedence")
 
 letBody :: Lens.Traversal' (Ann a # Sugar.Binder v n i o) (Ann a # Sugar.Binder v n i o)
@@ -349,7 +349,7 @@ testPunCursor =
             baseEnv & cursor .~ WidgetIds.tagHoleId (WidgetIds.fromEntityId tagId)
             & applyEvent dummyVirt (EventChar 'x')
             >>= applyEvent dummyVirt (simpleKeyEvent (noMods GLFW.Key'Enter))
-        workArea <- convertWorkArea env0
+        workArea <- convertWorkArea "" env0
         _ <- makeFocusedWidget "" env0 workArea
         workArea ^? Lens.cloneTraversal waRec . Sugar.cPunnedItems <&> length & pure
     & testProgram "rec-with-let.json"
@@ -373,7 +373,7 @@ testKeyboardDirAndBack ::
     Env.Env -> VirtualCursor -> ModKey -> ModKey -> OnceT (T ViewM) ()
 testKeyboardDirAndBack posEnv posVirt way back =
     do
-        wa <- convertWorkArea posEnv
+        wa <- convertWorkArea baseInfo posEnv
         mApplyEvent posEnv posVirt (simpleKeyEvent way) wa
             >>=
             \case
@@ -385,11 +385,11 @@ testKeyboardDirAndBack posEnv posVirt way back =
                 (simpleKeyEvent back) wa
                 >>=
                 \case
-                Nothing -> error (show baseInfo <> " can't move back with cursor keys")
+                Nothing -> error (baseInfo <> " can't move back with cursor keys")
                 Just updBack
                     | Lens.anyOf (GuiState.uCursor . traverse)
                     (`WidgetId.isSubId` (posEnv ^. cursor)) updBack & not ->
-                        show baseInfo <> "moving back with cursor keys goes to different place: " <>
+                        baseInfo <> "moving back with cursor keys goes to different place: " <>
                         show (updBack ^. GuiState.uCursor)
                         & error
                 Just{} -> pure ()
@@ -398,6 +398,7 @@ testKeyboardDirAndBack posEnv posVirt way back =
         baseInfo =
             Pretty.text (show (posEnv ^. GuiState.cursor)) $+$
             pPrintModKey way $+$ pPrintModKey back <> ": "
+            & show
 
 data RectOrdering = Before | Undetermined | After
     deriving Eq
@@ -417,7 +418,7 @@ testTabNavigation ::
     Env.Env -> VirtualCursor -> OnceT (T ViewM) ()
 testTabNavigation env virtCursor =
     do
-        w0 <- convertWorkArea env >>= makeFocusedWidget "mApplyEvent" env
+        w0 <- convertWorkArea "" env >>= makeFocusedWidget "mApplyEvent" env
         let eventMap =
                 (w0 ^. Widget.fEventMap)
                 Widget.EventContext
@@ -434,13 +435,14 @@ testTabNavigation env virtCursor =
                     do
                         let newEnv = GuiState.update upd env
                         w1 <-
-                            convertWorkArea newEnv >>= makeFocusedWidget "testTabNavigation" newEnv
+                            convertWorkArea info newEnv
+                            >>= makeFocusedWidget "testTabNavigation" newEnv
                         let p0 = w0 ^?! pos
                         let p1 = w1 ^?! pos
                         when (comparePositions p1 p0 /= expected) $
-                            show (env ^. GuiState.cursor) <> ": " <> name <>
-                            " did not move to expected direction"
-                            & error
+                            error $ info <> ": did not move to expected direction"
+                where
+                    info = show (env ^. GuiState.cursor) <> " " <> name
         traverse_ testDir dirs
     where
         pos = Widget.fFocalAreas . traverse
@@ -468,7 +470,7 @@ testActions ::
     Env.Env -> VirtualCursor -> OnceT (T ViewM) ()
 testActions env virtCursor =
     do
-        w <- convertWorkArea env >>= makeFocusedWidget "" env
+        w <- convertWorkArea "" env >>= makeFocusedWidget "" env
         let eventMap =
                 Widget.EventContext
                 { Widget._eVirtualCursor = virtCursor

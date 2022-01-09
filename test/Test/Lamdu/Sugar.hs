@@ -90,20 +90,21 @@ workAreaLowLevelLoad =
 
 validate ::
     (HasCallStack, NFData v, NFData name) =>
+    String ->
     WorkArea v name (OnceT (T fa)) (T fb) (Sugar.Payload v (T fb)) ->
     T ViewM (WorkArea v name (OnceT (T fa)) (T fb) (Sugar.Payload v (T fb)))
-validate workArea
+validate errInfo workArea
     | Map.null duplicateEntityIds =
         do
             wallEntityIds <- workAreaLowLevelLoad <&> workAreaLowLevelEntityIds
             let missing = wallEntityIds `Set.difference` sugarEntityIdsSet
             unless (Set.null missing) $ error $
-                show missing ++ " do not appear in any sugar entity ids"
+                errInfo <> ": " <> show missing <> " do not appear in any sugar entity ids"
             deepseq workArea -- make sure no "error" clauses are hiding within
                 (validateHiddenEntityIds workArea)
                 & either error (\() -> pure workArea)
     | otherwise =
-        error ("duplicate entityIds: " <> show duplicateEntityIds)
+        error (errInfo <> ": duplicate entityIds " <> show duplicateEntityIds)
     where
         duplicateEntityIds =
             sugarEntityIds <&> _2 %~ (:[])
@@ -113,14 +114,15 @@ validate workArea
 
 convertWorkArea ::
     (HasCallStack, _) =>
+    String ->
     env ->
     OnceT (T ViewM)
     ( WorkArea (Annotation (EvaluationScopes Name (OnceT (T ViewM))) Name) Name (OnceT (T ViewM)) (T ViewM)
         (Sugar.Payload (Annotation (EvaluationScopes Name (OnceT (T ViewM))) Name) (T ViewM))
     )
-convertWorkArea env =
+convertWorkArea errInfo env =
     (sugarWorkArea env >>= \x -> x (Tag.getTagName env) env)
-    >>= lift . validate
+    >>= lift . validate errInfo
 
 testProgramH :: [FilePath] -> OnceT (T ViewM) a -> IO a
 testProgramH paths action =
