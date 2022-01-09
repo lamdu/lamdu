@@ -15,7 +15,7 @@
         "names": {
             "hebrew": "לא_ריק",
             "english": "nonEmpty",
-            "italiano": "nonVuoto"
+            "italian": "nonVuoto"
         }
     },
     {
@@ -24,7 +24,7 @@
         "names": {
             "hebrew": "ראש",
             "english": "head",
-            "italiano": "testa"
+            "italian": "testa"
         }
     },
     {
@@ -61,7 +61,7 @@
         "names": {
             "hebrew": "זנב",
             "english": "tail",
-            "italiano": "coda"
+            "italian": "coda"
         }
     },
     {

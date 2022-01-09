@@ -8,7 +8,7 @@
         "names": {
             "hebrew": "רשימה",
             "english": "list",
-            "italiano": "lista"
+            "italian": "lista"
         }
     },
     {
@@ -17,7 +17,7 @@
         "names": {
             "hebrew": "קפל",
             "english": "fold",
-            "italiano": "fold"
+            "italian": "fold"
         }
     },
     {
@@ -26,7 +26,7 @@
         "names": {
             "hebrew": "לא_ריק",
             "english": "nonEmpty",
-            "italiano": "nonVuoto"
+            "italian": "nonVuoto"
         }
     },
     {
@@ -35,7 +35,7 @@
         "names": {
             "hebrew": "ראש",
             "english": "head",
-            "italiano": "testa"
+            "italian": "testa"
         }
     },
     {
@@ -44,7 +44,7 @@
         "names": {
             "hebrew": "אינדקס",
             "english": "index",
-            "italiano": "indice"
+            "italian": "indice"
         }
     },
     {
@@ -53,7 +53,7 @@
         "names": {
             "hebrew": "ריק",
             "english": "empty",
-            "italiano": "vuoto"
+            "italian": "vuoto"
         }
     },
     {
@@ -65,7 +65,7 @@
                 "abbreviation": "obj",
                 "name": "object"
             },
-            "italiano": "oggetto"
+            "italian": "oggetto"
         }
     },
     {
@@ -74,7 +74,7 @@
         "names": {
             "hebrew": "זנב",
             "english": "tail",
-            "italiano": "coda"
+            "italian": "coda"
         }
     },
     {
@@ -86,7 +86,7 @@
                 "abbreviation": "init",
                 "name": "initial"
             },
-            "italiano": "iniziale"
+            "italian": "iniziale"
         }
     },
     {
@@ -98,7 +98,7 @@
                 "abbreviation": "elem",
                 "name": "element"
             },
-            "italiano": {
+            "italian": {
                 "abbreviation": "elem",
                 "name": "elemento"
             }
@@ -113,7 +113,7 @@
                 "abbreviation": "binop",
                 "name": "binaryOperator"
             },
-            "italiano": "operatoreBinario"
+            "italian": "operatoreBinario"
         }
     },
     {
@@ -125,7 +125,7 @@
                 "abbreviation": "acc",
                 "name": "accumulator"
             },
-            "italiano": "accumulatore"
+            "italian": "accumulatore"
         }
     },
     {
@@ -134,7 +134,7 @@
         "names": {
             "hebrew": "איבר",
             "english": "item",
-            "italiano": "elemento"
+            "italian": "elemento"
         }
     },
     {

@@ -8,7 +8,7 @@
         "names": {
             "hebrew": "רשימה",
             "english": "list",
-            "italiano": "lista"
+            "italian": "lista"
         }
     },
     {
@@ -17,7 +17,7 @@
         "names": {
             "hebrew": "צעד",
             "english": "step",
-            "italiano": "passo"
+            "italian": "passo"
         }
     },
     {
@@ -26,7 +26,7 @@
         "names": {
             "hebrew": "כל_עוד",
             "english": "while",
-            "italiano": "mentre"
+            "italian": "mentre"
         }
     },
     {
@@ -35,7 +35,7 @@
         "names": {
             "hebrew": "לא_ריק",
             "english": "nonEmpty",
-            "italiano": "nonVuoto"
+            "italian": "nonVuoto"
         }
     },
     {
@@ -44,7 +44,7 @@
         "names": {
             "hebrew": "כזב",
             "english": "false",
-            "italiano": "falso"
+            "italian": "falso"
         }
     },
     {
@@ -53,7 +53,7 @@
         "names": {
             "hebrew": "ראש",
             "english": "head",
-            "italiano": "testa"
+            "italian": "testa"
         }
     },
     {
@@ -90,7 +90,7 @@
         "names": {
             "hebrew": "ריק",
             "english": "empty",
-            "italiano": "vuoto"
+            "italian": "vuoto"
         }
     },
     {
@@ -99,7 +99,7 @@
         "names": {
             "hebrew": "התחלה",
             "english": "start",
-            "italiano": "inizio"
+            "italian": "inizio"
         }
     },
     {
@@ -108,7 +108,7 @@
         "names": {
             "hebrew": "עצירה",
             "english": "stop",
-            "italiano": "stop"
+            "italian": "stop"
         }
     },
     {
@@ -117,7 +117,7 @@
         "names": {
             "hebrew": "זנב",
             "english": "tail",
-            "italiano": "coda"
+            "italian": "coda"
         }
     },
     {
@@ -126,7 +126,7 @@
         "names": {
             "hebrew": "אמת",
             "english": "true",
-            "italiano": "vero"
+            "italian": "vero"
         }
     },
     {
@@ -138,7 +138,7 @@
                 "abbreviation": "init",
                 "name": "initial"
             },
-            "italiano": "iniziale"
+            "italian": "iniziale"
         }
     },
     {
@@ -148,7 +148,7 @@
         "names": {
             "hebrew": "עד",
             "english": "to",
-            "italiano": "a"
+            "italian": "a"
         }
     },
     {
@@ -165,7 +165,7 @@
         "names": {
             "hebrew": "הבא",
             "english": "next",
-            "italiano": "prossimo"
+            "italian": "prossimo"
         }
     },
     {
@@ -179,7 +179,7 @@
         "names": {
             "hebrew": "איטרציה",
             "english": "iterate",
-            "italiano": "itera"
+            "italian": "itera"
         }
     },
     {
@@ -188,7 +188,7 @@
         "names": {
             "hebrew": "קח",
             "english": "take",
-            "italiano": "prendi"
+            "italian": "prendi"
         }
     },
     {

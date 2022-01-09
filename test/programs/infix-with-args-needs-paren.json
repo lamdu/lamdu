@@ -8,7 +8,7 @@
         "names": {
             "hebrew": "רצף_",
             "english": "sequence_",
-            "italiano": "sequenza_"
+            "italian": "sequenza_"
         }
     },
     {
@@ -17,7 +17,7 @@
         "names": {
             "hebrew": "רשימה",
             "english": "list",
-            "italiano": "lista"
+            "italian": "lista"
         }
     },
     {
@@ -26,7 +26,7 @@
         "names": {
             "hebrew": "למערך",
             "english": "toArray",
-            "italiano": "aArray"
+            "italian": "aArray"
         }
     },
     {
@@ -35,7 +35,7 @@
         "names": {
             "hebrew": "צעד",
             "english": "step",
-            "italiano": "passo"
+            "italian": "passo"
         }
     },
     {
@@ -49,7 +49,7 @@
         "names": {
             "hebrew": "כל_עוד",
             "english": "while",
-            "italiano": "mentre"
+            "italian": "mentre"
         }
     },
     {
@@ -58,7 +58,7 @@
         "names": {
             "hebrew": "לא_ריק",
             "english": "nonEmpty",
-            "italiano": "nonVuoto"
+            "italian": "nonVuoto"
         }
     },
     {
@@ -67,7 +67,7 @@
         "names": {
             "hebrew": "כזב",
             "english": "false",
-            "italiano": "falso"
+            "italian": "falso"
         }
     },
     {
@@ -76,7 +76,7 @@
         "names": {
             "hebrew": "ראש",
             "english": "head",
-            "italiano": "testa"
+            "italian": "testa"
         }
     },
     {
@@ -113,7 +113,7 @@
         "names": {
             "hebrew": "ריק",
             "english": "empty",
-            "italiano": "vuoto"
+            "italian": "vuoto"
         }
     },
     {
@@ -125,7 +125,7 @@
                 "abbreviation": "obj",
                 "name": "object"
             },
-            "italiano": "oggetto"
+            "italian": "oggetto"
         }
     },
     {
@@ -134,7 +134,7 @@
         "names": {
             "hebrew": "התחלה",
             "english": "start",
-            "italiano": "inizio"
+            "italian": "inizio"
         }
     },
     {
@@ -143,7 +143,7 @@
         "names": {
             "hebrew": "עצירה",
             "english": "stop",
-            "italiano": "stop"
+            "italian": "stop"
         }
     },
     {
@@ -152,7 +152,7 @@
         "names": {
             "hebrew": "זנב",
             "english": "tail",
-            "italiano": "coda"
+            "italian": "coda"
         }
     },
     {
@@ -161,7 +161,7 @@
         "names": {
             "hebrew": "אמת",
             "english": "true",
-            "italiano": "vero"
+            "italian": "vero"
         }
     },
     {
@@ -170,7 +170,7 @@
         "names": {
             "hebrew": "ערך",
             "english": "value",
-            "italiano": "valore"
+            "italian": "valore"
         }
     },
     {
@@ -182,7 +182,7 @@
                 "abbreviation": "init",
                 "name": "initial"
             },
-            "italiano": "iniziale"
+            "italian": "iniziale"
         }
     },
     {
@@ -192,7 +192,7 @@
         "names": {
             "hebrew": "עד",
             "english": "to",
-            "italiano": "a"
+            "italian": "a"
         }
     },
     {
@@ -201,7 +201,7 @@
         "names": {
             "hebrew": "מפה",
             "english": "map",
-            "italiano": "mappa"
+            "italian": "mappa"
         }
     },
     {
@@ -218,7 +218,7 @@
         "names": {
             "hebrew": "מיפוי",
             "english": "mapping",
-            "italiano": "mappatura"
+            "italian": "mappatura"
         }
     },
     {
@@ -230,7 +230,7 @@
                 "abbreviation": "binop",
                 "name": "binaryOperator"
             },
-            "italiano": "operatoreBinario"
+            "italian": "operatoreBinario"
         }
     },
     {
@@ -242,7 +242,7 @@
                 "abbreviation": "runMutArray",
                 "name": "runMutableArray"
             },
-            "italiano": "eseguiArrayMutabile"
+            "italian": "eseguiArrayMutabile"
         }
     },
     {
@@ -251,7 +251,7 @@
         "names": {
             "hebrew": "החזר",
             "english": "return",
-            "italiano": "ritorna"
+            "italian": "ritorna"
         }
     },
     {
@@ -263,7 +263,7 @@
                 "abbreviation": "appendMutArray",
                 "name": "appendToMutableArray"
             },
-            "italiano": "aggiungiAdArrayMutabile"
+            "italian": "aggiungiAdArrayMutabile"
         }
     },
     {
@@ -283,7 +283,7 @@
                 "abbreviation": "newMutArray",
                 "name": "newMutableArray"
             },
-            "italiano": "nuovoArrayMutabile"
+            "italian": "nuovoArrayMutabile"
         }
     },
     {
@@ -292,7 +292,7 @@
         "names": {
             "hebrew": "הבא",
             "english": "next",
-            "italiano": "prossimo"
+            "italian": "prossimo"
         }
     },
     {
@@ -306,7 +306,7 @@
         "names": {
             "hebrew": "דמה",
             "english": "dummy",
-            "italiano": "finto"
+            "italian": "finto"
         }
     },
     {
@@ -315,7 +315,7 @@
         "names": {
             "hebrew": "איטרציה",
             "english": "iterate",
-            "italiano": "itera"
+            "italian": "itera"
         }
     },
     {
@@ -324,7 +324,7 @@
         "names": {
             "hebrew": "קח",
             "english": "take",
-            "italiano": "prendi"
+            "italian": "prendi"
         }
     },
     {
@@ -341,7 +341,7 @@
         "names": {
             "hebrew": "שאר",
             "english": "rest",
-            "italiano": "resto"
+            "italian": "resto"
         }
     },
     {
@@ -350,7 +350,7 @@
         "names": {
             "hebrew": "מערך",
             "english": "array",
-            "italiano": "array"
+            "italian": "array"
         }
     },
     {
@@ -364,7 +364,7 @@
         "names": {
             "hebrew": "איבר",
             "english": "item",
-            "italiano": "elemento"
+            "italian": "elemento"
         }
     },
     {

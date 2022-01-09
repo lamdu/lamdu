@@ -2,7 +2,7 @@
     "imports": ["base.mixin.json"],
     "title": {
         "english": "Light",
-        "italiano": "Chiaro",
+        "italian": "Chiaro",
         "spanish": "Claro",
         "hebrew": "בהיר"
     },

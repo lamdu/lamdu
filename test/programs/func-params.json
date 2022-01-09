@@ -8,7 +8,7 @@
         "names": {
             "hebrew": "כזב",
             "english": "false",
-            "italiano": "falso"
+            "italian": "falso"
         }
     },
     {
@@ -17,7 +17,7 @@
         "names": {
             "hebrew": "אמת",
             "english": "true",
-            "italiano": "vero"
+            "italian": "vero"
         }
     },
     {
@@ -29,7 +29,7 @@
                 "abbreviation": "cur",
                 "name": "current"
             },
-            "italiano": "corrente"
+            "italian": "corrente"
         }
     },
     {
@@ -38,7 +38,7 @@
         "names": {
             "hebrew": "הבא",
             "english": "next",
-            "italiano": "prossimo"
+            "italian": "prossimo"
         }
     },
     {

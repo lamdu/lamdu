@@ -1,6 +1,6 @@
 {
     "imports": ["left-to-right.mixin.json"],
-    "identifier": "italiano",
+    "identifier": "italian",
     "title": "Italiano",
     "texts": {
         "languageNames": {
