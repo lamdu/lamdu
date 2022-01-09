@@ -259,6 +259,7 @@ isReserved env name =
             & Set.fromList
 
 toSuffixMap ::
+    HasCallStack =>
     Map T.Tag TagText ->
     MMap T.Tag (MMap Walk.NameType (Bias L (OSet UUID))) ->
     MMap T.Tag Clash.Info ->
@@ -296,7 +297,8 @@ numberCycle s =
         appendAll num = map (<> Text.pack (show num))
 
 initialP2Env ::
-    ( Has (Texts.Name Text) env
+    ( HasCallStack
+    , Has (Texts.Name Text) env
     , Has (Texts.Code Text) env
     ) =>
     env -> P1Out -> P2Env
@@ -361,7 +363,8 @@ newtype Pass2MakeNames (im :: * -> *) (am :: * -> *) a = Pass2MakeNames { runPas
     deriving newtype (Functor, Applicative, Monad, MonadReader P2Env)
 
 runPass2MakeNamesInitial ::
-    ( Has (Texts.Name Text) env
+    ( HasCallStack
+    , Has (Texts.Name Text) env
     , Has (Texts.Code Text) env
     ) =>
     env -> P1Out -> Pass2MakeNames i o a -> a
@@ -487,7 +490,8 @@ p2cpsNameConvertor u (P1Name (P1TagName aName isOp texts) tagsBelow isAutoGen) =
             Walk.MayBeAmbiguous -> p2TagsAbove . Lens.at tag %~ Just . maybe isClash (Clash.collide isClash)
 
 runPasses ::
-    ( Has (Texts.Name Text) env
+    ( HasCallStack
+    , Has (Texts.Name Text) env
     , Has (Texts.Code Text) env
     , Functor i
     ) =>
@@ -505,7 +509,8 @@ runPasses env getName f0 f1 f2 =
         pass2 (x, p1out) = f2 x & runPass2MakeNamesInitial env p1out
 
 addToWorkArea ::
-    ( Has (Texts.Name Text) env
+    ( HasCallStack
+    , Has (Texts.Name Text) env
     , Has (Texts.Code Text) env
     , Monad i
     ) =>
@@ -522,7 +527,8 @@ addToWorkArea env getName =
 
 -- TODO: Switch to regular type in tests
 addToWorkAreaTest ::
-    ( Has (Texts.Name Text) env
+    ( HasCallStack
+    , Has (Texts.Name Text) env
     , Has (Texts.Code Text) env
     , Monad i
     ) =>
