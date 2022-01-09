@@ -4,6 +4,7 @@ module Lamdu.Sugar.Names.Clash
     ( Info, _Clash, _NoClash
     , infoOf
     , Collider(..), _Collider, colliders
+    , NameSpaces(..), nameTypeSpace
     ) where
 
 import qualified Control.Lens as Lens

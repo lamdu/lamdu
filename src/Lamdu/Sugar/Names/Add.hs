@@ -92,7 +92,7 @@ data P1Out = P1Out
         -- ^ Used in P2 to check against local hole results
     , _p1Locals :: MMap T.Tag Clash.Info
         -- ^ Used in P2 to check against global hole results
-    , _p1Contexts :: MMap T.Tag (MMap Walk.NameType (Bias L (OSet UUID)))
+    , _p1Contexts :: MMap T.Tag (Clash.NameSpaces (Bias L (OSet UUID)))
         -- ^ Needed to generate suffixes
     , _p1TypeVars :: Bias L (OSet UUID)
         -- ^ Type vars met
@@ -178,7 +178,8 @@ p1Name mDisambiguator u nameType (P0Name texts isOp internalName) =
             | nameType == Walk.TypeVar =
                 tellSome p1TypeVars (Bias (OrderedSet.singleton x))
             | otherwise =
-                tellSome p1Contexts (tag ~~> (nameType ~~> Bias (OrderedSet.singleton x)))
+                tellSome p1Contexts
+                (tag ~~> (mempty & Clash.nameTypeSpace nameType .~ Bias (OrderedSet.singleton x)))
         InternalName ctx tag _ = internalName
         aName =
             Annotated.Name
@@ -260,7 +261,7 @@ isReserved env name =
 toSuffixMap ::
     HasCallStack =>
     Map T.Tag TagText ->
-    MMap T.Tag (MMap Walk.NameType (Bias L (OSet UUID))) ->
+    MMap T.Tag (Clash.NameSpaces (Bias L (OSet UUID))) ->
     MMap T.Tag Clash.Collider ->
     Map TaggedVarId Int
 toSuffixMap tagTexts contexts top =
@@ -320,7 +321,6 @@ initialP2Env env P1Out{_p1Globals, _p1Locals, _p1Contexts, _p1TypeVars, _p1Texts
     where
         tagTexts = makeTagTexts env _p1Texts
         top = _p1Locals ^. Clash.colliders <> _p1Globals
-
 
 ------------------------------
 ---------- Pass 2 ------------
