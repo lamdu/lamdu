@@ -3,7 +3,7 @@
 module Lamdu.Sugar.Names.Clash
     ( Info, _Clash, _NoClash
     , infoOf, toIsClash
-    , Collider(..), _Collider, colliders
+    , Collider(..), _Collider
     , NameSpaces(..), nameTypeSpace
     ) where
 
@@ -13,7 +13,6 @@ import           Control.Monad (foldM)
 import           Data.MMap (MMap)
 import qualified Data.MMap as MMap
 import           Data.UUID.Types (UUID)
-import qualified Lamdu.Calc.Type as T
 import           Lamdu.Sugar.Internal (inContext)
 import qualified Lamdu.Sugar.Names.Annotated as Annotated
 import           Lamdu.Sugar.Names.Walk (Disambiguator)
@@ -115,6 +114,3 @@ instance Semigroup Collider where
 instance Monoid Collider where mempty = Collider mempty
 
 Lens.makePrisms ''Collider
-
-colliders :: Lens.Iso' (MMap T.Tag Info) (MMap T.Tag (NameSpaces Collider))
-colliders = Lens.coerced
