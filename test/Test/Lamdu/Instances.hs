@@ -88,14 +88,6 @@ instance HasPrecedence InternalName where
     precedence (InternalName _ (T.Tag (Identifier ident)) _) =
         precedence (BS8.head ident)
 
-makeInstances [''NFData]
-    [ ''DebugTasks.Tasks, ''SugarConfig.Sugars, ''SugarConfig.Config
-    , ''Config, ''Config.Completion, ''Config.Debug, ''Config.Eval
-    , ''Config.Export, ''Config.Literal, ''Config.Pane
-    , ''Grid.Keys, ''Menu.Config, ''SearchMenu.Config
-    , ''StdKeys.DirKeys, ''TextEdit.Keys, ''VcGuiConfig.Config, ''Zoom.Config
-    ]
-
 instance NFData (OnceT (Transaction m) a) where rnf = pure () -- Cheating
 instance NFData (Transaction m a) where rnf = pure () -- Cheating
 instance NFData a => NFData (Property m a) where rnf (Property x _) = rnf x -- Cheating
@@ -130,7 +122,12 @@ instance Eq (Sugar.TagPane f) where
     ] & sequenceA <&> concat
 
 makeInstances [''NFData]
-    [ ''Sugar.TId, ''Sugar.Tag, ''Sugar.TagPane, ''Sugar.ParamsRecordVarRef
+    [ ''DebugTasks.Tasks, ''SugarConfig.Sugars, ''SugarConfig.Config
+    , ''Config, ''Config.Completion, ''Config.Debug, ''Config.Eval
+    , ''Config.Export, ''Config.Literal, ''Config.Pane
+    , ''Grid.Keys, ''Menu.Config, ''SearchMenu.Config
+    , ''StdKeys.DirKeys, ''TextEdit.Keys, ''VcGuiConfig.Config, ''Zoom.Config
+    , ''Sugar.TId, ''Sugar.Tag, ''Sugar.TagPane, ''Sugar.ParamsRecordVarRef
     , ''Sugar.ScopeId, ''Sugar.DefinitionState, ''Sugar.ParenInfo, ''Sugar.VarInfo
     , ''Sugar.BinderMode, ''Sugar.BinderParamScopeId, ''Sugar.FuncApplyLimit, ''Sugar.Error
     , ''Sugar.CompiledErrorType, ''ShowAnnotation, ''LangId, ''EntityId, ''Sugar.ParamKind
