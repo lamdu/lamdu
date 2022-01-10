@@ -133,5 +133,5 @@ makeInstances [''NFData]
     , ''Sugar.CompiledErrorType, ''ShowAnnotation, ''LangId, ''EntityId, ''Sugar.ParamKind
     , ''Name, ''Name.Collision, ''Name.TagName, ''Name.TagText
     , ''Tag.TextsInLang, ''Def.FFIName, ''Tag.DirOp, ''Tag.Symbol, ''Tag.Tag, ''CurAndPrev
-    , ''Unit
+    , ''Unit, ''Sugar.TaggedVarId
     ]

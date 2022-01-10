@@ -30,9 +30,10 @@ module Lamdu.Sugar.Types.Parts
     , PunnedVar(..), pvVar, pvTagEntityId
     , NullaryInject(..), iInject, iContent
     , Option(..), optionExpr, optionPick, optionTypeMatch, optionMNewTag
-    , Query(..), qLangInfo, qSearchTerm
+    , Query(..), qLangInfo, qTagSuffixes, qSearchTerm
     , QueryLangInfo(..), qLangId, qLangDir, qCodeTexts, qUITexts, qNameTexts
         , hasQueryLangInfo
+    , TaggedVarId(..), TagSuffixes
     , Expr
     , ParenInfo(..), piNeedParens, piMinOpPrec
     ) where
@@ -40,6 +41,7 @@ module Lamdu.Sugar.Types.Parts
 import qualified Control.Lens as Lens
 import           Control.Monad.Unit (Unit)
 import           Data.Kind (Type)
+import           Data.UUID.Types (UUID)
 import           GUI.Momentu.Direction (Layout)
 import           Hyper (makeHTraversableAndBases, makeHMorph)
 import qualified Lamdu.Calc.Type as T
@@ -212,8 +214,17 @@ data QueryLangInfo = QueryLangInfo
 hasQueryLangInfo :: _ => a -> QueryLangInfo
 hasQueryLangInfo env = QueryLangInfo (env ^. has) (env ^. has) (env ^. has) (env ^. has) (env ^. has)
 
+-- Like InternalName, but necessarily with a context and non-anonymous tag
+data TaggedVarId = TaggedVarId
+    { _tvCtx :: UUID -- InternalName's context
+    , _tvTag :: T.Tag -- InternalName's tag
+    } deriving (Eq, Ord, Show, Generic)
+
+type TagSuffixes = Map TaggedVarId Int
+
 data Query = Query
     { _qLangInfo :: QueryLangInfo
+    , _qTagSuffixes :: TagSuffixes
     , _qSearchTerm :: Text
     }
 

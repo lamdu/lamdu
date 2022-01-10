@@ -74,7 +74,7 @@ make (Ann (Const pl) fragment) =
         searchMenu <-
             SearchMenu.make
             (SearchMenu.searchTermEdit menuId (pure . as))
-            (makeResults (fragment ^. Sugar.fOptions)) M.empty menuId
+            (makeResults (fragment ^. Sugar.fOptions) (fragment ^. Sugar.fTagSuffixes)) M.empty menuId
             ?? Menu.AnyPlace
             & local (has . SearchMenu.emptyStrings . Lens.mapped .~ "?")
             -- Space goes to next hole in target (not necessarily visible)
@@ -119,13 +119,14 @@ make (Ann (Const pl) fragment) =
 makeResults ::
     _ =>
     i (Sugar.Query -> i [Sugar.Option Sugar.FragOpt Name i o]) ->
+    Sugar.TagSuffixes ->
     SearchMenu.ResultsContext ->
     GuiM env i o (Menu.OptionList (Menu.Option (GuiM env i o) o))
-makeResults opts ctx =
+makeResults opts tagSuffixes ctx =
     do
         c <- Lens.view (has . Config.completion . Config.completionResultCount)
         GuiM.im opts <*>
-            makeQuery ctx
+            makeQuery tagSuffixes ctx
             >>= GuiM.im
             <&> take c
             <&> Lens.mapped %~ makeResult makeFragOpt ctx

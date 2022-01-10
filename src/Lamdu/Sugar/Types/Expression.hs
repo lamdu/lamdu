@@ -24,12 +24,12 @@ module Lamdu.Sugar.Types.Expression
     , AssignPlain(..), apAddFirstParam, apBody
     , Assignment(..), _BodyFunction, _BodyPlain
     -- Holes
-    , Hole(..), holeOptions
+    , Hole(..), holeOptions, holeTagSuffixes
     , Query(..), qLangInfo, qSearchTerm
     , QueryLangInfo(..), qLangId, qLangDir, qCodeTexts, qUITexts, qNameTexts
         , hasQueryLangInfo
     -- Fragments
-    , Fragment(..), fExpr, fHeal, fTypeMismatch, fOptions
+    , Fragment(..), fExpr, fHeal, fTypeMismatch, fOptions, fTagSuffixes
     , FragOpt(..), _FragPostfix, _FragInject, _FragApplyFunc, _FragOp
     , FragOperator(..), oFunc, oRightArg, oAnnotatedArgs
     -- If/else
@@ -102,6 +102,7 @@ data Fragment v name i o k = Fragment
     , _fHeal :: o EntityId
     , _fTypeMismatch :: Maybe (Annotated EntityId # T.Type name Unit)
     , _fOptions :: i (Query -> i [Option FragOpt name i o])
+    , _fTagSuffixes :: TagSuffixes -- See comment for holeTagSuffixes
     } deriving Generic
 
 data FragOpt v name i o k
@@ -125,13 +126,17 @@ data FragOperator v name i o k = FragOperator
     , _oAnnotatedArgs :: [Tag name]
     } deriving Generic
 
-newtype Hole name i o = Hole
+data Hole name i o = Hole
     { _holeOptions ::
         i (Query -> i [Option Binder name i o])
         -- Inner `i` serves two purposes:
         -- Name walk requires monadic place to process names.
         -- Hole can prepare results depending on the query and avoid doing work
         -- if the query filters it out.
+    , _holeTagSuffixes :: TagSuffixes
+        -- When tag suffixes are created by the name pass this is populated,
+        -- should be given back in the query.
+        -- TODO: More elegant solution?
     } deriving stock Generic
 
 data Else v name i o f

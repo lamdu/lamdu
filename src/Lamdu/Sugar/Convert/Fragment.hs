@@ -89,7 +89,7 @@ convertAppliedHole app@(V.App funcI argI) exprPl argS =
                     ResultGroups
                         { gDefs =
                             makeGlobals (makeGetDef topRef argI)
-                            <&> traverse . rTexts . _QueryTexts . Lens.mapped . traverse %~ toOpName
+                            <&> traverse . rTexts . _QueryTexts . Lens.mapped . Lens.mapped . traverse %~ toOpName
                         , gLocals =
                             makeLocals (makeLocal topRef argI) (exprPl ^. Input.inferScope)
                             <&> traverse %~ sequenceA <&> (^.. traverse . Lens._Just)
@@ -150,6 +150,7 @@ convertAppliedHole app@(V.App funcI argI) exprPl argS =
                     <&> EntityId.ofValI
                 , _fTypeMismatch = typeMismatch
                 , _fOptions = opts <> argOpts <&> filterResults tagsProp (\outerMatch innerMatch -> (innerMatch, outerMatch))
+                , _fTagSuffixes = mempty
                 } & pure
             >>= Actions.addActions app exprPl
             & lift
@@ -173,12 +174,12 @@ makeResultsSyntax top arg =
         \v ->
         simpleResult
         (emplaceArg arg <&> _2 %~ Ann WriteNew . V.BLam . V.TypedLam v (Ann WriteNew (HCompose Pruned)))
-        (lamTexts (top ^. Input.inferredType))
+        (const (lamTexts (top ^. Input.inferredType)))
     , simpleResult
         (emplaceArg arg <&> _2 %~
             Ann (ExistingRef (top ^. Input.stored . ExprIRef.iref)) .
             V.BApp . V.App (Ann WriteNew (V.BLeaf V.LAbsurd)))
-            caseTexts
+            (const caseTexts)
         & pure
     ]
 
@@ -208,7 +209,7 @@ transformArg topPl arg =
                         Ann WriteNew . V.BApp . App (writeNew c) .
                         Ann WriteNew . V.BApp . App (Ann WriteNew (V.BLeaf (V.LFromNom tid)))
                 )
-            <*> (symTexts "." tid <&> (<> caseTexts))
+            <*> (symTexts "." tid <&> (<> const caseTexts))
             <&> rDeps . depsNominals . Lens.at tid ?~ s
         <&> Lens.mapped %~ (,) (Just tid)
     Nothing -> replaceFunc <&> Lens.mapped %~ (,) Nothing
@@ -328,7 +329,7 @@ makeFromNom topPl arg t tid =
         \c ->
         simpleResult
         (fromNom WriteNew <&> _2 %~ Ann WriteNew . V.BApp . App (writeNew c))
-        (if tid == Builtins.boolTid then ifTexts else caseTexts)
+        (const (if tid == Builtins.boolTid then ifTexts else caseTexts))
     _ -> simpleResult (fromNom (ExistingRef (topPl ^. Input.stored . ExprIRef.iref))) mempty & pure
     where
         fromNom w =

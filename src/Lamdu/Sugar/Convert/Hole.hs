@@ -75,7 +75,7 @@ convert posInfo holePl =
     -- If we remove all calls to convertOnce (replacing with "fmap pure"),
     -- they would flicker when editing the search term.
     & ConvertM.convertOnce
-    <&> BodyLeaf . LeafHole . Hole
+    <&> BodyLeaf . LeafHole . (`Hole` mempty)
     >>= addActions (Const ()) holePl
     <&> annotation . pActions . delete .~ CannotDelete
     <&> annotation . pActions . mApply .~ Nothing
@@ -91,7 +91,7 @@ makeToNoms t tid =
             mkVariant (tag, typ) =
                 simpleResult
                 <$> (suggestVal typ <&> (_Pure . V._BApp #) . V.App (_Pure . V._BLeaf . V._LInject # tag))
-                <*> (ExprIRef.readTagData tag <&> tagTexts <&> Lens.mapped %~ (>>= injTexts))
+                <*> (taggedVar tid tag <&> Lens.mapped . Lens.mapped %~ (>>= injTexts))
     _ -> suggestVal t <&> (:[]) . (simpleResult ?? mempty)
     <&> traverse . rExpr %~ Pure . V.BToNom . V.ToNom tid
     where
@@ -123,7 +123,7 @@ makeResultsSyntax typ posInfo =
                 t <- genLamVar
                 f <- genLamVar
                 pure [Result
-                    { _rTexts = QueryTexts ifTexts
+                    { _rTexts = QueryTexts (const ifTexts)
                     , _rAllowEmptyQuery = False
                     , _rExpr =
                         ( V.BLeafP V.LAbsurd
@@ -137,7 +137,7 @@ makeResultsSyntax typ posInfo =
                     }]
             else pure []
     where
-        r f t = simpleResult (t ^. hPlain) f
+        r f t = simpleResult (t ^. hPlain) (const f)
 
 makeGetDef :: Monad m => V.Var -> Pure # T.Type -> T m (Maybe (Pure # V.Term))
 makeGetDef v t =

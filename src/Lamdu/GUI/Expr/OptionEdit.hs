@@ -29,11 +29,12 @@ import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
 
-makeQuery :: _ => SearchMenu.ResultsContext -> f Sugar.Query
-makeQuery ctx =
+makeQuery :: _ => Sugar.TagSuffixes -> SearchMenu.ResultsContext -> f Sugar.Query
+makeQuery tagSuffixes ctx =
     Lens.view id <&> Sugar.hasQueryLangInfo
     <&> \langInfo -> Sugar.Query
     { Sugar._qLangInfo = langInfo
+    , Sugar._qTagSuffixes = tagSuffixes
     , Sugar._qSearchTerm = ctx ^. SearchMenu.rSearchTerm
     }
 

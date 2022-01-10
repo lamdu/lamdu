@@ -178,7 +178,7 @@ testInline =
                         replBody . _BodyLam . lamFunc . fBody .
                         hVal . bBody . _BinderLet . lBody . hVal . bBody . _BinderTerm . _BodyLeaf . _LeafHole
                         . holeOptions
-                        >>= (Query queryLangInfo "num" &)
+                        >>= (Query queryLangInfo mempty "num" &)
                         <&> fromMaybe (error "expected option") . (^? traverse)
                     result ^. optionPick & lift
                     result ^?! optionExpr . hVal . bBody . _BinderTerm
@@ -636,7 +636,7 @@ getHoleResults progName traversal =
             <&> (^? _BodyLeaf) <&> fromMaybe (error "getHoleResults: Not a leaf")
             <&> (^? _LeafHole . holeOptions)
             >>= fromMaybe (error "getHoleResults: Not a hole")
-            >>= ($ Query (hasQueryLangInfo env) "")
+            >>= ($ Query (hasQueryLangInfo env) mempty "")
 
 testSuspendedHoleResultSimple :: Test
 testSuspendedHoleResultSimple =

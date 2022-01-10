@@ -263,7 +263,7 @@ toSuffixMap ::
     Map T.Tag TagText ->
     MMap T.Tag (Bias L (OSet UUID)) ->
     MMap T.Tag Clash.Collider ->
-    Map TaggedVarId Int
+    TagSuffixes
 toSuffixMap tagTexts contexts top =
     evalState (Lens.itraverse eachTag collisions) nonCollisionTexts ^. Lens.folded
     where
@@ -327,12 +327,6 @@ initialP2Env env P1Out{_p1Globals, _p1Locals, _p1Contexts, _p1TypeVars, _p1Texts
 ----- Add tag suffixes -------
 ------------------------------
 
--- Like InternalName, but necessarily with a context and non-anonymous tag
-data TaggedVarId = TaggedVarId
-    { _tvCtx :: UUID -- InternalName's context
-    , _tvTag :: T.Tag   -- InternalName's tag
-    } deriving (Eq, Ord, Show)
-
 data P2Env = P2Env
     { _p2TypeVars :: Map UUID Text
         -- ^ Names for type variables. Globally unique.
@@ -340,7 +334,7 @@ data P2Env = P2Env
     , _p2Texts :: Set Text
         -- ^ The set of all texts seen in P1 traversal (we do not see hole results)
         -- This is used to identify textual collisions in hole result tags
-    , _p2TagSuffixes :: Map TaggedVarId Int
+    , _p2TagSuffixes :: TagSuffixes
         -- ^ When tags collide in the overlapping scopes, the tag gets
         -- a different suffix for each of its entities in ALL scopes
     , _p2AutoNames :: Map UUID T.Tag
@@ -409,6 +403,7 @@ instance Monad i => MonadNaming (Pass2MakeNames i o) where
     opWithName u _ = p2cpsNameConvertor u
     opGetName _ = p2nameConvertor
     opWithNewTag tag text = local (p2TagTexts . Lens.at tag ?~ TagText text NoCollision)
+    tagSuffixes = Lens.view p2TagSuffixes
 
 getTag :: Bool -> Annotated.Name -> Pass2MakeNames i o T.Tag
 getTag autoGen aName =

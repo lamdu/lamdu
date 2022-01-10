@@ -71,7 +71,7 @@ makeResults (Ann (Const pl) (Const hole)) ctx =
     do
         c <- Lens.view (has . Config.completion . Config.completionResultCount)
         GuiM.im (hole ^. Sugar.holeOptions) <*>
-            makeQuery ctx
+            makeQuery (hole ^. Sugar.holeTagSuffixes) ctx
             >>= GuiM.im
             <&> take c
             <&> Lens.mapped %~

@@ -126,7 +126,7 @@ workAreaGlobals =
                 , show textCollision, show tagCollision
                 ] & assertString
         trivialBinder =
-            Sugar.Hole mempty & Sugar.LeafHole & Sugar.BodyLeaf & Sugar.BinderTerm
+            Sugar.Hole mempty mempty & Sugar.LeafHole & Sugar.BodyLeaf & Sugar.BinderTerm
             & Sugar.Binder Unit & Sugar.AssignPlain Unit
             & Sugar.BodyPlain
             & Ann (Const Stub.payload)

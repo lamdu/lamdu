@@ -65,6 +65,9 @@ class (Monad m, Monad (IM m)) => MonadNaming m where
     opGetName :: Maybe Disambiguator -> IsUnambiguous -> NameType -> NameConvertor m
     opWithNewTag :: T.Tag -> Text -> m a -> m a
 
+    tagSuffixes :: m TagSuffixes
+    tagSuffixes = pure mempty
+
 class Walk m s t where
     walk :: MonadNaming m => s -> m t
 
@@ -242,7 +245,10 @@ walkOpts =
             Just tag -> opWithNewTag tag (newTagName (query ^. qSearchTerm))
 
 instance (a ~ OldName m, b ~ NewName m, i ~ IM m) => Walk m (Hole a i o) (Hole b i o) where
-    walk = holeOptions ((walkOpts <&>) . flip fmap)
+    walk h =
+        Hole
+        <$> (walkOpts <&> ((h ^. holeOptions) <&>))
+        <*> tagSuffixes
 
 toTagRefOf ::
     MonadNaming m =>
@@ -298,11 +304,13 @@ instance ToBody Fragment where
             newTypeMismatch <- Lens._Just walk _fTypeMismatch
             newExpr <- toExpression _fExpr
             w <- walkOpts
+            s <- tagSuffixes
             pure Fragment
                 { _fExpr = newExpr
                 , _fTypeMismatch = newTypeMismatch
                 , _fHeal
                 , _fOptions = _fOptions <&> w
+                , _fTagSuffixes = s
                 }
 
 instance ToBody FragOpt where

@@ -12,6 +12,7 @@ module Lamdu.Sugar.Convert.Option
     , getListing, makeGlobals
     , tagTexts, recTexts, caseTexts, ifTexts, symTexts, lamTexts
     , makeOption
+    , taggedVar
     ) where
 
 import qualified Control.Lens as Lens
@@ -46,7 +47,7 @@ import qualified Lamdu.Data.Definition as Def
 import qualified Lamdu.Data.Tag as Tag
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Load as Load
-import           Lamdu.Expr.UniqueId (ToUUID)
+import           Lamdu.Expr.UniqueId (ToUUID(..))
 import qualified Lamdu.I18N.Code as Texts
 import qualified Lamdu.I18N.CodeUI as Texts
 import qualified Lamdu.I18N.Name as Texts
@@ -82,7 +83,7 @@ data Matches a = Matches
 Lens.makeLenses ''Matches
 
 data ResultQuery
-    = QueryTexts !(QueryLangInfo -> [Text])
+    = QueryTexts !(TagSuffixes -> QueryLangInfo -> [Text])
     | QueryNewTag T.Tag
 Lens.makePrisms ''ResultQuery
 
@@ -95,7 +96,7 @@ data Result a = Result
     } deriving (Functor, Foldable, Traversable)
 Lens.makeLenses ''Result
 
-simpleResult :: a -> (QueryLangInfo -> [Text]) -> Result a
+simpleResult :: a -> (TagSuffixes -> QueryLangInfo -> [Text]) -> Result a
 simpleResult expr texts =
     Result
     { _rDeps = mempty
@@ -159,7 +160,9 @@ matchResult query result
             | any (Text.isInfixOf s) texts -> mempty & mInfix .~ e
             | otherwise -> mempty
             where
-                texts = makeTexts (query ^. qLangInfo) <&> Text.toLower >>= unicodeAlts
+                texts =
+                    makeTexts (query ^. qTagSuffixes) (query ^. qLangInfo)
+                    <&> Text.toLower >>= unicodeAlts
         QueryNewTag{} -> mempty & mCreateNew .~ e
     where
         e = [result ^. rExpr]
@@ -256,7 +259,8 @@ makeTagRes newTag prefix f =
     <&> (newTagRes :)
     where
         mk tag =
-            ExprIRef.readTagData tag & transaction <&> tagTexts <&> Lens.mapped . traverse %~ (prefix <>)
+            ExprIRef.readTagData tag & transaction <&> tagTexts Nothing
+            <&> Lens.mapped . Lens.mapped . traverse %~ (prefix <>)
             <&> simpleResult (f tag)
         newTagRes =
             Result
@@ -267,10 +271,13 @@ makeTagRes newTag prefix f =
             , _rTexts = QueryNewTag newTag
             }
 
-symTexts :: (Monad m, ToUUID a) => Text -> a -> T m (QueryLangInfo -> [Text])
+taggedVar :: (Monad m, ToUUID a) => a -> T.Tag -> Transaction m (TagSuffixes -> QueryLangInfo -> [Text])
+taggedVar v t = ExprIRef.readTagData t <&> tagTexts (Just (TaggedVarId (toUUID v) t))
+
+symTexts :: (Monad m, ToUUID a) => Text -> a -> T m (TagSuffixes -> QueryLangInfo -> [Text])
 symTexts prefix tid =
-    getP (Anchors.assocTag tid) >>= ExprIRef.readTagData <&> tagTexts
-    <&> Lens.mapped . traverse %~ (prefix <>)
+    getP (Anchors.assocTag tid) >>= taggedVar tid
+    <&> Lens.mapped . Lens.mapped . traverse %~ (prefix <>)
 
 makeNoms ::
     Monad m =>
@@ -334,18 +341,18 @@ makeForType t =
     where
         mkTexts v =
             case v ^. _Pure of
-            V.BRecExtend{} -> pure recTexts
-            V.BLeaf V.LRecEmpty -> pure recTexts
-            V.BCase{} -> pure caseTexts
-            V.BLeaf V.LAbsurd -> pure caseTexts
+            V.BRecExtend{} -> pure (const recTexts)
+            V.BLeaf V.LRecEmpty -> pure (const recTexts)
+            V.BCase{} -> pure (const caseTexts)
+            V.BLeaf V.LAbsurd -> pure (const caseTexts)
             V.BLeaf (V.LFromNom nomId) -> symTexts "." nomId
             V.BLeaf (V.LGetField tag) -> symTexts "." tag
             V.BLeaf (V.LInject tag) -> symTexts "'" tag
             V.BApp (V.App (Pure (V.BLeaf (V.LInject tag))) _) -> symTexts "'" tag
-            _ -> pure (const [])
+            _ -> mempty
 
-tagTexts :: Tag.Tag -> QueryLangInfo -> [Text]
-tagTexts t l
+tagTexts :: Maybe TaggedVarId -> Tag.Tag -> TagSuffixes -> QueryLangInfo -> [Text]
+tagTexts v t suffixes l
     | null names = l ^.. qNameTexts . Texts.unnamed
     | otherwise = names
     where
@@ -353,7 +360,11 @@ tagTexts t l
             t ^..
             ( Tag.tagTexts . Lens.ix (l ^. qLangId) . (Tag.name <> Tag.abbreviation . Lens._Just)
                 <> Tag.tagSymbol . (Tag._UniversalSymbol <> Tag._DirectionalSymbol . dir)
-            )
+            ) <&> addSuffix
+        addSuffix =
+            case v of
+            Nothing -> id
+            Just tv -> suffixes ^. Lens.at tv & maybe id (flip mappend . Text.pack . show)
         dir =
             case l ^. qLangDir of
             LeftToRight -> Tag.opLeftToRight
@@ -524,7 +535,7 @@ makeLocals f scope =
         mkGetField ctx (var, tag) =
             simpleResult
             <$> f typ (V.BLeafP (V.LGetField tag) `V.BAppP` V.BLeafP (V.LVar var) ^. hPlain)
-            <*> (ExprIRef.readTagData tag <&> tagTexts)
+            <*> taggedVar var tag
             where
                 typ =
                     Infer.runPureInfer scope ctx
@@ -532,12 +543,11 @@ makeLocals f scope =
                     ^?! Lens._Right . _1 . _Pure . T._TRecord . T.flatRow . freExtends . Lens.ix tag
 
  -- Duplicate name-gen behaviour for locals
-localName :: MonadTransaction n m => Pure # T.Type -> V.Var -> m (QueryLangInfo -> [Text])
+localName :: MonadTransaction n m => Pure # T.Type -> V.Var -> m (TagSuffixes -> QueryLangInfo -> [Text])
 localName typ var =
     do
         tag <- Anchors.assocTag var & getP & transaction
         if tag == Anchors.anonTag
             then mkVarInfo typ <&> autoName
             else pure tag
-    >>= transaction . ExprIRef.readTagData
-    <&> tagTexts
+    >>= transaction . taggedVar var
