@@ -180,14 +180,11 @@ instance Functor m => MarkBodyAnnotations v m Term where
         ( alwaysShowAnnotations
         , BodyLeaf (LeafHole x)
         )
-    markBodyAnnotations (BodyFragment (Fragment e h t o)) =
+    markBodyAnnotations (BodyFragment f) =
         ( alwaysShowAnnotations
-        , Fragment
-            ( markNodeAnnotations e
-                & if Lens.has Lens._Just t
-                    then nonHoleAnn .~ dontShowType
-                    else id
-            ) h t o
+        , f & fExpr %~
+                (if Lens.has (fTypeMismatch . Lens._Just) f then nonHoleAnn .~ dontShowType else id) .
+                markNodeAnnotations
             & BodyFragment
         )
 
