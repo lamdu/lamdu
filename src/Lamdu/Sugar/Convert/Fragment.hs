@@ -223,7 +223,7 @@ transformArg topPl arg =
                         Ann WriteNew . V.BApp . App (writeNew c) .
                         Ann WriteNew . V.BApp . App (Ann WriteNew (V.BLeaf (V.LFromNom tid)))
                 )
-            <*> (symTexts "." tid <&> (<> const caseTexts))
+            <*> (symTexts "." tid <&> (<> const (fromNomTexts tid)))
             <&> rDeps . depsNominals . Lens.at tid ?~ s
         <&> Lens.mapped %~ (,) (Just tid)
     Nothing -> replaceFunc <&> Lens.mapped %~ (,) Nothing
@@ -343,12 +343,16 @@ makeFromNom topPl arg t tid =
         \c ->
         simpleResult
         (fromNom WriteNew <&> _2 %~ Ann WriteNew . V.BApp . App (writeNew c))
-        (const (if tid == Builtins.boolTid then ifTexts else caseTexts))
+        (const (fromNomTexts tid))
     _ -> simpleResult (fromNom (ExistingRef (topPl ^. Input.stored . ExprIRef.iref))) mempty & pure
     where
         fromNom w =
             emplaceArg arg
             <&> _2 %~ asHyper . Ann w . V.BApp . V.App (V._BLeaf . V._LFromNom # tid & Ann WriteNew)
+
+fromNomTexts :: NominalId -> QueryLangInfo -> [Text]
+fromNomTexts tid | tid == Builtins.boolTid = ifTexts
+fromNomTexts _ = caseTexts
 
 makeToNom ::
     Monad m =>
