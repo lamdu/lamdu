@@ -97,38 +97,7 @@ instance AddEval i n Else where
 instance AddEval i n Function where
     addToBody ctx i x@Function{..} =
         x
-        { _fParams =
-            case _fParams of
-            NullParam (p, a) ->
-                NullParam
-                ( p & fpAnnotation . _AnnotationVal %~
-                    ConvertEval.param (EntityId.ofEvalOf i) . appliesOfLam
-                , a
-                )
-            VarParam (fp, info) ->
-                VarParam
-                ( fp & fpAnnotation . _AnnotationVal %~
-                    ConvertEval.param (EntityId.ofEvalOf (info ^. vpiTag . oTag . tagRefTag . tagInstance)) .
-                    appliesOfLam
-                , info
-                )
-            RecordParams ps ->
-                ps
-                & SugarLens.taggedListItems %~ fixItem
-                & RecordParams
-                where
-                    fixItem taggedItem =
-                        taggedItem & tiValue . fpAnnotation . _AnnotationVal %~
-                        \v ->
-                        ctx ^. evalResults
-                        <&> (^. erAppliesOfLam . Lens.at u)
-                        <&> fromMaybe mempty
-                        <&> Lens.mapped . Lens.mapped . _2 %~
-                            addTypes (ctx ^. nominalsMap) (v ^. eType) .
-                            extractField () (t ^. tagVal)
-                        & ConvertEval.param (EntityId.ofEvalOf (t ^. tagInstance))
-                        where
-                            t = taggedItem ^. tiTag . tagRefTag
+        { _fParams = addToParams ctx i _fParams
         , _fBody = addToNode ctx _fBody
         , _fBodyScopes =
             ctx ^. evalResults
@@ -136,11 +105,6 @@ instance AddEval i n Function where
             <&> Lens.mapped . Lens.mapped %~ BinderParamScopeId . (^. _1)
         }
         where
-            appliesOfLam v =
-                ctx ^. evalResults
-                <&> (^. erAppliesOfLam . Lens.at u)
-                <&> fromMaybe mempty
-                <&> Lens.mapped . Lens.mapped . _2 %~ addTypes (ctx ^. nominalsMap) (v ^. eType)
             EntityId u = i
 
 instance AddEval i n IfElse
@@ -164,6 +128,50 @@ instance AddEval i n Term where
         BodyPostfixFunc x -> addToBody r i x & BodyPostfixFunc
         BodyNullaryInject (NullaryInject j e) ->
             NullaryInject (addToNode r j) (addToNode r e) & BodyNullaryInject
+
+addToParams ::
+    Applicative i =>
+    AddEvalCtx -> EntityId ->
+    Params (Annotation EvalPrep n) n i o ->
+    Params (Annotation (EvaluationScopes InternalName i) n) n i o
+addToParams ctx i =
+    \case
+    NullParam (p, a) ->
+        NullParam
+        ( p & fpAnnotation . _AnnotationVal %~
+            ConvertEval.param (EntityId.ofEvalOf i) . appliesOfLam
+        , a
+        )
+    VarParam (fp, info) ->
+        VarParam
+        ( fp & fpAnnotation . _AnnotationVal %~
+            ConvertEval.param (EntityId.ofEvalOf (info ^. vpiTag . oTag . tagRefTag . tagInstance)) .
+            appliesOfLam
+        , info
+        )
+    RecordParams ps ->
+        ps
+        & SugarLens.taggedListItems %~ fixItem
+        & RecordParams
+    where
+        EntityId u = i
+        appliesOfLam v =
+            ctx ^. evalResults
+            <&> (^. erAppliesOfLam . Lens.at u)
+            <&> fromMaybe mempty
+            <&> Lens.mapped . Lens.mapped . _2 %~ addTypes (ctx ^. nominalsMap) (v ^. eType)
+        fixItem taggedItem =
+            taggedItem & tiValue . fpAnnotation . _AnnotationVal %~
+            \v ->
+            ctx ^. evalResults
+            <&> (^. erAppliesOfLam . Lens.at u)
+            <&> fromMaybe mempty
+            <&> Lens.mapped . Lens.mapped . _2 %~
+                addTypes (ctx ^. nominalsMap) (v ^. eType) .
+                extractField () (t ^. tagVal)
+            & ConvertEval.param (EntityId.ofEvalOf (t ^. tagInstance))
+            where
+                t = taggedItem ^. tiTag . tagRefTag
 
 addToPayload ::
     Applicative i =>
