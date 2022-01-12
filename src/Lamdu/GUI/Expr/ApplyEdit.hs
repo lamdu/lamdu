@@ -71,11 +71,15 @@ makeLabeled (Ann (Const pl) apply) =
                     ExprEventMap.closeParenEvent
                     [has . MomentuTexts.navigation, has . Texts.leaveSubexpression]
                     (pure myId)
+                disambRhs <-
+                    if Lens.has extraArgs apply
+                    then ResponsiveExpr.indent ?? Widget.toAnimId myId <&> Responsive.vertLayoutMaybeDisambiguate
+                    else pure id
                 (ResponsiveExpr.boxSpacedMDisamb ?? ExprGui.mParensId pl)
                     <*> sequenceA
                     [ GuiM.makeSubexpression l <&> swapAction Forward
                     , makeOperatorRow
-                        (Widget.weakerEvents navigateOut . swapAction Backward) func r
+                        (Widget.weakerEvents navigateOut . swapAction Backward . disambRhs) func r
                         >>= wrap
                     ]
     )
@@ -85,6 +89,7 @@ makeLabeled (Ann (Const pl) apply) =
             (maybeAddAnnotationPl pl <&> (Widget.widget %~)) <*>
             addArgs apply x
         func = apply ^. Sugar.aFunc
+        extraArgs = Sugar.aAnnotatedArgs . traverse . Lens.united <> Sugar.aPunnedArgs . traverse . Lens.united
 
 makeOperatorRow ::
     _ =>
