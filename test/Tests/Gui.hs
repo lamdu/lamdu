@@ -7,6 +7,7 @@ import           Control.Monad (foldM)
 import           Control.Monad.Once (OnceT, _OnceT, evalOnceT)
 import           Control.Monad.State (mapStateT)
 import           Control.Monad.Unit (Unit(..))
+import           Data.Char (isAscii)
 import qualified Data.Map as Map
 import qualified Data.Property as Property
 import qualified Data.Text as Text
@@ -585,7 +586,7 @@ wytiwysDb mkDb src result =
             & runDbTransaction db
     >>= runJS
     >>= assertEqual "Expected output" (result <> "\n")
-    & testCase src
+    & testCase (filter isAscii src)
 
 testWYTIWYS :: HasCallStack => Test
 testWYTIWYS =
