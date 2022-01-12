@@ -25,7 +25,7 @@ import           Lamdu.Expr.UniqueId (ToUUID(..))
 import qualified Lamdu.Sugar.Config as Config
 import           Lamdu.Sugar.Convert.Binder.Float (makeFloatLetToOuterScope)
 import           Lamdu.Sugar.Convert.Binder.Inline (inlineLet)
-import           Lamdu.Sugar.Convert.Binder.Params (ConventionalParams(..), convertLamParams, convertEmptyParams, convertNonEmptyParams, cpParams, cpMLamParam, mkVarInfo)
+import           Lamdu.Sugar.Convert.Binder.Params (ConventionalParams(..), convertLamParams, convertEmptyParams, cpParams, cpMLamParam, mkVarInfo)
 import           Lamdu.Sugar.Convert.Binder.Redex (Redex(..))
 import qualified Lamdu.Sugar.Convert.Binder.Redex as Redex
 import           Lamdu.Sugar.Convert.Binder.Types (BinderKind(..))
@@ -205,42 +205,6 @@ makeFunction chosenScopeProp params funcBody =
             where
                 p = params ^.. cpMLamParam .Lens._Just . _2
 
-makeAssignment ::
-    (Monad m, Monoid a) =>
-    MkProperty' (T m) (Maybe BinderParamScopeId) ->
-    BinderKind m -> V.Var -> Ann (Input.Payload m a) # V.Term ->
-    ConvertM m
-    ( Maybe (MkProperty' (T m) PresentationMode)
-    , Annotated (ConvertPayload m a) # Assignment EvalPrep InternalName (OnceT (T m)) (T m)
-    )
-makeAssignment chosenScopeProp binderKind defVar (Ann pl (V.BLam lam)) =
-    do
-        convParams <- convertNonEmptyParams (Just presMode) binderKind lam pl
-        funcS <- makeFunction chosenScopeProp convParams (lam ^. V.tlOut)
-        nodeActions <- makeActions pl & localNewExtractDestPos pl
-        pure
-            ( presMode <$ convParams ^? cpParams . Lens._Just . _RecordParams . tlItems . Lens._Just . tlTail . traverse
-            , Ann
-                { _hAnn =
-                    Const ConvertPayload
-                    { _pInput =
-                        pl & Input.userData .~
-                        hfoldMap (const (^. Input.userData)) (lam ^. V.tlInType . hflipped)
-                    , _pActions = nodeActions
-                    , _pLambdas = []
-                    }
-                , _hVal = BodyFunction funcS
-                }
-            )
-    where
-        presMode = Anchors.assocPresentationMode defVar
-makeAssignment _chosenScopeProp binderKind _defVar expr =
-    do
-        addFirstParam <- convertEmptyParams binderKind expr
-        convertBinder expr
-            <&> annValue %~ BodyPlain . AssignPlain addFirstParam
-    <&> (,) Nothing
-
 convertLam ::
     (Monad m, Monoid a) =>
     V.TypedLam V.Var (HCompose Prune T.Type) V.Term # Ann (Input.Payload m a) ->
@@ -387,14 +351,21 @@ convertAssignment ::
     , Annotated (ConvertPayload m a) # Assignment EvalPrep InternalName (OnceT (T m)) (T m)
     )
 convertAssignment binderKind defVar expr =
-    Lens.view (ConvertM.scConfig . Config.sugarsEnabled . Config.assignmentParameters)
-    >>=
-    \case
-    False ->
-        convertBinder expr
-        <&> annValue %~ BodyPlain . AssignPlain (error "TODO: add param when assignment parameters not supported")
-        <&> (,) Nothing
-    True -> makeAssignment (Anchors.assocScopeRef defVar) binderKind defVar expr
+    do
+        b <- convertBinder expr
+        enabled <- Lens.view (ConvertM.scConfig . Config.sugarsEnabled . Config.assignmentParameters)
+        case b ^? hVal . bBody . _BinderTerm . _BodyLam of
+            Just l | enabled ->
+                pure
+                    ( presMode <$ l ^? lamFunc . fParams . _RecordParams . tlItems . Lens._Just . tlTail . traverse
+                    , b & annValue .~
+                        BodyFunction (l ^. lamFunc)
+                    )
+            _ ->
+                convertEmptyParams binderKind expr <&>
+                \addFirstParam -> (Nothing, b & annValue %~ BodyPlain . AssignPlain addFirstParam)
+    where
+        presMode = Anchors.assocPresentationMode defVar
 
 convertDefinitionBinder ::
     (Monad m, Monoid a) =>
