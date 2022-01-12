@@ -18,7 +18,7 @@ import           GUI.Momentu.EventMap (Event(..))
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Main.Events (KeyEvent(..))
 import qualified GUI.Momentu.MetaKey as MetaKey
-import           GUI.Momentu.ModKey (ModKey(..), noMods)
+import           GUI.Momentu.ModKey (ModKey(..), noMods, shift)
 import           GUI.Momentu.Rect (Rect(..))
 import qualified GUI.Momentu.Rect as Rect
 import           GUI.Momentu.Responsive (Responsive)
@@ -566,6 +566,7 @@ charEvent '\t' = noMods GLFW.Key'Tab & simpleKeyEvent
 charEvent ',' = noMods GLFW.Key'Comma & simpleKeyEvent
 charEvent '⌫' = noMods GLFW.Key'Backspace & simpleKeyEvent
 charEvent '→' = noMods GLFW.Key'Right & simpleKeyEvent
+charEvent '⇐' = shift GLFW.Key'Left & simpleKeyEvent
 charEvent x = EventChar x
 
 applyActions :: HasCallStack => Env.Env -> String -> OnceT (T ViewM) Env.Env
@@ -624,5 +625,6 @@ testWYTIWYS =
             , wytiwys "if ⌫1+2" "3" -- Backspace after "if " deletes it
 
             , wytiwys "7+negate\n→4" "3"
+            , wytiwys "1==2⇐⇐if 3\t4" "4"
             ] & pure
         & buildTest
