@@ -140,6 +140,7 @@ test514 =
             , Sugar._fHeal = Unit
             , Sugar._fTypeMismatch = Nothing
             , Sugar._fOptions = pure (const (pure []))
+            , Sugar._fTagSuffixes = mempty
             } & Stub.node
             & Parens.addToTopLevel 0
         problemPos = expr ^?! hVal . Sugar._BodyFragment . Sugar.fExpr
