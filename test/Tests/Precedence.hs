@@ -139,7 +139,8 @@ test514 =
                 } & Stub.node
             , Sugar._fHeal = Unit
             , Sugar._fTypeMismatch = Nothing
-            , Sugar._fOptions = pure (const (pure []))
+            , Sugar._fOptions = mempty
+            , Sugar._fOptApply = pure (error "shouldn't affect test")
             , Sugar._fTagSuffixes = mempty
             } & Stub.node
             & Parens.addToTopLevel 0

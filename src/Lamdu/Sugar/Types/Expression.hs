@@ -29,7 +29,7 @@ module Lamdu.Sugar.Types.Expression
     , QueryLangInfo(..), qLangId, qLangDir, qCodeTexts, qUITexts, qNameTexts
         , hasQueryLangInfo
     -- Fragments
-    , Fragment(..), fExpr, fHeal, fTypeMismatch, fOptions, fTagSuffixes
+    , Fragment(..), fExpr, fHeal, fTypeMismatch, fOptions, fOptApply, fTagSuffixes
     , FragOpt(..), _FragPostfix, _FragInject, _FragApplyFunc, _FragOp
     , FragOperator(..), oFunc, oRightArg, oAnnotatedArgs
     -- If/else
@@ -102,6 +102,9 @@ data Fragment v name i o k = Fragment
     , _fHeal :: o EntityId
     , _fTypeMismatch :: Maybe (Annotated EntityId # T.Type name Unit)
     , _fOptions :: i (Query -> i [Option FragOpt name i o])
+    , _fOptApply :: i (Option FragOpt name i o)
+        -- An option to apply (with a hole).
+        -- Used for the actions to turn this hole into literal (i.e pressing "5")
     , _fTagSuffixes :: TagSuffixes -- See comment for holeTagSuffixes
     } deriving Generic
 

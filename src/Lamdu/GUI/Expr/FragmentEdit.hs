@@ -70,6 +70,11 @@ make (Ann (Const pl) fragment) =
                 E.keysEventMapMovesCursor (env ^. has . Config.healKeys) healDoc healAction <>
                 ExprEventMap.closeParenEvent editFragmentHeal healAction env
 
+        optApply <- fragment ^. Sugar.fOptApply & GuiM.im
+        applyActionsEventMap <-
+            optApply ^. Sugar.optionExpr . annotation & ExprEventMap.makeBaseEvents
+            <&> Lens.mapped %~ ((optApply ^. Sugar.optionPick) *>)
+
         as <- allowedSearchTerm
         searchMenu <-
             SearchMenu.make
@@ -79,7 +84,7 @@ make (Ann (Const pl) fragment) =
             & local (has . SearchMenu.emptyStrings . Lens.mapped .~ "?")
             -- Space goes to next hole in target (not necessarily visible)
             & local (has . Menu.configKeysPickOptionAndGotoNext <>~ [noMods ModKey.Key'Space])
-            <&> Lens.mapped %~ Widget.weakerEventsWithoutPreevents delHealsEventMap
+            <&> Lens.mapped %~ Widget.weakerEventsWithoutPreevents (delHealsEventMap <> applyActionsEventMap)
         hbox <- ResponsiveExpr.boxSpacedMDisamb ?? ExprGui.mParensId pl
 
         addInnerType <-

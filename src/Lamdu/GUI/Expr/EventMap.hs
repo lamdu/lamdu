@@ -1,5 +1,5 @@
 module Lamdu.GUI.Expr.EventMap
-    ( add
+    ( add, makeBaseEvents
     , Options(..), defaultOptions
     , extractCursor
     , addLetEventMap
@@ -79,6 +79,9 @@ add ::
 add options pl =
     exprInfoFromPl ?? pl >>= actionsEventMap options <&> Widget.weakerEventsWithContext
 
+makeBaseEvents :: _ => Sugar.Payload v o -> GuiM env i o (EventMap (o GuiState.Update))
+makeBaseEvents pl = exprInfoFromPl ?? pl >>= baseEvents
+
 extractCursor :: Sugar.ExtractDestination -> Widget.Id
 extractCursor (Sugar.ExtractToLet letId) = WidgetIds.fromEntityId letId
 extractCursor (Sugar.ExtractToDef defId) = WidgetIds.fromEntityId defId
@@ -115,15 +118,22 @@ actionsEventMap ::
     Options -> ExprInfo o ->
     GuiM env i o (EventContext -> EventMap (o GuiState.Update))
 actionsEventMap options exprInfo =
-    ( mconcat
-        [ detachEventMap ?? exprInfo
-        , extractEventMap ?? actions
-        , mkReplaceParent
-        , actions ^. Sugar.delete & replaceEventMap
-        , actions ^. Sugar.mApply & foldMap applyEventMap
-        , makeLiteralEventMap ?? actions ^. Sugar.setToLiteral
-        ] <&> const -- throw away EventContext here
-    ) <> (transformEventMap ?? options ?? exprInfo)
+    (baseEvents exprInfo <&> const) -- throw away EventContext here
+    <> (transformEventMap ?? options ?? exprInfo)
+
+baseEvents ::
+    _ =>
+    ExprInfo o ->
+    GuiM env i o (EventMap (o GuiState.Update))
+baseEvents exprInfo =
+    mconcat
+    [ detachEventMap ?? exprInfo
+    , extractEventMap ?? actions
+    , mkReplaceParent
+    , actions ^. Sugar.delete & replaceEventMap
+    , actions ^. Sugar.mApply & foldMap applyEventMap
+    , makeLiteralEventMap ?? actions ^. Sugar.setToLiteral
+    ]
     where
         actions = exprInfoActions exprInfo
         mkReplaceParent =

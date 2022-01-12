@@ -121,12 +121,8 @@ convertAppliedHole app@(V.App funcI argI) exprPl argS =
                 Just t | Lens.nullOf (hVal . V._BLam) argI ->
                     Hole.results ConvertM.ExpressionPos t (exprPl ^. Input.inferScope)
                     <&> Lens.mapped %~
-                        (Lens.mapped . traverse . rExpr . _2 . optionExpr . annValue %~ FragArgument . (^?! bBody . _BinderTerm)) .
-                        (>>= traverse (makeOption exprPl . fmap
-                            (\x ->
-                                emplaceArg argI
-                                <&> _2 %~ Ann ExprIRef.WriteNew . V.BApp . (`V.App` wrap (const (Ann ExprIRef.WriteNew)) x)
-                            )))
+                        (Lens.mapped . traverse . rExpr . _2 %~ toArg) .
+                        (>>= traverse (makeOption exprPl . fmap (applyArg argI)))
                     >>= traverse ConvertM.convertOnce
                     & ConvertM.convertOnce
                 _ -> pure mempty
@@ -134,6 +130,17 @@ convertAppliedHole app@(V.App funcI argI) exprPl argS =
                 argI ^. hAnn . Input.stored
                 & ExprIRef.setIref .~ exprPl ^. Input.stored . ExprIRef.setIref
                 & Actions.makeApply
+            optApply <-
+                makeOption exprPl
+                Result
+                { _rExpr = _Pure # V.BLeaf V.LHole & applyArg argI
+                , _rDeps = mempty
+                , _rTexts = QueryTexts mempty
+                , _rWithTypeAnnotations = False
+                , _rAllowEmptyQuery = True
+                }
+                <&> toArg . (^. rExpr . _2)
+                & ConvertM.convertOnce
             BodyFragment Fragment
                 { _fExpr =
                     argS
@@ -150,12 +157,14 @@ convertAppliedHole app@(V.App funcI argI) exprPl argS =
                     <&> EntityId.ofValI
                 , _fTypeMismatch = typeMismatch
                 , _fOptions = opts <> argOpts <&> filterResults tagsProp (\outerMatch innerMatch -> (innerMatch, outerMatch))
+                , _fOptApply = optApply
                 , _fTagSuffixes = mempty
                 } & pure
             >>= Actions.addActions app exprPl
             & lift
         <&> annotation . pActions . detach .~ FragmentedAlready storedEntityId
     where
+        toArg = optionExpr . annValue %~ FragArgument . (^?! bBody . _BinderTerm)
         topRef = exprPl ^. Input.stored . ExprIRef.iref
         funcOpt = traverse . rExpr %~ makeFuncOpts
         argPl = argS ^. annotation . pInput
@@ -163,6 +172,11 @@ convertAppliedHole app@(V.App funcI argI) exprPl argS =
         stored = exprPl ^. Input.stored
         storedEntityId = stored ^. iref & EntityId.ofValI
         makeFuncOpts opt = emplaceArg argI <&> _2 %~ Ann (ExistingRef topRef) . V.BApp . App (writeNew opt)
+
+applyArg :: Ann (Input.Payload m a) # V.Term -> Pure # V.Term -> [(TypeMatch, Ann (Write m) # V.Term)]
+applyArg argI x =
+    emplaceArg argI
+    <&> _2 %~ Ann ExprIRef.WriteNew . V.BApp . (`V.App` wrap (const (Ann ExprIRef.WriteNew)) x)
 
 makeResultsSyntax ::
     Monad m =>

@@ -299,17 +299,19 @@ instance ToBody LabeledApply where
         <*> (traverse . pvVar) (toNode (Lens._Wrapped walk)) _aPunnedArgs
 
 instance ToBody Fragment where
-    toBody Fragment{_fExpr, _fHeal, _fTypeMismatch, _fOptions} =
+    toBody Fragment{_fExpr, _fHeal, _fTypeMismatch, _fOptions, _fOptApply} =
         do
             newTypeMismatch <- Lens._Just walk _fTypeMismatch
             newExpr <- toExpression _fExpr
             w <- walkOpts
             s <- tagSuffixes
+            run <- opRun
             pure Fragment
                 { _fExpr = newExpr
                 , _fTypeMismatch = newTypeMismatch
                 , _fHeal
                 , _fOptions = _fOptions <&> w
+                , _fOptApply = _fOptApply >>= run . optionExpr toExpression
                 , _fTagSuffixes = s
                 }
 
