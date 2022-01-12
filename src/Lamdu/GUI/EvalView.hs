@@ -211,6 +211,7 @@ makeInner (Sugar.ResVal entityId body) =
     Sugar.RInject inject -> makeInject inject
     Sugar.RRecord record -> makeRecord record
     Sugar.RText txt -> toText txt
+    Sugar.RChar x -> toText x
     Sugar.RBytes x -> toText x
     Sugar.RFloat x -> toText x
     Sugar.RArray x -> makeArray x

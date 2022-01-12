@@ -6,6 +6,7 @@ module Lamdu.Sugar.Convert.Eval
 
 import           Control.Applicative ((<|>))
 import qualified Control.Lens as Lens
+import           Data.Char (chr)
 import           Data.CurAndPrev (CurAndPrev(..))
 import qualified Data.List as List
 import qualified Data.Map as Map
@@ -40,11 +41,20 @@ nullToNothing m
 
 convertPrimVal :: Pure # T.Type -> V.PrimVal -> ResBody name a
 convertPrimVal (Pure (T.TInst (NominalInst tid (T.Types (QVarInstances tp) (QVarInstances rp))))) p
-    | Map.null tp && Map.null rp
-      && tid == Builtins.textTid =
+    | isSimpleBuiltin Builtins.textTid =
         case PrimVal.toKnown p of
         PrimVal.Bytes x -> decodeUtf8' x & either (const (RBytes x)) RText
         _ -> RError (EvalTypeError "text not made of bytes")
+    | isSimpleBuiltin Builtins.charTid =
+        case PrimVal.toKnown p of
+        PrimVal.Float x
+            | x /= fromInteger (truncate x)
+            || x < 0
+            || x >= (2 ^^ (32::Int)) -> RError (EvalTypeError "Char with invalid code point")
+            | otherwise -> truncate x & chr & RChar
+        _ -> RError (EvalTypeError "text not made of bytes")
+    where
+        isSimpleBuiltin t = Map.null tp && Map.null rp && tid == t
 convertPrimVal _ p =
     case PrimVal.toKnown p of
     PrimVal.Bytes x -> RBytes x

@@ -64,3 +64,7 @@ instance Format Int where
 instance Format Text where
     tryParse x = mplus (readMaybe (Text.unpack x)) (readMaybe (Text.unpack x ++ "\""))
     format text = mconcat ["\"", formatTextContents text, "\""]
+
+instance Format Char where
+    tryParse x = mplus (readMaybe (Text.unpack x)) (readMaybe (Text.unpack x ++ "'"))
+    format chr = Text.pack ['\'', chr, '\'']

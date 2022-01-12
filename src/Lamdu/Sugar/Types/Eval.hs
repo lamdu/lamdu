@@ -68,6 +68,7 @@ data ResBody name v
     | RList (ResList v)
     | RTree (ResTree v)
     | RText Text
+    | RChar Char
     deriving (Functor, Foldable, Traversable, Generic)
 
 data ResVal name = ResVal

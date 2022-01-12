@@ -148,6 +148,7 @@ instance (a ~ OldName m, b ~ NewName m, Walk m p q) => Walk m (ResBody a p) (Res
         RBytes   x -> RBytes x & pure
         RFloat   x -> RFloat x & pure
         RText    x -> RText x & pure
+        RChar    x -> RChar x & pure
         RArray   x -> RArray x & pure
         RList    x -> RList x & pure
         RTree    x -> RTree x & pure
