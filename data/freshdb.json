@@ -218,6 +218,19 @@
     },
     {
         "tagOrder": 0,
+        "tag": "218a1d099fd7422bb1eb802e1d35d967",
+        "names": {
+            "hebrew": "אות",
+            "english": {
+                "abbreviation": "char",
+                "name": "character"
+            },
+            "italian": "carattere",
+            "spanish": "carácter"
+        }
+    },
+    {
+        "tagOrder": 0,
         "op": [
             "⋲",
             ""
