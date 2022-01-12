@@ -99,6 +99,8 @@ var rerun = function (result) {
     }
 };
 
+class UnicodeError extends Error {}
+
 module.exports = {
     logRepl: conf.logRepl,
     logReplErr: conf.logReplErr,
@@ -192,6 +194,15 @@ module.exports = {
                 go(tree);
                 return bytesConcat(bufs);
             },
+        },
+        Char: {
+            codePoint: function (x) { return x; },
+            fromCodePoint: function (x) {
+                if(!Number.isInteger(x) || x < 0 || x > 0xFFFFFFFF) {
+                    throw new UnicodeError("fromCodePoint on a non 32-bit unsigned integer value");
+                }
+                return x;
+            }
         },
         Array: {
             length: function (x) { return x.length; },

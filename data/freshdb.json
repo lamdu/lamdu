@@ -231,6 +231,26 @@
     },
     {
         "tagOrder": 0,
+        "tag": "e925b7a4e01c4680a0270035ab5d2ffd",
+        "names": {
+            "hebrew": "קוד נקודה",
+            "english": "codePoint",
+            "italian": "puntoDiCodice",
+            "spanish": "puntoDeCódigo"
+        }
+    },
+    {
+        "tagOrder": 0,
+        "tag": "8fee27cccd54410db200c9d737adac93",
+        "names": {
+            "hebrew": "מקוד נקודה",
+            "english": "fromCodePoint",
+            "italian": "dalPuntoDiCodice",
+            "spanish": "desdePuntoDeCódigo"
+        }
+    },
+    {
+        "tagOrder": 0,
         "op": [
             "⋲",
             ""
@@ -4043,6 +4063,44 @@
                     }
                 },
                 "id": "5de12f7d-a911-4e88-a405-a856c27b806d"
+            }
+        }
+    },
+    {
+        "tag": "e925b7a4e01c4680a0270035ab5d2ffd",
+        "defPresentationMode": "Verbose",
+        "builtin": [
+            "Char",
+            "codePoint"
+        ],
+        "def": "ab1f2e3d0bf241ceb764080f60d4f494",
+        "typ": {
+            "schemeType": {
+                "funcParam": {
+                    "nomId": "42493a63686172000000000000000000"
+                },
+                "funcResult": {
+                    "nomId": "42493a666c6f61740000000000000000"
+                }
+            }
+        }
+    },
+    {
+        "tag": "8fee27cccd54410db200c9d737adac93",
+        "defPresentationMode": "Verbose",
+        "builtin": [
+            "Char",
+            "fromCodePoint"
+        ],
+        "def": "dbe0c079573e49b686d9505bf36a4f83",
+        "typ": {
+            "schemeType": {
+                "funcParam": {
+                    "nomId": "42493a666c6f61740000000000000000"
+                },
+                "funcResult": {
+                    "nomId": "42493a63686172000000000000000000"
+                }
             }
         }
     },
