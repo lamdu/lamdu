@@ -71,8 +71,11 @@ make (Ann (Const pl) fragment) =
                 ExprEventMap.closeParenEvent editFragmentHeal healAction env
 
         optApply <- fragment ^. Sugar.fOptApply & GuiM.im
+        let applyPl = optApply ^. Sugar.optionExpr . annotation
+        searchTerm <- SearchMenu.readSearchTerm menuId
         applyActionsEventMap <-
-            optApply ^. Sugar.optionExpr . annotation & ExprEventMap.makeBaseEvents
+            (if searchTerm == "" then  ExprEventMap.makeBaseEvents applyPl else mempty)
+            <> (ExprEventMap.makeLiteralCharEventMap searchTerm ?? applyPl ^. Sugar.plActions . Sugar.setToLiteral)
             <&> Lens.mapped %~ ((optApply ^. Sugar.optionPick) *>)
 
         as <- allowedSearchTerm
@@ -84,7 +87,8 @@ make (Ann (Const pl) fragment) =
             & local (has . SearchMenu.emptyStrings . Lens.mapped .~ "?")
             -- Space goes to next hole in target (not necessarily visible)
             & local (has . Menu.configKeysPickOptionAndGotoNext <>~ [noMods ModKey.Key'Space])
-            <&> Lens.mapped %~ Widget.weakerEventsWithoutPreevents (delHealsEventMap <> applyActionsEventMap)
+            <&> Lens.mapped %~ Widget.weakerEventsWithoutPreevents delHealsEventMap
+            <&> Lens.mapped %~ Widget.strongerEventsWithoutPreevents applyActionsEventMap
         hbox <- ResponsiveExpr.boxSpacedMDisamb ?? ExprGui.mParensId pl
 
         addInnerType <-
