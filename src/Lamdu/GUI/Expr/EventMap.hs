@@ -260,25 +260,25 @@ makeLiteralNumberEventMap ::
     m ((Sugar.Literal Identity -> o Sugar.EntityId) -> EventMap (o GuiState.Update))
 makeLiteralNumberEventMap prefix =
     makeLiteralCommon (Just "Digit") Chars.digit Texts.literalNumber
-    (Sugar.LiteralNum . Identity . read . (prefix <>) . (: []))
+    ?? (Sugar.LiteralNum . Identity . read . (prefix <>) . (: []))
 
 makeLiteralCommon ::
     _ =>
     Maybe Text -> String ->
     Lens.ALens' (Texts.CodeUI Text) Text ->
-    (Char -> Sugar.Literal Identity) ->
-    m ((Sugar.Literal Identity -> o Sugar.EntityId) -> EventMap (o GuiState.Update))
-makeLiteralCommon mGroupDesc chars help f =
+    m ((Char -> Sugar.Literal Identity) ->
+          (Sugar.Literal Identity -> o Sugar.EntityId) -> EventMap (o GuiState.Update))
+makeLiteralCommon mGroupDesc chars help =
     Lens.view id <&> E.toDoc
-    <&> \toDoc makeLiteral ->
+    <&> \toDoc f makeLiteral ->
     E.charGroup mGroupDesc (toDoc [has . MomentuTexts.edit, has . Lens.cloneLens help])
     chars (fmap goToLiteral . makeLiteral . f)
 
 makeLiteralEventMap :: _ => m ((Sugar.Literal Identity -> o Sugar.EntityId) -> EventMap (o GuiState.Update))
 makeLiteralEventMap =
-    makeLiteralCommon Nothing "'" Texts.literalChar (const (Sugar.LiteralChar (Identity ' '))) <>
-    makeLiteralCommon Nothing "\"" Texts.literalText (const (Sugar.LiteralText (Identity ""))) <>
-    makeLiteralCommon Nothing "#" Texts.literalBytes (const (Sugar.LiteralBytes (Identity ""))) <>
+    (makeLiteralCommon Nothing "'" Texts.literalChar ?? const (Sugar.LiteralChar (Identity ' '))) <>
+    (makeLiteralCommon Nothing "\"" Texts.literalText ?? const (Sugar.LiteralText (Identity ""))) <>
+    (makeLiteralCommon Nothing "#" Texts.literalBytes ?? const (Sugar.LiteralBytes (Identity ""))) <>
     makeLiteralNumberEventMap ""
 
 recordOpener :: (MonadReader env m, Has Dir.Layout env) => m Char
