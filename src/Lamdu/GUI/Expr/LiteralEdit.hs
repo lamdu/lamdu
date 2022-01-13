@@ -6,7 +6,7 @@ import qualified Control.Lens as Lens
 import qualified Data.ByteString.Base16 as Hex
 import           Data.ByteString.Lens (chars)
 import qualified Data.Char as Char
-import           Data.Property (Property)
+import           Data.Property (Property(..))
 import qualified Data.Property as Property
 import qualified Data.Text as Text
 import           Data.Text.Encoding (encodeUtf8)
@@ -14,8 +14,8 @@ import qualified GUI.Momentu as M
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.I18N as MomentuTexts
-import qualified GUI.Momentu.ModKey as ModKey
 import           GUI.Momentu.ModKey (noMods)
+import qualified GUI.Momentu.ModKey as ModKey
 import           GUI.Momentu.Responsive (Responsive)
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.State as GuiState
@@ -26,6 +26,7 @@ import qualified GUI.Momentu.Widgets.Menu as Menu
 import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
 import qualified GUI.Momentu.Widgets.TextEdit.Property as TextEdits
+import qualified GUI.Momentu.Widgets.TextView as TextView
 import qualified Lamdu.Config as Config
 import           Lamdu.Formatting (Format(..))
 import qualified Lamdu.GUI.Expr.EventMap as ExprEventMap
@@ -70,6 +71,29 @@ bytesEdit prop pl =
             Hex.decode (encodeUtf8 (mconcat
                 (Text.splitOn " " s <&> Text.take 2 . (<> "00") . Text.filter Char.isHexDigit)))
             ^?! Lens._Right
+
+charEdit :: _ => Property o Char -> Sugar.Payload v o -> m (M.TextWidget o)
+charEdit (Property char setChar) pl =
+    do
+        env <- Lens.view id
+        let doc =
+                E.toDoc env
+                [ has . MomentuTexts.edit
+                , has . Texts.literal
+                , has . Texts.setLiteralChar
+                ]
+        let setCharEventMap = E.allChars (env ^. has . TextEdit.textCharacter) doc ((mempty <$) . setChar)
+        edit <-
+            TextView.makeFocusable ?? Text.singleton char ?? innerId
+            <&> M.tValue %~ Widget.weakerEvents setCharEventMap
+        let quote animId = (TextView.make ?? "'") <*> (Element.subAnimId ?? [animId])
+        quote "opener"
+            M./|/ pure edit
+            M./|/ quote "closer"
+        & withStyle Style.char
+    where
+        myId = WidgetIds.fromExprPayload pl
+        innerId = WidgetIds.literalEditOf myId
 
 fdConfig :: _ => m FocusDelegator.Config
 fdConfig =
@@ -222,6 +246,7 @@ make (Ann (Const p) (Const lit)) =
     case lit of
     Sugar.LiteralNum x -> numEdit x p
     Sugar.LiteralBytes x -> bytesEdit x p
+    Sugar.LiteralChar x -> charEdit x p
     Sugar.LiteralText x -> textEdit x p
     <&> Responsive.fromWithTextPos
     & stdWrap p

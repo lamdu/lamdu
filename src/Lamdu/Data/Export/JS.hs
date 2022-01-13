@@ -95,6 +95,7 @@ formatResult (Ann _ b) =
         case PrimVal.toKnown prim of
         PrimVal.Bytes x -> x
         PrimVal.Float x -> show x & fromString
+        PrimVal.Char x -> show x & fromString
     EV.RInject inj -> inj ^. EV.injectVal & formatResult
     _ -> "<TODO: Format result>"
 

@@ -60,6 +60,8 @@ data CodeUI a = CodeUI
     , _literalText :: a
     , _literalNumber :: a
     , _literalBytes :: a
+    , _literalChar :: a
+    , _setLiteralChar :: a
     , _startEditing :: a
     , _stopEditing :: a
     , _nameFirstParameter :: a

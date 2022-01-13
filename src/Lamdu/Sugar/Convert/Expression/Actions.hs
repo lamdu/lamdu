@@ -342,6 +342,7 @@ valFromLiteral =
     \case
     LiteralNum (Identity x) -> (literalExpr (PrimVal.Float x), pure ())
     LiteralBytes (Identity x) -> (literalExpr (PrimVal.Bytes x), pure ())
+    LiteralChar (Identity x) -> (literalExpr (PrimVal.Char x), pure ())
     LiteralText (Identity x) ->
         ( encodeUtf8 x
             & PrimVal.Bytes

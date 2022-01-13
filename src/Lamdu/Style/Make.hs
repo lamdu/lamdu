@@ -64,6 +64,7 @@ make fonts theme =
     , _nameAtBinder   = textEdit TextColors.baseColor    Fonts.binders
     , _bytes          = textEdit TextColors.literalColor Fonts.literalBytes
     , _text           = textEdit TextColors.literalColor Fonts.literalText
+    , _char           = textEdit TextColors.literalColor Fonts.literalText
     , _num            = textEdit TextColors.literalColor Fonts.base
     }
     where

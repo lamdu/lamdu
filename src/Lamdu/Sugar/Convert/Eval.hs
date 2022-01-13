@@ -59,6 +59,7 @@ convertPrimVal _ p =
     case PrimVal.toKnown p of
     PrimVal.Bytes x -> RBytes x
     PrimVal.Float x -> RFloat x
+    PrimVal.Char x -> RChar x
 
 type ERV = ER.Val (Pure # T.Type)
 

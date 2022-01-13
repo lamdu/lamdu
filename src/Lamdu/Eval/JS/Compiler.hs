@@ -476,6 +476,7 @@ compileLiteral literal =
         where
             ints = [JS.int (fromIntegral byte) | byte <- BS.unpack bytes]
     PrimVal.Float num -> JS.number num & codeGenFromExpr
+    PrimVal.Char c -> Char.ord c & fromIntegral & JS.number & codeGenFromExpr
 
 compileRecExtend :: Monad m => RowExtend T.Tag V.Term V.Term # Annotated ValId -> M m CodeGen
 compileRecExtend x =

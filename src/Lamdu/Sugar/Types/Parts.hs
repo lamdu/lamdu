@@ -4,7 +4,7 @@
 module Lamdu.Sugar.Types.Parts
     ( VarInfo(..), _VarNominal, _VarGeneric, _VarFunction, _VarRecord, _VarVariant
     , FuncApplyLimit(..), _UnlimitedFuncApply, _AtMostOneFuncApply
-    , Literal(..), _LiteralNum, _LiteralBytes, _LiteralText
+    , Literal(..), _LiteralNum, _LiteralBytes, _LiteralChar, _LiteralText
     , -- Annotations
       Annotation(..), _AnnotationVal, _AnnotationType, _AnnotationNone
     -- Node actions
@@ -173,6 +173,7 @@ newtype ClosedCompositeActions o = ClosedCompositeActions
 data Literal f
     = LiteralNum (f Double)
     | LiteralBytes (f ByteString)
+    | LiteralChar (f Char)
     | LiteralText (f Text)
     deriving Generic
 

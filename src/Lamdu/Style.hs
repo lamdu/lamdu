@@ -1,7 +1,7 @@
 {-# LANGUAGE TemplateHaskell, ConstraintKinds #-}
 module Lamdu.Style
     ( Style(..)
-    , base, autoNameOrigin, nameAtBinder, bytes, text, num
+    , base, autoNameOrigin, nameAtBinder, bytes, text, char, num
     , HasStyle
     ) where
 
@@ -17,6 +17,7 @@ data Style = Style
     , _nameAtBinder :: TextEdit.Style
     , _bytes :: TextEdit.Style
     , _text :: TextEdit.Style
+    , _char :: TextEdit.Style
     , _num :: TextEdit.Style
     }
 Lens.makeLenses ''Style

@@ -53,6 +53,11 @@ convertLiteralBytes ::
     ByteString -> Input.Payload m a # V.Term -> ConvertM m (ExpressionU v m a)
 convertLiteralBytes = convertLiteralCommon LiteralBytes PrimVal.Bytes
 
+convertLiteralChar ::
+    (Monad m, Monoid a) =>
+    Char -> Input.Payload m a # V.Term -> ConvertM m (ExpressionU v m a)
+convertLiteralChar = convertLiteralCommon LiteralChar PrimVal.Char
+
 convert ::
     (Monad m, Monoid a, Typeable m) =>
     PositionInfo ->
@@ -71,6 +76,7 @@ convert posInfo (Ann pl (V.BLeaf l)) =
         case PrimVal.toKnown literal of
         PrimVal.Float x -> convertLiteralFloat x
         PrimVal.Bytes x -> convertLiteralBytes x
+        PrimVal.Char x -> convertLiteralChar x
     V.LHole -> ConvertHole.convert posInfo
     V.LRecEmpty -> ConvertRecord.convertEmpty
     V.LAbsurd -> ConvertCase.convertAbsurd

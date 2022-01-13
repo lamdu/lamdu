@@ -120,6 +120,8 @@
             "detach": "Desconectar",
             "literal": "Literal",
             "literalText": "Texto Literal",
+            "literalChar": "Carácter Literal",
+            "setLiteralChar": "Establecer Carácter Literal",
             "literalBytes": "Bytes Literales",
             "literalNumber": "Número Literal",
             "startEditing": "Comenzar la edición",

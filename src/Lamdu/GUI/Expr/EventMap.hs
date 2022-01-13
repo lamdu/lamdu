@@ -276,6 +276,7 @@ makeLiteralCommon mGroupDesc chars help f =
 
 makeLiteralEventMap :: _ => m ((Sugar.Literal Identity -> o Sugar.EntityId) -> EventMap (o GuiState.Update))
 makeLiteralEventMap =
+    makeLiteralCommon Nothing "'" Texts.literalChar (const (Sugar.LiteralChar (Identity ' '))) <>
     makeLiteralCommon Nothing "\"" Texts.literalText (const (Sugar.LiteralText (Identity ""))) <>
     makeLiteralCommon Nothing "#" Texts.literalBytes (const (Sugar.LiteralBytes (Identity ""))) <>
     makeLiteralNumberEventMap ""
