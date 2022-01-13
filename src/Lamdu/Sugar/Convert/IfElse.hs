@@ -31,20 +31,17 @@ convertIfElse setToVal postApp =
             pArg . hVal . _BodyPostfixApply .
             Lens.filteredBy (pFunc . hVal . _PfFromNom . tidTId . Lens.only boolTid) .
             pArg
-            <&> Lens.filteredBy (hVal . _BodyLeaf . _LeafHole) . annotation .
-                pActions . delete .~ deleteWholeIf
         case postApp ^? pFunc . hVal . _PfCase . cList . tlItems . Lens._Just of
             Just (TaggedListBody alt0 [TaggedSwappableItem alt1 _])
                 | tagOf alt0 == trueTag && tagOf alt1 == falseTag -> convIfElse cond alt0 alt1
                 | tagOf alt1 == trueTag && tagOf alt0 == falseTag -> convIfElse cond alt1 alt0
             _ -> Nothing
     where
-        deleteWholeIf = DataOps.newHole >>= setToVal <&> EntityId.ofValI & Delete
         tagOf alt = alt ^. tiTag . tagRefTag . tagVal
         convIfElse cond altTrue altFalse =
             Just IfElse
-            { _iIf = cond
-            , _iThen = altTrue ^. tiValue
+            { _iIf = setDelClause cond
+            , _iThen = altTrue ^. tiValue & setDelClause
             , _iElse =
                 case altFalse ^@?
                      tiValue . hVal . _BodyLam . lamFunc .
@@ -58,7 +55,7 @@ convertIfElse setToVal postApp =
                         , _eIfElse = innerIfElse
                         }
                     , _hAnn =
-                        altFalse ^. tiValue . annotation
+                        innerPl
                         & pLambdas .~ [altFalse ^. tiValue . hAnn . Lens._Wrapped . pInput . Input.stored . iref & toUUID]
                         & Const
                     }
@@ -69,6 +66,13 @@ convertIfElse setToVal postApp =
                     & Ann (Const (altFalse ^. tiValue . annotation & pActions . delete %~ mkElseDel))
             }
             where
+                setDelClause =
+                    Lens.filteredBy (hVal . _BodyLeaf . _LeafHole) . annotation . pActions . delete .~ Delete delClause
+                delClause =
+                    fromMaybe (altFalse ^. tiValue . annotation)
+                    (altFalse ^? tiValue . hVal . _BodyLam . lamFunc . fBody . annotation)
+                    ^. pInput . Input.stored . iref
+                    & setToVal <&> EntityId.ofValI
                 mkElseDel CannotDelete =
                     thenBody ^. pInput . Input.stored . iref & setToVal
                     <&> EntityId.ofValI & Delete

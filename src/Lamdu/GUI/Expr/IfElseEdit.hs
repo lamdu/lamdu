@@ -19,7 +19,6 @@ import qualified GUI.Momentu.State as GuiState
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Label as Label
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
-import qualified Lamdu.Config as Config
 import qualified Lamdu.GUI.Expr.EventMap as ExprEventMap
 import           Lamdu.GUI.Monad (GuiM)
 import qualified Lamdu.GUI.Monad as GuiM
@@ -64,17 +63,7 @@ makeIfThen ifKind animId ifElse =
             grammar ifKeyword
             M./|/ Spacer.stdHSpace
             <&> Responsive.fromTextView
-        let eventMap =
-                foldMap
-                (E.keysEventMapMovesCursor (Config.delKeys env)
-                 ( E.toDoc env
-                     [has . MomentuTexts.edit, has . MomentuTexts.delete]
-                 ) . fmap WidgetIds.fromEntityId)
-                (ifElse ^. Sugar.iElse . annotation . Sugar.plActions . Sugar.mReplaceParent)
-        Row animId keyword
-            (M.weakerEvents eventMap ifGui)
-            (M.weakerEvents eventMap thenGui)
-            & pure
+        Row animId keyword ifGui thenGui & pure
     where
         ifKeyword =
             case ifKind of
