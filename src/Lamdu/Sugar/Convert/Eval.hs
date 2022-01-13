@@ -50,7 +50,7 @@ convertPrimVal (Pure (T.TInst (NominalInst tid (T.Types (QVarInstances tp) (QVar
         PrimVal.Float x
             | x /= fromInteger (truncate x)
             || x < 0
-            || x >= (2 ^^ (32::Int)) -> RError (EvalTypeError "Char with invalid code point")
+            || x >= 2 ^^ (32::Int) -> RError (EvalTypeError "Char with invalid code point")
             | otherwise -> truncate x & chr & RChar
         _ -> RError (EvalTypeError "text not made of bytes")
     where

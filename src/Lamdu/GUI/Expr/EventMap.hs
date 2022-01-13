@@ -260,7 +260,7 @@ makeLiteralNumberEventMap ::
     m ((Sugar.Literal Identity -> o Sugar.EntityId) -> EventMap (o GuiState.Update))
 makeLiteralNumberEventMap prefix =
     makeLiteralCommon (Just "Digit") Chars.digit Texts.literalNumber
-    ?? (Sugar.LiteralNum . Identity . read . (prefix <>) . (: []))
+    ?? Sugar.LiteralNum . Identity . read . (prefix <>) . (: [])
 
 makeLiteralCommon ::
     _ =>
