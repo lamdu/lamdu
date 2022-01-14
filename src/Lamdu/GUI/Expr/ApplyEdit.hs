@@ -73,7 +73,7 @@ makeLabeled (Ann (Const pl) apply) =
                     (pure myId)
                 disambRhs <-
                     if Lens.has extraArgs apply
-                    then ResponsiveExpr.indent ?? Widget.toAnimId myId <&> Responsive.vertLayoutMaybeDisambiguate
+                    then ResponsiveExpr.indent ?? Widget.toAnimId myId <> ["rhs"] <&> Responsive.vertLayoutMaybeDisambiguate
                     else pure id
                 (ResponsiveExpr.boxSpacedMDisamb ?? ExprGui.mParensId pl)
                     <*> sequenceA
