@@ -626,5 +626,7 @@ testWYTIWYS =
 
             , wytiwys "7+negate\n→4" "3"
             , wytiwys "1==2⇐⇐if 3\t4" "4"
+
+            , wytiwys "if 'a'=='b'\t1\t2" "2"
             ] & pure
         & buildTest
