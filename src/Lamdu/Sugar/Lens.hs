@@ -81,6 +81,7 @@ instance SugarExpr (Function v name i o) where
 
 instance SugarExpr (Binder v name i o) where
     isUnfinished = isUnfinished . (^. bBody)
+    isForbiddenInLightLam = isForbiddenInLightLam . (^. bBody)
 
 instance SugarExpr (BinderBody v name i o) where
     isUnfinished (BinderTerm x) = isUnfinished x
