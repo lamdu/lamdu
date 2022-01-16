@@ -16,6 +16,7 @@ import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.Config.Theme.TextColors as TextColors
 import qualified Lamdu.GUI.Expr.AssignmentEdit as AssignmentEdit
 import qualified Lamdu.GUI.Expr.EventMap as ExprEventMap
+import qualified Lamdu.GUI.Expr.TagEdit as TagEdit
 import           Lamdu.GUI.Monad (GuiM)
 import qualified Lamdu.GUI.Monad as GuiM
 import           Lamdu.GUI.Styled (grammar, label)
@@ -63,10 +64,13 @@ makeLetEdit item =
                 ) (item ^? Sugar.lUsages . Lens.ix 0)
         grammar (label Texts.let_)
             M./|/ Spacer.stdHSpace
-            M./|/ (AssignmentEdit.make Nothing (item ^. Sugar.lName)
-                    TextColors.letColor binder
-                    <&> M.weakerEvents eventMap
-                    <&> M.padAround (env ^. has . Theme.letItemPadding))
+            M./|/ (
+                TagEdit.makeBinderTagEdit TextColors.letColor (item ^. Sugar.lName) >>=
+                AssignmentEdit.make Nothing
+                (WidgetIds.fromEntityId (item ^. Sugar.lName . Sugar.oTag . Sugar.tagRefTag . Sugar.tagInstance))
+                binder
+                <&> M.weakerEvents eventMap
+                <&> M.padAround (env ^. has . Theme.letItemPadding))
     where
         bodyId = item ^. Sugar.lBody . annotation & WidgetIds.fromExprPayload
         binder = item ^. Sugar.lValue

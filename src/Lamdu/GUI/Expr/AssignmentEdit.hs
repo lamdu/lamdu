@@ -32,7 +32,6 @@ import qualified GUI.Momentu.Widgets.TextView as TextView
 import qualified Lamdu.Annotations as Annotations
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Theme as Theme
-import           Lamdu.Config.Theme.TextColors (TextColors)
 import qualified Lamdu.Config.Theme.TextColors as TextColors
 import qualified Lamdu.Data.Meta as Meta
 import qualified Lamdu.GUI.Annotation as Annotation
@@ -369,10 +368,11 @@ makeJumpToRhs rhsId =
 make ::
     _ =>
     Maybe (i (Property o Meta.PresentationMode)) ->
-    Sugar.OptionalTag Name i o -> Lens.ALens' TextColors M.Color ->
+    Widget.Id ->
     ExprGui.Expr Sugar.Assignment i o ->
+    M.TextWidget o ->
     GuiM env i o (Responsive o)
-make pMode tag color assignment =
+make pMode delParamDest assignment nameEdit =
     makeParts Sugar.UnlimitedFuncApply assignment delParamDest
     >>= \(Parts lhsEventMap mParamsEdit mScopeEdit bodyEdit eventMap mLamPl rhsId) ->
     do
@@ -385,11 +385,10 @@ make pMode tag color assignment =
                 >>= traverse
                     (PresentationModeEdit.make presentationChoiceId (x ^. Sugar.fParams))
         (|---|) <- Glue.mkGlue ?? Glue.Vertical
-        defNameEdit <-
-            TagEdit.makeBinderTagEdit color tag
-            <&> M.tValue %~ Widget.weakerEvents (rhsJumperEquals <> lhsEventMap)
-            <&> (|---| fromMaybe M.empty mPresentationEdit)
-            <&> Responsive.fromWithTextPos
+        let defNameEdit =
+                (nameEdit & M.tValue %~ Widget.weakerEvents (rhsJumperEquals <> lhsEventMap))
+                |---| fromMaybe M.empty mPresentationEdit
+                & Responsive.fromWithTextPos
         mParamEdit <-
             case mParamsEdit of
             Nothing -> pure Nothing
@@ -412,6 +411,5 @@ make pMode tag color assignment =
         <&> Widget.weakerEvents eventMap
     where
         myId = WidgetIds.fromExprPayload pl
-        delParamDest = tag ^. Sugar.oTag . Sugar.tagRefTag . Sugar.tagInstance & WidgetIds.fromEntityId
         Ann (Const pl) assignmentBody = assignment
         presentationChoiceId = Widget.joinId myId ["presentation"]
