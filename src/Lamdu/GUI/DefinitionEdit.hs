@@ -33,8 +33,9 @@ makeExprDefinition ::
     M.WidgetId ->
     GuiM env i o (Responsive o)
 makeExprDefinition def bodyExpr myId =
-    TagEdit.makeBinderTagEdit TextColors.definitionColor (def ^. Sugar.drName) >>=
-    AssignmentEdit.make (bodyExpr ^. Sugar.dePresentationMode) nameEditId (bodyExpr ^. Sugar.deContent)
+    TagEdit.makeBinderTagEdit TextColors.definitionColor (def ^. Sugar.drName)
+    <&> Responsive.fromWithTextPos
+    >>= AssignmentEdit.make (bodyExpr ^. Sugar.dePresentationMode) nameEditId (bodyExpr ^. Sugar.deContent)
     & GuiState.assignCursor myId nameEditId
     where
         nameEditId =

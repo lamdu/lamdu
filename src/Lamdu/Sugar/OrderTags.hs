@@ -93,8 +93,13 @@ instance (MonadTransaction m o, MonadTransaction m i) => Order i (Sugar.LabeledA
 instance MonadTransaction m i => Order i (Const a)
 instance (MonadTransaction m o, MonadTransaction m i) => Order i (Sugar.Else v name i o)
 instance (MonadTransaction m o, MonadTransaction m i) => Order i (Sugar.IfElse v name i o)
-instance (MonadTransaction m o, MonadTransaction m i) => Order i (Sugar.Let v name i o)
 instance (MonadTransaction m o, MonadTransaction m i) => Order i (Sugar.PostfixApply v name i o)
+
+instance (MonadTransaction m o, MonadTransaction m i) => Order i (Sugar.Let v name i o) where
+    order l =
+        l
+        & htraverse (Proxy @(Order i) #> orderNode)
+        >>= (Sugar.lNames . Sugar._ParamsRecord) (orderTaggedList [] pure)
 
 instance (MonadTransaction m o, MonadTransaction m i) => Order i (Sugar.Lambda v name i o) where
     order = Sugar.lamFunc order

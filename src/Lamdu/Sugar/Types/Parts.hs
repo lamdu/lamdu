@@ -20,7 +20,7 @@ module Lamdu.Sugar.Types.Parts
     , TaggedItem(..), tiTag, tiDelete, tiValue, tiAddAfter
     , -- Binders
       Params(..), _ParamVar, _ParamsRecord
-    , FuncParam(..), fpAnnotation, fpVarInfo
+    , FuncParam(..), fpAnnotation, fpUsages, fpVarInfo
     , NullParamActions(..), npDeleteLambda
     , Var(..), vTag, vAddPrev, vAddNext, vDelete, vIsNullParam, vParam
     , AddParam(..), _AddNext, _NeedToPickTagToAddNext
@@ -82,6 +82,7 @@ newtype NullParamActions o = NullParamActions
 
 data FuncParam v = FuncParam
     { _fpAnnotation :: v
+    , _fpUsages :: [EntityId]
     , _fpVarInfo :: VarInfo
     } deriving Generic
 

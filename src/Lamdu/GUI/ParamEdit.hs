@@ -1,5 +1,5 @@
 module Lamdu.GUI.ParamEdit
-    ( makeParams, addAnnotation, eventMapAddNextParamOrPickTag, mkAddParam
+    ( makeParams, addAnnotationAndEvents, eventMapAddNextParamOrPickTag, mkAddParam
     , mkParamPickResult
     ) where
 
@@ -13,6 +13,7 @@ import qualified GUI.Momentu.I18N as MomentuTexts
 import           GUI.Momentu.ModKey (noMods)
 import           GUI.Momentu.Responsive (Responsive)
 import qualified GUI.Momentu.Responsive as Responsive
+import qualified GUI.Momentu.Responsive.Options as Options
 import qualified GUI.Momentu.State as GuiState
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Menu as Menu
@@ -25,7 +26,9 @@ import           Lamdu.GUI.Monad (GuiM, im)
 import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.GUI.TaggedList as TaggedList
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
+import qualified Lamdu.I18N.Code as Texts
 import qualified Lamdu.I18N.CodeUI as Texts
+import qualified Lamdu.I18N.Navigation as Texts
 import           Lamdu.Name (Name)
 import qualified Lamdu.Sugar.Types as Sugar
 
@@ -50,21 +53,32 @@ mkParamPickResult tagInstance =
         WidgetIds.fromEntityId tagInstance & TagEdit.addItemId & Just
     }
 
-addAnnotation ::
+addAnnotationAndEvents ::
     _ =>
     Annotation.EvalAnnotationOptions ->
     Sugar.FuncParam (Sugar.Annotation (Sugar.EvaluationScopes Name i) Name) ->
     Widget.Id -> TextWidget o ->
     GuiM env i o (Responsive o)
-addAnnotation annotationOpts param myId widget =
+addAnnotationAndEvents annotationOpts param myId widget =
     do
         postProcessAnnotation <-
             GuiState.isSubCursor ?? myId
             <&> Annotation.postProcessAnnotationFromSelected
+        env <- Lens.view id
+        let eventMap =
+                foldMap
+                ( E.keysEventMapMovesCursor (env ^. has . Config.inlineKeys)
+                    (E.toDoc env
+                        [ has . MomentuTexts.navigation
+                        , has . Texts.jumpToFirstUse
+                        ])
+                    . pure . WidgetIds.fromEntityId
+                ) (param ^? Sugar.fpUsages . traverse)
         Annotation.maybeAddAnnotationWith annotationOpts postProcessAnnotation
             (param ^. Sugar.fpAnnotation)
             <&> (Widget.widget %~)
             ?? Responsive.fromWithTextPos widget
+            <&> M.weakerEvents eventMap
     & local (M.animIdPrefix .~ Widget.toAnimId myId)
 
 mkAddParam :: _ => i (Sugar.TagChoice Name a) -> Widget.Id -> GuiM env i a [Responsive a]
@@ -90,7 +104,7 @@ makeParam ::
 makeParam annotationOpts item =
     (<>)
     <$> (TagEdit.makeParamTag Nothing (item ^. TaggedList.iTag)
-            >>= addAnnotation annotationOpts (item ^. TaggedList.iValue) myId
+            >>= addAnnotationAndEvents annotationOpts (item ^. TaggedList.iValue) myId
             <&> M.weakerEvents (item ^. TaggedList.iEventMap) <&> (:[]))
     <*> mkAddParam (item ^. TaggedList.iAddAfter) myId
     & local (M.animIdPrefix .~ Widget.toAnimId myId)
@@ -102,7 +116,7 @@ makeParams ::
     Annotation.EvalAnnotationOptions ->
     Widget.Id -> Widget.Id ->
     Sugar.TaggedList Name i o (Sugar.FuncParam (Sugar.Annotation (Sugar.EvaluationScopes Name i) Name)) ->
-    GuiM env i o (EventMap (o GuiState.Update), [Responsive o])
+    GuiM env i o (EventMap (o GuiState.Update), Responsive o)
 makeParams annotationOpts prevId nextId items =
     do
         o <- Lens.view has <&> \d -> Lens.cloneLens . dirKey d Horizontal
@@ -113,7 +127,15 @@ makeParams annotationOpts prevId nextId items =
             , TaggedList._kOrderAfter = has . Config.orderDirKeys . o Forward
             }
         (addFirstEventMap, itemsR) <- TaggedList.make (has . Texts.parameter) keys prevId nextId items
-        (<>)
-            <$> mkAddParam (items ^. Sugar.tlAddFirst) prevId
-            <*> (traverse (makeParam annotationOpts) itemsR <&> concat)
+        (Options.box ?? Options.disambiguationNone) <*>
+            sequenceA
+            [ label (Styled.label Texts.recordOpener)
+            , (Options.boxSpaced ?? Options.disambiguationNone) <*>
+                ((<>)
+                <$> mkAddParam (items ^. Sugar.tlAddFirst) prevId
+                <*> (traverse (makeParam annotationOpts) itemsR <&> concat))
+            , label (Styled.label Texts.recordCloser)
+            ]
             <&> (,) addFirstEventMap
+    where
+        label x = Styled.grammar x <&> Responsive.fromTextView

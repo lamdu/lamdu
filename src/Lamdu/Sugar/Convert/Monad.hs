@@ -3,7 +3,7 @@
 module Lamdu.Sugar.Convert.Monad
     ( OuterScopeInfo(..), osiPos, osiScope
     , RecursiveRef(..), rrDefI, rrDefType
-    , ScopeInfo(..), siRecordParams, siNullParams, siLetItems, siMOuter
+    , ScopeInfo(..), siRecordParams, siNullParams, siLetItems, siExtractPos, siFloatPos
 
     , Context(..)
     , scInferContext, scTopLevelExpr, scPostProcessRoot, siRecursiveRef, scConfig
@@ -65,8 +65,8 @@ data ScopeInfo m = ScopeInfo
     , -- Each let item potentially has an inline action
       _siLetItems :: Map V.Var (Sugar.EntityId -> Sugar.VarInline (T m))
       -- TODO: siTagParamInfos needs a reverse-lookup map too
-    , -- Where "extract to let" goes:
-      _siMOuter :: Maybe (OuterScopeInfo m)
+    , _siExtractPos :: Maybe (OuterScopeInfo m)
+    , _siFloatPos :: Maybe (OuterScopeInfo m)
     , -- The globals we artificially inject into the scope in order to
       -- infer their type supporting mutual recursions
       _siRecursiveRef :: Maybe (RecursiveRef m)

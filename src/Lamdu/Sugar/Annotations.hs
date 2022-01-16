@@ -78,12 +78,16 @@ instance MarkBodyAnnotations v Binder where
     markBodyAnnotations = bBody markBodyAnnotations
 
 instance MarkBodyAnnotations v BinderBody where
-    markBodyAnnotations (BinderTerm body) =
-        markBodyAnnotations body & _2 %~ BinderTerm
-    markBodyAnnotations (BinderLet let_) =
+    markBodyAnnotations (BinderTerm body) = markBodyAnnotations body & _2 %~ BinderTerm
+    markBodyAnnotations (BinderLet let_) = markBodyAnnotations let_ & _2 %~ BinderLet
+
+instance  MarkBodyAnnotations v Let where
+    markBodyAnnotations l =
         ( neverShowAnnotations
-        , morphMap (Proxy @MarkAnnotations #?> markNodeAnnotations) let_
-            & BinderLet
+        , l { _lValue = l ^. lValue & markNodeAnnotations
+            , _lNames = l ^. lNames & annotations @v %~ (,) showAnnotationWhenVerbose
+            , _lBody = l ^. lBody & markNodeAnnotations
+            }
         )
 
 instance MarkBodyAnnotations v Assignment where

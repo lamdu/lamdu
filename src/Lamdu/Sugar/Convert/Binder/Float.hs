@@ -24,8 +24,6 @@ import           Lamdu.Expr.IRef (ValI, HRef)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Load as ExprLoad
 import qualified Lamdu.Sugar.Convert.Binder.Params as Params
-import           Lamdu.Sugar.Convert.Binder.Redex (Redex(..))
-import qualified Lamdu.Sugar.Convert.Binder.Redex as Redex
 import           Lamdu.Sugar.Convert.Binder.Types (BinderKind(..))
 import qualified Lamdu.Sugar.Convert.Input as Input
 import qualified Lamdu.Sugar.Convert.Load as Load
@@ -85,16 +83,20 @@ isVarAlwaysApplied (V.TypedLam var _paramTyp x) =
             & and
 
 convertLetToLam ::
-    Monad m => V.Var -> Redex # HRef m -> T m (HRef m # V.Term)
-convertLetToLam var redex =
+    Monad m =>
+    V.Var ->
+    V.TypedLam V.Var (HCompose Prune T.Type) V.Term # Ann (HRef m) ->
+    Ann (HRef m) # V.Term ->
+    T m (HRef m # V.Term)
+convertLetToLam var lam val =
     do
         (newParam, newHRef) <-
             Params.convertBinderToFunction mkArg
-            (BinderKindLet (redex ^. Redex.lam)) (redex ^. Redex.arg)
+            (BinderKindLet lam) val
         let toNewParam prop =
                 V.LVar newParam & V.BLeaf &
                 ExprIRef.writeValI (prop ^. ExprIRef.iref)
-        SubExprs.onGetVars toNewParam var (redex ^. Redex.arg)
+        SubExprs.onGetVars toNewParam var val
         pure newHRef
     where
         mkArg = V.LVar var & V.BLeaf & ExprIRef.newValI
@@ -152,25 +154,25 @@ addFieldToLetParamsRecord fieldTags var letLam storedLam =
 
 addLetParam ::
     Monad m =>
-    V.Var -> Redex # Input.Payload m -> ConvertM m (T m (HRef m # V.Term))
-addLetParam var redex =
-    case storedRedex ^. Redex.arg . hVal of
-    V.BLam lam | isVarAlwaysApplied (redex ^. Redex.lam) ->
-        case redex ^. Redex.arg . hAnn . Input.inferredType . _Pure of
+    V.Var ->
+    V.TypedLam V.Var (HCompose Prune T.Type) V.Term # Ann (HRef m) ->
+    Ann (Input.Payload m) # V.Term ->
+    ConvertM m (T m (HRef m # V.Term))
+addLetParam var lam val =
+    case valStored ^. hVal of
+    V.BLam innerLam | isVarAlwaysApplied lam ->
+        case val ^. hAnn . Input.inferredType . _Pure of
         T.TFun (FuncType (Pure (T.TRecord composite)) _)
             | FlatRowExtends fieldsMap (Pure T.REmpty) <- composite ^. T.flatRow
-            , Params.isParamAlwaysUsedWithGetField lam ->
+            , Params.isParamAlwaysUsedWithGetField innerLam ->
             addFieldToLetParamsRecord (fieldsMap ^.. Lens.itraversed . Lens.asIndex)
-            var (storedRedex ^. Redex.lam) storedLam
-        _ -> convertLetParamToRecord var (storedRedex ^. Redex.lam) storedLam
+            var lam storedLam
+        _ -> convertLetParamToRecord var lam storedLam
         where
-            storedLam = Params.StoredLam lam (storedRedex ^. Redex.arg . hAnn)
-    _ -> convertLetToLam var storedRedex & pure
+            storedLam = Params.StoredLam innerLam (val ^. hAnn . Input.stored)
+    _ -> convertLetToLam var lam valStored & pure
     where
-        storedRedex = Redex.hmapRedex (const (^. Input.stored)) redex
-
-sameLet :: Redex # HRef m -> HRef m # V.Term
-sameLet redex = redex ^. Redex.arg . hAnn
+        valStored = val & hflipped %~ hmap (const (^. Input.stored))
 
 {-# ANN ordNub ("HLint: ignore Use ^.."::String) #-}
 ordNub :: Ord a => [a] -> [a]
@@ -178,49 +180,49 @@ ordNub = Set.toList . Set.fromList
 
 processLet ::
     Monad m =>
-    Redex # Input.Payload m ->
+    V.TypedLam V.Var (HCompose Prune T.Type) V.Term # Ann (HRef m) ->
+    Ann (Input.Payload m) # V.Term ->
     ConvertM m (T m (HRef m # V.Term))
-processLet redex =
+processLet lam val =
     do
         scopeInfo <- Lens.view ConvertM.scScopeInfo
         let usedLocalVars =
-                redex ^.. Redex.arg . ExprLens.valLeafs . V._LVar
+                val ^.. ExprLens.valLeafs . V._LVar
                 & ordNub
                 & filter (\x -> innerScopeLocalVars ^. Lens.contains x)
         let varsExitingScope =
-                case scopeInfo ^. ConvertM.siMOuter of
+                case scopeInfo ^. ConvertM.siFloatPos of
                 Nothing -> usedLocalVars
                 Just outerScopeInfo ->
                     filter (\x -> Lens.hasn't (Lens.ix x) outerScope) usedLocalVars
                     where
                         outerScope = outerScopeInfo ^. ConvertM.osiScope . V.scopeVarTypes
         case varsExitingScope of
-            [] -> sameLet (Redex.hmapRedex (const (^. Input.stored)) redex) & pure & pure
-            [x] -> addLetParam x redex
+            [] -> val ^. hAnn . Input.stored & pure & pure
+            [x] -> addLetParam x lam val
             _ -> error "multiple osiVarsUnderPos not expected!?"
     where
-        innerScopeLocalVars =
-            redex ^. Redex.arg . hAnn . Input.localsInScope <&> fst & Set.fromList
+        innerScopeLocalVars = val ^. hAnn . Input.localsInScope <&> fst & Set.fromList
 
 makeFloatLetToOuterScope ::
     Monad m =>
     (ValI m -> T m ()) ->
-    Redex # Input.Payload m ->
+    V.TypedLam V.Var (HCompose Prune T.Type) V.Term # Ann (HRef m) ->
+    Ann (Input.Payload m) # V.Term ->
     ConvertM m (T m ExtractDestination)
-makeFloatLetToOuterScope setTopLevel redex =
+makeFloatLetToOuterScope setTopLevel lam val =
     (,,,)
-    <$> processLet newRedex
+    <$> processLet newLam val
     <*> Lens.view id
     <*> moveToGlobalScope
     <*> ConvertM.postProcessWith
     <&>
     \(makeNewLet, ctx, floatToGlobal, postProcess) ->
     do
-        redex ^. Redex.lam . V.tlOut . hAnn . Input.stored .
-            ExprIRef.iref & setTopLevel
+        lam ^. V.tlOut . hAnn . ExprIRef.iref & setTopLevel
         newLetP <- makeNewLet
         r <-
-            case ctx ^. ConvertM.scScopeInfo . ConvertM.siMOuter of
+            case ctx ^. ConvertM.scScopeInfo . ConvertM.siFloatPos of
             Nothing ->
                 EntityId.ofIRef (ExprIRef.defI param) <$
                 floatToGlobal param innerDefExpr <&> ExtractToDef
@@ -235,18 +237,16 @@ makeFloatLetToOuterScope setTopLevel redex =
                         -- Outer deps, pruned:
                         ctx ^. ConvertM.scFrozenDeps . Property.pVal
                         & addRecursiveRefAsDep
-                        & Def.pruneDeps (redex ^. Redex.arg)
+                        & Def.pruneDeps val
             Just outerScopeInfo ->
-                EntityId.ofValI (redex ^. Redex.arg . hAnn . Input.stored . ExprIRef.iref) <$
+                EntityId.ofValI (val ^. hAnn . Input.stored . ExprIRef.iref) <$
                 DataOps.redexWrapWithGivenParam param
                 (newLetP ^. ExprIRef.iref) (outerScopeInfo ^. ConvertM.osiPos)
                 <&> ExtractToLet
         r <$ postProcess fixUsages
     where
-        param = redex ^. Redex.lam . V.tlIn
+        param = lam ^. V.tlIn
         fixUsages _ =
-            Load.readValAndAddProperties (newRedex ^. Redex.lam . V.tlOut . hAnn . Input.stored)
-            >>= SubExprs.onGetVars (void . DataOps.applyHoleTo) (redex ^. Redex.lam . V.tlIn)
-        newRedex =
-            redex
-            & Redex.lam . V.tlOut . hAnn . Input.stored . ExprIRef.setIref .~ setTopLevel
+            Load.readValAndAddProperties (newLam ^. V.tlOut . hAnn)
+            >>= SubExprs.onGetVars (void . DataOps.applyHoleTo) param
+        newLam = lam & V.tlOut . hAnn . ExprIRef.setIref .~ setTopLevel

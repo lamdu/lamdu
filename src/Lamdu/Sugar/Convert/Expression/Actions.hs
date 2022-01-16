@@ -46,8 +46,8 @@ mkExtract ::
     Monad m =>
     Input.Payload m # V.Term -> ConvertM m (T m ExtractDestination)
 mkExtract exprPl =
-    Lens.view (ConvertM.scScopeInfo . ConvertM.siMOuter)
-    >>= \case
+    Lens.view (ConvertM.scScopeInfo . ConvertM.siExtractPos) >>=
+    \case
     Nothing -> mkExtractToDef exprPl <&> Lens.mapped %~ ExtractToDef
     Just outerScope ->
         mkExtractToLet (outerScope ^. ConvertM.osiPos) (exprPl ^. Input.stored)

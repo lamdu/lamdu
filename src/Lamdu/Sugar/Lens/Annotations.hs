@@ -1,5 +1,5 @@
 {-# LANGUAGE TypeApplications, FlexibleInstances, DefaultSignatures, MultiParamTypeClasses #-}
-{-# LANGUAGE ScopedTypeVariables, TypeFamilies, UndecidableInstances #-}
+{-# LANGUAGE ScopedTypeVariables, TypeFamilies, UndecidableInstances, NamedFieldPuns #-}
 
 module Lamdu.Sugar.Lens.Annotations
     ( Annotations(..), HAnnotations(..), paneBinder
@@ -80,9 +80,15 @@ instance HAnnotations a b (Const (TagRef n i o)) (Const (TagRef n i o)) where hA
 instance HAnnotations a b (Composite a n i o) (Composite b n i o)
 instance HAnnotations a b (IfElse a n i o) (IfElse b n i o)
 instance HAnnotations a b (LabeledApply a n i o) (LabeledApply b n i o)
-instance HAnnotations a b (Let a n i o) (Let b n i o)
 instance HAnnotations a b (PostfixApply a n i o) (PostfixApply b n i o)
 instance HAnnotations a b (PostfixFunc a n i o) (PostfixFunc b n i o)
+
+instance HAnnotations a b (Let a n i o) (Let b n i o) where
+    hAnnotations f l =
+        (\_lValue _lNames _lBody -> l {_lValue, _lNames, _lBody})
+        <$> hAnnotations f (l ^. lValue)
+        <*> annotations f (l ^. lNames)
+        <*> hAnnotations f (l ^. lBody)
 
 instance r ~ HoleOpt b n i o => HAnnotations a b (HoleOpt a n i o) r where
     hAnnotations f (HoleBinder x) = hAnnotations f x <&> HoleBinder

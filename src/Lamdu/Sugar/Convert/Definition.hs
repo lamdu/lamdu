@@ -62,7 +62,8 @@ emptyScopeInfo recursiveRef =
     { _siRecordParams = mempty
     , _siNullParams = mempty
     , _siLetItems = mempty
-    , _siMOuter = Nothing
+    , _siExtractPos = Nothing
+    , _siFloatPos = Nothing
     , _siRecursiveRef = recursiveRef
     }
 

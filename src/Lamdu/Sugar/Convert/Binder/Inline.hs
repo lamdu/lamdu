@@ -1,22 +1,21 @@
 {-# LANGUAGE TypeFamilies, ScopedTypeVariables #-}
 module Lamdu.Sugar.Convert.Binder.Inline
-    ( inlineLet
+    ( inlineVar
     ) where
 
 import qualified Control.Lens as Lens
 import           Hyper
-import           Hyper.Type.Functor (F, _F)
+import           Hyper.Type.Functor (_F)
 import           Hyper.Type.Prune (Prune(..))
 import           Lamdu.Calc.Term (Val)
 import qualified Lamdu.Calc.Term as V
-import           Lamdu.Expr.IRef (HRef)
+import           Lamdu.Expr.IRef (iref)
 import qualified Lamdu.Expr.IRef as ExprIRef
-import           Lamdu.Sugar.Convert.Binder.Redex (Redex(..))
-import qualified Lamdu.Sugar.Convert.Binder.Redex as Redex
+import qualified Lamdu.Sugar.Convert.Input as Input
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import           Lamdu.Sugar.Types
 import           Revision.Deltum.Hyper (Write(..))
-import           Revision.Deltum.IRef (IRef, uuid)
+import           Revision.Deltum.IRef (uuid)
 import           Revision.Deltum.Transaction (Transaction)
 
 import           Lamdu.Prelude
@@ -90,25 +89,37 @@ cursorDest x =
     & redexes
     & (^. _2 . annotation)
 
-inlineLet ::
+inlineVar ::
     Monad m =>
-    HRef m # V.Term -> Redex # F (IRef m) -> T m EntityId
-inlineLet topLevelProp redex =
-    topLevelProp ^. ExprIRef.iref & ExprIRef.readRecursively
-    <&> (^? hVal . V._BApp . V.appFunc . hVal . V._BLam . V.tlOut . hAnn)
-    <&> fromMaybe (error "malformed redex")
-    >>= ExprIRef.readRecursively
-    <&> hflipped %~ hmap (const ExistingRef)
-    <&> inlineLetH
-        (redex ^. Redex.lam . V.tlIn)
-        (redex ^. Redex.arg & hflipped %~ hmap (const ExistingRef))
-    <&> hflipped %~ hmap (const (:*: Const ()))
-    >>= ExprIRef.writeRecursively
-    <&> (^. hAnn . _1)
-    >>= topLevelProp ^. ExprIRef.setIref
-    & (dst <$)
+    Ann (Input.Payload m) # V.Term -> Maybe (V.Var, EntityId -> VarInline (T m))
+inlineVar (Ann topPl (V.BApp (V.App (Ann lamPl (V.BLam lam)) arg))) =
+    Just
+    ( lam ^. V.tlIn
+    , \useId ->
+        if all (== useId) uses
+        then
+            do
+                -- Need to re-read body to support inlining hole results!
+                bod <-
+                    topPl ^. Input.stored . iref & ExprIRef.readRecursively
+                    <&> fromMaybe (error "Not a lambda?") . (^? hVal . V._BApp . V.appFunc . hVal . V._BLam . V.tlOut)
+                inlineLetH
+                    (lam ^. V.tlIn)
+                    (arg & hflipped %~ hmap (const (ExistingRef . (^. Input.stored . iref))))
+                    (bod & hflipped %~ hmap (const ExistingRef))
+                    & hflipped %~ hmap (const (:*: Const ()))
+                    & ExprIRef.writeRecursively
+                    <&> (^. hAnn . _1)
+                    >>= topPl ^. Input.stored . ExprIRef.setIref
+                arg
+                    & hflipped %~ hmap (const (Const . EntityId.EntityId . uuid . (^. Input.stored . iref . _F)))
+                    & cursorDest
+                    & pure
+            & InlineVar
+        else
+            let (before, after) = break (== useId) uses
+            in CannotInlineDueToUses (drop 1 after <> before)
+    )
     where
-        dst =
-            redex ^. Redex.arg
-            & hflipped %~ hmap (const (Const . EntityId.EntityId . uuid . (^. _F)))
-            & cursorDest
+        uses = lamPl ^. Input.varRefsOfLambda
+inlineVar _ = Nothing

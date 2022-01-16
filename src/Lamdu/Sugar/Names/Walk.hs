@@ -182,14 +182,14 @@ class ToBody t where
     toBody :: (MonadNaming m, Walk m v0 v1, Walk m a0 a1) => WalkBody t m o v0 v1 a0 a1
 
 instance ToBody Let where
-    toBody let_@Let{_lName, _lBody, _lValue} =
+    toBody let_@Let{_lNames, _lBody, _lValue} =
         -- In "let x = let x = _"
         -- There isn't a real collision between the inner and outer "x"s
         -- because they don't live in the same scopes.
         -- However to avoid confusion we do treat it as a collision anyhow.
         (,) <$> toExpression _lValue <*> toExpression _lBody
-        & unCPS (withOptionalTag MayBeAmbiguous TaggedVar _lName)
-        <&> \(_lName, (_lValue, _lBody)) -> let_{_lName, _lBody, _lValue}
+        & unCPS (withParams MayBeAmbiguous _lNames)
+        <&> \(_lNames, (_lValue, _lBody)) -> let_{_lNames, _lBody, _lValue}
 
 instance ToBody Binder where
     toBody = bBody toBody

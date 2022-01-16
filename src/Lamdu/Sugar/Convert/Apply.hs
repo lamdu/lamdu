@@ -1,4 +1,4 @@
-{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeFamilies, TypeApplications #-}
 
 module Lamdu.Sugar.Convert.Apply
     ( convert
@@ -21,6 +21,8 @@ import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Sugar.Config as Config
+import           Lamdu.Sugar.Convert.Binder.Inline (inlineVar)
+import           Lamdu.Sugar.Convert.Binder.Float (makeFloatLetToOuterScope)
 import           Lamdu.Sugar.Convert.Expression.Actions (addActions)
 import           Lamdu.Sugar.Convert.Fragment (convertAppliedHole)
 import           Lamdu.Sugar.Convert.GetField (convertGetFieldParam)
@@ -48,9 +50,31 @@ convert app@(V.App funcI argI) exprPl =
         convertGetFieldParam app >>= Lens._Just addAct & MaybeT & justToLeft
         appS <-
             do
-                argS <- ConvertM.convertSubexpression argI & lift
+                mFloat <-
+                    case funcI ^. hVal of
+                    V.BLam lam ->
+                        makeFloatLetToOuterScope (exprPl ^. Input.stored . ExprIRef.setIref)
+                        (lam & hmap (Proxy @(Recursively HFunctor) #> hflipped %~ hmap (const (^. Input.stored))))
+                        argI & lift
+                        <&> Just
+                    _ -> pure Nothing
+                argS <-
+                    ConvertM.convertSubexpression argI & lift <&>
+                    case mFloat of
+                    Nothing -> id
+                    Just float -> annotation . pActions . extract .~ float
                 convertAppliedHole funcI exprPl argS & justToLeft
-                funcS <- ConvertM.convertSubexpression funcI & lift
+                let scopeUpdates =
+                        ( case inlineVar expr of
+                            Nothing -> id
+                            Just (v, mkInline) -> ConvertM.siLetItems . Lens.at v ?~ mkInline
+                        ) .
+                        case mFloat of
+                        Nothing -> id
+                        Just{} -> (ConvertM.siExtractPos ?~ pos) . (ConvertM.siFloatPos ?~ pos)
+                funcS <-
+                    ConvertM.convertSubexpression funcI & lift
+                    & local (ConvertM.scScopeInfo %~ scopeUpdates)
                 protectedSetToVal <- lift ConvertM.typeProtectedSetToVal
                 let dst = argI ^. hAnn . Input.stored . ExprIRef.iref
                 let fixDel d
@@ -64,7 +88,13 @@ convert app@(V.App funcI argI) exprPl =
         convertLabeled appS exprPl >>= lift . addAct & justToLeft
         convertPrefix appS exprPl >>= addAct & lift
     where
-        addAct = addActions (Ann exprPl (V.BApp app))
+        addAct = addActions expr
+        expr = Ann exprPl (V.BApp app)
+        pos =
+            ConvertM.OuterScopeInfo
+            { ConvertM._osiPos = exprPl ^. Input.stored
+            , ConvertM._osiScope = exprPl ^. Input.inferScope
+            }
 
 defParamsMatchArgs ::
     V.Var ->

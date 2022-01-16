@@ -30,7 +30,6 @@ import           Lamdu.GUI.Monad (GuiM)
 import qualified Lamdu.GUI.Monad as GuiM
 import qualified Lamdu.GUI.ParamEdit as ParamEdit
 import           Lamdu.GUI.Styled (grammar, label)
-import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.GUI.TaggedList as TaggedList
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.I18N.Code as Texts
@@ -167,10 +166,7 @@ make ::
 make mScopeCursor isScopeNavFocused delVarBackwardsId myId bodyId params =
     makeBody annotationMode delVarBackwardsId myId bodyId params
     & GuiM.withLocalMScopeId (mScopeCursor <&> Lens.traversed %~ (^. Sugar.bParamScopeId) . sBinderScope)
-    >>= _2 mAddFrame
     where
-        mAddFrame [x] = pure x
-        mAddFrame xs = Styled.addValFrame <*> (Options.boxSpaced ?? Options.disambiguationNone ?? xs)
         mCurCursor =
             do
                 ScopeNavIsFocused == isScopeNavFocused & guard
@@ -186,7 +182,7 @@ makeBody ::
     Annotation.EvalAnnotationOptions ->
     Widget.Id -> Widget.Id -> Widget.Id ->
     Sugar.Params (Sugar.Annotation (Sugar.EvaluationScopes Name i) Name) Name i o ->
-    GuiM env i o (EventMap (o GuiState.Update), [Responsive o])
+    GuiM env i o (EventMap (o GuiState.Update), Responsive o)
 makeBody annotationOpts delVarBackwardsId lhsId rhsId params =
     case params of
     Sugar.ParamsRecord items -> ParamEdit.makeParams annotationOpts delVarBackwardsId rhsId items
@@ -200,9 +196,8 @@ makeBody annotationOpts delVarBackwardsId lhsId rhsId params =
             )
         <*> ( (Widget.makeFocusableView ?? nullParamId <&> (M.tValue %~))
                 <*> grammar (label Texts.defer)
-                >>= ParamEdit.addAnnotation annotationOpts (p ^. Sugar.vParam) nullParamId
+                >>= ParamEdit.addAnnotationAndEvents annotationOpts (p ^. Sugar.vParam) nullParamId
             )
-        <&> (:[])
         <&> (,) mempty
         where
             nullParamId = Widget.joinId lhsId ["param"]
@@ -212,10 +207,11 @@ makeBody annotationOpts delVarBackwardsId lhsId rhsId params =
             let eventMap =
                     TaggedList.delEventMap (has . Texts.parameter) (p ^. Sugar.vDelete) delVarBackwardsId rhsId env <>
                     ParamEdit.eventMapAddNextParamOrPickTag widgetId (p ^. Sugar.vAddNext) env
-            mconcat
+            (Options.boxSpaced ?? Options.disambiguationNone) <*>
+                mconcat
                 [ foldMap (`ParamEdit.mkAddParam` lhsId) (p ^? Sugar.vAddPrev . Sugar._AddNext)
                 , TagEdit.makeParamTag (Just (tag ^. Sugar.oPickAnon)) (tag ^. Sugar.oTag)
-                    >>= ParamEdit.addAnnotation annotationOpts (p ^. Sugar.vParam) widgetId
+                    >>= ParamEdit.addAnnotationAndEvents annotationOpts (p ^. Sugar.vParam) widgetId
                     <&> M.weakerEvents eventMap <&> (:[])
                 , foldMap (`ParamEdit.mkAddParam` widgetId) (p ^? Sugar.vAddNext . Sugar._AddNext)
                 ]

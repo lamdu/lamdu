@@ -270,7 +270,7 @@ make ::
     Maybe (i (Property o Meta.PresentationMode)) ->
     Widget.Id ->
     ExprGui.Expr Sugar.Assignment i o ->
-    M.TextWidget o ->
+    Responsive o ->
     GuiM env i o (Responsive o)
 make pMode delParamDest assignment nameEdit =
     makeParts Sugar.UnlimitedFuncApply assignment delParamDest
@@ -286,9 +286,8 @@ make pMode delParamDest assignment nameEdit =
                     (PresentationModeEdit.make presentationChoiceId (x ^. Sugar.fParams))
         (|---|) <- Glue.mkGlue ?? Glue.Vertical
         let defNameEdit =
-                (nameEdit & M.tValue %~ Widget.weakerEvents (rhsJumperEquals <> lhsEventMap))
+                Widget.weakerEvents (rhsJumperEquals <> lhsEventMap) nameEdit
                 |---| fromMaybe M.empty mPresentationEdit
-                & Responsive.fromWithTextPos
         mParamEdit <-
             case mParamsEdit of
             Nothing -> pure Nothing

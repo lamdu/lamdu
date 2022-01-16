@@ -109,9 +109,16 @@ instance AddEval i n Function where
 
 instance AddEval i n IfElse
 instance AddEval i n LabeledApply
-instance AddEval i n Let
 instance AddEval i n PostfixApply
 instance AddEval i n PostfixFunc
+
+instance AddEval i n Let where
+    addToBody r i l =
+        l
+        { _lValue = l ^. lValue & addToNode r
+        , _lNames = l ^. lNames & addToParams r i
+        , _lBody = l ^. lBody & addToNode r
+        }
 
 instance AddEval i n Term where
     addToBody r i =

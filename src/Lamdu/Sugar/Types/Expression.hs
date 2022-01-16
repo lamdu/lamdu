@@ -15,7 +15,7 @@ module Lamdu.Sugar.Types.Expression
     , Lambda(..), lamFunc, lamLightweight, lamApplyLimit
     , Nominal(..), nTId, nVal
     -- Binders
-    , Let(..), lValue, lName, lUsages, lDelete, lBody
+    , Let(..), lValue, lNames, lBody
     , Meta.DefinitionState(..)
     , BinderParamScopeId(..), bParamScopeId
     , Binder(..), bBody, bAddOuterLet
@@ -210,9 +210,7 @@ data Term v name i o k
 
 data Let v name i o k = Let
     { _lValue :: k :# Assignment v name i o -- "let foo = [[bar]] in x"
-    , _lUsages :: [EntityId]
-    , _lName :: OptionalTag name i o -- let [[foo]] = bar in x
-    , _lDelete :: o ()
+    , _lNames :: Params v name i o -- let [[foo]] = bar in x
     , _lBody :: k :# Binder v name i o -- "let foo = bar in [[x]]"
     } deriving Generic
 

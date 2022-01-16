@@ -301,7 +301,11 @@ fieldParamInfo binderKind tags fp storedLam tag =
             , _tiAddAfter = addNext
             , _tiDelete = del <* postProcess
             , _tiValue =
-                FuncParam (EvalPrep (fpFieldType fp) (tag ^. tagRefTag . tagInstance)) vinfo
+                FuncParam
+                { _fpAnnotation = EvalPrep (fpFieldType fp) (tag ^. tagRefTag . tagInstance)
+                , _fpUsages = []
+                , _fpVarInfo = vinfo
+                }
             }
     where
         param = storedLam ^. slLam . V.tlIn
@@ -572,6 +576,10 @@ convertNonRecordParam binderKind lam@(V.TypedLam param _ _) lamExprPl =
                         , _eEvalId = tag ^. oTag . tagRefTag . tagInstance
                         }
                     , _fpVarInfo = varInfo
+                    , _fpUsages =
+                        -- TODO: Replace varRefsOfLambda mechanism with one that traverses the sugar,
+                        -- So it goes to actual first use after reordering by sugar.
+                        lamExprPl ^. Input.varRefsOfLambda
                     }
                 , _vTag = tag
                 , _vAddPrev = addPrev

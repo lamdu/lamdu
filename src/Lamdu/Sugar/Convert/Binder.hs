@@ -1,4 +1,3 @@
-{-# LANGUAGE TypeApplications, DisambiguateRecordFields #-}
 module Lamdu.Sugar.Convert.Binder
     ( convertDefinitionBinder, convertLam
     , convertBinder
@@ -17,22 +16,17 @@ import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Data.Ops.Subexprs as SubExprs
-import           Lamdu.Expr.IRef (DefI, HRef)
+import           Lamdu.Expr.IRef (DefI)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import           Lamdu.Expr.UniqueId (ToUUID(..))
 import qualified Lamdu.Sugar.Config as Config
-import           Lamdu.Sugar.Convert.Binder.Float (makeFloatLetToOuterScope)
-import           Lamdu.Sugar.Convert.Binder.Inline (inlineLet)
-import           Lamdu.Sugar.Convert.Binder.Params (ConventionalParams(..), convertLamParams, convertEmptyParams, cpParams, cpMLamParam, mkVarInfo)
-import           Lamdu.Sugar.Convert.Binder.Redex (Redex(..))
-import qualified Lamdu.Sugar.Convert.Binder.Redex as Redex
+import           Lamdu.Sugar.Convert.Binder.Params (ConventionalParams(..), convertLamParams, convertEmptyParams, cpParams, cpMLamParam)
 import           Lamdu.Sugar.Convert.Binder.Types (BinderKind(..))
-import           Lamdu.Sugar.Convert.Expression.Actions (addActions, makeActions)
+import           Lamdu.Sugar.Convert.Expression.Actions (addActions)
 import qualified Lamdu.Sugar.Convert.Input as Input
 import           Lamdu.Sugar.Convert.LightLam (addLightLambdas)
-import           Lamdu.Sugar.Convert.Monad (ConvertM(..), scScopeInfo, siLetItems)
+import           Lamdu.Sugar.Convert.Monad (ConvertM)
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
-import qualified Lamdu.Sugar.Convert.Tag as ConvertTag
 import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import qualified Lamdu.Sugar.Lens as SugarLens
@@ -49,122 +43,61 @@ lamParamToHole ::
 lamParamToHole (V.TypedLam param _paramTyp x) =
     SubExprs.getVarsToHole param (x & hflipped %~ hmap (const (^. Input.stored)))
 
-makeInline ::
-    Monad m =>
-    HRef m # V.Term -> Redex # Input.Payload m -> EntityId -> VarInline (T m)
-makeInline stored redex useId
-    | Lens.has traverse otherUses = CannotInlineDueToUses (drop 1 after <> before)
-    | otherwise =
-        inlineLet stored (Redex.hmapRedex (const (^. Input.stored . ExprIRef.iref)) redex)
-        & InlineVar
-    where
-        otherUses = filter (/= useId) uses
-        uses = redex ^. Redex.paramRefs
-        (before, after) = break (== useId) uses
-
-convertLet ::
-    Monad m =>
-    Ann (Input.Payload m) # V.Term ->
-    Redex # Input.Payload m ->
-    ConvertM m (Annotated (ConvertPayload m) # BinderBody EvalPrep InternalName (OnceT (T m)) (T m))
-convertLet src redex =
-    do
-        float <- makeFloatLetToOuterScope (pl ^. Input.stored . ExprIRef.setIref) redex
-        vinfo <- mkVarInfo (argAnn ^. Input.inferredType)
-        tag <- ConvertTag.taggedEntity (Just vinfo) param >>= ConvertM . lift
-        (value, letBody, actions) <-
-            (,,)
-            <$> (convertAssignment binderKind param (redex ^. Redex.arg) <&> (^. _2))
-            <*> ( convertBinder bod
-                    & local (scScopeInfo . siLetItems <>~
-                        Map.singleton param (makeInline stored redex))
-                )
-            <*> makeActions pl
-            & localNewExtractDestPos pl
-        protectedSetToVal <- ConvertM.typeProtectedSetToVal
-        let fixValueNodeActions nodeActions =
-                nodeActions
-                & extract .~ float
-                & mReplaceParent ?~
-                    ( protectedSetToVal stored
-                        (redex ^. Redex.arg . hAnn . Input.stored . ExprIRef.iref)
-                        <&> EntityId.ofValI
-                    )
-        postProcess <- ConvertM.postProcessAssert
-        let del =
-                do
-                    lamParamToHole (redex ^. Redex.lam)
-                    redex ^. Redex.lam . V.tlOut . hAnn . Input.stored
-                        & replaceWith stored & void
-                <* postProcess
-        pure Ann
-            { _hVal =
-                BinderLet Let
-                { _lValue = value & annotation . pActions %~ fixValueNodeActions
-                , _lDelete = del
-                , _lName = tag
-                , _lBody =
-                    letBody
-                    & annotation . pActions . mReplaceParent ?~
-                        (letBody ^. annotation . pEntityId <$ del)
-                    & annotation . pLambdas .~ [redex ^. Redex.lamPl . Input.stored . ExprIRef.iref & toUUID]
-                , _lUsages = redex ^. Redex.paramRefs
-                }
-            , _hAnn =
-                Const ConvertPayload
-                { _pUnsugared = src
-                , _pActions = actions
-                , _pLambdas = []
-                , _pEntityId = src ^. hAnn . Input.entityId
-                }
-            }
-    where
-        pl = src ^. hAnn
-        argAnn = redex ^. Redex.arg . hAnn
-        stored = pl ^. Input.stored
-        binderKind =
-            redex ^. Redex.lam
-            & hmap (Proxy @(Recursively HFunctor) #> hflipped %~ hmap (const (^. Input.stored)))
-            & BinderKindLet
-        V.TypedLam param _paramTyp bod = redex ^. Redex.lam
-
 convertBinder ::
     Monad m =>
     Ann (Input.Payload m) # V.Term ->
     ConvertM m (Annotated (ConvertPayload m) # Binder EvalPrep InternalName (OnceT (T m)) (T m))
 convertBinder expr =
-    convertBinderBody expr
-    <&> annValue %~ Binder (DataOps.redexWrap (expr ^. hAnn . Input.stored) <&> EntityId.ofValI)
+    do
+        convertSub <- Lens.view id <&> \env -> ConvertM.scConvertSubexpression env
+        convertSub ConvertM.BinderPos expr
+    >>= convertBinderBody expr
+    & local (ConvertM.scScopeInfo %~ addPos)
+    where
+        addPos x =
+            x
+            & ConvertM.siExtractPos ?~
+                ConvertM.OuterScopeInfo
+                { ConvertM._osiPos = expr ^. hAnn . Input.stored
+                , ConvertM._osiScope = expr ^. hAnn . Input.inferScope
+                }
+            & ConvertM.siFloatPos .~ x ^. ConvertM.siExtractPos
 
 convertBinderBody ::
     Monad m =>
     Ann (Input.Payload m) # V.Term ->
-    ConvertM m (Annotated (ConvertPayload m) # BinderBody EvalPrep InternalName (OnceT (T m)) (T m))
-convertBinderBody expr@(Ann pl body) =
-    Lens.view (ConvertM.scConfig . Config.sugarsEnabled . Config.letExpression) >>=
-    \case
-    False -> convertExpr
-    True ->
-        case Redex.check body of
-        Nothing -> convertExpr
-        Just redex -> convertLet expr redex
+    Annotated (ConvertPayload m) # Term EvalPrep InternalName (OnceT (T m)) (T m) ->
+    ConvertM m (Annotated (ConvertPayload m) # Binder EvalPrep InternalName (OnceT (T m)) (T m))
+convertBinderBody rawExpr expr =
+    do
+        supportLet <- Lens.view (ConvertM.scConfig . Config.sugarsEnabled . Config.letExpression)
+        case expr ^. hVal of
+            BodySimpleApply (App (Ann lamPl (BodyLam lam)) argT) | supportLet ->
+                do
+                    postProcess <- ConvertM.postProcessAssert
+                    convertBinderBody rawExpr argT >>= toAssignment BinderKindLambda rawExpr <&>
+                        \argA ->
+                        expr
+                        & annValue .~
+                            BinderLet Let
+                            { _lValue = argA
+                            , _lNames =
+                                lam ^. lamFunc . fParams
+                                & _ParamVar . vDelete .~
+                                do
+                                    traverse_ (`SubExprs.getVarsToHole` (rawExpr & hflipped %~ hmap (const (^. Input.stored)))) mVar
+                                    lam ^. lamFunc . fBody . annotation . pStored
+                                        & replaceWith topStored & void
+                                    postProcess
+                            , _lBody = lam ^. lamFunc . fBody
+                            }
+                        & annotation . pLambdas <>~ [toUUID (lamPl ^. Lens._Wrapped . pStored . ExprIRef.iref)]
+                    where
+                        mVar = rawExpr ^? hVal . V._BApp . V.appFunc . hVal . V._BLam . V.tlIn
+            _ -> expr & annValue %~ BinderTerm & pure
+    <&> annValue %~ Binder (DataOps.redexWrap topStored <&> EntityId.ofValI)
     where
-        convertExpr =
-            do
-                convertSub <- Lens.view id <&> \env -> ConvertM.scConvertSubexpression env
-                convertSub ConvertM.BinderPos expr
-            & localNewExtractDestPos pl
-            <&> annValue %~ BinderTerm
-
-localNewExtractDestPos ::
-    Monad m => Input.Payload m # V.Term -> ConvertM m b -> ConvertM m b
-localNewExtractDestPos x =
-    ConvertM.scScopeInfo . ConvertM.siMOuter ?~
-    ConvertM.OuterScopeInfo
-    { _osiPos = x ^. Input.stored
-    , _osiScope = x ^. Input.inferScope
-    }
-    & local
+        topStored = expr ^. annotation . pStored
 
 makeFunction ::
     Monad m =>
@@ -229,7 +162,8 @@ convertAssignment ::
     , Annotated (ConvertPayload m) # Assignment EvalPrep InternalName (OnceT (T m)) (T m)
     )
 convertAssignment binderKind defVar expr =
-    convertBinder expr >>= toAssignment binderKind expr <&>
+    convertBinder expr
+    >>= toAssignment binderKind expr <&>
     \r ->
     ( presMode <$ r ^? hVal . _BodyFunction . fParams . _ParamsRecord . tlItems . Lens._Just . tlTail . traverse
     , r

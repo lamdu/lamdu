@@ -173,7 +173,7 @@ funcExpr paramVar paramTag (Ann (Const ba) bx) =
     , Sugar._fBodyScopes = mempty
     , Sugar._fParams =
         Sugar.ParamVar Sugar.Var
-        { Sugar._vParam = Sugar.FuncParam Sugar.AnnotationNone Sugar.VarGeneric
+        { Sugar._vParam = Sugar.FuncParam Sugar.AnnotationNone [] Sugar.VarGeneric
         , Sugar._vTag = Sugar.OptionalTag (mkTag (Just paramVar) paramTag) Unit
         , Sugar._vAddPrev = Sugar.AddNext (Identity tagRefReplace)
         , Sugar._vAddNext = Sugar.AddNext (Identity tagRefReplace)

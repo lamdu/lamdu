@@ -13,10 +13,9 @@ import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Theme as Theme
-import qualified Lamdu.Config.Theme.TextColors as TextColors
 import qualified Lamdu.GUI.Expr.AssignmentEdit as AssignmentEdit
 import qualified Lamdu.GUI.Expr.EventMap as ExprEventMap
-import qualified Lamdu.GUI.Expr.TagEdit as TagEdit
+import qualified Lamdu.GUI.Expr.ParamsEdit as ParamsEdit
 import           Lamdu.GUI.Monad (GuiM)
 import qualified Lamdu.GUI.Monad as GuiM
 import           Lamdu.GUI.Styled (grammar, label)
@@ -31,8 +30,8 @@ import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
 
-makeLetEdit :: _ => ExprGui.Body Sugar.Let i o -> GuiM env i o (Responsive o)
-makeLetEdit item =
+makeLetEdit :: _ => ExprGui.Body Sugar.Let i o -> Widget.Id -> GuiM env i o (Responsive o)
+makeLetEdit item myId =
     do
         env <- Lens.view id
         let eventMap =
@@ -45,30 +44,11 @@ makeLetEdit item =
                         ])
                     . fmap ExprEventMap.extractCursor
                 ) (item ^? Sugar.lValue . annotation . Sugar.plActions . Sugar.extract)
-                <>
-                E.keysEventMapMovesCursor (Config.delKeys env)
-                (E.toDoc env
-                    [ has . MomentuTexts.edit
-                    , has . CodeUI.letClause
-                    , has . MomentuTexts.delete
-                    ])
-                (bodyId <$ item ^. Sugar.lDelete)
-                <>
-                foldMap
-                ( E.keysEventMapMovesCursor (env ^. has . Config.inlineKeys)
-                    (E.toDoc env
-                        [ has . MomentuTexts.navigation
-                        , has . Texts.jumpToFirstUse
-                        ])
-                    . pure . WidgetIds.fromEntityId
-                ) (item ^? Sugar.lUsages . Lens.ix 0)
+        (_, paramsEdit) <- ParamsEdit.make (pure Nothing) ParamsEdit.ScopeNavNotFocused myId myId bodyId (item ^. Sugar.lNames)
         grammar (label Texts.let_)
             M./|/ Spacer.stdHSpace
             M./|/ (
-                TagEdit.makeBinderTagEdit TextColors.variableColor (item ^. Sugar.lName) >>=
-                AssignmentEdit.make Nothing
-                (WidgetIds.fromEntityId (item ^. Sugar.lName . Sugar.oTag . Sugar.tagRefTag . Sugar.tagInstance))
-                binder
+                AssignmentEdit.make Nothing myId binder paramsEdit
                 <&> M.weakerEvents eventMap
                 <&> M.padAround (env ^. has . Theme.letItemPadding))
     where
@@ -103,7 +83,7 @@ makeBody (Ann (Const pl) (Sugar.BinderLet l)) =
         Responsive.vboxSpaced
             <*>
             sequence
-            [ makeLetEdit l <&> M.weakerEvents moveToInnerEventMap
+            [ makeLetEdit l myId <&> M.weakerEvents moveToInnerEventMap
             , make body
             ]
         & stdWrapParentExpr pl
