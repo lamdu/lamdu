@@ -351,21 +351,25 @@ convertAssignment ::
     , Annotated (ConvertPayload m a) # Assignment EvalPrep InternalName (OnceT (T m)) (T m)
     )
 convertAssignment binderKind defVar expr =
-    do
-        b <- convertBinder expr
-        enabled <- Lens.view (ConvertM.scConfig . Config.sugarsEnabled . Config.assignmentParameters)
-        case b ^? hVal . bBody . _BinderTerm . _BodyLam of
-            Just l | enabled ->
-                pure
-                    ( presMode <$ l ^? lamFunc . fParams . _RecordParams . tlItems . Lens._Just . tlTail . traverse
-                    , b & annValue .~
-                        BodyFunction (l ^. lamFunc)
-                    )
-            _ ->
-                convertEmptyParams binderKind expr <&>
-                \addFirstParam -> (Nothing, b & annValue %~ BodyPlain . AssignPlain addFirstParam)
+    convertBinder expr >>= toAssignment binderKind expr <&>
+    \r ->
+    ( presMode <$ r ^? hVal . _BodyFunction . fParams . _RecordParams . tlItems . Lens._Just . tlTail . traverse
+    , r
+    )
     where
         presMode = Anchors.assocPresentationMode defVar
+
+toAssignment ::
+    Monad m =>
+    BinderKind m -> Ann (Input.Payload m a) # V.Term ->
+    Annotated (ConvertPayload m a) # Binder v name i (T m) ->
+    ConvertM m (Annotated (ConvertPayload m a) # Assignment v name i (T m))
+toAssignment binderKind expr b =
+    do
+        enabled <- Lens.view (ConvertM.scConfig . Config.sugarsEnabled . Config.assignmentParameters)
+        case b ^? hVal . bBody . _BinderTerm . _BodyLam of
+            Just l | enabled -> b & annValue .~ BodyFunction (l ^. lamFunc) & pure
+            _ -> convertEmptyParams binderKind expr <&> \addFirstParam -> b & annValue %~ BodyPlain . AssignPlain addFirstParam
 
 convertDefinitionBinder ::
     (Monad m, Monoid a) =>
