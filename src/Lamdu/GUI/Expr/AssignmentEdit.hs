@@ -4,9 +4,9 @@ module Lamdu.GUI.Expr.AssignmentEdit
     , makeJumpToRhs
     ) where
 
-import           Control.Applicative ((<|>), liftA2)
+import           Control.Applicative (liftA2)
 import qualified Control.Lens as Lens
-import           Data.CurAndPrev (CurAndPrev, current, fallbackToPrev)
+import           Data.CurAndPrev (CurAndPrev, fallbackToPrev)
 import qualified Data.Map as Map
 import           Data.Property (Property)
 import qualified Data.Property as Property
@@ -27,22 +27,17 @@ import qualified GUI.Momentu.Responsive.Options as Options
 import qualified GUI.Momentu.State as GuiState
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Label as Label
-import qualified GUI.Momentu.Widgets.Menu as Menu
 import qualified GUI.Momentu.Widgets.TextView as TextView
 import qualified Lamdu.Annotations as Annotations
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.Config.Theme.TextColors as TextColors
 import qualified Lamdu.Data.Meta as Meta
-import qualified Lamdu.GUI.Annotation as Annotation
-import qualified Lamdu.GUI.Expr.TagEdit as TagEdit
+import qualified Lamdu.GUI.Expr.ParamsEdit as ParamsEdit
 import           Lamdu.GUI.Monad (GuiM)
 import qualified Lamdu.GUI.Monad as GuiM
-import qualified Lamdu.GUI.ParamEdit as ParamEdit
 import qualified Lamdu.GUI.PresentationModeEdit as PresentationModeEdit
 import           Lamdu.GUI.Styled (grammar, label)
-import qualified Lamdu.GUI.Styled as Styled
-import qualified Lamdu.GUI.TaggedList as TaggedList
 import qualified Lamdu.GUI.Types as ExprGui
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.GUI.Wrap (stdWrap)
@@ -66,31 +61,6 @@ data Parts i o = Parts
     , pRhsId :: Widget.Id
     }
 
-data ScopeCursor = ScopeCursor
-    { sBinderScope :: Sugar.BinderParamScopeId
-    , sMPrevParamScope :: Maybe Sugar.BinderParamScopeId
-    , sMNextParamScope :: Maybe Sugar.BinderParamScopeId
-    }
-
-scopeCursor :: Maybe Sugar.BinderParamScopeId -> [Sugar.BinderParamScopeId] -> Maybe ScopeCursor
-scopeCursor mChosenScope scopes =
-    do
-        chosenScope <- mChosenScope
-        (prevs, it:nexts) <- break (== chosenScope) scopes & Just
-        Just ScopeCursor
-            { sBinderScope = it
-            , sMPrevParamScope = reverse prevs ^? Lens.traversed
-            , sMNextParamScope = nexts ^? Lens.traversed
-            }
-    <|> (scopes ^? Lens.traversed <&> def)
-    where
-        def binderScope =
-            ScopeCursor
-            { sBinderScope = binderScope
-            , sMPrevParamScope = Nothing
-            , sMNextParamScope = scopes ^? Lens.ix 1
-            }
-
 readFunctionChosenScope ::
     Functor i => Sugar.Function v name i o expr -> i (Maybe Sugar.BinderParamScopeId)
 readFunctionChosenScope func = func ^. Sugar.fChosenScopeProp <&> Property.value
@@ -101,22 +71,22 @@ lookupMKey k m = k >>= (`Map.lookup` m)
 mkChosenScopeCursor ::
     Monad i =>
     Sugar.Body Sugar.Function v Name i o ->
-    GuiM env i o (CurAndPrev (Maybe ScopeCursor))
+    GuiM env i o (CurAndPrev (Maybe ParamsEdit.ScopeCursor))
 mkChosenScopeCursor func =
     do
         mOuterScopeId <- GuiM.readMScopeId
         readFunctionChosenScope func & GuiM.im <&>
             \mChosenScope ->
             liftA2 lookupMKey mOuterScopeId (func ^. Sugar.fBodyScopes)
-            <&> (>>= scopeCursor mChosenScope)
+            <&> (>>= ParamsEdit.scopeCursor mChosenScope)
 
 makeScopeEventMap ::
     _ =>
-    env -> ScopeCursor -> (Sugar.BinderParamScopeId -> o ()) -> [ModKey] -> [ModKey] ->
+    env -> ParamsEdit.ScopeCursor -> (Sugar.BinderParamScopeId -> o ()) -> [ModKey] -> [ModKey] ->
     EventMap (o M.Update)
 makeScopeEventMap env cursor setter prevKeys nextKeys =
-    mkEventMap (sMPrevParamScope, prevKeys, Texts.prev) ++
-    mkEventMap (sMNextParamScope, nextKeys, Texts.next)
+    mkEventMap (ParamsEdit.sMPrevParamScope, prevKeys, Texts.prev) ++
+    mkEventMap (ParamsEdit.sMNextParamScope, nextKeys, Texts.next)
     & mconcat
     where
         mkEventMap (cursorField, key, lens) =
@@ -170,7 +140,7 @@ blockEventMap env =
 
 makeScopeNavEdit ::
     _ =>
-    Sugar.Function v name i o expr -> Widget.Id -> ScopeCursor ->
+    Sugar.Function v name i o expr -> Widget.Id -> ParamsEdit.ScopeCursor ->
     GuiM env i o
     ( EventMap (o M.Update)
     , Maybe (M.Widget o)
@@ -186,9 +156,9 @@ makeScopeNavEdit func myId curCursor =
         let mkScopeEventMap = makeScopeEventMap env curCursor (void . setScope)
         let scopes :: [(Text, Maybe Sugar.BinderParamScopeId)]
             scopes =
-                [ (env ^. has . Texts.prevScopeArrow, sMPrevParamScope curCursor)
+                [ (env ^. has . Texts.prevScopeArrow, ParamsEdit.sMPrevParamScope curCursor)
                 , (" ", Nothing)
-                , (env ^. has . Texts.nextScopeArrow, sMNextParamScope curCursor)
+                , (env ^. has . Texts.nextScopeArrow, ParamsEdit.sMNextParamScope curCursor)
                 ]
         (prevKeys, nextKeys) <-
             Lens.view has <&>
@@ -213,100 +183,29 @@ makeScopeNavEdit func myId curCursor =
         leftKeys = [noMods ModKey.Key'Left]
         rightKeys = [noMods ModKey.Key'Right]
 
-data IsScopeNavFocused = ScopeNavIsFocused | ScopeNavNotFocused
-    deriving (Eq, Ord)
-
-makeParamsEdit ::
-    _ =>
-    Annotation.EvalAnnotationOptions ->
-    Widget.Id -> Widget.Id -> Widget.Id ->
-    Sugar.Params (Sugar.Annotation (Sugar.EvaluationScopes Name i) Name) Name i o ->
-    GuiM env i o (EventMap (o GuiState.Update), [Responsive o])
-makeParamsEdit annotationOpts delVarBackwardsId lhsId rhsId params =
-    case params of
-    Sugar.NullParam (p, actions) ->
-        Widget.weakerEvents
-        <$> ( Lens.view id <&>
-                \env ->
-                E.keyPresses (env ^. has . (Config.delForwardKeys <> Config.delBackwardKeys))
-                (E.toDoc env [has . MomentuTexts.edit, has . MomentuTexts.delete])
-                (GuiState.updateCursor rhsId <$ actions ^. Sugar.npDeleteLambda)
-            )
-        <*> ( (Widget.makeFocusableView ?? nullParamId <&> (M.tValue %~))
-                <*> grammar (label Texts.defer)
-                >>= ParamEdit.addAnnotation annotationOpts p nullParamId
-            )
-        <&> (:[])
-        <&> (,) mempty
-        where
-            nullParamId = Widget.joinId lhsId ["param"]
-    Sugar.RecordParams items -> ParamEdit.makeParams annotationOpts delVarBackwardsId rhsId items
-    Sugar.VarParam (param, pInfo) ->
-        do
-            env <- Lens.view id
-            let eventMap =
-                    TaggedList.delEventMap (has . Texts.parameter) (pInfo ^. Sugar.vpiDelete) delVarBackwardsId rhsId env <>
-                    ParamEdit.eventMapAddNextParamOrPickTag widgetId (pInfo ^. Sugar.vpiAddNext) env
-            mconcat
-                [ foldMap (`ParamEdit.mkAddParam` lhsId) (pInfo ^? Sugar.vpiAddPrev . Sugar._AddNext)
-                , TagEdit.makeParamTag (Just (tag ^. Sugar.oPickAnon)) (tag ^. Sugar.oTag)
-                    >>= ParamEdit.addAnnotation annotationOpts param widgetId
-                    <&> M.weakerEvents eventMap <&> (:[])
-                , foldMap (`ParamEdit.mkAddParam` widgetId) (pInfo ^? Sugar.vpiAddNext . Sugar._AddNext)
-                ]
-                <&> (,) (ParamEdit.eventMapAddNextParamOrPickTag lhsId (pInfo ^. Sugar.vpiAddPrev) env)
-        where
-            tag = pInfo ^. Sugar.vpiTag
-            widgetId = tag ^. Sugar.oTag . Sugar.tagRefTag . Sugar.tagInstance & WidgetIds.fromEntityId
-    & local (has . Menu.configKeysPickOptionAndGotoNext <>~ [noMods M.Key'Space])
-
-makeMParamsEdit ::
-    _ =>
-    CurAndPrev (Maybe ScopeCursor) -> IsScopeNavFocused ->
-    Widget.Id -> Widget.Id ->
-    Widget.Id ->
-    Sugar.Params (Sugar.Annotation (Sugar.EvaluationScopes Name i) Name) Name i o ->
-    GuiM env i o (EventMap (o GuiState.Update), Responsive o)
-makeMParamsEdit mScopeCursor isScopeNavFocused delVarBackwardsId myId bodyId params =
-    makeParamsEdit annotationMode delVarBackwardsId myId bodyId params
-    & GuiM.withLocalMScopeId (mScopeCursor <&> Lens.traversed %~ (^. Sugar.bParamScopeId) . sBinderScope)
-    >>= _2 mAddFrame
-    where
-        mAddFrame [x] = pure x
-        mAddFrame xs = Styled.addValFrame <*> (Options.boxSpaced ?? Options.disambiguationNone ?? xs)
-        mCurCursor =
-            do
-                ScopeNavIsFocused == isScopeNavFocused & guard
-                mScopeCursor ^. current
-        annotationMode =
-            Annotation.NeighborVals
-            (mCurCursor >>= sMPrevParamScope)
-            (mCurCursor >>= sMNextParamScope)
-            & Annotation.WithNeighbouringEvalAnnotations
-
 makeFunctionParts ::
     _ =>
     Sugar.FuncApplyLimit -> ExprGui.Expr Sugar.Function i o -> Widget.Id -> GuiM env i o (Parts i o)
 makeFunctionParts funcApplyLimit (Ann (Const pl) func) delVarBackwardsId =
     do
         mScopeCursor <- mkChosenScopeCursor func
-        let binderScopeId = mScopeCursor <&> Lens.mapped %~ (^. Sugar.bParamScopeId) . sBinderScope
+        let binderScopeId = mScopeCursor <&> Lens.mapped %~ (^. Sugar.bParamScopeId) . ParamsEdit.sBinderScope
         (scopeEventMap, mScopeNavEdit) <-
             do
                 guard (funcApplyLimit == Sugar.UnlimitedFuncApply)
                 scope <- fallbackToPrev mScopeCursor
                 guard $
                     Lens.nullOf (Sugar.fParams . Sugar._NullParam) func ||
-                    Lens.has (Lens.traversed . Lens._Just) [sMPrevParamScope scope, sMNextParamScope scope]
+                    Lens.has (Lens.traversed . Lens._Just) [ParamsEdit.sMPrevParamScope scope, ParamsEdit.sMNextParamScope scope]
                 Just scope
                 & maybe (pure (mempty, Nothing)) (makeScopeNavEdit func scopesNavId)
         let isScopeNavFocused =
                 case mScopeNavEdit of
-                Just edit | Widget.isFocused edit -> ScopeNavIsFocused
-                _ -> ScopeNavNotFocused
+                Just edit | Widget.isFocused edit -> ParamsEdit.ScopeNavIsFocused
+                _ -> ParamsEdit.ScopeNavNotFocused
         do
             (lhsEventMap, paramsEdit) <-
-                makeMParamsEdit mScopeCursor isScopeNavFocused delVarBackwardsId myId
+                ParamsEdit.make mScopeCursor isScopeNavFocused delVarBackwardsId myId
                 bodyId (func ^. Sugar.fParams)
             rhs <- GuiM.makeBinder (func ^. Sugar.fBody)
             Parts lhsEventMap (Just paramsEdit) mScopeNavEdit rhs scopeEventMap (Just pl) bodyId & pure
