@@ -30,7 +30,6 @@ instance Recursive SugarExpr where
     recurse = sugarExprRecursive . proxyArgument
 
 instance SugarExpr (Const (GetVar name o))
-instance SugarExpr (Const (TId name o))
 instance SugarExpr (Const (i (TagChoice name o)))
 instance SugarExpr (Const (TagRef name i o))
 instance SugarExpr (PostfixFunc v name i o)
