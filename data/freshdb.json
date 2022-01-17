@@ -412,12 +412,18 @@
         "tag": "32110348a4b87b7844695e53fc00857e"
     },
     {
-        "tagOrder": 1,
+        "tagOrder": 4,
         "tag": "34b89ce6ab3248b69159b0d7746ffef5",
         "names": {
+            "hebrew": "המשך",
             "english": {
                 "abbreviation": "cont",
                 "name": "continuation"
+            },
+            "italian": "continuazione",
+            "spanish": {
+                "abbreviation": "cont",
+                "name": "continuación"
             }
         }
     },
