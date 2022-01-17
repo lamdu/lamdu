@@ -23,6 +23,7 @@ import           Lamdu.Sugar.Internal
 import           Lamdu.Sugar.Internal.EntityId (EntityId(..))
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import qualified Lamdu.Sugar.Lens as SugarLens
+import qualified Lamdu.Sugar.Lens.Annotations as SugarLens
 import           Lamdu.Sugar.Types hiding (Type)
 import           Revision.Deltum.Transaction (Transaction)
 

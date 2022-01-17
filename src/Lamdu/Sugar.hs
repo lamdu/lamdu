@@ -29,7 +29,7 @@ import           Lamdu.Sugar.Convert.Annotation (makeAnnotation)
 import qualified Lamdu.Sugar.Convert.Input as Input
 import           Lamdu.Sugar.Eval (addEvaluationResults)
 import           Lamdu.Sugar.Internal
-import qualified Lamdu.Sugar.Lens as SugarLens
+import qualified Lamdu.Sugar.Lens.Annotations as SugarLens
 import qualified Lamdu.Sugar.Names.Add as AddNames
 import qualified Lamdu.Sugar.Parens as AddParens
 import qualified Lamdu.Sugar.Types as Sugar

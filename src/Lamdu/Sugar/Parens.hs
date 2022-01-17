@@ -10,7 +10,7 @@ import           Hyper
 import           Hyper.Recurse (Recursive(..), proxyArgument)
 import qualified Lamdu.Calc.Term as V
 import           Lamdu.Precedence (Prec, Precedence(..), HasPrecedence(..), before, after)
-import qualified Lamdu.Sugar.Lens as SugarLens
+import qualified Lamdu.Sugar.Lens.Annotations as SugarLens
 import           Lamdu.Sugar.Types
 
 import           Lamdu.Prelude

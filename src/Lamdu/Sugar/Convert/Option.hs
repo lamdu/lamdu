@@ -62,7 +62,7 @@ import           Lamdu.Sugar.Convert.Monad (ConvertM)
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
 import           Lamdu.Sugar.Internal
 import           Lamdu.Sugar.Internal.EntityId (EntityId(..))
-import qualified Lamdu.Sugar.Lens as SugarLens
+import           Lamdu.Sugar.Lens.Annotations (HAnnotations(..))
 import           Lamdu.Sugar.Types
 import           Revision.Deltum.Hyper (Write(..), writeRecursively)
 import qualified Revision.Deltum.IRef as IRef
@@ -453,7 +453,7 @@ makeOption dstPl res =
             <&> hVal . bBody . _BinderTerm . _BodySimpleApply . appFunc .
                 Lens.filteredBy (hVal . _BodyLeaf . _LeafGetVar) .
                 annotation . plAnnotation . _1 .~ alwaysShowAnnotations
-            >>= SugarLens.hAnnotations mkAnn
+            >>= hAnnotations mkAnn
         depsProp <- Lens.view ConvertM.scFrozenDeps
         pick <- ConvertM.typeProtectedSetToVal ?? dstPl ^. Input.stored <&> Lens.mapped %~ void
         res & rExpr .~

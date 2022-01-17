@@ -25,7 +25,7 @@ import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.UniqueId as UniqueId
 import qualified Lamdu.Sugar.Convert.Input as Input
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
-import qualified Lamdu.Sugar.Lens as SugarLens
+import           Lamdu.Sugar.Lens.Annotations (Annotations(..))
 import           Lamdu.Sugar.Types
 import           Revision.Deltum.Transaction (Transaction)
 
@@ -128,5 +128,5 @@ Lens.makeLenses ''ConvertPayload
 Lens.makeLenses ''EvalPrep
 Lens.makeLenses ''InternalName
 
-instance SugarLens.Annotations a b (ConvertPayload m (a, x)) (ConvertPayload m (b, x)) where
+instance Annotations a b (ConvertPayload m (a, x)) (ConvertPayload m (b, x)) where
     annotations = pInput . Input.userData . _1

@@ -24,6 +24,7 @@ import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.I18N.CodeUI as Texts
 import           Lamdu.Name (Name)
 import qualified Lamdu.Sugar.Lens as SugarLens
+import qualified Lamdu.Sugar.Lens.Annotations as SugarLens
 import           Lamdu.Sugar.Names.NewTag (newTagName)
 import qualified Lamdu.Sugar.Types as Sugar
 

@@ -13,6 +13,7 @@ import qualified Lamdu.Builtins.Anchors as Builtins
 import           Lamdu.Sugar.Convert.Input (userData)
 import           Lamdu.Sugar.Internal (ConvertPayload, pInput)
 import qualified Lamdu.Sugar.Lens as SugarLens
+import           Lamdu.Sugar.Lens.Annotations (Annotations(..))
 import qualified Lamdu.Sugar.Props as SugarProps
 import           Lamdu.Sugar.Types
 
@@ -105,7 +106,7 @@ instance Functor m => MarkBodyAnnotations v m Function where
         ( neverShowAnnotations
         , func
             { _fBody = func ^. fBody & markNodeAnnotations
-            , _fParams = func ^. fParams & SugarLens.annotations @v %~ (,) showAnnotationWhenVerbose
+            , _fParams = func ^. fParams & annotations @v %~ (,) showAnnotationWhenVerbose
             }
         )
 
