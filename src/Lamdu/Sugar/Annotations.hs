@@ -13,6 +13,7 @@ import qualified Lamdu.Builtins.Anchors as Builtins
 import           Lamdu.Sugar.Convert.Input (userData)
 import           Lamdu.Sugar.Internal (ConvertPayload, pInput)
 import qualified Lamdu.Sugar.Lens as SugarLens
+import qualified Lamdu.Sugar.Props as SugarProps
 import           Lamdu.Sugar.Types
 
 import           Lamdu.Prelude
@@ -147,7 +148,7 @@ instance Functor m => MarkBodyAnnotations v m Term where
                     || newBinder ^. SugarLens.binderResultExpr . pInput . userData . _1 . showInEvalMode
                 )
         , newBinder
-            & Lens.filtered (not . SugarLens.isUnfinished . (^. hVal)) .
+            & Lens.filtered (not . SugarProps.isUnfinished . (^. hVal)) .
                 annotation . pInput . userData . _1 .~ dontShowEval
             & Nominal tid & BodyToNom
         )

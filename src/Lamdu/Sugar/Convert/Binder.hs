@@ -37,6 +37,7 @@ import qualified Lamdu.Sugar.Convert.Tag as ConvertTag
 import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import qualified Lamdu.Sugar.Lens as SugarLens
+import qualified Lamdu.Sugar.Props as SugarProps
 import           Lamdu.Sugar.Types
 import           Revision.Deltum.Transaction (Transaction)
 
@@ -241,8 +242,8 @@ useNormalLambda ::
     Function v InternalName i o # Annotated a -> Bool
 useNormalLambda paramNames func =
     foldMapRecursive
-    ( Proxy @SugarLens.SugarExpr ##>>
-        Any . SugarLens.isForbiddenInLightLam
+    ( Proxy @SugarProps.SugarExpr ##>>
+        Any . SugarProps.isForbiddenInLightLam
     ) (func ^. fBody . hVal) ^. Lens._Wrapped
     || paramsCond
     where
