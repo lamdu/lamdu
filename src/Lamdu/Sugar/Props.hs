@@ -26,8 +26,7 @@ class HTraversable t => SugarExpr t where
         Proxy t -> Dict (HNodesConstraint t SugarExpr)
     sugarExprRecursive _ = Dict
 
-instance Recursive SugarExpr where
-    recurse = sugarExprRecursive . proxyArgument
+instance Recursive SugarExpr where recurse = sugarExprRecursive . proxyArgument
 
 instance SugarExpr (Const (GetVar name o))
 instance SugarExpr (Const (i (TagChoice name o)))
@@ -35,29 +34,18 @@ instance SugarExpr (Const (TagRef name i o))
 instance SugarExpr (PostfixFunc v name i o)
 instance SugarExpr (FragOpt v name i o)
 
-instance SugarExpr (Const (BinderVarRef name o)) where
-    isUnfinished (Const x) = Lens.has binderVarRefUnfinished x
-
-instance SugarExpr (Assignment v name i o) where
-    isUnfinished (BodyPlain x) = isUnfinished (x ^. apBody)
-    isUnfinished BodyFunction{} = False
-
-instance SugarExpr (Else v name i o) where
-    isUnfinished (SimpleElse x) = isUnfinished x
-    isUnfinished ElseIf{} = False
-
-instance SugarExpr (Function v name i o) where
-    isForbiddenInLightLam = not . Lens.has (fParams . _NullParam)
+instance SugarExpr (Const (BinderVarRef name o)) where isUnfinished = Lens.has (Lens._Wrapped . binderVarRefUnfinished)
+instance SugarExpr (Assignment v name i o) where isUnfinished = Lens.anyOf (_BodyPlain . apBody) isUnfinished
+instance SugarExpr (Else v name i o) where isUnfinished = Lens.anyOf _SimpleElse isUnfinished
+instance SugarExpr (Function v name i o) where isForbiddenInLightLam = Lens.nullOf (fParams . _NullParam)
 
 instance SugarExpr (Binder v name i o) where
     isUnfinished = isUnfinished . (^. bBody)
     isForbiddenInLightLam = isForbiddenInLightLam . (^. bBody)
 
 instance SugarExpr (BinderBody v name i o) where
-    isUnfinished (BinderTerm x) = isUnfinished x
-    isUnfinished BinderLet{} = False
-    isForbiddenInLightLam BinderLet{} = True
-    isForbiddenInLightLam (BinderTerm x) = isForbiddenInLightLam x
+    isUnfinished = Lens.anyOf _BinderTerm isUnfinished
+    isForbiddenInLightLam = Lens.allOf _BinderTerm isForbiddenInLightLam
 
 instance SugarExpr (Term v name i o) where
     isUnfinished (BodyLeaf LeafHole{}) = True
