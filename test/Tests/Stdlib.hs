@@ -10,12 +10,13 @@ import           Data.Map ((!))
 import qualified Data.Map as Map
 import qualified Data.Set as Set
 import qualified Data.Text as Text
-import           Hyper (htraverse_, (#>))
+import           Hyper
+import           Hyper.Syntax.Nominal (nScheme)
 import qualified Hyper.Syntax.Scheme as S
 import           Lamdu.Calc.Definition (depsGlobalTypes)
 import           Lamdu.Calc.Identifier (identHex)
 import           Lamdu.Calc.Infer (alphaEq)
-import           Lamdu.Calc.Lens (valGlobals)
+import           Lamdu.Calc.Lens (valGlobals, valTags)
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
 import           Lamdu.Data.Anchors (anonTag)
@@ -31,9 +32,66 @@ test :: Test
 test =
     testGroup "Stdlib"
     [ testCase "sensible-tags" verifyTagsTest
+    , testCase "dead-tags" verifyUsedTags
     , testCase "no-broken-defs" verifyNoBrokenDefsTest
     , testCase "schemes" verifySchemes
     ]
+
+verifyUsedTags :: IO ()
+verifyUsedTags =
+    do
+        db <- readFreshDb
+        let unused =
+                Set.difference
+                (Set.fromList (db ^.. traverse . JsonCodec._EntityTag . _1))
+                (Set.fromList (db ^.. traverse . usedTags))
+                ^.. Lens.folded
+                <&> identHex . T.tagName
+                & filter (`notElem` whitelist)
+        unless (null unused) (fail ("unused tags: " <> unwords unused))
+    where
+        whitelist =
+            [ "42493a66756e6374696f6e0000000000" -- func
+            , "42493a7265636f726400000000000000" -- rec
+            , "42493a756e6974000000000000000000" -- unit
+            , "42493a76617269616e74000000000000" -- variant
+            , "42493a766f6964000000000000000000" -- void
+            -- Useful words:
+            , "f38fc647fb4b73e35d1ffec481a44dd8" -- "prev"
+            , "f526d897cab5429fb66ebbe0b4b8f34e" -- "window"
+            -- TODO, remove from DB:
+            , "61000000000000000000000000000000"
+            ]
+
+usedTags :: Lens.Traversal' JsonCodec.Entity T.Tag
+usedTags f (JsonCodec.EntityLamVar t v) = JsonCodec.EntityLamVar <$> f t ?? v
+usedTags f (JsonCodec.EntityDef (Def.Definition b s p)) =
+    Def.Definition
+    <$> (Def._BodyExpr . Def.expr . valTags) f b
+    <*> (_Pure . S.sTyp . typeTags) f s
+    <*> _2 f p
+    <&> JsonCodec.EntityDef
+usedTags f (JsonCodec.EntityNominal t n d) =
+    JsonCodec.EntityNominal
+    <$> f t <*> pure n
+    <*> (Lens._Right . _Pure . nScheme . S.sTyp . typeTags) f d
+usedTags _ x = pure x
+
+typeTags :: Lens.Traversal' (Pure # T.Type) T.Tag
+typeTags f =
+    htraverse
+    ( \case
+        HWitness T.W_Type_Type -> typeTags f
+        HWitness T.W_Type_Row -> rowTags f
+        HWitness (T.E_Type_NominalInst_NominalId_Types (HWitness T.W_Types_Type)) -> typeTags f
+        HWitness (T.E_Type_NominalInst_NominalId_Types (HWitness T.W_Types_Row)) -> rowTags f
+    )
+    & _Pure
+
+rowTags :: Lens.Traversal' (Pure # T.Row) T.Tag
+rowTags f =
+    (_Pure . T._RExtend)
+    (\(V.RowExtend t v r) -> V.RowExtend <$> f t <*> typeTags f v <*> rowTags f r)
 
 verifyTagsTest :: IO ()
 verifyTagsTest =

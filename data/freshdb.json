@@ -172,16 +172,6 @@
     },
     {
         "tagOrder": 0,
-        "tag": "1a1e52b2e2af0791119ec5458f9ef350",
-        "names": {
-            "hebrew": "נסוג",
-            "english": "recurse",
-            "italian": "ricorrente",
-            "spanish": "recurrente"
-        }
-    },
-    {
-        "tagOrder": 0,
         "tag": "1a325e9af1de76dc492589ba2d0c8ce6",
         "names": {
             "hebrew": "מספר",
@@ -349,16 +339,6 @@
     },
     {
         "tagOrder": 0,
-        "tag": "2cd566b597f3104ca7cdaafba234e97e",
-        "names": {
-            "hebrew": "מצב_ראשוני",
-            "english": "initialState",
-            "italian": "statoIniziale",
-            "spanish": "estadoInicial"
-        }
-    },
-    {
-        "tagOrder": 0,
         "tag": "2cf28e61ddd6ee6c5c0513c0319a5687",
         "names": {
             "hebrew": "למערך",
@@ -482,16 +462,6 @@
             "english": "step",
             "italian": "passo",
             "spanish": "paso"
-        }
-    },
-    {
-        "tagOrder": 1,
-        "tag": "3ac2d79e23295ac7b5d8a1982683b295",
-        "names": {
-            "hebrew": "השווה",
-            "english": "compare",
-            "italian": "confronta",
-            "spanish": "comparar"
         }
     },
     {
@@ -697,38 +667,12 @@
     },
     {
         "tagOrder": 0,
-        "tag": "42493a66696c65446573630000000000",
-        "names": {
-            "hebrew": "מתאר_קובץ",
-            "english": {
-                "abbreviation": "fileDesc",
-                "name": "fileDescriptor"
-            },
-            "italian": "descrittoreFile",
-            "spanish": {
-                "abbreviation": "decrArchivo",
-                "name": "descriptorArchivo"
-            }
-        }
-    },
-    {
-        "tagOrder": 0,
         "tag": "42493a66696c65506174680000000000",
         "names": {
             "hebrew": "מסלול_לקובץ",
             "english": "filePath",
             "italian": "percorsoFile",
             "spanish": "rutaArchivo"
-        }
-    },
-    {
-        "tagOrder": 1,
-        "tag": "42493a666c6167730000000000000000",
-        "names": {
-            "hebrew": "דגלים",
-            "english": "flags",
-            "italian": "parametri",
-            "spanish": "parámetros"
         }
     },
     {
@@ -926,16 +870,6 @@
         }
     },
     {
-        "tagOrder": 1,
-        "tag": "42493a73697a65000000000000000000",
-        "names": {
-            "hebrew": "גודל",
-            "english": "size",
-            "italian": "dimensione",
-            "spanish": "tamaño"
-        }
-    },
-    {
         "tagOrder": 0,
         "tag": "42493a736f636b657400000000000000",
         "names": {
@@ -969,16 +903,6 @@
             "english": "start",
             "italian": "inizio",
             "spanish": "inicio"
-        }
-    },
-    {
-        "tagOrder": 1,
-        "tag": "42493a73746174650000000000000000",
-        "names": {
-            "hebrew": "מצב",
-            "english": "state",
-            "italian": "stato",
-            "spanish": "estado"
         }
     },
     {
@@ -1081,16 +1005,6 @@
         "names": {
             "hebrew": "פסע_",
             "english": "traverse_"
-        }
-    },
-    {
-        "tagOrder": 2,
-        "tag": "47399337d5cce68a4b7ca4fc8b9dac14",
-        "names": {
-            "hebrew": "רשימה_ב",
-            "english": "listB",
-            "italian": "listaB",
-            "spanish": "listaB"
         }
     },
     {
@@ -1353,22 +1267,6 @@
         "tag": "6b23c96867fb2b3082359dda58202ca9"
     },
     {
-        "tagOrder": 1,
-        "tag": "6c15f96848dfbcdafa7f239af12424b1",
-        "names": {
-            "hebrew": "פעולה_בינארית",
-            "english": {
-                "abbreviation": "binop",
-                "name": "binaryOperator"
-            },
-            "italian": "operatoreBinario",
-            "spanish": {
-                "abbreviation": "binop",
-                "name": "operadorBinario"
-            }
-        }
-    },
-    {
         "tagOrder": 0,
         "tag": "6e6574776f726b000000000000000000",
         "names": {
@@ -1514,16 +1412,6 @@
     },
     {
         "tagOrder": 0,
-        "tag": "794bd0c089ef49ffa07855a9e3f74f12",
-        "names": {
-            "hebrew": "קטוע",
-            "english": "truncated",
-            "italian": "troncato",
-            "spanish": "truncado"
-        }
-    },
-    {
-        "tagOrder": 0,
         "tag": "7a29ccaa6cf29e9406a99074cd1f0840",
         "names": {
             "hebrew": "הוסף_למערך_משתנה",
@@ -1620,16 +1508,6 @@
     },
     {
         "tagOrder": 0,
-        "tag": "8a615c38ad36ea21f7ee5f2aa9445940",
-        "names": {
-            "hebrew": "בהתייחסות_עצמית",
-            "english": "recursively",
-            "italian": "ricorsivamente",
-            "spanish": "recursivamente"
-        }
-    },
-    {
-        "tagOrder": 0,
         "tag": "8a64ff09886cc35fe5f56cd45a1f8725",
         "names": {
             "hebrew": "מקסימום",
@@ -1722,16 +1600,6 @@
                 "abbreviation": "leerRefMut",
                 "name": "leerRefMutable"
             }
-        }
-    },
-    {
-        "tagOrder": 0,
-        "tag": "a12d211f441b48ffb0e3f3337449e135",
-        "names": {
-            "hebrew": "בהיסט",
-            "english": "atOffset",
-            "italian": "inOffset",
-            "spanish": "enOffset"
         }
     },
     {
@@ -1874,30 +1742,12 @@
     },
     {
         "tagOrder": 0,
-        "tag": "a82d65c4b77b4868bf690b9edda8a402",
-        "names": {
-            "hebrew": "קלט",
-            "english": "input"
-        }
-    },
-    {
-        "tagOrder": 0,
         "tag": "a8792157cb4f27fb949c035f45518c61",
         "names": {
             "hebrew": "מכפלה",
             "english": "product",
             "italian": "prodotto",
             "spanish": "producto"
-        }
-    },
-    {
-        "tagOrder": 0,
-        "tag": "a8f80ade18bf4566885af361e3778557",
-        "names": {
-            "hebrew": "היסט",
-            "english": "offset",
-            "italian": "offset",
-            "spanish": "compensación"
         }
     },
     {
@@ -2054,16 +1904,6 @@
             "english": "key",
             "italian": "chiave",
             "spanish": "llave"
-        }
-    },
-    {
-        "tagOrder": 0,
-        "tag": "bb501e4dcd4bd09f2945125de01947b7",
-        "names": {
-            "hebrew": "המשך",
-            "english": "continue",
-            "italian": "continua",
-            "spanish": "continuar"
         }
     },
     {
@@ -2342,16 +2182,6 @@
     },
     {
         "tagOrder": 0,
-        "tag": "eca1f7d2a2d74eba943f320be5f4dcd8",
-        "names": {
-            "hebrew": "ערך_חדש",
-            "english": "newValue",
-            "italian": "nuovoValore",
-            "spanish": "nuevoValor"
-        }
-    },
-    {
-        "tagOrder": 0,
         "tag": "ee3dd1c9a98b2601b8b99733fd32e57f",
         "names": {
             "hebrew": "קלט_פלט",
@@ -2364,16 +2194,6 @@
                 "abbreviation": "io",
                 "name": "entradaSalida"
             }
-        }
-    },
-    {
-        "tagOrder": 0,
-        "tag": "f07d7c4553037e6084e5015e42d272ad",
-        "names": {
-            "hebrew": "לעומת",
-            "english": "than",
-            "italian": "rispettoA",
-            "spanish": "respectoDe"
         }
     },
     {
@@ -2426,6 +2246,7 @@
                 "abbreviation": "win",
                 "name": "window"
             },
+            "italian": "finestra",
             "spanish": {
                 "abbreviation": "vent",
                 "name": "ventana"
@@ -2470,16 +2291,6 @@
         "names": {
             "hebrew": "הפץ",
             "english": "intersperse"
-        }
-    },
-    {
-        "tagOrder": 1,
-        "tag": "fa2eecfc22cdb3d6ce328806e66c7838",
-        "names": {
-            "hebrew": "רשימה_א",
-            "english": "listA",
-            "italian": "listaA",
-            "spanish": "listaA"
         }
     },
     {
