@@ -122,11 +122,14 @@ toBinderVarRef ::
 toBinderVarRef mDisambig (GetVar nameRef form var inline) =
     GetVar
     <$> ( nrName %%~
-          opGetName mDisambig MayBeAmbiguous (binderVarType form)
+          opGetName mDisambig amb (binderVarType form)
         ) nameRef
     <*> (_GetDefinition . _DefTypeChanged %%~ walk) form
     ?? var
     ?? inline
+    where
+        amb | Lens.has _GetLightParam form = Unambiguous
+            | otherwise = MayBeAmbiguous
 
 instance (a ~ OldName m, b ~ NewName m) => Walk m (GetVar a o) (GetVar b o) where
     walk = toBinderVarRef Nothing
