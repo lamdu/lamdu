@@ -245,9 +245,9 @@ data AssignPlain v name i o f = AssignPlain
     , _apBody :: Binder v name i o f
     } deriving Generic
 
-data Assignment v name i o f
-    = BodyFunction (Function v name i o f)
-    | BodyPlain (AssignPlain v name i o f)
+data Assignment v name i o h
+    = BodyFunction (Function v name i o h)
+    | BodyPlain (AssignPlain v name i o h)
     deriving Generic
 
 traverse Lens.makeLenses

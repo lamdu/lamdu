@@ -101,11 +101,11 @@ data DetachAction o
     | DetachAction (o EntityId) -- Detach me
     deriving Generic
 
-data Delete m
-    = SetToHole (m EntityId)
+data Delete o
+    = SetToHole (o EntityId)
     | -- Changes the structure around the hole to remove the hole.
       -- For example (f _) becomes (f) or (2 + _) becomes 2
-      Delete (m EntityId)
+      Delete (o EntityId)
     | CannotDelete
     deriving Generic
 
