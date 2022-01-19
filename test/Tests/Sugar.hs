@@ -99,7 +99,7 @@ testUnnamed =
     & testCase "name-of-unnamed"
     where
         verify workArea =
-            case workArea ^?! replBody . _BodyLeaf . _LeafGetVar . _GetBinder . bvNameRef . nrName of
+            case workArea ^?! replBody . _BodyLeaf . _LeafGetVar . _GetVar . vNameRef . nrName of
             Unnamed{} -> pure ()
             _ -> error "Unexpected name"
 
@@ -157,14 +157,14 @@ testCannotInline =
             case workArea ^? pos of
             Nothing -> error "expected a getvar!"
             Just x ->
-                case x ^. bvInline of
+                case x ^. vInline of
                 InlineVar{} -> error "shouldn't be able to inline!"
                 _ -> pure ()
             where
                 pos =
                     replLet . lBody
                     . hVal . bBody . _BinderTerm . _BodyLabeledApply . aMOpArgs . Lens._Just . oaLhs
-                    . hVal . _BodyLeaf . _LeafGetVar . _GetBinder
+                    . hVal . _BodyLeaf . _LeafGetVar . _GetVar
 
 -- Test for issue #402
 -- https://trello.com/c/ClDnsGQi/402-wrong-result-when-inlining-from-hole-results
@@ -183,7 +183,7 @@ testInline =
                         <&> fromMaybe (error "expected option") . (^? traverse)
                     result ^. optionPick & lift
                     result ^?! optionExpr . hVal . bBody . _BinderTerm
-                        . _BodyLeaf . _LeafGetVar . _GetBinder . bvInline . _InlineVar
+                        . _BodyLeaf . _LeafGetVar . _GetVar . vInline . _InlineVar
                         & lift & void
         testSugarActions "let-item-inline.json" [inline, verify]
     & testCase "inline"
@@ -246,7 +246,7 @@ testExtractForRecursion =
     where
         openDef =
             replBody . _BodyLabeledApply . aFunc .
-            hVal . Lens._Wrapped . bvNameRef . nrGotoDefinition
+            hVal . Lens._Wrapped . vNameRef . nrGotoDefinition
         extractDef =
             waPanes . traverse . SugarLens.paneBinder .
             annotation . plActions . extract
@@ -262,7 +262,7 @@ testInsistFactorial =
     where
         openDef =
             replBody . _BodySimpleApply . appFunc .
-            hVal . _BodyLeaf . _LeafGetVar . _GetBinder . bvNameRef . nrGotoDefinition
+            hVal . _BodyLeaf . _LeafGetVar . _GetVar . vNameRef . nrGotoDefinition
         ifElse =
             waPanes . traverse . SugarLens.paneBinder .
             hVal . _BodyFunction . fBody .
@@ -371,7 +371,7 @@ testNotALightLambda =
 
 openTopLevelDef :: WorkArea v name i (T ViewM) a -> OnceT (T ViewM) ()
 openTopLevelDef =
-    lift . void . (^?! replBody . _BodyLeaf . _LeafGetVar . _GetBinder . bvNameRef . nrGotoDefinition)
+    lift . void . (^?! replBody . _BodyLeaf . _LeafGetVar . _GetVar . vNameRef . nrGotoDefinition)
 
 delDefParam :: Test
 delDefParam =
@@ -394,7 +394,7 @@ updateDef =
             waPanes . traverse . SugarLens.paneBinder .
             hVal . _BodyFunction . fBody .
             hVal . bBody . _BinderTerm . _BodyLabeledApply . aFunc .
-            hVal . Lens._Wrapped . bvForm . _GetDefinition . _DefTypeChanged . defTypeUseCurrent
+            hVal . Lens._Wrapped . vForm . _GetDefinition . _DefTypeChanged . defTypeUseCurrent
 
 testReplaceParent :: Test
 testReplaceParent =
@@ -525,7 +525,7 @@ testPunnedIso =
     <&> (^.. replBinder . _BinderLet . lBody . hVal . bBody . _BinderLet . lBody .
             hVal . bBody . _BinderTerm . _BodyRecord . cList . SugarLens.taggedListItems)
     <&> Lens.mapped %~
-        (\x -> (x ^. tiTag . tagRefTag . tagName, x ^? tiValue . hVal . _BodyLeaf . _LeafGetVar . _GetBinder . bvNameRef . nrName))
+        (\x -> (x ^. tiTag . tagRefTag . tagName, x ^? tiValue . hVal . _BodyLeaf . _LeafGetVar . _GetVar . vNameRef . nrName))
     >>= assertEqual "Record items expected to be punned" []
 
 testNullParamUnused :: Test
@@ -619,7 +619,7 @@ testDisambig =
         itemOp =
             replBinder . _BinderTerm . _BodyLabeledApply . aAnnotatedArgs . traverse . aaExpr .
             hVal . _BodyLabeledApply . aFunc .
-            hVal . Lens._Wrapped . bvNameRef . nrName . _NameTag . tnTagCollision . _Collision
+            hVal . Lens._Wrapped . vNameRef . nrName . _NameTag . tnTagCollision . _Collision
 
 getHoleResults ::
     FilePath ->

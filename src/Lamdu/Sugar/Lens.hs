@@ -16,7 +16,7 @@ import           Control.Lens (Traversal)
 import qualified Control.Lens as Lens
 import           Control.Monad.Unit (Unit)
 import           Hyper
-import           Lamdu.Sugar.Props (SugarExpr(..), binderVarRefUnfinished)
+import           Lamdu.Sugar.Props (SugarExpr(..), varRefUnfinished)
 import           Lamdu.Sugar.Types
 
 import           Lamdu.Prelude
@@ -41,8 +41,8 @@ bodyUnfinished :: Lens.Traversal' (Term v name i o # Ann a) ()
 bodyUnfinished =
     _BodyLeaf . _LeafHole . Lens.united
     & Lens.failing (_BodyFragment . Lens.united)
-    & Lens.failing (_BodyLeaf . _LeafGetVar . _GetBinder . binderVarRefUnfinished)
-    & Lens.failing (_BodyLabeledApply . aFunc . hVal . Lens._Wrapped . binderVarRefUnfinished)
+    & Lens.failing (_BodyLeaf . _LeafGetVar . _GetVar . varRefUnfinished)
+    & Lens.failing (_BodyLabeledApply . aFunc . hVal . Lens._Wrapped . varRefUnfinished)
 
 defBodySchemes :: Lens.Traversal' (DefinitionBody v name i o expr) (Scheme name Unit)
 defBodySchemes f (DefinitionBodyBuiltin b) =
@@ -73,7 +73,7 @@ binderResultExpr f (Ann (Const pl) x) =
 
 getVarName :: Lens.Traversal' (GetVar a o) a
 getVarName f (GetParam x) = (pNameRef . nrName) f x <&> GetParam
-getVarName f (GetBinder x) = (bvNameRef . nrName) f x <&> GetBinder
+getVarName f (GetVar x) = (vNameRef . nrName) f x <&> GetVar
 getVarName _ (GetParamsRecord x) = GetParamsRecord x & pure
 
 taggedListBodyItems ::

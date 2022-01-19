@@ -80,8 +80,8 @@ instance Walk m s t => Walk m (s, x) (t, x) where
 instance (a ~ OldName m, b ~ NewName m) => Walk m (ParamRef a o) (ParamRef b o) where
     walk p = (pNameRef . nrName) (opGetName Nothing (binderAmbiguity (p ^. pBinderMode)) TaggedVar) p
 
-binderVarType :: BinderVarForm name m -> NameType
-binderVarType GetLet = TaggedVar
+binderVarType :: VarForm name m -> NameType
+binderVarType GetLocal = TaggedVar
 binderVarType (GetDefinition _) = GlobalDef
 
 instance
@@ -120,10 +120,10 @@ instance (a ~ OldName m, b ~ NewName m) => Walk m (DefinitionOutdatedType a o p)
 toBinderVarRef ::
     MonadNaming m =>
     Maybe Disambiguator ->
-    BinderVarRef (OldName m) o ->
-    m (BinderVarRef (NewName m) o)
-toBinderVarRef mDisambig (BinderVarRef nameRef form var inline) =
-    BinderVarRef
+    VarRef (OldName m) o ->
+    m (VarRef (NewName m) o)
+toBinderVarRef mDisambig (VarRef nameRef form var inline) =
+    VarRef
     <$> ( nrName %%~
           opGetName mDisambig MayBeAmbiguous (binderVarType form)
         ) nameRef
@@ -133,7 +133,7 @@ toBinderVarRef mDisambig (BinderVarRef nameRef form var inline) =
 
 instance (a ~ OldName m, b ~ NewName m) => Walk m (GetVar a o) (GetVar b o) where
     walk (GetParam x) = walk x <&> GetParam
-    walk (GetBinder x) = toBinderVarRef Nothing x <&> GetBinder
+    walk (GetVar x) = toBinderVarRef Nothing x <&> GetVar
     walk (GetParamsRecord x) =
         traverse (opGetName Nothing MayBeAmbiguous Tag) x <&> GetParamsRecord
 

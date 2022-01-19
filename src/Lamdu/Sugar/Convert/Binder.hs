@@ -53,7 +53,7 @@ lamParamToHole (V.TypedLam param _paramTyp x) =
 
 makeInline ::
     Monad m =>
-    HRef m # V.Term -> Redex # Input.Payload m a -> EntityId -> BinderVarInline (T m)
+    HRef m # V.Term -> Redex # Input.Payload m a -> EntityId -> VarInline (T m)
 makeInline stored redex useId
     | Lens.has traverse otherUses = CannotInlineDueToUses (drop 1 after <> before)
     | otherwise =
@@ -269,7 +269,7 @@ class GetParam t where
 instance Recursive GetParam where
     recurse = getParamRecursive . proxyArgument
 
-instance GetParam (Const (BinderVarRef InternalName o))
+instance GetParam (Const (VarRef InternalName o))
 instance GetParam (Const (i (TagChoice InternalName o)))
 instance GetParam (Const (TagRef InternalName i o))
 instance GetParam (Const (TId name o))
@@ -312,7 +312,7 @@ markNodeLightParams paramNames =
     hVal %~ markLightParams paramNames
 
 -- instance MarkLightParams (Const a)
-instance MarkLightParams (Const (BinderVarRef InternalName o))
+instance MarkLightParams (Const (VarRef InternalName o))
 instance MarkLightParams (Const (i (TagChoice InternalName o)))
 instance MarkLightParams (Const (TagRef InternalName i o))
 instance MarkLightParams (Else v InternalName i o)

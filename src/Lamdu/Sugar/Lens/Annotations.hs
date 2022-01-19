@@ -45,7 +45,7 @@ class HAnnotations a b s t where
         ) => Traversal (s # h0) (t # h1) a b
     hAnnotations f = morphTraverse (Proxy @(HAnnotations a b) #?> hAnnotations f)
 
-instance Annotations a b (BinderVarRef n o) (BinderVarRef n o) where annotations _ = pure
+instance Annotations a b (VarRef n o) (VarRef n o) where annotations _ = pure
 instance Annotations a b (GetVar n o) (GetVar n o) where annotations _ = pure
 instance Annotations a b (TagRef n i o) (TagRef n i o) where annotations _ = pure
 instance Annotations a b (i (TagChoice n o)) (i (TagChoice n o)) where annotations _ = pure

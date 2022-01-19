@@ -138,8 +138,8 @@ convertLabeled subexprs funcS argS exprPl =
         -- Make sure it is not a "let" but a "def" (recursive or external)
         funcVar <-
             annValue
-            ( ^? _BodyLeaf . _LeafGetVar . _GetBinder
-                . Lens.filteredBy (bvForm . _GetDefinition)
+            ( ^? _BodyLeaf . _LeafGetVar . _GetVar
+                . Lens.filteredBy (vForm . _GetDefinition)
                 . Lens._Unwrapped
             ) funcS
             & maybeToMPlus
@@ -150,7 +150,7 @@ convertLabeled subexprs funcS argS exprPl =
         -- with at least 2 fields
         length (record ^.. cList . taggedListItems) + length (record ^. cPunnedItems) >= 2 & guard
         frozenDeps <- Lens.view ConvertM.scFrozenDeps <&> Property.value
-        let var = funcVar ^. hVal . Lens._Wrapped . bvVar
+        let var = funcVar ^. hVal . Lens._Wrapped . vVar
         -- If it is an external (non-recursive) def (i.e: not in
         -- scope), make sure the def (frozen) type is inferred to have
         -- closed record of same parameters

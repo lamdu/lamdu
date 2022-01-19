@@ -41,7 +41,7 @@ testPunnedArgOp =
             , Sugar._aMOpArgs = Nothing
             , Sugar._aAnnotatedArgs = []
             , Sugar._aPunnedArgs =
-                [ Sugar.PunnedVar (Stub.defRef "b" "b" & Sugar.GetBinder & Const & Stub.node) "b"
+                [ Sugar.PunnedVar (Stub.defRef "b" "b" & Sugar.GetVar & Const & Stub.node) "b"
                 ]
             } & Stub.node
             & Parens.addToTopLevel 0

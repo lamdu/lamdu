@@ -38,13 +38,13 @@ type Expr =
 litNum :: Double -> Expr
 litNum x = prop x & Sugar.LiteralNum & Sugar.LeafLiteral & Sugar.BodyLeaf & expr
 
-defRef :: String -> T.Tag -> Sugar.BinderVarRef InternalName Unit
+defRef :: String -> T.Tag -> Sugar.VarRef InternalName Unit
 defRef var tag =
-    Sugar.BinderVarRef
-    { Sugar._bvNameRef = nameRef (taggedEntityName (fromString var) tag)
-    , Sugar._bvForm = Sugar.GetDefinition Sugar.DefUpToDate
-    , Sugar._bvVar = fromString var
-    , Sugar._bvInline = Sugar.CannotInline
+    Sugar.VarRef
+    { Sugar._vNameRef = nameRef (taggedEntityName (fromString var) tag)
+    , Sugar._vForm = Sugar.GetDefinition Sugar.DefUpToDate
+    , Sugar._vVar = fromString var
+    , Sugar._vInline = Sugar.CannotInline
     }
 
 node ::
@@ -53,15 +53,15 @@ node ::
 node = Const payload & Ann
 
 labeledApplyFunc ::
-    Sugar.BinderVarRef InternalName Unit ->
+    Sugar.VarRef InternalName Unit ->
     Annotated (Sugar.Payload (Sugar.Annotation v InternalName) Unit) #
-    Const (Sugar.BinderVarRef InternalName Unit)
+    Const (Sugar.VarRef InternalName Unit)
 labeledApplyFunc = node . Const
 
 type Infix2 = Expr -> Expr -> Expr
 
 infix2Apply ::
-    Sugar.BinderVarRef InternalName Unit ->
+    Sugar.VarRef InternalName Unit ->
     Infix2
 infix2Apply varRef l r =
     Sugar.LabeledApply (labeledApplyFunc varRef) (Just (Sugar.OperatorArgs l r Unit)) [] []
@@ -90,7 +90,7 @@ r $. tag =
     & expr
 
 identity :: Expr
-identity = defRef "id" "id" & Sugar.GetBinder & Sugar.LeafGetVar & Sugar.BodyLeaf & expr
+identity = defRef "id" "id" & Sugar.GetVar & Sugar.LeafGetVar & Sugar.BodyLeaf & expr
 
 plus :: Infix2
 plus = arithmeticInfix2 "+"

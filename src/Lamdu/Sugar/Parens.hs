@@ -36,10 +36,10 @@ unambiguousBody :: HFunctor expr => (expr # h) -> expr # (Const (MinOpPrec, Prec
 unambiguousBody = hmap (const unambiguousChild)
 
 class GetPrec h where
-    getPrec :: HasPrecedence name => h # Const (BinderVarRef name o) -> Prec
+    getPrec :: HasPrecedence name => h # Const (VarRef name o) -> Prec
 
 instance GetPrec (Ann a) where
-    getPrec = precedence . (^. hVal . Lens._Wrapped . bvNameRef . nrName)
+    getPrec = precedence . (^. hVal . Lens._Wrapped . vNameRef . nrName)
 
 class HFunctor expr => AddParens expr where
     parenInfo ::
@@ -154,7 +154,7 @@ instance HasPrecedence name => AddParens (Term v name i o) where
 
 bareInfix ::
     Lens.Prism' (LabeledApply v name i o # h)
-    ( h # Const (BinderVarRef name o)
+    ( h # Const (VarRef name o)
     , OperatorArgs v name i o # h
     )
 bareInfix =

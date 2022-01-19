@@ -54,7 +54,7 @@ import           Lamdu.Data.Anchors (BinderParamScopeId(..), bParamScopeId)
 import qualified Lamdu.Data.Meta as Meta
 import           Lamdu.Sugar.Internal.EntityId (EntityId)
 import           Lamdu.Sugar.Types.Eval (ParamScopes)
-import           Lamdu.Sugar.Types.GetVar (GetVar, BinderVarRef, BinderMode)
+import           Lamdu.Sugar.Types.GetVar (GetVar, VarRef, BinderMode)
 import           Lamdu.Sugar.Types.Parts
 import           Lamdu.Sugar.Types.Tag
 import           Lamdu.Sugar.Types.Type (TId)
@@ -78,7 +78,7 @@ data OperatorArgs v name i o k = OperatorArgs
 -- TODO: func + specialArgs into a single sum type so that field order
 -- matches gui order, no need for special traversal code
 data LabeledApply v name i o k = LabeledApply
-    { _aFunc :: k :# Const (BinderVarRef name o)
+    { _aFunc :: k :# Const (VarRef name o)
     , _aMOpArgs :: Maybe (OperatorArgs v name i o k)
     , _aAnnotatedArgs :: [AnnotatedArg v name i o k]
     , _aPunnedArgs :: [PunnedVar name o k]
@@ -122,7 +122,7 @@ data FragOpt v name i o k
     deriving Generic
 
 data FragOperator v name i o k = FragOperator
-    { _oFunc :: k :# Const (BinderVarRef name o)
+    { _oFunc :: k :# Const (VarRef name o)
     , -- Argument on right-hand-side (LTR) of operator.
       -- (usually a hole, but may be completed to other values)
       _oRightArg :: k :# Term v name i o
@@ -279,7 +279,7 @@ instance RNodes (Term v name i o)
 type Dep v (c :: HyperType -> Constraint) name i o =
     ( c (Assignment v name i o)
     , c (Binder v name i o)
-    , c (Const (BinderVarRef name o))
+    , c (Const (VarRef name o))
     , c (Const (GetVar name o))
     , c (Const (i (TagChoice name o)))
     , c (Const (TagRef name i o))

@@ -1,13 +1,13 @@
 {-# LANGUAGE TemplateHaskell #-}
 module Lamdu.Sugar.Types.GetVar
     ( ParamRef(..), pNameRef, pBinderMode
-    , BinderVarForm(..), _GetDefinition, _GetLet
+    , VarForm(..), _GetDefinition, _GetLocal
     , DefinitionForm(..), _DefUpToDate, _DefDeleted, _DefTypeChanged
     , DefinitionOutdatedType(..), defTypeWhenUsed, defTypeCurrent, defTypeUseCurrent
-    , BinderVarInline(..), _InlineVar, _CannotInlineDueToUses, _CannotInline
-    , BinderVarRef(..), bvNameRef, bvForm, bvVar, bvInline
+    , VarInline(..), _InlineVar, _CannotInlineDueToUses, _CannotInline
+    , VarRef(..), vNameRef, vForm, vVar, vInline
     , BinderMode(..), _NormalBinder, _LightLambda
-    , GetVar(..), _GetParam, _GetParamsRecord, _GetBinder
+    , GetVar(..), _GetParam, _GetParamsRecord, _GetVar
     , ParamsRecordVarRef(..), prvFieldNames
     ) where
 
@@ -40,23 +40,23 @@ data DefinitionForm name o
     | DefTypeChanged (DefinitionOutdatedType name o EntityId)
     deriving (Generic)
 
-data BinderVarForm name o
+data VarForm name o
     = GetDefinition (DefinitionForm name o)
-    | GetLet
+    | GetLocal
     deriving (Generic)
 
-data BinderVarInline o
+data VarInline o
     = InlineVar (o EntityId)
     | CannotInlineDueToUses [EntityId]
     | CannotInline
     deriving Generic
 
-data BinderVarRef name o = BinderVarRef
-    { _bvNameRef :: NameRef name o
-    , _bvForm :: BinderVarForm name o
-    , _bvVar :: V.Var
+data VarRef name o = VarRef
+    { _vNameRef :: NameRef name o
+    , _vForm :: VarForm name o
+    , _vVar :: V.Var
     , -- Just means it is stored and inlinable:
-      _bvInline :: BinderVarInline o
+      _vInline :: VarInline o
     } deriving Generic
 
 newtype ParamsRecordVarRef name = ParamsRecordVarRef
@@ -66,10 +66,10 @@ newtype ParamsRecordVarRef name = ParamsRecordVarRef
 data GetVar name o
     = GetParam (ParamRef name o)
     | GetParamsRecord (ParamsRecordVarRef name)
-    | GetBinder (BinderVarRef name o)
+    | GetVar (VarRef name o)
     deriving Generic
 
 traverse Lens.makeLenses
-    [''BinderVarRef, ''DefinitionOutdatedType, ''ParamRef, ''ParamsRecordVarRef] <&> concat
+    [''VarRef, ''DefinitionOutdatedType, ''ParamRef, ''ParamsRecordVarRef] <&> concat
 traverse Lens.makePrisms
-    [''BinderMode, ''BinderVarForm, ''BinderVarInline, ''DefinitionForm, ''GetVar] <&> concat
+    [''BinderMode, ''VarForm, ''VarInline, ''DefinitionForm, ''GetVar] <&> concat

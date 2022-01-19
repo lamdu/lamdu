@@ -120,7 +120,7 @@ makeNameRef role color myId nameRef =
         name = nameRef ^. Sugar.nrName
         nameId = Widget.joinId myId ["name"]
 
-makeInlineEventMap :: _ => env -> Sugar.BinderVarInline f -> EventMap (f GuiState.Update)
+makeInlineEventMap :: _ => env -> Sugar.VarInline f -> EventMap (f GuiState.Update)
 makeInlineEventMap env (Sugar.InlineVar inline) =
     inline <&> WidgetIds.fromEntityId
     & E.keysEventMapMovesCursor (env ^. has . Config.inlineKeys)
@@ -211,20 +211,20 @@ processDefinitionWidget (Sugar.DefTypeChanged info) myId mkLayout =
         hiddenId = myId `Widget.joinId` ["hidden"]
 
 makeGetBinder ::
-    _ => Role -> Sugar.BinderVarRef Name o -> Widget.Id -> GuiM env i o (M.TextWidget o)
+    _ => Role -> Sugar.VarRef Name o -> Widget.Id -> GuiM env i o (M.TextWidget o)
 makeGetBinder role binderVar myId =
     do
         env <- Lens.view id
         let (color, processDef) =
-                case binderVar ^. Sugar.bvForm of
-                Sugar.GetLet -> (TextColors.letColor, id)
+                case binderVar ^. Sugar.vForm of
+                Sugar.GetLocal -> (TextColors.letColor, id)
                 Sugar.GetDefinition defForm ->
                     ( TextColors.definitionColor
                     , processDefinitionWidget defForm myId
                     )
-        makeNameRef role color myId (binderVar ^. Sugar.bvNameRef)
+        makeNameRef role color myId (binderVar ^. Sugar.vNameRef)
             <&> Align.tValue %~ Widget.weakerEvents
-                (makeInlineEventMap env (binderVar ^. Sugar.bvInline))
+                (makeInlineEventMap env (binderVar ^. Sugar.vInline))
             & processDef
 
 makeGetParam :: _ => Sugar.ParamRef Name o -> Widget.Id -> GuiM env i o (M.TextWidget o)
@@ -247,7 +247,7 @@ make ::
     GuiM env i o (Responsive o)
 make (Ann (Const pl) (Const getVar)) =
     case getVar of
-    Sugar.GetBinder binderVar ->
+    Sugar.GetVar binderVar ->
         makeGetBinder Normal binderVar myId <&> Responsive.fromWithTextPos
     Sugar.GetParamsRecord paramsRecordVar ->
         makeParamsRecord myId paramsRecordVar

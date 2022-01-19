@@ -114,11 +114,11 @@ convertGlobal var exprPl =
                 | inlineableDefinition ctx var (exprPl ^. Input.entityId) ->
                     inlineDef var (exprPl ^. Input.stored) & lift <&> InlineVar
             _ -> pure CannotInline
-        GetBinder BinderVarRef
-            { _bvNameRef = nameRef
-            , _bvVar = var
-            , _bvForm = GetDefinition defForm
-            , _bvInline = inline
+        GetVar VarRef
+            { _vNameRef = nameRef
+            , _vVar = var
+            , _vForm = GetDefinition defForm
+            , _vInline = inline
             } & pure
     where
         defI = ExprIRef.defI var
@@ -133,11 +133,11 @@ convertGetLet param exprPl =
             >>= maybeToMPlus
         varInfo <- mkVarInfo (exprPl ^. Input.inferredType)
         nameRef <- convertLocalNameRef varInfo param
-        GetBinder BinderVarRef
-            { _bvNameRef = nameRef
-            , _bvVar = param
-            , _bvForm = GetLet
-            , _bvInline = inline (exprPl ^. Input.entityId)
+        GetVar VarRef
+            { _vNameRef = nameRef
+            , _vVar = param
+            , _vForm = GetLocal
+            , _vInline = inline (exprPl ^. Input.entityId)
             } & pure
 
 convertParamsRecord ::

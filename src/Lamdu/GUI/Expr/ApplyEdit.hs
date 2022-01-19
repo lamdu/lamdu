@@ -42,7 +42,7 @@ import           Lamdu.Prelude
 makeFunc ::
     _ =>
     GetVarEdit.Role ->
-    Annotated (ExprGui.Payload i o) # Const (Sugar.BinderVarRef Name o) ->
+    Annotated (ExprGui.Payload i o) # Const (Sugar.VarRef Name o) ->
     GuiM env i o (Responsive o)
 makeFunc role func =
     GetVarEdit.makeGetBinder role (func ^. hVal . Lens._Wrapped) myId
@@ -94,7 +94,7 @@ makeLabeled (Ann (Const pl) apply) =
 makeOperatorRow ::
     _ =>
     (Responsive o -> Responsive o) ->
-    (Annotated (ExprGui.Payload i o) # Const (Sugar.BinderVarRef Name o)) ->
+    (Annotated (ExprGui.Payload i o) # Const (Sugar.VarRef Name o)) ->
     ExprGui.Expr Sugar.Term i o ->
     GuiM env i o (Responsive o)
 makeOperatorRow onR func r =

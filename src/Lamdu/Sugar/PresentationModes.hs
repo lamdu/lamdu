@@ -28,7 +28,7 @@ type T = Transaction
 
 makeLabeledApply ::
     Monad m =>
-    Annotated (ConvertPayload m a) # Const (Sugar.BinderVarRef InternalName (T m)) ->
+    Annotated (ConvertPayload m a) # Const (Sugar.VarRef InternalName (T m)) ->
     [ Sugar.AnnotatedArg v InternalName (OnceT (T m)) (T m) # Annotated (ConvertPayload m a)
     ] ->
     [Sugar.PunnedVar InternalName (T m) # Annotated (ConvertPayload m a)] ->
@@ -37,7 +37,7 @@ makeLabeledApply ::
     (Sugar.LabeledApply v InternalName (OnceT (T m)) (T m) # Annotated (ConvertPayload m a))
 makeLabeledApply func args punnedArgs exprPl =
     do
-        presentationMode <- func ^. hVal . Lens._Wrapped . Sugar.bvVar & Anchors.assocPresentationMode & getP
+        presentationMode <- func ^. hVal . Lens._Wrapped . Sugar.vVar & Anchors.assocPresentationMode & getP
         protectedSetToVal <- ConvertM.typeProtectedSetToVal
         let mkOperatorArg arg other =
                 arg & annotation . pActions . Sugar.delete . Lens.filteredBy Sugar._CannotDelete .~
