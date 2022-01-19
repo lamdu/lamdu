@@ -532,7 +532,7 @@ testNullParamUnused :: Test
 testNullParamUnused =
     testCase "null-param-unused" $
     Env.make >>= testProgram "null-param-cond.json" . convertWorkArea ""
-    <&> Lens.has (replBinder . _BinderLet . lValue . hVal . _BodyPlain . apBody . bBody . _BinderTerm . _BodyLam . lamFunc . fParams . _VarParam)
+    <&> Lens.has (replBinder . _BinderLet . lValue . hVal . _BodyFunction . fParams . _VarParam)
     >>= assertBool "Null param only if unused"
 
 -- Test for https://github.com/lamdu/lamdu/issues/123

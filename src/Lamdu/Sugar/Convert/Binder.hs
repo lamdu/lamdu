@@ -1,4 +1,4 @@
-{-# LANGUAGE TypeApplications, DisambiguateRecordFields, FlexibleInstances, DefaultSignatures, DataKinds, TypeFamilies #-}
+{-# LANGUAGE TypeApplications, DisambiguateRecordFields #-}
 module Lamdu.Sugar.Convert.Binder
     ( convertDefinitionBinder, convertLam
     , convertBinder
@@ -7,12 +7,10 @@ module Lamdu.Sugar.Convert.Binder
 import qualified Control.Lens as Lens
 import           Control.Monad.Once (OnceT)
 import qualified Data.Map as Map
-import           Data.Monoid (Any(..))
 import           Data.Property (MkProperty')
 import qualified Data.Property as Property
 import qualified Data.Set as Set
 import           Hyper
-import           Hyper.Recurse (Recursive(..), foldMapRecursive, proxyArgument, (##>>))
 import           Hyper.Type.Prune (Prune)
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
@@ -31,13 +29,13 @@ import qualified Lamdu.Sugar.Convert.Binder.Redex as Redex
 import           Lamdu.Sugar.Convert.Binder.Types (BinderKind(..))
 import           Lamdu.Sugar.Convert.Expression.Actions (addActions, makeActions)
 import qualified Lamdu.Sugar.Convert.Input as Input
+import           Lamdu.Sugar.Convert.LightLam (addLightLambdas)
 import           Lamdu.Sugar.Convert.Monad (ConvertM(..), scScopeInfo, siLetItems)
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
 import qualified Lamdu.Sugar.Convert.Tag as ConvertTag
 import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import qualified Lamdu.Sugar.Lens as SugarLens
-import qualified Lamdu.Sugar.Props as SugarProps
 import           Lamdu.Sugar.Types
 import           Revision.Deltum.Transaction (Transaction)
 
@@ -218,126 +216,10 @@ convertLam lam exprPl =
             makeFunction
             (lam ^. V.tlIn & Anchors.assocScopeRef)
             convParams (lam ^. V.tlOut)
-        let paramNames =
-                func ^..
-                fParams .
-                (_RecordParams . SugarLens.taggedListItems . tiTag <> _VarParam . _2 . vpiTag . oTag) .
-                tagRefTag . tagName
-                & Set.fromList
-        lightLamSugar <- Lens.view (ConvertM.scConfig . Config.sugarsEnabled . Config.lightLambda)
-        let lambda
-                | useNormalLambda paramNames func || not lightLamSugar =
-                    Lambda False UnlimitedFuncApply func
-                | otherwise =
-                    func
-                    & fBody %~ markNodeLightParams paramNames
-                    & Lambda True UnlimitedFuncApply
-        BodyLam lambda
+        Lambda False UnlimitedFuncApply func & BodyLam
             & addActions lam exprPl
             <&> hVal %~
                 hmap (const (annotation . pActions . mReplaceParent . Lens._Just %~ (lamParamToHole lam >>)))
-
-useNormalLambda ::
-    Set InternalName ->
-    Function v InternalName i o # Annotated a -> Bool
-useNormalLambda paramNames func =
-    foldMapRecursive
-    ( Proxy @SugarProps.SugarExpr ##>>
-        Any . SugarProps.isForbiddenInLightLam
-    ) (func ^. fBody . hVal) ^. Lens._Wrapped
-    || paramsCond
-    where
-        paramsCond = not allParamsUsed && not (null usedParams)
-        allParamsUsed = Set.null (paramNames `Set.difference` usedParams)
-        usedParams =
-            foldMapRecursive
-            ( Proxy @GetVars ##>>
-                (^. Lens._Just . Lens.to Set.singleton) . getVars
-            ) func
-
-class GetVars t where
-    getVars :: t f -> Maybe InternalName
-    getVars _ = Nothing
-
-    getVarsRecursive ::
-        Proxy t -> Dict (HNodesConstraint t GetVars)
-    default getVarsRecursive ::
-        HNodesConstraint t GetVars =>
-        Proxy t -> Dict (HNodesConstraint t GetVars)
-    getVarsRecursive _ = Dict
-
-instance Recursive GetVars where
-    recurse = getVarsRecursive . proxyArgument
-
-instance GetVars (Const (i (TagChoice InternalName o)))
-instance GetVars (Const (TagRef InternalName i o))
-instance GetVars (Const (TId name o))
-instance GetVars (Else v InternalName i o)
-instance GetVars (Function v InternalName i o)
-instance GetVars (PostfixFunc v InternalName i o)
-
-instance GetVars (Const (GetVar InternalName o)) where
-    getVars = (^? Lens._Wrapped . vNameRef . nrName)
-
-instance GetVars (Assignment v InternalName i o) where
-    getVars x = x ^? _BodyPlain . apBody >>= getVars
-
-instance GetVars (Binder v InternalName i o) where
-    getVars x = x ^? bBody . _BinderTerm >>= getVars
-
-instance GetVars (Term v InternalName i o) where
-    getVars x = x ^? _BodyLeaf . _LeafGetVar <&> Const >>= getVars
-
-class MarkLightParams t where
-    markLightParams :: Set InternalName -> t # Ann a -> t # Ann a
-
-    default markLightParams ::
-        (HFunctor t, HNodesConstraint t MarkLightParams) =>
-        Set InternalName -> t # Ann a -> t # Ann a
-    markLightParams = defaultMarkLightParams
-
-defaultMarkLightParams ::
-    (HFunctor t, HNodesConstraint t MarkLightParams) =>
-    Set InternalName -> t # Ann a -> t # Ann a
-defaultMarkLightParams paramNames =
-    hmap (Proxy @MarkLightParams #> markNodeLightParams paramNames)
-
-markNodeLightParams ::
-    MarkLightParams t =>
-    Set InternalName ->
-    Ann a # t ->
-    Ann a # t
-markNodeLightParams paramNames =
-    hVal %~ markLightParams paramNames
-
-instance MarkLightParams (Const (i (TagChoice InternalName o)))
-instance MarkLightParams (Const (TagRef InternalName i o))
-instance MarkLightParams (Else v InternalName i o)
-instance MarkLightParams (Let v InternalName i o)
-instance MarkLightParams (Function v InternalName i o)
-instance MarkLightParams (PostfixFunc v InternalName i o)
-
-instance MarkLightParams (Const (GetVar InternalName o)) where
-    markLightParams paramNames =
-        Lens._Wrapped . Lens.filteredBy (vNameRef . nrName . Lens.filtered f) . vForm .~ GetLightParam
-        where
-            f n = paramNames ^. Lens.contains n
-
-instance MarkLightParams (Assignment v InternalName i o) where
-    markLightParams ps (BodyPlain x) = x & apBody %~ markLightParams ps & BodyPlain
-    markLightParams ps (BodyFunction x) = markLightParams ps x & BodyFunction
-
-instance MarkLightParams (Binder v InternalName i o) where
-    markLightParams ps = bBody %~ markLightParams ps
-
-instance MarkLightParams (BinderBody v InternalName i o) where
-    markLightParams ps (BinderTerm x) = markLightParams ps x & BinderTerm
-    markLightParams ps (BinderLet x) = markLightParams ps x & BinderLet
-
-instance MarkLightParams (Term v InternalName i o) where
-    markLightParams paramNames (BodyLeaf (LeafGetVar x)) =
-        markLightParams paramNames (Const x) ^. Lens._Wrapped & LeafGetVar & BodyLeaf
-    markLightParams paramNames bod = defaultMarkLightParams paramNames bod
 
 -- Let-item or definition (form of <name> [params] = <body>)
 convertAssignment ::
@@ -377,5 +259,5 @@ convertDefinitionBinder ::
     , Annotated (ConvertPayload m a)
         # Assignment EvalPrep InternalName (OnceT (T m)) (T m)
     )
-convertDefinitionBinder defI =
-    convertAssignment (BinderKindDef defI) (ExprIRef.globalId defI)
+convertDefinitionBinder defI t =
+    (addLightLambdas <&> (_2 %~)) <*> convertAssignment (BinderKindDef defI) (ExprIRef.globalId defI) t
