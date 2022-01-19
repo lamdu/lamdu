@@ -1,13 +1,11 @@
 {-# LANGUAGE TemplateHaskell #-}
 module Lamdu.Sugar.Types.GetVar
-    ( ParamRef(..), pNameRef, pBinderMode
-    , VarForm(..), _GetDefinition, _GetLocal
+    ( VarForm(..), _GetDefinition, _GetNormalVar, _GetLightParam
     , DefinitionForm(..), _DefUpToDate, _DefDeleted, _DefTypeChanged
     , DefinitionOutdatedType(..), defTypeWhenUsed, defTypeCurrent, defTypeUseCurrent
     , VarInline(..), _InlineVar, _CannotInlineDueToUses, _CannotInline
     , VarRef(..), vNameRef, vForm, vVar, vInline
-    , BinderMode(..), _NormalBinder, _LightLambda
-    , GetVar(..), _GetParam, _GetParamsRecord, _GetVar
+    , GetVar(..), _GetParamsRecord, _GetVar
     , ParamsRecordVarRef(..), prvFieldNames
     ) where
 
@@ -19,14 +17,6 @@ import           Lamdu.Sugar.Types.Type
 import           Lamdu.Sugar.Types.NameRef (NameRef)
 
 import           Lamdu.Prelude
-
-data BinderMode = NormalBinder | LightLambda
-    deriving (Generic, Eq)
-
-data ParamRef name o = ParamRef
-    { _pNameRef :: NameRef name o
-    , _pBinderMode :: BinderMode
-    } deriving Generic
 
 data DefinitionOutdatedType name o a = DefinitionOutdatedType
     { _defTypeWhenUsed :: Scheme name Unit
@@ -42,7 +32,8 @@ data DefinitionForm name o
 
 data VarForm name o
     = GetDefinition (DefinitionForm name o)
-    | GetLocal
+    | GetNormalVar
+    | GetLightParam
     deriving (Generic)
 
 data VarInline o
@@ -64,12 +55,11 @@ newtype ParamsRecordVarRef name = ParamsRecordVarRef
     } deriving stock (Eq, Ord, Functor, Foldable, Traversable, Generic)
 
 data GetVar name o
-    = GetParam (ParamRef name o)
-    | GetParamsRecord (ParamsRecordVarRef name)
+    = GetParamsRecord (ParamsRecordVarRef name)
     | GetVar (VarRef name o)
     deriving Generic
 
 traverse Lens.makeLenses
-    [''VarRef, ''DefinitionOutdatedType, ''ParamRef, ''ParamsRecordVarRef] <&> concat
+    [''VarRef, ''DefinitionOutdatedType, ''ParamsRecordVarRef] <&> concat
 traverse Lens.makePrisms
-    [''BinderMode, ''VarForm, ''VarInline, ''DefinitionForm, ''GetVar] <&> concat
+    [''VarForm, ''VarInline, ''DefinitionForm, ''GetVar] <&> concat

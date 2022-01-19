@@ -357,7 +357,7 @@ testLightLambda =
             | otherwise = error "Expected light lambda sugar!"
         expected =
             replBody . _BodyLabeledApply . aAnnotatedArgs . traverse . aaExpr .
-            hVal . _BodyLam . lamMode . _LightLambda
+            hVal . _BodyLam . lamLightweight . Lens.only True
 
 testNotALightLambda :: Test
 testNotALightLambda =
@@ -367,7 +367,7 @@ testNotALightLambda =
         verify workArea
             | Lens.has expected workArea = pure ()
             | otherwise = error "Expected light lambda sugar!"
-        expected = replBody . _BodyLam . lamMode . _NormalBinder
+        expected = replBody . _BodyLam . lamLightweight . Lens.only False
 
 openTopLevelDef :: WorkArea v name i (T ViewM) a -> OnceT (T ViewM) ()
 openTopLevelDef =
@@ -543,7 +543,7 @@ testPunnedLightParam =
     <&> Lens.has
         ( replBinder . _BinderTerm . _BodyLam . lamFunc . fBody . hVal .
             bBody . _BinderTerm . _BodyRecord . cPunnedItems . traverse . pvVar . hVal .
-            Lens._Wrapped . _GetParam . pBinderMode . _LightLambda
+            Lens._Wrapped . _GetVar . vForm . _GetLightParam
         )
     >>= assertBool "Null param only if unused"
 

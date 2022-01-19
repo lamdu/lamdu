@@ -381,7 +381,7 @@ makeLHSTag onPickNext color mSetToAnon tag =
 
 makeParamTag :: _ => Maybe (o EntityId) -> Sugar.TagRef Name i o -> GuiM env i o (M.TextWidget o)
 makeParamTag =
-    makeLHSTag onPickNext TextColors.parameterColor
+    makeLHSTag onPickNext TextColors.variableColor
     where
         onPickNext pos = WidgetIds.fromEntityId pos & addItemId & Just
 

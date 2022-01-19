@@ -69,7 +69,7 @@ makeParamsRecord myId paramsRecordVar =
                     let paramId = ["params", SBS8.pack (show (i :: Int))]
                     in
                     Widget.joinId myId paramId
-                    & makeSimpleView TextColors.parameterColor fieldName
+                    & makeSimpleView TextColors.variableColor fieldName
                     <&> Responsive.fromWithTextPos
                     & local (M.animIdPrefix %~ (<> paramId))
                 )
@@ -212,34 +212,25 @@ processDefinitionWidget (Sugar.DefTypeChanged info) myId mkLayout =
 
 makeGetBinder ::
     _ => Role -> Sugar.VarRef Name o -> Widget.Id -> GuiM env i o (M.TextWidget o)
-makeGetBinder role binderVar myId =
+makeGetBinder role var myId =
     do
         env <- Lens.view id
         let (color, processDef) =
-                case binderVar ^. Sugar.vForm of
-                Sugar.GetLocal -> (TextColors.letColor, id)
+                case var ^. Sugar.vForm of
                 Sugar.GetDefinition defForm ->
                     ( TextColors.definitionColor
                     , processDefinitionWidget defForm myId
                     )
-        makeNameRef role color myId (binderVar ^. Sugar.vNameRef)
+                _ -> (TextColors.variableColor, id)
+        mUnderline <-
+            case var ^. Sugar.vForm of
+            Sugar.GetLightParam -> Lens.view has <&> LightLambda.underline <&> (TextView.underline ?~)
+            _ -> pure id
+        makeNameRef role color myId (var ^. Sugar.vNameRef)
+            & local mUnderline
             <&> Align.tValue %~ Widget.weakerEvents
-                (makeInlineEventMap env (binderVar ^. Sugar.vInline))
+                (makeInlineEventMap env (var ^. Sugar.vInline))
             & processDef
-
-makeGetParam :: _ => Sugar.ParamRef Name o -> Widget.Id -> GuiM env i o (M.TextWidget o)
-makeGetParam param myId =
-    do
-        underline <- Lens.view has <&> LightLambda.underline
-        let mk = makeNameRef Normal TextColors.parameterColor myId (param ^. Sugar.pNameRef)
-        case param ^. Sugar.pBinderMode of
-            Sugar.LightLambda ->
-                mk
-                & local (TextView.underline ?~ underline)
-                & Styled.nameAtBinder name
-            Sugar.NormalBinder -> mk
-    where
-        name = param ^. Sugar.pNameRef . Sugar.nrName
 
 make ::
     _ =>
@@ -251,8 +242,6 @@ make (Ann (Const pl) (Const getVar)) =
         makeGetBinder Normal binderVar myId <&> Responsive.fromWithTextPos
     Sugar.GetParamsRecord paramsRecordVar ->
         makeParamsRecord myId paramsRecordVar
-    Sugar.GetParam param ->
-        makeGetParam param myId <&> Responsive.fromWithTextPos
     & stdWrap pl
     where
         myId = WidgetIds.fromExprPayload pl

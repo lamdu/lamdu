@@ -72,7 +72,6 @@ binderResultExpr f (Ann (Const pl) x) =
         <&> Ann (Const pl)
 
 getVarName :: Lens.Traversal' (GetVar a o) a
-getVarName f (GetParam x) = (pNameRef . nrName) f x <&> GetParam
 getVarName f (GetVar x) = (vNameRef . nrName) f x <&> GetVar
 getVarName _ (GetParamsRecord x) = GetParamsRecord x & pure
 

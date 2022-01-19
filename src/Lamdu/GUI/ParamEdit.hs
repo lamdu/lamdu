@@ -76,7 +76,7 @@ mkAddParam addParam myId =
         addParam & im
         >>= TagEdit.makeTagHoleEdit mkParamPickResult addId
         & local (has . Menu.configKeysPickOptionAndGotoNext <>~ [noMods M.Key'Space])
-        & Styled.withColor TextColors.parameterColor
+        & Styled.withColor TextColors.variableColor
         <&> Responsive.fromWithTextPos
         <&> (:[])
     where

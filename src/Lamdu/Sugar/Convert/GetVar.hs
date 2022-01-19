@@ -136,7 +136,7 @@ convertGetLet param exprPl =
         GetVar VarRef
             { _vNameRef = nameRef
             , _vVar = param
-            , _vForm = GetLocal
+            , _vForm = GetNormalVar
             , _vInline = inline (exprPl ^. Input.entityId)
             } & pure
 
@@ -176,9 +176,11 @@ convertParam param exprPl =
     >>= (`convertLocalNameRef` param)
     <&>
     \nameRef ->
-    GetParam ParamRef
-    { _pNameRef = nameRef
-    , _pBinderMode = NormalBinder
+    GetVar VarRef
+    { _vNameRef = nameRef
+    , _vForm = GetNormalVar
+    , _vInline = CannotInline -- TODO: In some cases can inline param
+    , _vVar = param
     }
 
 convert ::

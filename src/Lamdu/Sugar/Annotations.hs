@@ -136,7 +136,7 @@ instance Functor m => MarkBodyAnnotations v m Term where
     markBodyAnnotations (BodyLeaf (LeafGetVar x)) =
         ( case x of
             GetParamsRecord{} -> showAnnotationWhenVerbose
-            GetParam ParamRef{ _pBinderMode = LightLambda } -> showAnnotationWhenVerbose
+            GetVar VarRef{ _vForm = GetLightParam } -> showAnnotationWhenVerbose
             GetVar VarRef { _vForm = GetDefinition{} } -> showAnnotationWhenVerbose
             _ -> neverShowAnnotations
         , LeafGetVar x & BodyLeaf

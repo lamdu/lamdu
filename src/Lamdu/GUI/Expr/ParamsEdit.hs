@@ -150,11 +150,11 @@ mkLightLambda params myId =
 
 makeLhs ::
     _ =>
-    Sugar.BinderMode -> Sugar.Params v a i o ->
+    Bool -> Sugar.Params v a i o ->
     Maybe (Responsive o) -> Maybe (Widget.Widget o) -> EventMap (o GuiState.Update) -> Widget.Id ->
     m [Responsive o]
 makeLhs _ Sugar.NullParam{} mParamsEdit mScopeEdit _ _ = mkLhsEdits ?? mParamsEdit ?? mScopeEdit
-makeLhs Sugar.LightLambda params mParamsEdit mScopeEdit _ myId = mkLightLambda params myId ?? mParamsEdit ?? mScopeEdit
+makeLhs True params mParamsEdit mScopeEdit _ myId = mkLightLambda params myId ?? mParamsEdit ?? mScopeEdit
 makeLhs _ _ mParamsEdit mScopeEdit lhsEventMap _ = mkExpanded ?? mParamsEdit ?? mScopeEdit <&> Lens.ix 0 %~ M.weakerEvents lhsEventMap
 
 make ::

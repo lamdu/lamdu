@@ -129,11 +129,12 @@ test514 =
             Sugar.BodyFragment Sugar.Fragment
             { Sugar._fExpr =
                 Sugar.BodyLam Sugar.Lambda
-                { Sugar._lamMode = Sugar.NormalBinder
+                { Sugar._lamLightweight = False
                 , Sugar._lamApplyLimit = Sugar.UnlimitedFuncApply
                 , Sugar._lamFunc =
-                    (Stub.node . Sugar.BodyLeaf . Sugar.LeafGetVar . Sugar.GetParam)
-                    (Sugar.ParamRef (Stub.nameRef (Stub.taggedEntityName "x" "x")) Sugar.NormalBinder)
+                    (Stub.node . Sugar.BodyLeaf . Sugar.LeafGetVar . Sugar.GetVar)
+                    (Sugar.VarRef (Stub.nameRef (Stub.taggedEntityName "x" "x"))
+                        Sugar.GetNormalVar "x" Sugar.CannotInline)
                     $$ Stub.hole
                     & Stub.funcExpr "x" "x"
                 } & Stub.node

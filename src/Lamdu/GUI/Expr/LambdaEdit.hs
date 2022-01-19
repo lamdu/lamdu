@@ -28,7 +28,7 @@ make (Ann (Const pl) lam) =
             AssignmentEdit.makeFunctionParts (lam ^. Sugar.lamApplyLimit)
             (Ann (Const pl) func) (WidgetIds.fromEntityId bodyId)
         rhsJumperEquals <- AssignmentEdit.makeJumpToRhs rhsId
-        paramsAndLabelEdits <- ParamsEdit.makeLhs (lam ^. Sugar.lamMode) params mParamsEdit mScopeEdit lhsEventMap myId
+        paramsAndLabelEdits <- ParamsEdit.makeLhs (lam ^. Sugar.lamLightweight) params mParamsEdit mScopeEdit lhsEventMap myId
         navigateOut <-
             closeParenEvent
             [has . MomentuTexts.navigation, has . Texts.lambda, has . Texts.leaveSubexpression]

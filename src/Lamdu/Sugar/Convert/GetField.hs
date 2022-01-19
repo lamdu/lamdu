@@ -30,12 +30,14 @@ convertGetFieldParam (V.App g@(Ann _ (V.BLeaf (V.LGetField tag))) recExpr) exprP
             param <- recExpr ^? ExprLens.valVar
             tags <- recParams ^. Lens.at param
             guard (tags ^. Lens.contains tag)
-            GetParam ParamRef
-                { _pNameRef = NameRef
+            GetVar VarRef
+                { _vNameRef = NameRef
                   { _nrName = nameWithContext Nothing param tag
                   , _nrGotoDefinition = EntityId.ofTaggedEntity param tag & pure
                   }
-                , _pBinderMode = NormalBinder
+                , _vForm = GetNormalVar
+                , _vVar = param
+                , _vInline = CannotInline
                 } & LeafGetVar & BodyLeaf & Just
             & Lens._Just %%~ addActions (App g recExpr) exprPl
 convertGetFieldParam _ _= pure Nothing

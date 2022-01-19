@@ -27,8 +27,7 @@ data TextColors = TextColors
     -- Names:
     , _collisionSuffixTextColor :: Draw.Color
     , _definitionColor :: Draw.Color
-    , _parameterColor :: Draw.Color
-    , _letColor :: Draw.Color
+    , _variableColor :: Draw.Color
     , _recordTagColor :: Draw.Color
     , _caseTagColor :: Draw.Color
     , _argTagColor :: Draw.Color

@@ -65,7 +65,7 @@ makeLetEdit item =
         grammar (label Texts.let_)
             M./|/ Spacer.stdHSpace
             M./|/ (
-                TagEdit.makeBinderTagEdit TextColors.letColor (item ^. Sugar.lName) >>=
+                TagEdit.makeBinderTagEdit TextColors.variableColor (item ^. Sugar.lName) >>=
                 AssignmentEdit.make Nothing
                 (WidgetIds.fromEntityId (item ^. Sugar.lName . Sugar.oTag . Sugar.tagRefTag . Sugar.tagInstance))
                 binder

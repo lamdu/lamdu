@@ -12,7 +12,7 @@ module Lamdu.Sugar.Types.Expression
     , PostfixApply(..), pArg, pFunc
     , PostfixFunc(..), _PfCase, _PfFromNom, _PfGetField
     , App(..), appFunc, appArg
-    , Lambda(..), lamFunc, lamMode, lamApplyLimit
+    , Lambda(..), lamFunc, lamLightweight, lamApplyLimit
     , Nominal(..), nTId, nVal
     -- Binders
     , Let(..), lValue, lName, lUsages, lDelete, lBody
@@ -54,7 +54,7 @@ import           Lamdu.Data.Anchors (BinderParamScopeId(..), bParamScopeId)
 import qualified Lamdu.Data.Meta as Meta
 import           Lamdu.Sugar.Internal.EntityId (EntityId)
 import           Lamdu.Sugar.Types.Eval (ParamScopes)
-import           Lamdu.Sugar.Types.GetVar (GetVar, VarRef, BinderMode)
+import           Lamdu.Sugar.Types.GetVar (GetVar, VarRef)
 import           Lamdu.Sugar.Types.Parts
 import           Lamdu.Sugar.Types.Tag
 import           Lamdu.Sugar.Types.Type (TId)
@@ -90,7 +90,7 @@ data PostfixApply v name i o k = PostfixApply
     } deriving Generic
 
 data Lambda v name i o f = Lambda
-    { _lamMode :: BinderMode
+    { _lamLightweight :: Bool
     , _lamApplyLimit :: FuncApplyLimit
     , _lamFunc :: Function v name i o f
     } deriving Generic

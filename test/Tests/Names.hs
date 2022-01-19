@@ -98,7 +98,7 @@ workArea396 =
         lamType = Stub.numType ~> Stub.numType
         lamExpr =
             Sugar.BodyLam Sugar.Lambda
-            { Sugar._lamMode = Sugar.NormalBinder
+            { Sugar._lamLightweight = False
             , Sugar._lamApplyLimit = Sugar.UnlimitedFuncApply
             , Sugar._lamFunc = Stub.funcExpr "lamVar" "num" Stub.hole
             } & Stub.expr

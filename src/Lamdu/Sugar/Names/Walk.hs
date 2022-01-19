@@ -77,12 +77,9 @@ instance Walk m (Property o ParamKind) (Property o ParamKind) where walk = pure
 instance Walk m s t => Walk m (s, x) (t, x) where
     walk = _1 walk
 
-instance (a ~ OldName m, b ~ NewName m) => Walk m (ParamRef a o) (ParamRef b o) where
-    walk p = (pNameRef . nrName) (opGetName Nothing (binderAmbiguity (p ^. pBinderMode)) TaggedVar) p
-
 binderVarType :: VarForm name m -> NameType
-binderVarType GetLocal = TaggedVar
 binderVarType (GetDefinition _) = GlobalDef
+binderVarType _ = TaggedVar
 
 instance
     (a ~ OldName m, b ~ NewName m, Walk m fa fb) =>
@@ -132,7 +129,6 @@ toBinderVarRef mDisambig (VarRef nameRef form var inline) =
     ?? inline
 
 instance (a ~ OldName m, b ~ NewName m) => Walk m (GetVar a o) (GetVar b o) where
-    walk (GetParam x) = walk x <&> GetParam
     walk (GetVar x) = toBinderVarRef Nothing x <&> GetVar
     walk (GetParamsRecord x) =
         traverse (opGetName Nothing MayBeAmbiguous Tag) x <&> GetParamsRecord
@@ -380,10 +376,6 @@ instance ToBody PostfixApply where
     toBody (PostfixApply a f) =
         PostfixApply <$> toExpression a <*> toExpression f
 
-binderAmbiguity :: BinderMode -> IsUnambiguous
-binderAmbiguity LightLambda = Unambiguous
-binderAmbiguity _ = MayBeAmbiguous
-
 instance
     (a ~ OldName m, b ~ NewName m, i ~ IM m, Walk m pa pb) =>
     Walk m (NullaryInject a i o # Annotated pa) (NullaryInject b i o # Annotated pb) where
@@ -415,10 +407,13 @@ instance ToBody Term where
         BodyLabeledApply x -> x & toBody <&> BodyLabeledApply
         BodyPostfixFunc  x -> x & toBody <&> BodyPostfixFunc
         BodyToNom        x -> x & toBody <&> BodyToNom
-        BodyLam          x -> x & lamFunc (toFunction (binderAmbiguity (x ^. lamMode))) <&> BodyLam
         BodyFragment     x -> x & toBody <&> BodyFragment
         BodyNullaryInject x -> walk x <&> BodyNullaryInject
         BodyLeaf         x -> walk x <&> BodyLeaf
+        BodyLam x ->
+            x
+            & lamFunc (toFunction (if x ^. lamLightweight then Unambiguous else MayBeAmbiguous))
+            <&> BodyLam
 
 funcSignature :: LabeledApply v name i o a -> FunctionSignature
 funcSignature apply =

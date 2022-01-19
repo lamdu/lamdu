@@ -227,11 +227,11 @@ convertLam lam exprPl =
         lightLamSugar <- Lens.view (ConvertM.scConfig . Config.sugarsEnabled . Config.lightLambda)
         let lambda
                 | useNormalLambda paramNames func || not lightLamSugar =
-                    Lambda NormalBinder UnlimitedFuncApply func
+                    Lambda False UnlimitedFuncApply func
                 | otherwise =
                     func
                     & fBody %~ markNodeLightParams paramNames
-                    & Lambda LightLambda UnlimitedFuncApply
+                    & Lambda True UnlimitedFuncApply
         BodyLam lambda
             & addActions lam exprPl
             <&> hVal %~
@@ -251,43 +251,43 @@ useNormalLambda paramNames func =
         allParamsUsed = Set.null (paramNames `Set.difference` usedParams)
         usedParams =
             foldMapRecursive
-            ( Proxy @GetParam ##>>
-                (^. Lens._Just . Lens.to Set.singleton) . getParam
+            ( Proxy @GetVars ##>>
+                (^. Lens._Just . Lens.to Set.singleton) . getVars
             ) func
 
-class GetParam t where
-    getParam :: t f -> Maybe InternalName
-    getParam _ = Nothing
+class GetVars t where
+    getVars :: t f -> Maybe InternalName
+    getVars _ = Nothing
 
-    getParamRecursive ::
-        Proxy t -> Dict (HNodesConstraint t GetParam)
-    default getParamRecursive ::
-        HNodesConstraint t GetParam =>
-        Proxy t -> Dict (HNodesConstraint t GetParam)
-    getParamRecursive _ = Dict
+    getVarsRecursive ::
+        Proxy t -> Dict (HNodesConstraint t GetVars)
+    default getVarsRecursive ::
+        HNodesConstraint t GetVars =>
+        Proxy t -> Dict (HNodesConstraint t GetVars)
+    getVarsRecursive _ = Dict
 
-instance Recursive GetParam where
-    recurse = getParamRecursive . proxyArgument
+instance Recursive GetVars where
+    recurse = getVarsRecursive . proxyArgument
 
-instance GetParam (Const (VarRef InternalName o))
-instance GetParam (Const (i (TagChoice InternalName o)))
-instance GetParam (Const (TagRef InternalName i o))
-instance GetParam (Const (TId name o))
-instance GetParam (Else v InternalName i o)
-instance GetParam (Function v InternalName i o)
-instance GetParam (PostfixFunc v InternalName i o)
+instance GetVars (Const (VarRef InternalName o))
+instance GetVars (Const (i (TagChoice InternalName o)))
+instance GetVars (Const (TagRef InternalName i o))
+instance GetVars (Const (TId name o))
+instance GetVars (Else v InternalName i o)
+instance GetVars (Function v InternalName i o)
+instance GetVars (PostfixFunc v InternalName i o)
 
-instance GetParam (Const (GetVar InternalName o)) where
-    getParam = (^? Lens._Wrapped . _GetParam . pNameRef . nrName)
+instance GetVars (Const (GetVar InternalName o)) where
+    getVars = (^? Lens._Wrapped . _GetVar . vNameRef . nrName)
 
-instance GetParam (Assignment v InternalName i o) where
-    getParam x = x ^? _BodyPlain . apBody >>= getParam
+instance GetVars (Assignment v InternalName i o) where
+    getVars x = x ^? _BodyPlain . apBody >>= getVars
 
-instance GetParam (Binder v InternalName i o) where
-    getParam x = x ^? bBody . _BinderTerm >>= getParam
+instance GetVars (Binder v InternalName i o) where
+    getVars x = x ^? bBody . _BinderTerm >>= getVars
 
-instance GetParam (Term v InternalName i o) where
-    getParam x = x ^? _BodyLeaf . _LeafGetVar <&> Const >>= getParam
+instance GetVars (Term v InternalName i o) where
+    getVars x = x ^? _BodyLeaf . _LeafGetVar <&> Const >>= getVars
 
 class MarkLightParams t where
     markLightParams :: Set InternalName -> t # Ann a -> t # Ann a
@@ -322,7 +322,7 @@ instance MarkLightParams (PostfixFunc v InternalName i o)
 
 instance MarkLightParams (Const (GetVar InternalName o)) where
     markLightParams paramNames =
-        Lens._Wrapped . _GetParam . Lens.filteredBy (pNameRef . nrName . Lens.filtered f) . pBinderMode .~ LightLambda
+        Lens._Wrapped . _GetVar . Lens.filteredBy (vNameRef . nrName . Lens.filtered f) . vForm .~ GetLightParam
         where
             f n = paramNames ^. Lens.contains n
 
@@ -369,7 +369,7 @@ toAssignment binderKind expr b =
     do
         enabled <- Lens.view (ConvertM.scConfig . Config.sugarsEnabled . Config.assignmentParameters)
         case b ^? hVal . bBody . _BinderTerm . _BodyLam of
-            Just l | enabled && Lens.has (lamMode . _NormalBinder) l -> b & annValue .~ BodyFunction (l ^. lamFunc) & pure
+            Just l | enabled && not (l ^. lamLightweight) -> b & annValue .~ BodyFunction (l ^. lamFunc) & pure
             _ -> convertEmptyParams binderKind expr <&> \addFirstParam -> b & annValue %~ BodyPlain . AssignPlain addFirstParam
 
 convertDefinitionBinder ::
