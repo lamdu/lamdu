@@ -390,7 +390,7 @@ makeOption ::
     Monad m =>
     Input.Payload m b # V.Term ->
     Result [(a, Ann (Write m) # V.Term)] ->
-    ConvertM m (Result (a, Option Binder InternalName (OnceT (T m)) (T m)))
+    ConvertM m (Result (a, Option HoleOpt InternalName (OnceT (T m)) (T m)))
 makeOption dstPl res =
     do
         curCtx <- Lens.view ConvertM.scInferContext
@@ -425,32 +425,44 @@ makeOption dstPl res =
             -- No actual data is written to the db for generating an option
             -- The results cache is not invalidated due to writing to the database
             & Transaction.fork & transaction
-        s <-
-            case written ^? hVal . V._BApp of
-            Just (V.App (Ann _ f) x) ->
-                -- For applying arguments to fragmented funcs,
-                -- prune replaces the func in the expr with a hole or fragmented hole.
-                -- We extract the argument of it.
-                case f of
-                V.BLeaf V.LHole -> x
-                V.BApp (V.App (Ann _ (V.BLeaf V.LHole)) (Ann _ (V.BLeaf V.LHole))) -> x
+        let resExpr =
+                case written ^? hVal . V._BApp of
+                Just (V.App (Ann _ f) x) ->
+                    -- For applying arguments to fragmented funcs,
+                    -- prune replaces the func in the expr with a hole or fragmented hole.
+                    -- We extract the argument of it.
+                    case f of
+                    V.BLeaf V.LHole -> x
+                    V.BApp (V.App (Ann _ (V.BLeaf V.LHole)) (Ann _ (V.BLeaf V.LHole))) -> x
+                    _ -> written
                 _ -> written
-            _ -> written
-            & Input.preprocess (dstPl ^. Input.inferScope) (dstPl ^. Input.localsInScope)
-            & convertBinder
+                & Input.preprocess (dstPl ^. Input.inferScope) (dstPl ^. Input.localsInScope)
+
+        recordVars <- Lens.view (ConvertM.scScopeInfo . ConvertM.siRecordParams)
+        let recordVarTags =
+                do
+                    v <- resExpr ^? hVal . V._BLeaf . V._LVar
+                    recordVars ^. Lens.at v
+                        <&> map (nameWithContext Nothing v) . (^.. Lens.folded)
+
+        s <-
+            convertBinder resExpr <&> annValue %~
+                case recordVarTags of
+                Just t -> const (HoleVarsRecord t)
+                Nothing -> HoleBinder
             & local (ConvertM.scInferContext .~ ctx1)
             & -- Updated deps are required to sugar labeled apply
                 Lens.locally (ConvertM.scFrozenDeps . pVal) (<> res ^. rDeps)
-            <&> markNodeAnnotations @_ @_ @(Binder (ShowAnnotation, EvalPrep) InternalName (OnceT (T m)) (T m))
+            <&> markNodeAnnotations @_ @_ @(HoleOpt (ShowAnnotation, EvalPrep) InternalName (OnceT (T m)) (T m))
             <&> hflipped %~ hmap (const (Lens._Wrapped %~
                 \x ->
                 convertPayload (x & pInput . Input.userData .~ (ParenInfo 0 False, []))
                 & plAnnotation %~ (,) (x ^. pInput . Input.userData . _1)
                 ))
             -- We explicitly do want annotations of variables such as global defs to appear
-            <&> Lens.filteredBy (hVal . bBody . _BinderTerm . _BodyLeaf . _LeafGetVar) .
+            <&> Lens.filteredBy (hVal . _HoleBinder . bBody . _BinderTerm . _BodyLeaf . _LeafGetVar) .
                 annotation . plAnnotation . _1 .~ alwaysShowAnnotations
-            <&> hVal . bBody . _BinderTerm . _BodySimpleApply . appFunc .
+            <&> hVal . _HoleBinder . bBody . _BinderTerm . _BodySimpleApply . appFunc .
                 Lens.filteredBy (hVal . _BodyLeaf . _LeafGetVar) .
                 annotation . plAnnotation . _1 .~ alwaysShowAnnotations
             >>= hAnnotations mkAnn

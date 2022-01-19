@@ -28,13 +28,13 @@ class HTraversable t => SugarExpr t where
 
 instance Recursive SugarExpr where recurse = sugarExprRecursive . proxyArgument
 
-instance SugarExpr (Const (GetVar name o))
 instance SugarExpr (Const (i (TagChoice name o)))
 instance SugarExpr (Const (TagRef name i o))
 instance SugarExpr (PostfixFunc v name i o)
+instance SugarExpr (HoleOpt v name i o)
 instance SugarExpr (FragOpt v name i o)
 
-instance SugarExpr (Const (VarRef name o)) where isUnfinished = Lens.has (Lens._Wrapped . varRefUnfinished)
+instance SugarExpr (Const (GetVar name o)) where isUnfinished = Lens.has (Lens._Wrapped . varRefUnfinished)
 instance SugarExpr (Assignment v name i o) where isUnfinished = Lens.anyOf (_BodyPlain . apBody) isUnfinished
 instance SugarExpr (Else v name i o) where isUnfinished = Lens.anyOf _SimpleElse isUnfinished
 instance SugarExpr (Function v name i o) where isForbiddenInLightLam = Lens.nullOf (fParams . _NullParam)
@@ -50,10 +50,10 @@ instance SugarExpr (BinderBody v name i o) where
 instance SugarExpr (Term v name i o) where
     isUnfinished (BodyLeaf LeafHole{}) = True
     isUnfinished BodyFragment{} = True
-    isUnfinished (BodyLeaf (LeafGetVar (GetVar x))) = isUnfinished (Const x)
+    isUnfinished (BodyLeaf (LeafGetVar x)) = isUnfinished (Const x)
     isUnfinished _ = False
     isForbiddenInLightLam (BodyLam f) = isForbiddenInLightLam (f ^. lamFunc)
     isForbiddenInLightLam x = isUnfinished x
 
-varRefUnfinished :: Lens.Traversal' (VarRef name m) ()
+varRefUnfinished :: Lens.Traversal' (GetVar name m) ()
 varRefUnfinished = vForm . _GetDefinition . Lens.failing _DefDeleted (_DefTypeChanged . Lens.united)

@@ -114,7 +114,7 @@ instance Eq (Sugar.TagPane f) where
     , ''Sugar.DetachAction, ''Sugar.EvalCompletionResult, ''Sugar.EvalException, ''Sugar.Hole
     , ''Sugar.Literal, ''Sugar.NodeActions, ''Sugar.NullParamActions, ''Sugar.Globals
     , ''Sugar.ResList, ''Sugar.ResTree, ''Sugar.AddParam
-    , ''Sugar.VarForm, ''Sugar.VarRef, ''Sugar.Payload
+    , ''Sugar.VarForm, ''Sugar.Payload
     , ''Sugar.DefinitionBuiltin, ''Sugar.DefinitionForm
     , ''Sugar.GetVar, ''Sugar.Leaf, ''Sugar.NameRef, ''Sugar.VarParamInfo
     , ''Sugar.ResVal, ''Sugar.Scheme, ''Sugar.TagRef, ''Sugar.TagChoice, ''Sugar.TagOption
@@ -127,7 +127,7 @@ makeInstances [''NFData]
     , ''Config.Export, ''Config.Literal, ''Config.Pane
     , ''Grid.Keys, ''Menu.Config, ''SearchMenu.Config
     , ''StdKeys.DirKeys, ''TextEdit.Keys, ''VcGuiConfig.Config, ''Zoom.Config
-    , ''Sugar.TId, ''Sugar.Tag, ''Sugar.TagPane, ''Sugar.ParamsRecordVarRef
+    , ''Sugar.TId, ''Sugar.Tag, ''Sugar.TagPane
     , ''Sugar.ScopeId, ''Sugar.DefinitionState, ''Sugar.ParenInfo, ''Sugar.VarInfo
     , ''Sugar.BinderParamScopeId, ''Sugar.FuncApplyLimit, ''Sugar.Error
     , ''Sugar.CompiledErrorType, ''ShowAnnotation, ''LangId, ''EntityId, ''Sugar.ParamKind

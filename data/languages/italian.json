@@ -23,7 +23,6 @@
             "if_": "se",
             "else_": "altrimenti",
             "elseIf": "altse",
-            "paramsRecordOpener": "Parametri {",
             "variantTypeSep": "oppure: ",
             "typ": "tipi",
             "row": "riga"

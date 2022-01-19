@@ -99,7 +99,7 @@ testUnnamed =
     & testCase "name-of-unnamed"
     where
         verify workArea =
-            case workArea ^?! replBody . _BodyLeaf . _LeafGetVar . _GetVar . vNameRef . nrName of
+            case workArea ^?! replBody . _BodyLeaf . _LeafGetVar . vNameRef . nrName of
             Unnamed{} -> pure ()
             _ -> error "Unexpected name"
 
@@ -164,7 +164,7 @@ testCannotInline =
                 pos =
                     replLet . lBody
                     . hVal . bBody . _BinderTerm . _BodyLabeledApply . aMOpArgs . Lens._Just . oaLhs
-                    . hVal . _BodyLeaf . _LeafGetVar . _GetVar
+                    . hVal . _BodyLeaf . _LeafGetVar
 
 -- Test for issue #402
 -- https://trello.com/c/ClDnsGQi/402-wrong-result-when-inlining-from-hole-results
@@ -182,8 +182,8 @@ testInline =
                         >>= (Query queryLangInfo mempty "num" &)
                         <&> fromMaybe (error "expected option") . (^? traverse)
                     result ^. optionPick & lift
-                    result ^?! optionExpr . hVal . bBody . _BinderTerm
-                        . _BodyLeaf . _LeafGetVar . _GetVar . vInline . _InlineVar
+                    result ^?! optionExpr . hVal . _HoleBinder . bBody . _BinderTerm
+                        . _BodyLeaf . _LeafGetVar . vInline . _InlineVar
                         & lift & void
         testSugarActions "let-item-inline.json" [inline, verify]
     & testCase "inline"
@@ -262,7 +262,7 @@ testInsistFactorial =
     where
         openDef =
             replBody . _BodySimpleApply . appFunc .
-            hVal . _BodyLeaf . _LeafGetVar . _GetVar . vNameRef . nrGotoDefinition
+            hVal . _BodyLeaf . _LeafGetVar . vNameRef . nrGotoDefinition
         ifElse =
             waPanes . traverse . SugarLens.paneBinder .
             hVal . _BodyFunction . fBody .
@@ -371,7 +371,7 @@ testNotALightLambda =
 
 openTopLevelDef :: WorkArea v name i (T ViewM) a -> OnceT (T ViewM) ()
 openTopLevelDef =
-    lift . void . (^?! replBody . _BodyLeaf . _LeafGetVar . _GetVar . vNameRef . nrGotoDefinition)
+    lift . void . (^?! replBody . _BodyLeaf . _LeafGetVar . vNameRef . nrGotoDefinition)
 
 delDefParam :: Test
 delDefParam =
@@ -525,7 +525,7 @@ testPunnedIso =
     <&> (^.. replBinder . _BinderLet . lBody . hVal . bBody . _BinderLet . lBody .
             hVal . bBody . _BinderTerm . _BodyRecord . cList . SugarLens.taggedListItems)
     <&> Lens.mapped %~
-        (\x -> (x ^. tiTag . tagRefTag . tagName, x ^? tiValue . hVal . _BodyLeaf . _LeafGetVar . _GetVar . vNameRef . nrName))
+        (\x -> (x ^. tiTag . tagRefTag . tagName, x ^? tiValue . hVal . _BodyLeaf . _LeafGetVar . vNameRef . nrName))
     >>= assertEqual "Record items expected to be punned" []
 
 testNullParamUnused :: Test
@@ -543,7 +543,7 @@ testPunnedLightParam =
     <&> Lens.has
         ( replBinder . _BinderTerm . _BodyLam . lamFunc . fBody . hVal .
             bBody . _BinderTerm . _BodyRecord . cPunnedItems . traverse . pvVar . hVal .
-            Lens._Wrapped . _GetVar . vForm . _GetLightParam
+            Lens._Wrapped . vForm . _GetLightParam
         )
     >>= assertBool "Null param only if unused"
 
@@ -626,7 +626,7 @@ getHoleResults ::
     Lens.ATraversal'
     TestWorkArea
     (Term v0 name (OnceT (T ViewM)) o k0) ->
-    IO [Option Binder name (OnceT (T ViewM)) o]
+    IO [Option HoleOpt name (OnceT (T ViewM)) o]
 getHoleResults progName traversal =
     do
         env <- Env.make
@@ -647,7 +647,7 @@ testSuspendedHoleResultSimple =
         let opt = head opts
         opt ^. optionTypeMatch & assertBool "First opt is not a type match"
         let optLam =
-                opt ^? optionExpr . hVal . bBody . _BinderTerm . _BodyLam
+                opt ^? optionExpr . hVal . _HoleBinder . bBody . _BinderTerm . _BodyLam
                 & fromMaybe (error "First opt is not a lam")
         Lens.has (lamFunc . fParams . _NullParam) optLam
             & assertBool "First opt is not being sugared as a null param lambda"
@@ -661,7 +661,7 @@ testSuspendedHoleResult =
         opts <- getHoleResults "suspended-hole-result.json" replHole
         let opt = head opts
         opt ^. optionTypeMatch & assertBool "First opt is not a type match"
-        Lens.has (optionExpr . hVal . bBody . _BinderTerm . _BodyLam . lamFunc . fParams . _NullParam) opt
+        Lens.has (optionExpr . hVal . _HoleBinder . bBody . _BinderTerm . _BodyLam . lamFunc . fParams . _NullParam) opt
             & assertBool "First opt is not a null param lambda"
     where
         replHole =

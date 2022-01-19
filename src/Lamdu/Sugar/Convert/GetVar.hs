@@ -14,7 +14,6 @@ import           Data.Maybe.Extended (maybeToMPlus)
 import qualified Data.Property as Property
 import qualified Data.Set as Set
 import           Hyper
-import           Hyper.Syntax.Row (freExtends)
 import qualified Hyper.Syntax.Scheme as S
 import qualified Lamdu.Calc.Lens as ExprLens
 import qualified Lamdu.Calc.Term as V
@@ -27,7 +26,7 @@ import qualified Lamdu.Expr.IRef as ExprIRef
 import           Lamdu.Sugar.Convert.Binder.Params (mkVarInfo)
 import           Lamdu.Sugar.Convert.Expression.Actions (addActions)
 import qualified Lamdu.Sugar.Convert.Input as Input
-import           Lamdu.Sugar.Convert.Monad (ConvertM, siRecordParams)
+import           Lamdu.Sugar.Convert.Monad (ConvertM)
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
 import qualified Lamdu.Sugar.Convert.NameRef as NameRef
 import           Lamdu.Sugar.Internal
@@ -114,12 +113,12 @@ convertGlobal var exprPl =
                 | inlineableDefinition ctx var (exprPl ^. Input.entityId) ->
                     inlineDef var (exprPl ^. Input.stored) & lift <&> InlineVar
             _ -> pure CannotInline
-        GetVar VarRef
+        pure GetVar
             { _vNameRef = nameRef
             , _vVar = var
             , _vForm = GetDefinition defForm
             , _vInline = inline
-            } & pure
+            }
     where
         defI = ExprIRef.defI var
 
@@ -133,29 +132,12 @@ convertGetLet param exprPl =
             >>= maybeToMPlus
         varInfo <- mkVarInfo (exprPl ^. Input.inferredType)
         nameRef <- convertLocalNameRef varInfo param
-        GetVar VarRef
+        pure GetVar
             { _vNameRef = nameRef
             , _vVar = param
             , _vForm = GetNormalVar
             , _vInline = inline (exprPl ^. Input.entityId)
-            } & pure
-
-convertParamsRecord ::
-    Monad m =>
-    V.Var -> Input.Payload m a # V.Term -> MaybeT (ConvertM m) (GetVar InternalName (T m))
-convertParamsRecord param exprPl =
-    GetParamsRecord ParamsRecordVarRef
-    { _prvFieldNames =
-        exprPl
-        ^.. Input.inferredType . _Pure . T._TRecord . T.flatRow
-        . freExtends . Lens.itraversed . Lens.asIndex
-        <&> nameWithContext Nothing param
-    } <$ check
-    where
-        check =
-            Lens.view (ConvertM.scScopeInfo . siRecordParams)
-            <&> Lens.has (Lens.ix param)
-            >>= guard
+            }
 
 convertLocalNameRef ::
     (Applicative f, MonadTransaction n m) =>
@@ -176,7 +158,7 @@ convertParam param exprPl =
     >>= (`convertLocalNameRef` param)
     <&>
     \nameRef ->
-    GetVar VarRef
+    GetVar
     { _vNameRef = nameRef
     , _vForm = GetNormalVar
     , _vInline = CannotInline -- TODO: In some cases can inline param
@@ -190,7 +172,6 @@ convert param exprPl =
     do
         convertGlobal param exprPl & justToLeft
         convertGetLet param exprPl & justToLeft
-        convertParamsRecord param exprPl & justToLeft
         convertParam param exprPl & lift
     & runMatcherT
     <&> BodyLeaf . LeafGetVar

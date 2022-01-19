@@ -183,6 +183,7 @@ instance (MonadTransaction m o, MonadTransaction m i) => Order i (Sugar.Term v n
         & pure
 
 instance (MonadTransaction m o, MonadTransaction m i) => Order i (Sugar.FragOpt v name i o)
+instance (MonadTransaction m o, MonadTransaction m i) => Order i (Sugar.HoleOpt v name i o)
 
 orderNode ::
     (MonadTransaction m i, Order i f) =>

@@ -28,6 +28,7 @@ import           Lamdu.GUI.Annotation (addInferredType, shrinkValAnnotationsIfNe
 import qualified Lamdu.GUI.Expr.ApplyEdit as ApplyEdit
 import qualified Lamdu.GUI.Expr.EventMap as ExprEventMap
 import qualified Lamdu.GUI.Expr.GetVarEdit as GetVarEdit
+import qualified Lamdu.GUI.Expr.HoleOptEdit as HoleOptEdit
 import qualified Lamdu.GUI.Expr.InjectEdit as InjectEdit
 import qualified Lamdu.GUI.Expr.NominalEdit as NominalEdit
 import           Lamdu.GUI.Expr.OptionEdit
@@ -150,13 +151,13 @@ makeFragOpt (Ann (Const a) b) =
         (ResponsiveExpr.boxSpacedMDisamb ?? Nothing)
         <*> traverse ApplyEdit.makePostfixFunc x
     Sugar.FragInject x -> InjectEdit.make (Ann (Const a) (Const x))
-    Sugar.FragApplyFunc x -> GetVarEdit.make (Ann (Const a) (Const x)) /|/ grammar (Label.make " _")
+    Sugar.FragApplyFunc x -> GetVarEdit.make GetVarEdit.Normal (Ann (Const a) (Const x)) /|/ grammar (Label.make " _")
     Sugar.FragOp x -> makeFragOperator x
     Sugar.FragToNom x -> NominalEdit.makeTIdView x & fromView
     Sugar.FragIf t ->
         (grammar (label Texts.if_) /|/ grammar (Label.make ":")) /|/
         Spacer.stdHSpace /|/ GuiM.makeSubexpression t
-    Sugar.FragArgument x -> GuiM.makeSubexpression (Ann (Const a) x)
+    Sugar.FragArgument x -> HoleOptEdit.make (Ann (Const a) x)
     Sugar.FragLam -> grammar (label Texts.lam) & fromView
     Sugar.FragDefer -> grammar (label Texts.defer) & fromView
     Sugar.FragWrapInRec x ->

@@ -24,8 +24,6 @@ data Code a = Code
     , _elseIf :: a -- shorthand for else-if, "elif" a la Python
     , -- Inject
       _injectSymbol :: a
-    , -- Getvar
-      _paramsRecordOpener :: a
     , -- Lambda:
       _defer :: a
     , _lam :: a

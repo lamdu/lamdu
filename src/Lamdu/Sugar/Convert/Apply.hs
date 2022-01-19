@@ -30,7 +30,7 @@ import           Lamdu.Sugar.Convert.Monad (ConvertM)
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
 import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
-import           Lamdu.Sugar.Lens (childPayloads, getVarName, taggedListItems)
+import           Lamdu.Sugar.Lens (childPayloads, taggedListItems)
 import qualified Lamdu.Sugar.PresentationModes as PresentationModes
 import           Lamdu.Sugar.Types
 import           Revision.Deltum.Transaction (Transaction)
@@ -85,7 +85,7 @@ defParamsMatchArgs var record frozenDeps =
         let sFields =
                 record ^..
                 ( cList . taggedListItems . tiTag . tagRefTag . tagVal
-                    <> cPunnedItems . traverse . pvVar . hVal . Lens._Wrapped . getVarName . inTag
+                    <> cPunnedItems . traverse . pvVar . hVal . Lens._Wrapped . vNameRef . nrName . inTag
                 ) & Set.fromList
         guard (sFields == Map.keysSet (defArgs ^. freExtends))
     & Lens.has Lens._Just
@@ -138,7 +138,7 @@ convertLabeled subexprs funcS argS exprPl =
         -- Make sure it is not a "let" but a "def" (recursive or external)
         funcVar <-
             annValue
-            ( ^? _BodyLeaf . _LeafGetVar . _GetVar
+            ( ^? _BodyLeaf . _LeafGetVar
                 . Lens.filteredBy (vForm . _GetDefinition)
                 . Lens._Unwrapped
             ) funcS

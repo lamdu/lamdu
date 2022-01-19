@@ -4,9 +4,7 @@ module Lamdu.Sugar.Types.GetVar
     , DefinitionForm(..), _DefUpToDate, _DefDeleted, _DefTypeChanged
     , DefinitionOutdatedType(..), defTypeWhenUsed, defTypeCurrent, defTypeUseCurrent
     , VarInline(..), _InlineVar, _CannotInlineDueToUses, _CannotInline
-    , VarRef(..), vNameRef, vForm, vVar, vInline
-    , GetVar(..), _GetParamsRecord, _GetVar
-    , ParamsRecordVarRef(..), prvFieldNames
+    , GetVar(..), vNameRef, vForm, vVar, vInline
     ) where
 
 import qualified Control.Lens as Lens
@@ -42,7 +40,7 @@ data VarInline o
     | CannotInline
     deriving Generic
 
-data VarRef name o = VarRef
+data GetVar name o = GetVar
     { _vNameRef :: NameRef name o
     , _vForm :: VarForm name o
     , _vVar :: V.Var
@@ -50,16 +48,7 @@ data VarRef name o = VarRef
       _vInline :: VarInline o
     } deriving Generic
 
-newtype ParamsRecordVarRef name = ParamsRecordVarRef
-    { _prvFieldNames :: [name]
-    } deriving stock (Eq, Ord, Functor, Foldable, Traversable, Generic)
-
-data GetVar name o
-    = GetParamsRecord (ParamsRecordVarRef name)
-    | GetVar (VarRef name o)
-    deriving Generic
-
 traverse Lens.makeLenses
-    [''VarRef, ''DefinitionOutdatedType, ''ParamsRecordVarRef] <&> concat
+    [''GetVar, ''DefinitionOutdatedType] <&> concat
 traverse Lens.makePrisms
-    [''VarForm, ''VarInline, ''DefinitionForm, ''GetVar] <&> concat
+    [''VarForm, ''VarInline, ''DefinitionForm] <&> concat

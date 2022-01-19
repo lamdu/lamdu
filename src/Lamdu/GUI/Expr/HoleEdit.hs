@@ -18,6 +18,7 @@ import qualified Lamdu.Config as Config
 import qualified Lamdu.I18N.Navigation as Texts
 import           Lamdu.GUI.Annotation (maybeAddAnnotationPl)
 import qualified Lamdu.GUI.Expr.EventMap as ExprEventMap
+import qualified Lamdu.GUI.Expr.HoleOptEdit as HoleOptEdit
 import           Lamdu.GUI.Expr.OptionEdit
 import           Lamdu.GUI.Monad (GuiM)
 import qualified Lamdu.GUI.Monad as GuiM
@@ -77,7 +78,7 @@ makeResults (Ann (Const pl) (Const hole)) ctx =
             >>= GuiM.im
             <&> take c
             <&> Lens.mapped %~
-                makeResult GuiM.makeBinder ctx .
+                makeResult HoleOptEdit.make ctx .
                 -- Initialize the operator precedence of results.
                 -- Without this results accept too many operators (and a test fails).
                 (Sugar.optionExpr . annotation . Sugar.plParenInfo . Sugar.piMinOpPrec .~

@@ -30,7 +30,7 @@ convertGetFieldParam (V.App g@(Ann _ (V.BLeaf (V.LGetField tag))) recExpr) exprP
             param <- recExpr ^? ExprLens.valVar
             tags <- recParams ^. Lens.at param
             guard (tags ^. Lens.contains tag)
-            GetVar VarRef
+            LeafGetVar GetVar
                 { _vNameRef = NameRef
                   { _nrName = nameWithContext Nothing param tag
                   , _nrGotoDefinition = EntityId.ofTaggedEntity param tag & pure
@@ -38,7 +38,7 @@ convertGetFieldParam (V.App g@(Ann _ (V.BLeaf (V.LGetField tag))) recExpr) exprP
                 , _vForm = GetNormalVar
                 , _vVar = param
                 , _vInline = CannotInline
-                } & LeafGetVar & BodyLeaf & Just
+                } & BodyLeaf & Just
             & Lens._Just %%~ addActions (App g recExpr) exprPl
 convertGetFieldParam _ _= pure Nothing
 

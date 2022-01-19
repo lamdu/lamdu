@@ -17,7 +17,6 @@ import           Lamdu.Sugar.Convert.Monad (ConvertM)
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
 import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
-import qualified Lamdu.Sugar.Lens as SugarLens
 import qualified Lamdu.Sugar.Types as Sugar
 import           Revision.Deltum.Transaction (Transaction)
 import           Revision.Deltum.Hyper (iref)
@@ -28,7 +27,7 @@ type T = Transaction
 
 makeLabeledApply ::
     Monad m =>
-    Annotated (ConvertPayload m a) # Const (Sugar.VarRef InternalName (T m)) ->
+    Annotated (ConvertPayload m a) # Const (Sugar.GetVar InternalName (T m)) ->
     [ Sugar.AnnotatedArg v InternalName (OnceT (T m)) (T m) # Annotated (ConvertPayload m a)
     ] ->
     [Sugar.PunnedVar InternalName (T m) # Annotated (ConvertPayload m a)] ->
@@ -96,7 +95,7 @@ makeLabeledApply func args punnedArgs exprPl =
                 filter ((`notElem` removedKeys) . (^. Sugar.aaTag . Sugar.tagVal)) args
             , Sugar._aPunnedArgs =
                 filter
-                ((`notElem` removedKeys) . (^?! Sugar.pvVar . hVal . Lens._Wrapped . SugarLens.getVarName . inTag))
+                ((`notElem` removedKeys) . (^?! Sugar.pvVar . hVal . Lens._Wrapped . Sugar.vNameRef . Sugar.nrName . inTag))
                 punnedArgs
             }
     where
@@ -104,7 +103,7 @@ makeLabeledApply func args punnedArgs exprPl =
             (args <&> \x -> (x ^. Sugar.aaTag . Sugar.tagVal, x ^. Sugar.aaExpr)) <>
             (punnedArgs <&>
                 \x ->
-                ( x ^?! Sugar.pvVar . hVal . Lens._Wrapped . SugarLens.getVarName . inTag
+                ( x ^?! Sugar.pvVar . hVal . Lens._Wrapped . Sugar.vNameRef . Sugar.nrName . inTag
                 , x ^. Sugar.pvVar . hVal . Lens._Wrapped & Sugar.LeafGetVar & Sugar.BodyLeaf
                     & Ann (Const (x ^. Sugar.pvVar . annotation))
                 ))

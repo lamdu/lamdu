@@ -45,7 +45,6 @@ class HAnnotations a b s t where
         ) => Traversal (s # h0) (t # h1) a b
     hAnnotations f = morphTraverse (Proxy @(HAnnotations a b) #?> hAnnotations f)
 
-instance Annotations a b (VarRef n o) (VarRef n o) where annotations _ = pure
 instance Annotations a b (GetVar n o) (GetVar n o) where annotations _ = pure
 instance Annotations a b (TagRef n i o) (TagRef n i o) where annotations _ = pure
 instance Annotations a b (i (TagChoice n o)) (i (TagChoice n o)) where annotations _ = pure
@@ -78,6 +77,10 @@ instance HAnnotations a b (LabeledApply a n i o) (LabeledApply b n i o)
 instance HAnnotations a b (Let a n i o) (Let b n i o)
 instance HAnnotations a b (PostfixApply a n i o) (PostfixApply b n i o)
 instance HAnnotations a b (PostfixFunc a n i o) (PostfixFunc b n i o)
+
+instance HAnnotations a b (HoleOpt a n i o) (HoleOpt b n i o) where
+    hAnnotations f (HoleBinder x) = hAnnotations f x <&> HoleBinder
+    hAnnotations _ (HoleVarsRecord x) = HoleVarsRecord x & pure
 
 instance HAnnotations a b (FragOpt a n i o) (FragOpt b n i o) where
     hAnnotations f (FragPostfix x) = (traverse . hAnnotations) f x <&> FragPostfix

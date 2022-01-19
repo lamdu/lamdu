@@ -1,11 +1,10 @@
 module Lamdu.GUI.Expr.GetVarEdit
-    ( make, makeGetBinder, makeSimpleView
+    ( make, makeSimpleView
     , makePunnedVars
     , Role(..)
     ) where
 
 import qualified Control.Lens as Lens
-import qualified Data.ByteString.Char8 as SBS8
 import qualified GUI.Momentu as M
 import qualified GUI.Momentu.Align as Align
 import           GUI.Momentu.EventMap (EventMap)
@@ -53,31 +52,6 @@ makeSimpleView color name myId =
     (Widget.makeFocusableView ?? myId <&> (Align.tValue %~))
     <*> NameView.make name
     & Styled.withColor (Lens.cloneLens color)
-
-makeParamsRecord :: _ => Widget.Id -> Sugar.ParamsRecordVarRef Name -> m (Responsive f)
-makeParamsRecord myId paramsRecordVar =
-    do
-        respondToCursor <- Widget.respondToCursorPrefix ?? myId
-        (Options.box ?? Options.disambiguationNone)
-            <*> sequence
-            [ grammar (label Texts.paramsRecordOpener) <&> Responsive.fromTextView
-            , (Options.boxSpaced ?? Options.disambiguationNone)
-              <*>
-              ( fieldNames
-                & Lens.itraverse
-                (\i fieldName ->
-                    let paramId = ["params", SBS8.pack (show (i :: Int))]
-                    in
-                    Widget.joinId myId paramId
-                    & makeSimpleView TextColors.variableColor fieldName
-                    <&> Responsive.fromWithTextPos
-                    & local (M.animIdPrefix %~ (<> paramId))
-                )
-              )
-            , grammar (label Texts.recordCloser) <&> Responsive.fromTextView
-            ] <&> respondToCursor
-    where
-        Sugar.ParamsRecordVarRef fieldNames = paramsRecordVar
 
 data Role = Normal | Operator deriving Eq
 
@@ -210,9 +184,12 @@ processDefinitionWidget (Sugar.DefTypeChanged info) myId mkLayout =
     where
         hiddenId = myId `Widget.joinId` ["hidden"]
 
-makeGetBinder ::
-    _ => Role -> Sugar.VarRef Name o -> Widget.Id -> GuiM env i o (M.TextWidget o)
-makeGetBinder role var myId =
+make ::
+    _ =>
+    Role ->
+    Annotated (ExprGui.Payload i o) # Const (Sugar.GetVar Name o) ->
+    GuiM env i o (Responsive o)
+make role (Ann (Const pl) (Const var)) =
     do
         env <- Lens.view id
         let (color, processDef) =
@@ -231,18 +208,7 @@ makeGetBinder role var myId =
             <&> Align.tValue %~ Widget.weakerEvents
                 (makeInlineEventMap env (var ^. Sugar.vInline))
             & processDef
-
-make ::
-    _ =>
-    Annotated (ExprGui.Payload i o) # Const (Sugar.GetVar Name o) ->
-    GuiM env i o (Responsive o)
-make (Ann (Const pl) (Const getVar)) =
-    case getVar of
-    Sugar.GetVar binderVar ->
-        makeGetBinder Normal binderVar myId <&> Responsive.fromWithTextPos
-    Sugar.GetParamsRecord paramsRecordVar ->
-        makeParamsRecord myId paramsRecordVar
-    & stdWrap pl
+    <&> Responsive.fromWithTextPos & stdWrap pl
     where
         myId = WidgetIds.fromExprPayload pl
 
@@ -251,7 +217,7 @@ makePunnedVar ::
     Sugar.PunnedVar Name o # Annotated (ExprGui.Payload i o) ->
     GuiM env i o (Responsive o)
 makePunnedVar (Sugar.PunnedVar var tagId) =
-    make var
+    make Normal var
     & GuiState.assignCursor
         (WidgetIds.fromEntityId tagId)
         (WidgetIds.fromExprPayload (var ^. annotation))

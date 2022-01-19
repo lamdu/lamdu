@@ -117,10 +117,10 @@ instance (a ~ OldName m, b ~ NewName m) => Walk m (DefinitionOutdatedType a o p)
 toBinderVarRef ::
     MonadNaming m =>
     Maybe Disambiguator ->
-    VarRef (OldName m) o ->
-    m (VarRef (NewName m) o)
-toBinderVarRef mDisambig (VarRef nameRef form var inline) =
-    VarRef
+    GetVar (OldName m) o ->
+    m (GetVar (NewName m) o)
+toBinderVarRef mDisambig (GetVar nameRef form var inline) =
+    GetVar
     <$> ( nrName %%~
           opGetName mDisambig MayBeAmbiguous (binderVarType form)
         ) nameRef
@@ -129,9 +129,7 @@ toBinderVarRef mDisambig (VarRef nameRef form var inline) =
     ?? inline
 
 instance (a ~ OldName m, b ~ NewName m) => Walk m (GetVar a o) (GetVar b o) where
-    walk (GetVar x) = toBinderVarRef Nothing x <&> GetVar
-    walk (GetParamsRecord x) =
-        traverse (opGetName Nothing MayBeAmbiguous Tag) x <&> GetParamsRecord
+    walk = toBinderVarRef Nothing
 
 instance (a ~ OldName m, b ~ NewName m) => Walk m (ResRecord a p) (ResRecord b p) where
     walk = recordFields . traverse . _1 %%~ toTagOf Tag
@@ -330,6 +328,10 @@ instance ToBody FragOperator where
         <$> toNode (Lens._Wrapped (toBinderVarRef Nothing)) f
         <*> toExpression a
         <*> traverse (toTagOf Tag) t
+
+instance ToBody HoleOpt where
+    toBody (HoleBinder x) = toBody x <&> HoleBinder
+    toBody (HoleVarsRecord x) = traverse (opGetName Nothing MayBeAmbiguous TaggedVar) x <&> HoleVarsRecord
 
 instance
     (Walk m v0 v1, Walk m p0 p1, i ~ IM m, a ~ OldName m, b ~ NewName m) =>

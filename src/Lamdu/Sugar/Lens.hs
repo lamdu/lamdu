@@ -5,7 +5,6 @@ module Lamdu.Sugar.Lens
     , bodyUnfinished
     , defSchemes
     , binderResultExpr
-    , getVarName
     , unfinishedPayloads
     , taggedListItems, taggedListBodyItems
     , taggedItemTagChoices
@@ -41,7 +40,7 @@ bodyUnfinished :: Lens.Traversal' (Term v name i o # Ann a) ()
 bodyUnfinished =
     _BodyLeaf . _LeafHole . Lens.united
     & Lens.failing (_BodyFragment . Lens.united)
-    & Lens.failing (_BodyLeaf . _LeafGetVar . _GetVar . varRefUnfinished)
+    & Lens.failing (_BodyLeaf . _LeafGetVar . varRefUnfinished)
     & Lens.failing (_BodyLabeledApply . aFunc . hVal . Lens._Wrapped . varRefUnfinished)
 
 defBodySchemes :: Lens.Traversal' (DefinitionBody v name i o expr) (Scheme name Unit)
@@ -70,10 +69,6 @@ binderResultExpr f (Ann (Const pl) x) =
         <&> BinderLet
         <&> Binder (x ^. bAddOuterLet)
         <&> Ann (Const pl)
-
-getVarName :: Lens.Traversal' (GetVar a o) a
-getVarName f (GetVar x) = (vNameRef . nrName) f x <&> GetVar
-getVarName _ (GetParamsRecord x) = GetParamsRecord x & pure
 
 taggedListBodyItems ::
     Traversal (TaggedListBody n0 i0 o a0) (TaggedListBody n1 i1 o a1)

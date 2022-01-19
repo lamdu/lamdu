@@ -92,7 +92,7 @@ convertExtend cons valS exprPl extendV restC =
         do
             guard punSugar
             getVar <- itemS ^? tiValue . hVal . _BodyLeaf . _LeafGetVar
-            name <- getVar ^? SugarLens.getVarName
+            name <- getVar ^? vNameRef . nrName
             _ <- internalNameMatch (itemS ^. tiTag . tagRefTag . tagName) name
             let punned =
                     PunnedVar

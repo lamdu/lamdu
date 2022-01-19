@@ -25,7 +25,6 @@
             "if_": "si",
             "else_": "sino",
             "elseIf": "osino",
-            "paramsRecordOpener": "Parámetros {",
             "variantTypeSep": "o: ",
             "typ": "tipos",
             "row": "fila"

@@ -110,6 +110,10 @@ instance Functor m => MarkBodyAnnotations v m Function where
             }
         )
 
+instance Functor m => MarkBodyAnnotations v m HoleOpt where
+    markBodyAnnotations (HoleBinder t) = markBodyAnnotations t & _2 %~ HoleBinder
+    markBodyAnnotations (HoleVarsRecord x) = (neverShowAnnotations, HoleVarsRecord x)
+
 instance Functor m => MarkBodyAnnotations v m IfElse where
     markBodyAnnotations (IfElse i t e) =
         ( showAnnotationWhenVerbose
@@ -134,10 +138,9 @@ instance Functor m => MarkBodyAnnotations v m Term where
     markBodyAnnotations (BodyRecord x) = markBodyAnnotations x & _2 %~ BodyRecord
     markBodyAnnotations (BodyLam x) = lamFunc markBodyAnnotations x & _2 %~ BodyLam
     markBodyAnnotations (BodyLeaf (LeafGetVar x)) =
-        ( case x of
-            GetParamsRecord{} -> showAnnotationWhenVerbose
-            GetVar VarRef{ _vForm = GetLightParam } -> showAnnotationWhenVerbose
-            GetVar VarRef { _vForm = GetDefinition{} } -> showAnnotationWhenVerbose
+        ( case x ^. vForm of
+            GetLightParam -> showAnnotationWhenVerbose
+            GetDefinition{} -> showAnnotationWhenVerbose
             _ -> neverShowAnnotations
         , LeafGetVar x & BodyLeaf
         )

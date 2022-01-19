@@ -25,6 +25,7 @@ module Lamdu.Sugar.Types.Expression
     , Assignment(..), _BodyFunction, _BodyPlain
     -- Holes
     , Hole(..), holeOptions, holeTagSuffixes
+    , HoleOpt(..), _HoleBinder, _HoleVarsRecord
     , Query(..), qLangInfo, qSearchTerm
     , QueryLangInfo(..), qLangId, qLangDir, qCodeTexts, qUITexts, qNameTexts
         , hasQueryLangInfo
@@ -54,7 +55,7 @@ import           Lamdu.Data.Anchors (BinderParamScopeId(..), bParamScopeId)
 import qualified Lamdu.Data.Meta as Meta
 import           Lamdu.Sugar.Internal.EntityId (EntityId)
 import           Lamdu.Sugar.Types.Eval (ParamScopes)
-import           Lamdu.Sugar.Types.GetVar (GetVar, VarRef)
+import           Lamdu.Sugar.Types.GetVar (GetVar)
 import           Lamdu.Sugar.Types.Parts
 import           Lamdu.Sugar.Types.Tag
 import           Lamdu.Sugar.Types.Type (TId)
@@ -78,7 +79,7 @@ data OperatorArgs v name i o k = OperatorArgs
 -- TODO: func + specialArgs into a single sum type so that field order
 -- matches gui order, no need for special traversal code
 data LabeledApply v name i o k = LabeledApply
-    { _aFunc :: k :# Const (VarRef name o)
+    { _aFunc :: k :# Const (GetVar name o)
     , _aMOpArgs :: Maybe (OperatorArgs v name i o k)
     , _aAnnotatedArgs :: [AnnotatedArg v name i o k]
     , _aPunnedArgs :: [PunnedVar name o k]
@@ -118,11 +119,11 @@ data FragOpt v name i o k
     | FragLam
     | FragDefer
     | FragIf (k :# Term v name i o)
-    | FragArgument (Term v name i o k) -- Apply fragmented expr with argument
+    | FragArgument (HoleOpt v name i o k) -- Apply fragmented expr with argument
     deriving Generic
 
 data FragOperator v name i o k = FragOperator
-    { _oFunc :: k :# Const (VarRef name o)
+    { _oFunc :: k :# Const (GetVar name o)
     , -- Argument on right-hand-side (LTR) of operator.
       -- (usually a hole, but may be completed to other values)
       _oRightArg :: k :# Term v name i o
@@ -131,7 +132,7 @@ data FragOperator v name i o k = FragOperator
 
 data Hole name i o = Hole
     { _holeOptions ::
-        i (Query -> i [Option Binder name i o])
+        i (Query -> i [Option HoleOpt name i o])
         -- Inner `i` serves two purposes:
         -- Name walk requires monadic place to process names.
         -- Hole can prepare results depending on the query and avoid doing work
@@ -141,6 +142,11 @@ data Hole name i o = Hole
         -- should be given back in the query.
         -- TODO: More elegant solution?
     } deriving stock Generic
+
+data HoleOpt v name i o k
+    = HoleBinder (Binder v name i o k)
+    | HoleVarsRecord [name] -- List of fields
+    deriving stock Generic
 
 data Else v name i o f
     = SimpleElse (Term v name i o f)
@@ -252,12 +258,14 @@ traverse Lens.makeLenses
     , ''Nominal, ''OperatorArgs, ''PostfixApply
     ] <&> concat
 traverse Lens.makePrisms
-    [''Assignment, ''BinderBody, ''CompositeTail, ''Else, ''FragOpt, ''Leaf, ''PostfixFunc, ''Term] <&> concat
+    [''Assignment, ''BinderBody, ''CompositeTail, ''Else
+    , ''FragOpt, ''HoleOpt, ''Leaf, ''PostfixFunc, ''Term
+    ] <&> concat
 
 traverse makeHTraversableAndBases
     [ ''AnnotatedArg, ''Assignment, ''AssignPlain, ''Binder, ''BinderBody
     , ''Composite, ''CompositeTail, ''Else, ''ElseIfBody
-    , ''Fragment, ''FragOperator, ''FragOpt, ''Function, ''IfElse
+    , ''Fragment, ''FragOperator, ''FragOpt, ''Function, ''HoleOpt, ''IfElse
     , ''LabeledApply, ''Lambda, ''Let, ''Nominal
     , ''OperatorArgs, ''PostfixApply, ''PostfixFunc, ''Term
     ] <&> concat
@@ -273,13 +281,13 @@ instance RNodes (Binder v name i o)
 instance RNodes (Else v name i o)
 instance RNodes (Function v name i o)
 instance RNodes (FragOpt v name i o)
+instance RNodes (HoleOpt v name i o)
 instance RNodes (PostfixFunc v name i o)
 instance RNodes (Term v name i o)
 
 type Dep v (c :: HyperType -> Constraint) name i o =
     ( c (Assignment v name i o)
     , c (Binder v name i o)
-    , c (Const (VarRef name o))
     , c (Const (GetVar name o))
     , c (Const (i (TagChoice name o)))
     , c (Const (TagRef name i o))
@@ -294,6 +302,7 @@ instance Dep v c name i o => Recursively c (Else v name i o)
 instance Dep v c name i o => Recursively c (PostfixFunc v name i o)
 instance Dep v c name i o => Recursively c (Term v name i o)
 
+instance (Dep v c name i o, c (HoleOpt v name i o)) => Recursively c (HoleOpt v name i o)
 instance (Dep v c name i o, c (FragOpt v name i o)) => Recursively c (FragOpt v name i o)
 instance (Dep v c name i o, c (Function v name i o)) => Recursively c (Function v name i o)
 

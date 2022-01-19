@@ -40,9 +40,7 @@ testPunnedArgOp =
             { Sugar._aFunc = Stub.defRef "a" "a" & Const & Stub.node
             , Sugar._aMOpArgs = Nothing
             , Sugar._aAnnotatedArgs = []
-            , Sugar._aPunnedArgs =
-                [ Sugar.PunnedVar (Stub.defRef "b" "b" & Sugar.GetVar & Const & Stub.node) "b"
-                ]
+            , Sugar._aPunnedArgs = [Sugar.PunnedVar (Stub.defRef "b" "b" & Const & Stub.node) "b"]
             } & Stub.node
             & Parens.addToTopLevel 0
 
@@ -132,8 +130,8 @@ test514 =
                 { Sugar._lamLightweight = False
                 , Sugar._lamApplyLimit = Sugar.UnlimitedFuncApply
                 , Sugar._lamFunc =
-                    (Stub.node . Sugar.BodyLeaf . Sugar.LeafGetVar . Sugar.GetVar)
-                    (Sugar.VarRef (Stub.nameRef (Stub.taggedEntityName "x" "x"))
+                    (Stub.node . Sugar.BodyLeaf . Sugar.LeafGetVar)
+                    (Sugar.GetVar (Stub.nameRef (Stub.taggedEntityName "x" "x"))
                         Sugar.GetNormalVar "x" Sugar.CannotInline)
                     $$ Stub.hole
                     & Stub.funcExpr "x" "x"

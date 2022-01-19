@@ -30,7 +30,7 @@ import qualified Lamdu.GUI.Monad as GuiM
 import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.GUI.Types as ExprGui
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
-import           Lamdu.GUI.Wrap (stdWrap, stdWrapParentExpr)
+import           Lamdu.GUI.Wrap (stdWrapParentExpr)
 import qualified Lamdu.GUI.Wrap as Wrap
 import qualified Lamdu.I18N.CodeUI as Texts
 import qualified Lamdu.I18N.Navigation as Texts
@@ -39,25 +39,12 @@ import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
 
-makeFunc ::
-    _ =>
-    GetVarEdit.Role ->
-    Annotated (ExprGui.Payload i o) # Const (Sugar.VarRef Name o) ->
-    GuiM env i o (Responsive o)
-makeFunc role func =
-    GetVarEdit.makeGetBinder role (func ^. hVal . Lens._Wrapped) myId
-    <&> Responsive.fromWithTextPos
-    & stdWrap pl
-    where
-        pl = func ^. annotation
-        myId = WidgetIds.fromExprPayload pl
-
 makeLabeled :: _ => ExprGui.Expr Sugar.LabeledApply i o -> GuiM env i o (Responsive o)
 makeLabeled (Ann (Const pl) apply) =
     ExprEventMap.add ExprEventMap.defaultOptions pl <*>
     ( Wrap.parentDelegator myId <*>
         case apply ^. Sugar.aMOpArgs of
-        Nothing -> makeFunc GetVarEdit.Normal func >>= wrap
+        Nothing -> GetVarEdit.make GetVarEdit.Normal func >>= wrap
         Just (Sugar.OperatorArgs l r s) ->
             do
                 env <- Lens.view id
@@ -94,13 +81,13 @@ makeLabeled (Ann (Const pl) apply) =
 makeOperatorRow ::
     _ =>
     (Responsive o -> Responsive o) ->
-    (Annotated (ExprGui.Payload i o) # Const (Sugar.VarRef Name o)) ->
+    (Annotated (ExprGui.Payload i o) # Const (Sugar.GetVar Name o)) ->
     ExprGui.Expr Sugar.Term i o ->
     GuiM env i o (Responsive o)
 makeOperatorRow onR func r =
     (Options.boxSpaced ?? Options.disambiguationNone)
     <*> sequenceA
-    [ makeFunc GetVarEdit.Operator func
+    [ GetVarEdit.make GetVarEdit.Operator func
     , GuiM.makeSubexpression r <&> onR
     ]
 

@@ -269,7 +269,6 @@ class GetVars t where
 instance Recursive GetVars where
     recurse = getVarsRecursive . proxyArgument
 
-instance GetVars (Const (VarRef InternalName o))
 instance GetVars (Const (i (TagChoice InternalName o)))
 instance GetVars (Const (TagRef InternalName i o))
 instance GetVars (Const (TId name o))
@@ -278,7 +277,7 @@ instance GetVars (Function v InternalName i o)
 instance GetVars (PostfixFunc v InternalName i o)
 
 instance GetVars (Const (GetVar InternalName o)) where
-    getVars = (^? Lens._Wrapped . _GetVar . vNameRef . nrName)
+    getVars = (^? Lens._Wrapped . vNameRef . nrName)
 
 instance GetVars (Assignment v InternalName i o) where
     getVars x = x ^? _BodyPlain . apBody >>= getVars
@@ -311,8 +310,6 @@ markNodeLightParams ::
 markNodeLightParams paramNames =
     hVal %~ markLightParams paramNames
 
--- instance MarkLightParams (Const a)
-instance MarkLightParams (Const (VarRef InternalName o))
 instance MarkLightParams (Const (i (TagChoice InternalName o)))
 instance MarkLightParams (Const (TagRef InternalName i o))
 instance MarkLightParams (Else v InternalName i o)
@@ -322,7 +319,7 @@ instance MarkLightParams (PostfixFunc v InternalName i o)
 
 instance MarkLightParams (Const (GetVar InternalName o)) where
     markLightParams paramNames =
-        Lens._Wrapped . _GetVar . Lens.filteredBy (vNameRef . nrName . Lens.filtered f) . vForm .~ GetLightParam
+        Lens._Wrapped . Lens.filteredBy (vNameRef . nrName . Lens.filtered f) . vForm .~ GetLightParam
         where
             f n = paramNames ^. Lens.contains n
 

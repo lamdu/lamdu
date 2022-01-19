@@ -23,7 +23,6 @@
             "if_": "if",
             "else_": "else",
             "elseIf": "elif",
-            "paramsRecordOpener": "Params {",
             "variantTypeSep": "or: ",
             "typ": "type",
             "row": "row"

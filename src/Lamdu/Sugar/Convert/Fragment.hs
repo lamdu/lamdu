@@ -164,7 +164,7 @@ convertAppliedHole app@(V.App funcI argI) exprPl argS =
             & lift
         <&> annotation . pActions . detach .~ FragmentedAlready storedEntityId
     where
-        toArg = optionExpr . annValue %~ FragArgument . (^?! bBody . _BinderTerm)
+        toArg = optionExpr . annValue %~ FragArgument
         topRef = exprPl ^. Input.stored . ExprIRef.iref
         funcOpt = traverse . rExpr %~ makeFuncOpts
         argPl = argS ^. annotation . pInput
@@ -248,9 +248,9 @@ makeLocal top arg typ val =
     where
         r = Ann (ExistingRef top) . V.BApp . App (writeNew val)
 
-toFragOpt :: Annotated (Payload a m) # Binder v name i o -> Annotated (Payload a m) # FragOpt v name i o
+toFragOpt :: Annotated (Payload a m) # HoleOpt v name i o -> Annotated (Payload a m) # FragOpt v name i o
 toFragOpt o =
-    case o ^. hVal . bBody of
+    case o ^?! hVal . _HoleBinder . bBody of
     BinderTerm (BodyPostfixApply (PostfixApply a f)) ->
         reverse (f : match a)
         <&> annotation . plActions . detach .~ o ^. annotation . plActions . detach

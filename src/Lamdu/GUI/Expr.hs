@@ -51,7 +51,7 @@ makeEditor (Ann (Const pl) body) =
         Sugar.LeafHole        x -> editor pl (Const x) HoleEdit.make
         Sugar.LeafLiteral     x -> editor pl (Const x) LiteralEdit.make
         Sugar.LeafInject      x -> editor pl (Const x) InjectEdit.make
-        Sugar.LeafGetVar      x -> editor pl (Const x) GetVarEdit.make
+        Sugar.LeafGetVar      x -> editor pl (Const x) (GetVarEdit.make GetVarEdit.Normal)
     & local
         (Element.animIdPrefix .~ Widget.toAnimId (WidgetIds.fromExprPayload pl))
 
