@@ -1,8 +1,7 @@
 {-# LANGUAGE TypeFamilies, TypeApplications, ScopedTypeVariables #-}
 
 module Lamdu.Sugar.Convert.Expression.Actions
-    ( subexprPayloads, addActionsWith, addActions, makeActions
-    , convertPayload, makeApply
+    ( subexprPayloads, addActionsWith, addActions, makeActions, makeApply
     ) where
 
 import           Control.Applicative ((<|>))
@@ -312,25 +311,6 @@ addActions ::
 addActions subexprs exprPl bodyS =
     addActionsWith (mconcat (subexprPayloads subexprs (bodyS ^.. childPayloads)))
     exprPl bodyS
-
-mkEvalPrep :: ConvertPayload m a -> EvalPrep
-mkEvalPrep pl =
-    EvalPrep
-    { _eType = pl ^. pInput . Input.inferredType
-    , _eEvalId = pl ^. pInput . Input.entityId
-    }
-
-convertPayload ::
-    ConvertPayload m (ParenInfo, [EntityId]) ->
-    Payload EvalPrep (T m)
-convertPayload pl =
-    Payload
-    { _plAnnotation = mkEvalPrep pl
-    , _plActions = pl ^. pActions
-    , _plEntityId = pl ^. pInput . Input.entityId
-    , _plParenInfo = pl ^. pInput . Input.userData . _1
-    , _plHiddenEntityIds = pl ^. pInput . Input.userData . _2
-    }
 
 valFromLiteral ::
     Monad m =>

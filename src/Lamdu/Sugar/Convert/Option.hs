@@ -56,7 +56,6 @@ import           Lamdu.Sugar.Annotations (ShowAnnotation, MarkAnnotations(..), a
 import           Lamdu.Sugar.Convert.Annotation (makeAnnotation)
 import           Lamdu.Sugar.Convert.Binder (convertBinder)
 import           Lamdu.Sugar.Convert.Binder.Params (mkVarInfo)
-import           Lamdu.Sugar.Convert.Expression.Actions (convertPayload)
 import qualified Lamdu.Sugar.Convert.Input as Input
 import           Lamdu.Sugar.Convert.Monad (ConvertM)
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
@@ -455,9 +454,7 @@ makeOption dstPl res =
                 Lens.locally (ConvertM.scFrozenDeps . pVal) (<> res ^. rDeps)
             <&> markNodeAnnotations @_ @_ @(HoleOpt (ShowAnnotation, EvalPrep) InternalName (OnceT (T m)) (T m))
             <&> hflipped %~ hmap (const (Lens._Wrapped %~
-                \x ->
-                convertPayload (x & pInput . Input.userData .~ (ParenInfo 0 False, []))
-                & plAnnotation %~ (,) (x ^. pInput . Input.userData . _1)
+                    \x -> convertPayload x & plAnnotation %~ (,) (x ^. pInput . Input.userData . _1)
                 ))
             -- We explicitly do want annotations of variables such as global defs to appear
             <&> Lens.filteredBy (hVal . _HoleBinder . bBody . _BinderTerm . _BodyLeaf . _LeafGetVar) .
@@ -553,6 +550,23 @@ makeLocals f scope =
                     Infer.runPureInfer scope ctx
                     (instantiate (scope ^?! V.scopeVarTypes . Lens.ix var . _HFlip) >>= applyBindings)
                     ^?! Lens._Right . _1 . _Pure . T._TRecord . T.flatRow . freExtends . Lens.ix tag
+
+mkEvalPrep :: ConvertPayload m a -> EvalPrep
+mkEvalPrep pl =
+    EvalPrep
+    { _eType = pl ^. pInput . Input.inferredType
+    , _eEvalId = pl ^. pInput . Input.entityId
+    }
+
+convertPayload :: ConvertPayload m a -> Payload EvalPrep (T m)
+convertPayload pl =
+    Payload
+    { _plAnnotation = mkEvalPrep pl
+    , _plActions = pl ^. pActions
+    , _plEntityId = pl ^. pInput . Input.entityId
+    , _plParenInfo = ParenInfo 0 False
+    , _plHiddenEntityIds = []
+    }
 
  -- Duplicate name-gen behaviour for locals
 localName :: MonadTransaction n m => Pure # T.Type -> V.Var -> m (TagSuffixes -> QueryLangInfo -> [Text])
