@@ -130,6 +130,3 @@ testProgramH paths action =
 
 testProgram :: FilePath -> OnceT (T ViewM) a -> IO a
 testProgram x = testProgramH ["test/programs/builtins.json", "test/programs/" <> x]
-
-testFresh :: OnceT (T ViewM) a -> IO a
-testFresh = testProgramH ["data/freshdb.json"]

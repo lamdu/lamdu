@@ -67,14 +67,13 @@ type TestWorkArea =
     WorkArea TestAnnotation Name (OnceT (T ViewM)) (T ViewM)
     (Sugar.Payload TestAnnotation (T ViewM))
 
-testSugarActionsWith ::
-    FilePath -> [TestWorkArea -> OnceT (T ViewM) a] -> Env -> IO ()
+testSugarActionsWith :: HasCallStack => FilePath -> [TestWorkArea -> OnceT (T ViewM) a] -> Env -> IO ()
 testSugarActionsWith program actions env =
     traverse_ (convertWorkArea "" env >>=) actions <* convertWorkArea "" env
     & testProgram program
 
 -- | Verify that a sugar action does not result in a crash
-testSugarActions :: FilePath -> [TestWorkArea -> OnceT (T ViewM) a] -> IO ()
+testSugarActions :: HasCallStack => FilePath -> [TestWorkArea -> OnceT (T ViewM) a] -> IO ()
 testSugarActions program actions =
     Env.make >>= testSugarActionsWith program actions
 
