@@ -19,28 +19,24 @@ import           Lamdu.Sugar.Types
 import           Lamdu.Prelude
 
 convertGetFieldParam ::
-    (Monad m, Monoid a) =>
-    V.App V.Term # Ann (Input.Payload m a) ->
-    Input.Payload m a # V.Term ->
-    ConvertM m (Maybe (ExpressionU v m a))
-convertGetFieldParam (V.App g@(Ann _ (V.BLeaf (V.LGetField tag))) recExpr) exprPl =
+    Monad m => V.App V.Term # Ann (Input.Payload m a) -> ConvertM m (Maybe (BodyU v m a))
+convertGetFieldParam (V.App (Ann _ (V.BLeaf (V.LGetField tag))) recExpr) =
+    Lens.view (ConvertM.scScopeInfo . ConvertM.siRecordParams) <&>
+    \recParams ->
     do
-        recParams <- Lens.view (ConvertM.scScopeInfo . ConvertM.siRecordParams)
-        do
-            param <- recExpr ^? ExprLens.valVar
-            tags <- recParams ^. Lens.at param
-            guard (tags ^. Lens.contains tag)
-            LeafGetVar GetVar
-                { _vNameRef = NameRef
-                  { _nrName = nameWithContext Nothing param tag
-                  , _nrGotoDefinition = EntityId.ofTaggedEntity param tag & pure
-                  }
-                , _vForm = GetNormalVar
-                , _vVar = param
-                , _vInline = CannotInline
-                } & BodyLeaf & Just
-            & Lens._Just %%~ addActions (App g recExpr) exprPl
-convertGetFieldParam _ _= pure Nothing
+        param <- recExpr ^? ExprLens.valVar
+        tags <- recParams ^. Lens.at param
+        guard (tags ^. Lens.contains tag)
+        LeafGetVar GetVar
+            { _vNameRef = NameRef
+                { _nrName = nameWithContext Nothing param tag
+                , _nrGotoDefinition = EntityId.ofTaggedEntity param tag & pure
+                }
+            , _vForm = GetNormalVar
+            , _vVar = param
+            , _vInline = CannotInline
+            } & BodyLeaf & Just
+convertGetFieldParam _ = pure Nothing
 
 convert ::
     (Monad m, Monoid a) =>

@@ -5,7 +5,7 @@ module Lamdu.Sugar.Convert.Apply
     ) where
 
 import qualified Control.Lens as Lens
-import           Control.Monad.Once (Typeable)
+import           Control.Monad.Once (OnceT, Typeable)
 import           Control.Monad.Trans.Except.Extended (runMatcherT, justToLeft)
 import           Control.Monad.Trans.Maybe (MaybeT(..))
 import qualified Data.Map as Map
@@ -45,14 +45,14 @@ convert ::
 convert app@(V.App funcI argI) exprPl =
     runMatcherT $
     do
-        convertGetFieldParam app exprPl & MaybeT & justToLeft
-        (funcS, argS) <-
+        convertGetFieldParam app >>= Lens._Just addAct & MaybeT & justToLeft
+        appS <-
             do
                 argS <- ConvertM.convertSubexpression argI & lift
                 convertAppliedHole app exprPl argS & justToLeft
                 funcS <- ConvertM.convertSubexpression funcI & lift
                 protectedSetToVal <- lift ConvertM.typeProtectedSetToVal
-                pure
+                App
                     ( if Lens.has (hVal . _BodyLeaf . _LeafHole) argS
                       then
                           let dst = argI ^. hAnn . Input.stored . ExprIRef.iref
@@ -62,12 +62,13 @@ convert app@(V.App funcI argI) exprPl =
                           in  funcS
                               & annotation . pActions . delete .~ SetToHole deleteAction
                       else funcS
-                    , argS
-                    )
-        convertEmptyInject app funcS argS exprPl & justToLeft
-        convertPostfix app funcS argS exprPl & justToLeft
-        convertLabeled app funcS argS exprPl & justToLeft
-        convertPrefix app funcS argS exprPl & lift
+                    ) argS & pure
+        convertEmptyInject appS >>= lift . addAct & justToLeft
+        convertPostfix appS exprPl >>= lift . addAct & justToLeft
+        convertLabeled app appS exprPl & justToLeft
+        convertPrefix appS exprPl >>= addAct & lift
+    where
+        addAct = addActions app exprPl
 
 defParamsMatchArgs ::
     V.Var ->
@@ -90,12 +91,12 @@ defParamsMatchArgs var record frozenDeps =
         guard (sFields == Map.keysSet (defArgs ^. freExtends))
     & Lens.has Lens._Just
 
-convertEmptyInject ::
-    (Monad m, Monoid a, Recursively HFoldable h) =>
-    h # Ann (Input.Payload m a) ->
-    ExpressionU v m a -> ExpressionU v m a -> Input.Payload m a # V.Term ->
-    MaybeT (ConvertM m) (ExpressionU v m a)
-convertEmptyInject subexprs funcS argS applyPl =
+type AppS v m a =
+    App (Term v InternalName (OnceT (Transaction m)) (Transaction m)) #
+    Annotated (ConvertPayload m a)
+
+convertEmptyInject :: Monad m => AppS v m a -> MaybeT (ConvertM m) (BodyU v m a)
+convertEmptyInject (App funcS argS) =
     do
         inject <- annValue (^? _BodyLeaf . _LeafInject . Lens._Unwrapped) funcS & maybeToMPlus
         r <- annValue (^? _BodyRecord) argS & maybeToMPlus
@@ -104,14 +105,10 @@ convertEmptyInject subexprs funcS argS applyPl =
         Lens.has (hVal . cTail . _ClosedComposite) r & guard
         r & annValue %~ (^. cList . tlAddFirst . Lens._Unwrapped)
             & NullaryInject inject & BodyNullaryInject
-            & addActions subexprs applyPl & lift
+            & pure
 
-convertPostfix ::
-    (Monad m, Monoid a, Recursively HFoldable h) =>
-    h # Ann (Input.Payload m a) ->
-    ExpressionU v m a -> ExpressionU v m a -> Input.Payload m a # V.Term ->
-    MaybeT (ConvertM m) (ExpressionU v m a)
-convertPostfix subexprs funcS argS applyPl =
+convertPostfix :: Monad m => AppS v m a -> Input.Payload m a # V.Term -> MaybeT (ConvertM m) (BodyU v m a)
+convertPostfix (App funcS argS) applyPl =
     do
         postfixFunc <- annValue (^? _BodyPostfixFunc) funcS & maybeToMPlus
         del <- makeDel applyPl & lift
@@ -124,14 +121,13 @@ convertPostfix subexprs funcS argS applyPl =
         ifSugar <- Lens.view (ConvertM.scConfig . Config.sugarsEnabled . Config.ifExpression)
         guard ifSugar *> convertIfElse setTo postfix
             & maybe (BodyPostfixApply postfix) BodyIfElse
-            & addActions subexprs applyPl & lift
+            & pure
 
 convertLabeled ::
     (Monad m, Monoid a, Recursively HFoldable h) =>
-    h # Ann (Input.Payload m a) ->
-    ExpressionU v m a -> ExpressionU v m a -> Input.Payload m a # V.Term ->
+    h # Ann (Input.Payload m a) -> AppS v m a -> Input.Payload m a # V.Term ->
     MaybeT (ConvertM m) (ExpressionU v m a)
-convertLabeled subexprs funcS argS exprPl =
+convertLabeled subexprs (App funcS argS) exprPl =
     do
         Lens.view (ConvertM.scConfig . Config.sugarsEnabled . Config.labeledApply) >>= guard
         -- Make sure it's a not a param, get the var
@@ -173,12 +169,8 @@ convertLabeled subexprs funcS argS exprPl =
                 & mconcat
         addActionsWith userPayload exprPl bod & lift
 
-convertPrefix ::
-    (Monad m, Monoid a) =>
-    V.App V.Term # Ann (Input.Payload m a) ->
-    ExpressionU v m a -> ExpressionU v m a -> Input.Payload m a # V.Term ->
-    ConvertM m (ExpressionU v m a)
-convertPrefix subexprs funcS argS applyPl =
+convertPrefix :: Monad m => AppS v m a -> Input.Payload m a # V.Term -> ConvertM m (BodyU v m a)
+convertPrefix (App funcS argS) applyPl =
     do
         del <- makeDel applyPl
         protectedSetToVal <- ConvertM.typeProtectedSetToVal
@@ -190,13 +182,13 @@ convertPrefix subexprs funcS argS applyPl =
                     <&> EntityId.ofValI
                 | otherwise = x
                 where
-                    argIref = subexprs ^. V.appArg . hAnn . Input.stored . ExprIRef.iref
+                    argIref = argS ^. annotation . pInput . Input.stored . ExprIRef.iref
         BodySimpleApply App
             { _appFunc = funcS & annotation . pActions . delete .~ del argS
             , _appArg =
                 argS
                 & annotation . pActions . delete %~ (_Delete %~ injectToNullary) . (Lens.filteredBy _CannotDelete .~ del funcS)
-            } & addActions subexprs applyPl
+            } & pure
 
 makeDel ::
     Monad m =>

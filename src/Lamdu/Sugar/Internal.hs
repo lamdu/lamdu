@@ -6,7 +6,7 @@ module Lamdu.Sugar.Internal
     , InternalName(..), inTag, inContext, inIsAutoName
     , internalNameMatch
     , nameWithoutContext, nameWithContext, taggedName
-    , ExpressionU
+    , ExpressionU, BodyU
     , replaceWith
     , autoName
     ) where
@@ -114,6 +114,7 @@ taggedName :: (MonadTransaction n m, UniqueId.ToUUID a) => Maybe VarInfo -> a ->
 taggedName mVarInfo x = Anchors.assocTag x & getP <&> nameWithContext mVarInfo x
 
 type ExpressionU v m a = Annotated (ConvertPayload m a) # Term v InternalName (OnceT (T m)) (T m)
+type BodyU v m a = Term v InternalName (OnceT (T m)) (T m) # Annotated (ConvertPayload m a)
 
 replaceWith ::
     Monad m =>
