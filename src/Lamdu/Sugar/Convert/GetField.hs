@@ -19,7 +19,7 @@ import           Lamdu.Sugar.Types
 import           Lamdu.Prelude
 
 convertGetFieldParam ::
-    Monad m => V.App V.Term # Ann (Input.Payload m a) -> ConvertM m (Maybe (BodyU v m a))
+    Monad m => V.App V.Term # Ann (Input.Payload m) -> ConvertM m (Maybe (BodyU v m ()))
 convertGetFieldParam (V.App (Ann _ (V.BLeaf (V.LGetField tag))) recExpr) =
     Lens.view (ConvertM.scScopeInfo . ConvertM.siRecordParams) <&>
     \recParams ->
@@ -39,10 +39,10 @@ convertGetFieldParam (V.App (Ann _ (V.BLeaf (V.LGetField tag))) recExpr) =
 convertGetFieldParam _ = pure Nothing
 
 convert ::
-    (Monad m, Monoid a) =>
+    Monad m =>
     T.Tag ->
-    Input.Payload m a # V.Term ->
-    ConvertM m (ExpressionU v m a)
+    Input.Payload m # V.Term ->
+    ConvertM m (ExpressionU v m ())
 convert tag exprPl =
     do
         protectedSetToVal <- ConvertM.typeProtectedSetToVal
@@ -53,6 +53,6 @@ convert tag exprPl =
         let resultInfo () = ConvertTag.TagResultInfo <$> EntityId.ofTag (exprPl ^. Input.entityId) <*> setTag
         ConvertTag.ref tag Nothing mempty (pure ()) resultInfo >>= ConvertM . lift
     <&> PfGetField <&> BodyPostfixFunc
-    >>= addActions (Const ()) exprPl
+    >>= addActions (Ann exprPl (V.BLeaf (V.LGetField tag)))
     where
         valI = exprPl ^. Input.stored . ExprIRef.iref

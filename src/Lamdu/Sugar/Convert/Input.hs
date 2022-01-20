@@ -4,7 +4,7 @@
 module Lamdu.Sugar.Convert.Input
     ( Payload(..)
         , varRefsOfLambda, entityId, inferRes, stored
-        , userData, localsInScope, inferScope
+        , localsInScope, inferScope
         , inferredType, inferredTypeUVar
     , SugarInput, preprocess
     ) where
@@ -26,7 +26,7 @@ import           Lamdu.Sugar.EntityId (EntityId)
 
 import           Lamdu.Prelude
 
-data Payload m a h = Payload
+data Payload m h = Payload
     { _entityId :: EntityId
     , _inferRes :: InferResult (Pure :*: UVar) h
     , _inferScope :: V.Scope # UVar
@@ -34,29 +34,28 @@ data Payload m a h = Payload
     , _stored :: HRef m h
     , -- The GetVars of this lambda's var if this is a lambda
       _varRefsOfLambda :: [EntityId]
-    , _userData :: a
     }
 
 Lens.makeLenses ''Payload
 makeHTraversableAndBases ''Payload
 
-inferredType :: Lens' (Payload m a # V.Term) (Pure # Type)
+inferredType :: Lens' (Payload m # V.Term) (Pure # Type)
 inferredType = inferRes . inferResult . _1
 
-inferredTypeUVar :: Lens' (Payload m a # V.Term) (UVar # Type)
+inferredTypeUVar :: Lens' (Payload m # V.Term) (UVar # Type)
 inferredTypeUVar = inferRes . inferResult . _2
 
 class SugarInput t where
     prep ::
         V.Scope # UVar -> [(V.Var, Pure # Type)] ->
-        Ann (Payload m a) # t ->
-        (MMap V.Var [EntityId], Ann (Payload m a) # t)
+        Ann (Payload m) # t ->
+        (MMap V.Var [EntityId], Ann (Payload m) # t)
     prep _ _ = (,) mempty
 
 preprocess ::
     SugarInput t =>
     V.Scope # UVar -> [(V.Var, Pure # Type)] ->
-    Ann (Payload m a) # t -> Ann (Payload m a) # t
+    Ann (Payload m) # t -> Ann (Payload m) # t
 preprocess s l = snd . prep s l
 
 instance SugarInput V.Term where

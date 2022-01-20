@@ -152,7 +152,7 @@ addFieldToLetParamsRecord fieldTags var letLam storedLam =
 
 addLetParam ::
     Monad m =>
-    V.Var -> Redex # Input.Payload m a -> ConvertM m (T m (HRef m # V.Term))
+    V.Var -> Redex # Input.Payload m -> ConvertM m (T m (HRef m # V.Term))
 addLetParam var redex =
     case storedRedex ^. Redex.arg . hVal of
     V.BLam lam | isVarAlwaysApplied (redex ^. Redex.lam) ->
@@ -178,7 +178,7 @@ ordNub = Set.toList . Set.fromList
 
 processLet ::
     Monad m =>
-    Redex # Input.Payload m a ->
+    Redex # Input.Payload m ->
     ConvertM m (T m (HRef m # V.Term))
 processLet redex =
     do
@@ -205,7 +205,7 @@ processLet redex =
 makeFloatLetToOuterScope ::
     Monad m =>
     (ValI m -> T m ()) ->
-    Redex # Input.Payload m a ->
+    Redex # Input.Payload m ->
     ConvertM m (T m ExtractDestination)
 makeFloatLetToOuterScope setTopLevel redex =
     (,,,)

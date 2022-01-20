@@ -72,8 +72,8 @@ data StoredLam m = StoredLam
 Lens.makeLenses ''StoredLam
 
 mkStoredLam ::
-    V.TypedLam V.Var (HCompose Prune T.Type) V.Term # Ann (Input.Payload m a) ->
-    Input.Payload m a # V.Term -> StoredLam m
+    V.TypedLam V.Var (HCompose Prune T.Type) V.Term # Ann (Input.Payload m) ->
+    Input.Payload m # V.Term -> StoredLam m
 mkStoredLam lam pl =
     StoredLam
     (hmap (Proxy @(Recursively HFunctor) #>  hflipped %~ hmap (const (^. Input.stored))) lam)
@@ -381,8 +381,8 @@ convertRecordParams ::
     Monad m =>
     Maybe (MkProperty' (T m) PresentationMode) ->
     BinderKind m -> [FieldParam] ->
-    V.TypedLam V.Var (HCompose Prune T.Type) V.Term # Ann (Input.Payload m a) ->
-    Input.Payload m a # V.Term ->
+    V.TypedLam V.Var (HCompose Prune T.Type) V.Term # Ann (Input.Payload m) ->
+    Input.Payload m # V.Term ->
     ConvertM m (ConventionalParams m)
 convertRecordParams mPresMode binderKind fieldParams lam@(V.TypedLam param _ _) lamPl =
     do
@@ -519,7 +519,7 @@ convertToRecordParams =
             RowExtend tag (_HCompose # typ) (_HCompose # rest)
             & ExprIRef.newValI
 
-lamParamType :: Input.Payload m a # V.Term -> Pure # T.Type
+lamParamType :: Input.Payload m # V.Term -> Pure # T.Type
 lamParamType lamExprPl =
     unsafeUnjust "Lambda value not inferred to a function type?!" $
     lamExprPl ^? Input.inferredType . _Pure . T._TFun . funcIn
@@ -567,7 +567,7 @@ mkVarInfo (Pure (T.TInst (NominalInst tid _))) =
 
 mkFuncParam ::
     Monad m =>
-    EntityId -> Input.Payload m a # V.Term -> info ->
+    EntityId -> Input.Payload m # V.Term -> info ->
     ConvertM m (FuncParam EvalPrep, info)
 mkFuncParam entityId lamExprPl info =
     mkVarInfo typ <&>
@@ -588,8 +588,8 @@ mkFuncParam entityId lamExprPl info =
 convertNonRecordParam ::
     Monad m =>
     BinderKind m ->
-    V.TypedLam V.Var (HCompose Prune T.Type) V.Term # Ann (Input.Payload m a) ->
-    Input.Payload m a # V.Term ->
+    V.TypedLam V.Var (HCompose Prune T.Type) V.Term # Ann (Input.Payload m) ->
+    Input.Payload m # V.Term ->
     ConvertM m (ConventionalParams m)
 convertNonRecordParam binderKind lam@(V.TypedLam param _ _) lamExprPl =
     do
@@ -650,8 +650,8 @@ isParamAlwaysUsedWithGetField (V.TypedLam param _paramTyp bod) =
 
 convertLamParams ::
     Monad m =>
-    V.TypedLam V.Var (HCompose Prune T.Type) V.Term # Ann (Input.Payload m a) ->
-    Input.Payload m a # V.Term ->
+    V.TypedLam V.Var (HCompose Prune T.Type) V.Term # Ann (Input.Payload m) ->
+    Input.Payload m # V.Term ->
     ConvertM m (ConventionalParams m)
 convertLamParams = convertNonEmptyParams Nothing BinderKindLambda
 
@@ -659,8 +659,8 @@ convertNonEmptyParams ::
     Monad m =>
     Maybe (MkProperty' (T m) PresentationMode) ->
     BinderKind m ->
-    V.TypedLam V.Var (HCompose Prune T.Type) V.Term # Ann (Input.Payload m a) ->
-    Input.Payload m a # V.Term ->
+    V.TypedLam V.Var (HCompose Prune T.Type) V.Term # Ann (Input.Payload m) ->
+    Input.Payload m # V.Term ->
     ConvertM m (ConventionalParams m)
 convertNonEmptyParams mPresMode binderKind lambda lambdaPl =
     do
@@ -702,7 +702,7 @@ convertBinderToFunction mkArg binderKind x =
 
 convertEmptyParams ::
     Monad m =>
-    BinderKind m -> Ann (Input.Payload m a) # V.Term -> ConvertM m (Transaction m EntityId)
+    BinderKind m -> Ann (Input.Payload m) # V.Term -> ConvertM m (Transaction m EntityId)
 convertEmptyParams binderKind x =
     ConvertM.postProcessAssert
     <&>

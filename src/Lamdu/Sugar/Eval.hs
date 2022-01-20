@@ -17,7 +17,6 @@ import qualified Lamdu.Data.Anchors as Anchors
 import           Lamdu.Eval.Results (EvalResults, erExprValues, erAppliesOfLam, erCompleted, extractField)
 import           Lamdu.Eval.Results.Process (addTypes)
 import qualified Lamdu.Sugar.Convert.Eval as ConvertEval
-import qualified Lamdu.Sugar.Convert.Input as Input
 import           Lamdu.Sugar.Convert.Load (makeNominalsMap)
 import           Lamdu.Sugar.Internal
 import           Lamdu.Sugar.Internal.EntityId (EntityId(..))
@@ -56,7 +55,7 @@ instance
     addToNode results (Ann a b) =
         Ann
         { _hAnn = a & Lens._Wrapped %~ addToPayload results
-        , _hVal = addToBody results (a ^. Lens._Wrapped . pInput . Input.entityId) b
+        , _hVal = addToBody results (a ^. Lens._Wrapped . pEntityId) b
         }
 
 type AddToBodyType e n (i :: Type -> Type) (o :: Type -> Type) m a =
@@ -181,7 +180,7 @@ addToPayload ::
     ConvertPayload m (Annotation (EvaluationScopes InternalName i) n, a)
 addToPayload ctx a =
     a
-    & pInput . Input.userData . _1 . _AnnotationVal %~
+    & pUserData . _1 . _AnnotationVal %~
         \v ->
         ctx ^. evalResults
         <&> (^. erExprValues . Lens.at u)
@@ -190,7 +189,7 @@ addToPayload ctx a =
         & ConvertEval.results (EntityId.ofEvalOf i)
     where
         EntityId u = i
-        i = a ^. pInput . Input.entityId
+        i = a ^. pEntityId
 
 addEvaluationResults ::
     forall n m i a.

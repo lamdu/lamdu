@@ -385,9 +385,9 @@ ifTexts :: QueryLangInfo -> [Text]
 ifTexts = (^.. qCodeTexts . Texts.if_)
 
 makeOption ::
-    forall a m b.
+    forall a m.
     Monad m =>
-    Input.Payload m b # V.Term ->
+    Input.Payload m # V.Term ->
     Result [(a, Ann (Write m) # V.Term)] ->
     ConvertM m (Result (a, Option HoleOpt InternalName (OnceT (T m)) (T m)))
 makeOption dstPl res =
@@ -454,7 +454,7 @@ makeOption dstPl res =
                 Lens.locally (ConvertM.scFrozenDeps . pVal) (<> res ^. rDeps)
             <&> markNodeAnnotations @_ @_ @(HoleOpt (ShowAnnotation, EvalPrep) InternalName (OnceT (T m)) (T m))
             <&> hflipped %~ hmap (const (Lens._Wrapped %~
-                    \x -> convertPayload x & plAnnotation %~ (,) (x ^. pInput . Input.userData . _1)
+                    \x -> convertPayload x & plAnnotation %~ (,) (x ^. pUserData . _1)
                 ))
             -- We explicitly do want annotations of variables such as global defs to appear
             <&> Lens.filteredBy (hVal . _HoleBinder . bBody . _BinderTerm . _BodyLeaf . _LeafGetVar) .
@@ -485,7 +485,6 @@ makeOption dstPl res =
         mkPayload (stored :*: inferRes) =
             Input.Payload
             { Input._entityId = stored ^. ExprIRef.iref . _F & IRef.uuid & EntityId
-            , Input._userData = ()
             , Input._stored = stored
             , Input._inferScope = V.emptyScope
             , Input._varRefsOfLambda = []
@@ -554,8 +553,8 @@ makeLocals f scope =
 mkEvalPrep :: ConvertPayload m a -> EvalPrep
 mkEvalPrep pl =
     EvalPrep
-    { _eType = pl ^. pInput . Input.inferredType
-    , _eEvalId = pl ^. pInput . Input.entityId
+    { _eType = pl ^. pUnsugared . hAnn . Input.inferredType
+    , _eEvalId = pl ^. pEntityId
     }
 
 convertPayload :: ConvertPayload m a -> Payload EvalPrep (T m)
@@ -563,7 +562,7 @@ convertPayload pl =
     Payload
     { _plAnnotation = mkEvalPrep pl
     , _plActions = pl ^. pActions
-    , _plEntityId = pl ^. pInput . Input.entityId
+    , _plEntityId = pl ^. pEntityId
     , _plParenInfo = ParenInfo 0 False
     , _plHiddenEntityIds = []
     }

@@ -45,8 +45,8 @@ hmapRedex f r =
     }
 
 check ::
-    V.Term # Ann (Input.Payload m a) ->
-    Maybe (Redex # Input.Payload m a)
+    V.Term # Ann (Input.Payload m) ->
+    Maybe (Redex # Input.Payload m)
 check term =
     do
         V.App func a <- term ^? V._BApp

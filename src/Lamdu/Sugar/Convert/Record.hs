@@ -16,21 +16,19 @@ import           Lamdu.Sugar.Types
 
 import           Lamdu.Prelude
 
-convertEmpty ::
-    (Monad m, Monoid a) =>
-    Input.Payload m a # V.Term -> ConvertM m (ExpressionU v m a)
+convertEmpty :: Monad m => Input.Payload m # V.Term -> ConvertM m (ExpressionU v m ())
 convertEmpty pl =
     Composite.convertEmpty V.BRecExtend (pl ^. Input.stored)
     <&> BodyRecord
-    >>= addActions (Const ()) pl
+    >>= addActions (Ann pl (V.BLeaf V.LRecEmpty))
     <&> annotation . pActions . mApply .~ Nothing
 
 convertExtend ::
-    (Monad m, Monoid a) =>
-    RowExtend T.Tag V.Term V.Term # Ann (Input.Payload m a) ->
-    Input.Payload m a # V.Term ->
-    ConvertM m (ExpressionU EvalPrep m a)
-convertExtend (RowExtend tag val rest) exprPl =
+    Monad m =>
+    RowExtend T.Tag V.Term V.Term # Ann (Input.Payload m) ->
+    Input.Payload m # V.Term ->
+    ConvertM m (ExpressionU EvalPrep m ())
+convertExtend r@(RowExtend tag val rest) exprPl =
     do
         valS <- ConvertM.convertSubexpression val
         restS <- ConvertM.convertSubexpression rest
@@ -40,5 +38,5 @@ convertExtend (RowExtend tag val rest) exprPl =
                 , Composite._extendValI = val ^. hAnn . Input.stored . ExprIRef.iref
                 , Composite._extendRest = rest ^. hAnn
                 }
-        Composite.convert V.BRecExtend _BodyRecord valS restS exprPl recP
+        Composite.convert V.BRecExtend _BodyRecord valS restS (Ann exprPl (V.BRecExtend r)) recP
     <&> annotation . pActions . mApply .~ Nothing

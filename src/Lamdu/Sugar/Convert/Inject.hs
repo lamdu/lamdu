@@ -21,11 +21,11 @@ import           Lamdu.Prelude
 type T = Transaction
 
 convert ::
-    (Monad m, Monoid a) =>
-    (TagRef InternalName (OnceT (T m)) (T m) -> Term v InternalName (OnceT (T m)) (T m) # Annotated (ConvertPayload m a)) ->
+    Monad m =>
+    (TagRef InternalName (OnceT (T m)) (T m) -> Term v InternalName (OnceT (T m)) (T m) # Annotated (ConvertPayload m ())) ->
     T.Tag ->
-    Input.Payload m a # V.Term ->
-    ConvertM m (ExpressionU v m a)
+    Input.Payload m # V.Term ->
+    ConvertM m (ExpressionU v m ())
 convert c tag exprPl =
     do
         protectedSetToVal <- ConvertM.typeProtectedSetToVal
@@ -37,7 +37,7 @@ convert c tag exprPl =
         let resultInfo () = ConvertTag.TagResultInfo <$> EntityId.ofTag entityId <*> setTag
         ConvertTag.ref tag Nothing mempty (pure ()) resultInfo >>= ConvertM . lift
     <&> c
-    >>= addActions (Const ()) exprPl
+    >>= addActions (Ann exprPl (V.BLeaf (V.LInject tag)))
     where
         entityId = exprPl ^. Input.entityId
         valI = exprPl ^. Input.stored . ExprIRef.iref

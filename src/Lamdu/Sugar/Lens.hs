@@ -1,8 +1,7 @@
 {-# LANGUAGE TypeApplications, ScopedTypeVariables #-}
 
 module Lamdu.Sugar.Lens
-    ( childPayloads
-    , bodyUnfinished
+    ( bodyUnfinished
     , defSchemes
     , binderResultExpr
     , unfinishedPayloads
@@ -19,12 +18,6 @@ import           Lamdu.Sugar.Props (SugarExpr(..), varRefUnfinished)
 import           Lamdu.Sugar.Types
 
 import           Lamdu.Prelude
-
-childPayloads ::
-    HTraversable expr =>
-    Lens.Traversal' (expr # Annotated a) a
-childPayloads f =
-    htraverse (const (annotation f))
 
 unfinishedPayloads ::
     forall t a.

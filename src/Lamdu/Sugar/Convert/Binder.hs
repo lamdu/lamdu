@@ -45,13 +45,13 @@ type T = Transaction
 
 lamParamToHole ::
     Monad m =>
-    V.TypedLam V.Var (HCompose Prune T.Type) V.Term # Ann (Input.Payload m a) -> T m ()
+    V.TypedLam V.Var (HCompose Prune T.Type) V.Term # Ann (Input.Payload m) -> T m ()
 lamParamToHole (V.TypedLam param _paramTyp x) =
     SubExprs.getVarsToHole param (x & hflipped %~ hmap (const (^. Input.stored)))
 
 makeInline ::
     Monad m =>
-    HRef m # V.Term -> Redex # Input.Payload m a -> EntityId -> VarInline (T m)
+    HRef m # V.Term -> Redex # Input.Payload m -> EntityId -> VarInline (T m)
 makeInline stored redex useId
     | Lens.has traverse otherUses = CannotInlineDueToUses (drop 1 after <> before)
     | otherwise =
@@ -63,11 +63,11 @@ makeInline stored redex useId
         (before, after) = break (== useId) uses
 
 convertLet ::
-    (Monad m, Monoid a) =>
-    Input.Payload m a # V.Term ->
-    Redex # Input.Payload m a ->
-    ConvertM m (Annotated (ConvertPayload m a) # BinderBody EvalPrep InternalName (OnceT (T m)) (T m))
-convertLet pl redex =
+    Monad m =>
+    Ann (Input.Payload m) # V.Term ->
+    Redex # Input.Payload m ->
+    ConvertM m (Annotated (ConvertPayload m ()) # BinderBody EvalPrep InternalName (OnceT (T m)) (T m))
+convertLet src redex =
     do
         float <- makeFloatLetToOuterScope (pl ^. Input.stored . ExprIRef.setIref) redex
         vinfo <- mkVarInfo (argAnn ^. Input.inferredType)
@@ -106,22 +106,21 @@ convertLet pl redex =
                 , _lBody =
                     letBody
                     & annotation . pActions . mReplaceParent ?~
-                        (letBody ^. annotation . pInput . Input.entityId <$ del)
+                        (letBody ^. annotation . pEntityId <$ del)
                     & annotation . pLambdas .~ [redex ^. Redex.lamPl . Input.stored . ExprIRef.iref & toUUID]
                 , _lUsages = redex ^. Redex.paramRefs
                 }
             , _hAnn =
                 Const ConvertPayload
-                { _pInput =
-                    pl
-                    & Input.userData .~
-                        redex ^. Redex.lamPl . Input.userData <>
-                        hfoldMap (const (^. Input.userData)) (redex ^. Redex.lam . V.tlInType . hflipped)
+                { _pUnsugared = src
                 , _pActions = actions
                 , _pLambdas = []
+                , _pUserData = ()
+                , _pEntityId = src ^. hAnn . Input.entityId
                 }
             }
     where
+        pl = src ^. hAnn
         argAnn = redex ^. Redex.arg . hAnn
         stored = pl ^. Input.stored
         binderKind =
@@ -131,17 +130,17 @@ convertLet pl redex =
         V.TypedLam param _paramTyp bod = redex ^. Redex.lam
 
 convertBinder ::
-    (Monad m, Monoid a) =>
-    Ann (Input.Payload m a) # V.Term ->
-    ConvertM m (Annotated (ConvertPayload m a) # Binder EvalPrep InternalName (OnceT (T m)) (T m))
+    Monad m =>
+    Ann (Input.Payload m) # V.Term ->
+    ConvertM m (Annotated (ConvertPayload m ()) # Binder EvalPrep InternalName (OnceT (T m)) (T m))
 convertBinder expr =
     convertBinderBody expr
     <&> annValue %~ Binder (DataOps.redexWrap (expr ^. hAnn . Input.stored) <&> EntityId.ofValI)
 
 convertBinderBody ::
-    (Monad m, Monoid a) =>
-    Ann (Input.Payload m a) # V.Term ->
-    ConvertM m (Annotated (ConvertPayload m a) # BinderBody EvalPrep InternalName (OnceT (T m)) (T m))
+    Monad m =>
+    Ann (Input.Payload m) # V.Term ->
+    ConvertM m (Annotated (ConvertPayload m ()) # BinderBody EvalPrep InternalName (OnceT (T m)) (T m))
 convertBinderBody expr@(Ann pl body) =
     Lens.view (ConvertM.scConfig . Config.sugarsEnabled . Config.letExpression) >>=
     \case
@@ -149,7 +148,7 @@ convertBinderBody expr@(Ann pl body) =
     True ->
         case Redex.check body of
         Nothing -> convertExpr
-        Just redex -> convertLet pl redex
+        Just redex -> convertLet expr redex
     where
         convertExpr =
             do
@@ -159,7 +158,7 @@ convertBinderBody expr@(Ann pl body) =
             <&> annValue %~ BinderTerm
 
 localNewExtractDestPos ::
-    Monad m => Input.Payload m a # V.Term -> ConvertM m b -> ConvertM m b
+    Monad m => Input.Payload m # V.Term -> ConvertM m b -> ConvertM m b
 localNewExtractDestPos x =
     ConvertM.scScopeInfo . ConvertM.siMOuter ?~
     ConvertM.OuterScopeInfo
@@ -169,10 +168,10 @@ localNewExtractDestPos x =
     & local
 
 makeFunction ::
-    (Monad m, Monoid a) =>
+    Monad m =>
     MkProperty' (T m) (Maybe BinderParamScopeId) ->
-    ConventionalParams m -> Ann (Input.Payload m a) # V.Term ->
-    ConvertM m (Function EvalPrep InternalName (OnceT (T m)) (T m) # Annotated (ConvertPayload m a))
+    ConventionalParams m -> Ann (Input.Payload m) # V.Term ->
+    ConvertM m (Function EvalPrep InternalName (OnceT (T m)) (T m) # Annotated (ConvertPayload m ()))
 makeFunction chosenScopeProp params funcBody =
     convertBinder funcBody
     <&> mkRes
@@ -205,10 +204,10 @@ makeFunction chosenScopeProp params funcBody =
                 p = params ^.. cpMLamParam .Lens._Just . _2
 
 convertLam ::
-    (Monad m, Monoid a) =>
-    V.TypedLam V.Var (HCompose Prune T.Type) V.Term # Ann (Input.Payload m a) ->
-    Input.Payload m a # V.Term ->
-    ConvertM m (ExpressionU EvalPrep m a)
+    Monad m =>
+    V.TypedLam V.Var (HCompose Prune T.Type) V.Term # Ann (Input.Payload m) ->
+    Input.Payload m # V.Term ->
+    ConvertM m (ExpressionU EvalPrep m ())
 convertLam lam exprPl =
     do
         convParams <- convertLamParams lam exprPl
@@ -217,18 +216,18 @@ convertLam lam exprPl =
             (lam ^. V.tlIn & Anchors.assocScopeRef)
             convParams (lam ^. V.tlOut)
         Lambda False UnlimitedFuncApply func & BodyLam
-            & addActions lam exprPl
+            & addActions (Ann exprPl (V.BLam lam))
             <&> hVal %~
                 hmap (const (annotation . pActions . mReplaceParent . Lens._Just %~ (lamParamToHole lam >>)))
 
 -- Let-item or definition (form of <name> [params] = <body>)
 convertAssignment ::
-    (Monad m, Monoid a) =>
+    Monad m =>
     BinderKind m -> V.Var ->
-    Ann (Input.Payload m a) # V.Term ->
+    Ann (Input.Payload m) # V.Term ->
     ConvertM m
     ( Maybe (MkProperty' (T m) PresentationMode)
-    , Annotated (ConvertPayload m a) # Assignment EvalPrep InternalName (OnceT (T m)) (T m)
+    , Annotated (ConvertPayload m ()) # Assignment EvalPrep InternalName (OnceT (T m)) (T m)
     )
 convertAssignment binderKind defVar expr =
     convertBinder expr >>= toAssignment binderKind expr <&>
@@ -241,7 +240,7 @@ convertAssignment binderKind defVar expr =
 
 toAssignment ::
     Monad m =>
-    BinderKind m -> Ann (Input.Payload m a) # V.Term ->
+    BinderKind m -> Ann (Input.Payload m) # V.Term ->
     Annotated (ConvertPayload m a) # Binder v name i (T m) ->
     ConvertM m (Annotated (ConvertPayload m a) # Assignment v name i (T m))
 toAssignment binderKind expr b =
@@ -252,11 +251,11 @@ toAssignment binderKind expr b =
             _ -> convertEmptyParams binderKind expr <&> \addFirstParam -> b & annValue %~ BodyPlain . AssignPlain addFirstParam
 
 convertDefinitionBinder ::
-    (Monad m, Monoid a) =>
-    DefI m -> Ann (Input.Payload m a) # V.Term ->
+    Monad m =>
+    DefI m -> Ann (Input.Payload m) # V.Term ->
     ConvertM m
     ( Maybe (MkProperty' (T m) PresentationMode)
-    , Annotated (ConvertPayload m a)
+    , Annotated (ConvertPayload m ())
         # Assignment EvalPrep InternalName (OnceT (T m)) (T m)
     )
 convertDefinitionBinder defI t =

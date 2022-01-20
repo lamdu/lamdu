@@ -1,4 +1,4 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving, TemplateHaskell, PolymorphicComponents #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving, TemplateHaskell #-}
 {-# LANGUAGE FlexibleInstances, MultiParamTypeClasses #-}
 module Lamdu.Sugar.Convert.Monad
     ( OuterScopeInfo(..), osiPos, osiScope
@@ -85,7 +85,7 @@ data Context m = Context
     { _scInferContext :: InferState
     , _scCodeAnchors :: Anchors.CodeAnchors m
     , _scScopeInfo :: ScopeInfo m
-    , _scTopLevelExpr :: Ann (Input.Payload m [Sugar.EntityId]) # V.Term
+    , _scTopLevelExpr :: Ann (Input.Payload m) # V.Term
     , -- Check whether the definition is valid after an edit,
       -- so that can detach bad edits.
       _scPostProcessRoot :: T m PostProcess.Result
@@ -96,9 +96,8 @@ data Context m = Context
     , _scCacheFunctions :: Cache.Functions
     , _scConfig :: Config
     , scConvertSubexpression ::
-        forall a. Monoid a =>
-        PositionInfo -> Ann (Input.Payload m a) # V.Term ->
-        ConvertM m (ExpressionU EvalPrep m a)
+        PositionInfo -> Ann (Input.Payload m) # V.Term ->
+        ConvertM m (ExpressionU EvalPrep m ())
     }
 Lens.makeLenses ''Context
 
@@ -163,11 +162,8 @@ convertOnce action =
     <&> (`run` action)
     >>= ConvertM . lift . once
 
-convertSubexpression ::
-    (Monad m, Monoid a) =>
-    Ann (Input.Payload m a) # V.Term ->
-    ConvertM m (ExpressionU EvalPrep m a)
+convertSubexpression :: Monad m => Ann (Input.Payload m) # V.Term -> ConvertM m (ExpressionU EvalPrep m ())
 convertSubexpression exprI =
     do
-        convertSub <- Lens.view id <&> \env -> scConvertSubexpression env
+        convertSub <- Lens.view id <&> scConvertSubexpression
         convertSub ExpressionPos exprI

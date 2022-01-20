@@ -31,11 +31,11 @@ import           Lamdu.Prelude
 type T = Transaction
 
 convert ::
-    (Monoid a, Monad m) =>
+    Monad m =>
     Pure # T.Scheme ->
-    Definition.Expr (Ann (Input.Payload m a) # V.Term) ->
+    Definition.Expr (Ann (Input.Payload m) # V.Term) ->
     DefI m ->
-    ConvertM m (DefinitionBody EvalPrep InternalName (OnceT (T m)) (T m) (ConvertPayload m a))
+    ConvertM m (DefinitionBody EvalPrep InternalName (OnceT (T m)) (T m) (ConvertPayload m ()))
 convert defType defExpr defI =
     do
         (presMode, content) <-

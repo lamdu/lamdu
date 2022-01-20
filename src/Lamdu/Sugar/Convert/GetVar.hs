@@ -93,7 +93,7 @@ inlineableDefinition ctx var entityId =
 
 convertGlobal ::
     Monad m =>
-    V.Var -> Input.Payload m a # V.Term -> MaybeT (ConvertM m) (GetVar InternalName (T m))
+    V.Var -> Input.Payload m # V.Term -> MaybeT (ConvertM m) (GetVar InternalName (T m))
 convertGlobal var exprPl =
     do
         ctx <- Lens.view id
@@ -124,7 +124,7 @@ convertGlobal var exprPl =
 
 convertGetLet ::
     Monad m =>
-    V.Var -> Input.Payload m a # V.Term -> MaybeT (ConvertM m) (GetVar InternalName (T m))
+    V.Var -> Input.Payload m # V.Term -> MaybeT (ConvertM m) (GetVar InternalName (T m))
 convertGetLet param exprPl =
     do
         inline <-
@@ -152,7 +152,7 @@ convertLocalNameRef varInfo param =
 
 convertParam ::
     (MonadTransaction u m, Applicative n) =>
-    V.Var -> Input.Payload u a # V.Term -> m (GetVar InternalName n)
+    V.Var -> Input.Payload u # V.Term -> m (GetVar InternalName n)
 convertParam param exprPl =
     mkVarInfo (exprPl ^. Input.inferredType)
     >>= (`convertLocalNameRef` param)
@@ -165,9 +165,7 @@ convertParam param exprPl =
     , _vVar = param
     }
 
-convert ::
-    (Monad m, Monoid a) =>
-    V.Var -> Input.Payload m a # V.Term -> ConvertM m (ExpressionU v m a)
+convert :: Monad m => V.Var -> Input.Payload m # V.Term -> ConvertM m (ExpressionU v m ())
 convert param exprPl =
     do
         convertGlobal param exprPl & justToLeft
@@ -175,4 +173,4 @@ convert param exprPl =
         convertParam param exprPl & lift
     & runMatcherT
     <&> BodyLeaf . LeafGetVar
-    >>= addActions (Const ()) exprPl
+    >>= addActions (Ann exprPl (V.BLeaf (V.LVar param)))

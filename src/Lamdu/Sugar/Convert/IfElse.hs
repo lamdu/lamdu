@@ -9,7 +9,6 @@ import           Lamdu.Builtins.Anchors (boolTid, trueTag, falseTag)
 import qualified Lamdu.Data.Ops as DataOps
 import           Lamdu.Expr.IRef (ValI, iref)
 import           Lamdu.Expr.UniqueId (ToUUID(..))
-import qualified Lamdu.Sugar.Convert.Input as Input
 import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import           Lamdu.Sugar.Types
@@ -51,12 +50,12 @@ convertIfElse setToVal postApp =
                     Ann
                     { _hVal =
                         ElseIf ElseIfBody
-                        { _eAddLet = DataOps.redexWrap (innerPl ^. pInput . Input.stored) <&> EntityId.ofValI
+                        { _eAddLet = DataOps.redexWrap (innerPl ^. pStored) <&> EntityId.ofValI
                         , _eIfElse = innerIfElse
                         }
                     , _hAnn =
                         innerPl
-                        & pLambdas .~ [altFalse ^. tiValue . hAnn . Lens._Wrapped . pInput . Input.stored . iref & toUUID]
+                        & pLambdas .~ [altFalse ^. tiValue . hAnn . Lens._Wrapped . pStored . iref & toUUID]
                         & Const
                     }
                 Nothing ->
@@ -71,10 +70,10 @@ convertIfElse setToVal postApp =
                 delClause =
                     fromMaybe (altFalse ^. tiValue . annotation)
                     (altFalse ^? tiValue . hVal . _BodyLam . lamFunc . fBody . annotation)
-                    ^. pInput . Input.stored . iref
+                    ^. pStored . iref
                     & setToVal <&> EntityId.ofValI
                 mkElseDel CannotDelete =
-                    thenBody ^. pInput . Input.stored . iref & setToVal
+                    thenBody ^. pStored . iref & setToVal
                     <&> EntityId.ofValI & Delete
                 mkElseDel x = x
                 thenBody =

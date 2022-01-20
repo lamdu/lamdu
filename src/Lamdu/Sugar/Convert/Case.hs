@@ -20,20 +20,18 @@ import           Lamdu.Prelude
 -- This is mostly a copy&paste of the Convert.Record module, yuck! DRY
 -- with some abstraction?
 
-convertAbsurd ::
-    (Monad m, Monoid a) =>
-    Input.Payload m a # V.Term -> ConvertM m (ExpressionU v m a)
+convertAbsurd :: Monad m => Input.Payload m # V.Term -> ConvertM m (ExpressionU v m ())
 convertAbsurd pl =
     Composite.convertEmpty V.BCase (pl ^. Input.stored)
     <&> PfCase <&> BodyPostfixFunc
-    >>= addActions (Const ()) pl
+    >>= addActions (Ann pl (V.BLeaf V.LAbsurd))
 
 convert ::
-    (Monad m, Monoid a) =>
-    RowExtend T.Tag V.Term V.Term # Ann (Input.Payload m a) ->
-    Input.Payload m a # V.Term ->
-    ConvertM m (ExpressionU EvalPrep m a)
-convert (RowExtend tag v rest) exprPl =
+    Monad m =>
+    RowExtend T.Tag V.Term V.Term # Ann (Input.Payload m) ->
+    Input.Payload m # V.Term ->
+    ConvertM m (ExpressionU EvalPrep m ())
+convert r@(RowExtend tag v rest) exprPl =
     do
         valS <-
             ConvertM.convertSubexpression v
@@ -45,4 +43,4 @@ convert (RowExtend tag v rest) exprPl =
                 , Composite._extendValI = v ^. hAnn . Input.stored . ExprIRef.iref
                 , Composite._extendRest = rest ^. hAnn
                 }
-        Composite.convert V.BCase (_BodyPostfixFunc . _PfCase) valS restS exprPl caseP
+        Composite.convert V.BCase (_BodyPostfixFunc . _PfCase) valS restS (Ann exprPl (V.BCase r)) caseP

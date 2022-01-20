@@ -1,7 +1,7 @@
 {-# LANGUAGE TypeFamilies, TypeApplications, ScopedTypeVariables #-}
 
 module Lamdu.Sugar.Convert.Expression.Actions
-    ( subexprPayloads, addActionsWith, addActions, makeActions, makeApply
+    ( addActions, makeActions, makeApply
     ) where
 
 import           Control.Applicative ((<|>))
@@ -10,7 +10,6 @@ import           Control.Monad.Once (OnceT)
 import           Control.Monad.Trans.Maybe (MaybeT(..))
 import qualified Data.Map as Map
 import qualified Data.Property as Property
-import qualified Data.Set as Set
 import           Data.Text.Encoding (encodeUtf8)
 import           Hyper
 import           Hyper.Syntax.Nominal (ToNom(..), NominalDecl(..), NominalInst(..))
@@ -25,7 +24,6 @@ import           Lamdu.Calc.Definition (depsGlobalTypes, depsNominals)
 import           Lamdu.Calc.Infer (runPureInfer)
 import           Lamdu.Calc.Term (Val)
 import qualified Lamdu.Calc.Term as V
-import           Lamdu.Calc.Term.Utils (culledSubexprPayloads)
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Definition as Definition
@@ -37,7 +35,6 @@ import qualified Lamdu.Sugar.Convert.Monad as ConvertM
 import qualified Lamdu.Sugar.Convert.PostProcess as PostProcess
 import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
-import           Lamdu.Sugar.Lens (childPayloads)
 import           Lamdu.Sugar.Types
 import           Revision.Deltum.Transaction (Transaction)
 
@@ -47,7 +44,7 @@ type T = Transaction
 
 mkExtract ::
     Monad m =>
-    Input.Payload m a # V.Term -> ConvertM m (T m ExtractDestination)
+    Input.Payload m # V.Term -> ConvertM m (T m ExtractDestination)
 mkExtract exprPl =
     Lens.view (ConvertM.scScopeInfo . ConvertM.siMOuter)
     >>= \case
@@ -56,7 +53,7 @@ mkExtract exprPl =
         mkExtractToLet (outerScope ^. ConvertM.osiPos) (exprPl ^. Input.stored)
         <&> ExtractToLet & pure
 
-mkExtractToDef :: Monad m => Input.Payload m a # V.Term -> ConvertM m (T m EntityId)
+mkExtractToDef :: Monad m => Input.Payload m # V.Term -> ConvertM m (T m EntityId)
 mkExtractToDef exprPl =
     (,,)
     <$> Lens.view id
@@ -124,7 +121,7 @@ mkExtractToLet outerScope stored =
 
 makeSetToLiteral ::
     Monad m =>
-    Input.Payload m a # V.Term -> ConvertM m (Literal Identity -> T m EntityId)
+    Input.Payload m # V.Term -> ConvertM m (Literal Identity -> T m EntityId)
 makeSetToLiteral exprPl =
     (,) <$> ConvertM.typeProtectedSetToVal <*> valFromLiteral
     <&>
@@ -143,7 +140,7 @@ makeSetToLiteral exprPl =
 
 makeActions ::
     Monad m =>
-    Input.Payload m a # V.Term -> ConvertM m (NodeActions (T m))
+    Input.Payload m # V.Term -> ConvertM m (NodeActions (T m))
 makeActions exprPl =
     do
         ext <- mkExtract exprPl
@@ -253,7 +250,7 @@ setChildReplaceParentActions =
             pActions . mReplaceParent ?~
             (protectedSetToVal
                 stored
-                (srcPl ^. pInput . Input.stored . ExprIRef.iref)
+                (srcPl ^. pStored . ExprIRef.iref)
                 <&> EntityId.ofValI)
         setForChildren = hmap (\_ -> annotation %~ join setToExpr)
     in
@@ -264,53 +261,27 @@ setChildReplaceParentActions =
     _ -> setForChildren bod
     & hmap (Proxy @FixReplaceParent #> fixReplaceParent setToExpr)
 
-subexprPayloads ::
-    forall h m a.
-    Recursively HFoldable h =>
-    h # Ann (Input.Payload m a) -> [ConvertPayload m a] -> [a]
-subexprPayloads subexprs cullPoints =
-    withDict (recursively (Proxy @(HFoldable h))) $
-    hfoldMap
-    ( Proxy @(Recursively HFoldable) #> culledSubexprPayloads toCull
-    ) subexprs
-    where
-        -- | The direct child exprs of the sugar expr
-        cullSet =
-            cullPoints ^.. Lens.folded . pInput . Input.stored . ExprIRef.iref
-            <&> EntityId.ofValI
-            & Set.fromList
-        toCull :: Input.Payload m a # n -> Maybe a
-        toCull pl =
-            pl ^. Input.userData <$
-            guard (not (cullSet ^. Lens.contains (pl ^. Input.entityId)))
-
-addActionsWith ::
+addActions ::
     Monad m =>
-    a -> Input.Payload m b # V.Term ->
-    Term v InternalName (OnceT (T m)) (T m) # Annotated (ConvertPayload m a) ->
-    ConvertM m (ExpressionU v m a)
-addActionsWith userData exprPl bodyS =
+    Ann (Input.Payload m) # V.Term ->
+    Term v InternalName (OnceT (T m)) (T m) # Annotated (ConvertPayload m ()) ->
+    ConvertM m (ExpressionU v m ())
+addActions expr bodyS =
     do
-        actions <- makeActions exprPl
+        actions <- makeActions (expr ^. hAnn)
         addReplaceParents <- setChildReplaceParentActions
         Ann
-            { _hVal = addReplaceParents (exprPl ^. Input.stored) bodyS
+            { _hVal = addReplaceParents (expr ^. hAnn . Input.stored) bodyS
             , _hAnn =
                 Const ConvertPayload
-                { _pInput = exprPl & Input.userData .~ userData
+                { _pUnsugared = expr
                 , _pActions = actions
                 , _pLambdas = []
+                , _pUserData = ()
+                , _pEntityId = expr ^. hAnn . Input.entityId
                 }
             } & pure
 
-addActions ::
-    (Monad m, Monoid a, Recursively HFoldable h) =>
-    h # Ann (Input.Payload m a) -> Input.Payload m a # V.Term ->
-    Term v InternalName (OnceT (T m)) (T m) # Annotated (ConvertPayload m a) ->
-    ConvertM m (ExpressionU v m a)
-addActions subexprs exprPl bodyS =
-    addActionsWith (mconcat (subexprPayloads subexprs (bodyS ^.. childPayloads)))
-    exprPl bodyS
 
 valFromLiteral ::
     Monad m =>

@@ -9,7 +9,6 @@ import           Control.Monad.Trans.Maybe (MaybeT(..))
 import           Data.Maybe.Extended (maybeToMPlus)
 import           Data.Property (Property(..))
 import           Data.Text.Encoding (decodeUtf8', encodeUtf8)
-import           Hyper (_ANode)
 import           Hyper.Syntax.Nominal (ToNom(..))
 import qualified Lamdu.Builtins.Anchors as Builtins
 import qualified Lamdu.Builtins.PrimVal as PrimVal
@@ -27,11 +26,11 @@ import           Lamdu.Sugar.Types
 import           Lamdu.Prelude
 
 text ::
-    (Monad m, Monoid a) =>
-    ToNom NominalId V.Term # Ann (Input.Payload m a) ->
-    Input.Payload m a # V.Term ->
-    MaybeT (ConvertM m) (ExpressionU v m a)
-text (ToNom tid c@(Ann litPl bod)) toNomPl =
+    Monad m =>
+    ToNom NominalId V.Term # Ann (Input.Payload m) ->
+    Input.Payload m # V.Term ->
+    MaybeT (ConvertM m) (ExpressionU v m ())
+text t@(ToNom tid (Ann litPl bod)) toNomPl =
     do
         Lens.view (ConvertM.scConfig . Config.sugarsEnabled . Config.literalText) >>= guard
         guard $ tid == Builtins.textTid
@@ -48,7 +47,7 @@ text (ToNom tid c@(Ann litPl bod)) toNomPl =
             , _pSet =
                 ExprIRef.writeValI litIRef . V.BLeaf . V.LLiteral .
                 PrimVal.fromKnown . PrimVal.Bytes . encodeUtf8
-            } & LiteralText & LeafLiteral & BodyLeaf & addActions (_ANode # c) toNomPl
+            } & LiteralText & LeafLiteral & BodyLeaf & addActions (Ann toNomPl (V.BToNom t))
             & lift
     where
         litIRef = litPl ^. Input.stored . ExprIRef.iref

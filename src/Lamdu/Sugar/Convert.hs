@@ -15,7 +15,6 @@ import qualified Lamdu.Debug as Debug
 import qualified Lamdu.Expr.IRef as ExprIRef
 import           Lamdu.Sugar.Config (Config)
 import qualified Lamdu.Sugar.Convert.Definition as ConvertDefinition
-import qualified Lamdu.Sugar.Convert.Input as Input
 import qualified Lamdu.Sugar.Convert.NameRef as ConvertNameRef
 import qualified Lamdu.Sugar.Convert.Nominal as ConvertNominal
 import           Lamdu.Sugar.Internal
@@ -145,7 +144,7 @@ loadWorkArea env =
     do
         repl <- ConvertDefinition.repl env
         panes <-
-            repl ^. replExpr . SugarLens.binderResultExpr . pInput . Input.entityId
+            repl ^. replExpr . SugarLens.binderResultExpr . pEntityId
             & loadPanes env
         orderWorkArea WorkArea
             { _waRepl = repl

@@ -55,7 +55,7 @@ unmemoizedInfer defExpr =
 preparePayloads ::
     V.Scope # UVar ->
     Ann (HRef m :*: InferResult (Pure :*: UVar)) # V.Term ->
-    Ann (Input.Payload m ()) # V.Term
+    Ann (Input.Payload m) # V.Term
 preparePayloads topLevelScope inferredVal =
     inferredVal
     & hflipped %~ hmap (const f)
@@ -69,7 +69,6 @@ preparePayloads topLevelScope inferredVal =
             , Input._stored = valIProp
             , Input._inferRes = inferRes
             , Input._inferScope = V.emptyScope -- UGLY: This is initialized by initScopes
-            , Input._userData = ()
             }
             where
                 eId = valIProp ^. ExprIRef.iref . _F & IRef.uuid & EntityId.EntityId
@@ -101,7 +100,7 @@ readValAndAddProperties prop =
     <&> hflipped %~ hmap (const (^. _1))
 
 data InferOut m = InferOut
-    { _irVal :: Ann (Input.Payload m [EntityId]) # V.Term
+    { _irVal :: Ann (Input.Payload m) # V.Term
     , _irCtx :: InferState
     }
 Lens.makeLenses ''InferOut
@@ -120,11 +119,8 @@ runInferResult _monitors act =
         Right (resolvedTerm, _inferState1) ->
             InferOut
             ( preparePayloads topLevelScope resolvedTerm
-                & hflipped %~ hmap (const setUserData)
             ) inferState0
             & Right
-    where
-        setUserData pl = pl & Input.userData %~ \() -> [pl ^. Input.entityId]
 
 inferDef ::
     InferFunc (HRef m) -> Debug.Monitors ->

@@ -1,7 +1,7 @@
 {-# LANGUAGE TemplateHaskell, MultiParamTypeClasses, FlexibleInstances #-}
 
 module Lamdu.Sugar.Internal
-    ( ConvertPayload(..), pInput, pActions, pLambdas
+    ( ConvertPayload(..), pActions, pLambdas, pUserData, pUnsugared, pEntityId, pStored
     , EvalPrep(..), eType, eEvalId
     , InternalName(..), inTag, inContext, inIsAutoName
     , internalNameMatch
@@ -34,10 +34,13 @@ import           Lamdu.Prelude
 type T = Transaction
 
 data ConvertPayload m a = ConvertPayload
-    { -- Stored of top-level subtree for sugar expression subtree
-      _pInput :: Input.Payload m a # V.Term
-    , _pActions :: NodeActions (T m)
+    { _pActions :: NodeActions (T m)
     , _pLambdas :: [UUID] -- Identifiers for lambdas that were swallowed by the sugar
+    , _pUserData :: a
+    , _pUnsugared :: Ann (Input.Payload m) # V.Term
+        -- Stored of top-level subtree for sugar expression subtree
+    , _pEntityId :: EntityId
+        -- Not necessarily the entity-id of the top-level sugar expression
     }
 
 data EvalPrep = EvalPrep
@@ -130,4 +133,7 @@ Lens.makeLenses ''EvalPrep
 Lens.makeLenses ''InternalName
 
 instance Annotations a b (ConvertPayload m (a, x)) (ConvertPayload m (b, x)) where
-    annotations = pInput . Input.userData . _1
+    annotations = pUserData . _1
+
+pStored :: Lens' (ConvertPayload m a) (HRef m # V.Term)
+pStored = pUnsugared . hAnn . Input.stored

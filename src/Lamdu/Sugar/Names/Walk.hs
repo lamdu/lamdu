@@ -18,7 +18,6 @@ import           Hyper.Class.Morph (morphTraverse1)
 import           Hyper.Syntax (FuncType(..))
 import qualified Lamdu.Calc.Type as T
 import           Lamdu.Sugar.Names.NewTag (newTagName)
-import           Lamdu.Sugar.Convert.Input (userData)
 import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Lens as SugarLens
 import           Lamdu.Sugar.Names.CPS (CPS(..), liftCPS)
@@ -540,8 +539,7 @@ instance
             repl <- replExpr (toNode toBody) _waRepl
             WorkArea panes repl <$> walk _waGlobals
 
-instance Walk m a b => Walk m (ConvertPayload n a) (ConvertPayload n b) where
-    walk = (pInput . userData) walk
+instance Walk m a b => Walk m (ConvertPayload n a) (ConvertPayload n b) where walk = pUserData walk
 
 toWorkArea ::
     MonadNaming m =>

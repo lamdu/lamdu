@@ -59,12 +59,12 @@ checkTypeMatch x y =
         check ctx = unify x y >> applyBindings x & Infer.runPureInfer () ctx
 
 convertAppliedHole ::
-    (Monad m, Typeable m, Monoid a) =>
-    V.App V.Term # Ann (Input.Payload m a) ->
-    Input.Payload m a # V.Term ->
-    ExpressionU EvalPrep m a ->
-    MaybeT (ConvertM m) (ExpressionU EvalPrep m a)
-convertAppliedHole app@(V.App funcI argI) exprPl argS =
+    (Monad m, Typeable m) =>
+    Ann (Input.Payload m) # V.Term ->
+    Input.Payload m # V.Term ->
+    ExpressionU EvalPrep m () ->
+    MaybeT (ConvertM m) (ExpressionU EvalPrep m ())
+convertAppliedHole funcI exprPl argS =
     do
         Lens.view (ConvertM.scConfig . Config.sugarsEnabled . Config.fragment) >>= guard
         guard (Lens.has ExprLens.valHole funcI)
@@ -79,8 +79,8 @@ convertAppliedHole app@(V.App funcI argI) exprPl argS =
                 then pure Nothing
                 else
                     makeTypeAnnotation
-                        (EntityId.ofFragmentArg (argPl ^. Input.entityId))
-                        (argPl ^. Input.inferredType) <&> Just
+                        (EntityId.ofFragmentArg (argS ^. annotation . pEntityId))
+                        (argS ^. annotation . pUnsugared . hAnn . Input.inferredType) <&> Just
             tagsProp <- Lens.view Anchors.codeAnchors <&> Anchors.tags
             opts <-
                 do
@@ -160,27 +160,27 @@ convertAppliedHole app@(V.App funcI argI) exprPl argS =
                 , _fOptApply = optApply
                 , _fTagSuffixes = mempty
                 } & pure
-            >>= Actions.addActions app exprPl
+            >>= Actions.addActions (Ann exprPl (V.BApp (App funcI argI)))
             & lift
         <&> annotation . pActions . detach .~ FragmentedAlready storedEntityId
     where
+        argI = argS ^. annotation . pUnsugared
         toArg = optionExpr . annValue %~ FragArgument
         topRef = exprPl ^. Input.stored . ExprIRef.iref
         funcOpt = traverse . rExpr %~ makeFuncOpts
-        argPl = argS ^. annotation . pInput
         argIRef = argI ^. hAnn . Input.stored . iref
         stored = exprPl ^. Input.stored
         storedEntityId = stored ^. iref & EntityId.ofValI
         makeFuncOpts opt = emplaceArg argI <&> _2 %~ Ann (ExistingRef topRef) . V.BApp . App (writeNew opt)
 
-applyArg :: Ann (Input.Payload m a) # V.Term -> Pure # V.Term -> [(TypeMatch, Ann (Write m) # V.Term)]
+applyArg :: Ann (Input.Payload m) # V.Term -> Pure # V.Term -> [(TypeMatch, Ann (Write m) # V.Term)]
 applyArg argI x =
     emplaceArg argI
     <&> _2 %~ Ann ExprIRef.WriteNew . V.BApp . (`V.App` wrap (const (Ann ExprIRef.WriteNew)) x)
 
 makeResultsSyntax ::
     Monad m =>
-    Input.Payload m a # V.Term -> Ann (Input.Payload m a) # V.Term ->
+    Input.Payload m # V.Term -> Ann (Input.Payload m) # V.Term ->
     T m [Result [(TypeMatch, Ann (Write m) # V.Term)]]
 makeResultsSyntax top arg =
     sequenceA
@@ -202,7 +202,7 @@ writeNew = wrap (const (Ann WriteNew))
 
 transformArg ::
     Monad m =>
-    Input.Payload m a # V.Term -> Ann (Input.Payload m a) # V.Term ->
+    Input.Payload m # V.Term -> Ann (Input.Payload m) # V.Term ->
     T m [(Maybe T.NominalId, Result [(TypeMatch, Ann (Write m) # V.Term)])]
 transformArg topPl arg =
     case arg ^? hAnn . Input.inferredType . _Pure . T._TInst . nId of
@@ -238,7 +238,7 @@ transformArg topPl arg =
 
 makeLocal ::
     Monad m =>
-    ExprIRef.ValI m -> Ann (Input.Payload m a) # V.Term ->
+    ExprIRef.ValI m -> Ann (Input.Payload m) # V.Term ->
     Pure # T.Type -> Pure # V.Term -> T m (Maybe [(TypeMatch, Ann (Write m) # V.Term)])
 makeLocal top arg typ val =
     case typ ^. _Pure of
@@ -302,7 +302,7 @@ emplaceTag r v =
         assertNotEmpty [] = error "empty list!"
         assertNotEmpty x = x
 
-emplaceArg :: Ann (Input.Payload m a) # V.Term -> [(TypeMatch, Ann (Write m) # V.Term)]
+emplaceArg :: Ann (Input.Payload m) # V.Term -> [(TypeMatch, Ann (Write m) # V.Term)]
 emplaceArg arg =
     [ (TypeMatches, a)
     , (TypeMismatch, App (Ann WriteNew (V.BLeaf V.LHole)) a & V.BApp & Ann WriteNew)
@@ -312,7 +312,7 @@ emplaceArg arg =
 
 emplaceExtendArg ::
     Monad m =>
-    Pure # T.Type -> Ann (Input.Payload m a) # V.Term ->
+    Pure # T.Type -> Ann (Input.Payload m) # V.Term ->
     T m [(TypeMatch, Ann (Write m) # V.Term)]
 emplaceExtendArg typ arg =
     suggestVal typ <&>
@@ -333,7 +333,7 @@ emplaceExtendArg typ arg =
 
 makeFromNom ::
     Monad m =>
-    Input.Payload m a # V.Term -> Ann (Input.Payload m a) # V.Term ->
+    Input.Payload m # V.Term -> Ann (Input.Payload m) # V.Term ->
     Pure # T.Type -> NominalId ->
     T m (Result [(TypeMatch, Ann (Write m) # V.Term)])
 makeFromNom topPl arg t tid =
@@ -356,14 +356,14 @@ fromNomTexts _ = caseTexts
 
 makeToNom ::
     Monad m =>
-    Ann (Input.Payload m a) # V.Term -> Pure # T.Type -> NominalId ->
+    Ann (Input.Payload m) # V.Term -> Pure # T.Type -> NominalId ->
     T m [(TypeMatch, Ann (Write m) # V.Term)]
 makeToNom arg t tid =
     emplaceExtendArg t arg <&> Lens.mapped . _2 %~ Ann WriteNew . V.BToNom . V.ToNom tid
 
 makeGetDef ::
     Monad m =>
-    ExprIRef.ValI m -> Ann (Input.Payload m a) # V.Term -> V.Var -> Pure # T.Type ->
+    ExprIRef.ValI m -> Ann (Input.Payload m) # V.Term -> V.Var -> Pure # T.Type ->
     T m (Maybe [(TypeMatch, Ann (Write m) # V.Term)])
 makeGetDef top arg v t =
     t ^? _Pure . T._TFun & Lens._Just %%~

@@ -72,8 +72,8 @@ convertExtend ::
     Monad m =>
     (V.RowExtend T.Tag V.Term V.Term # F (IRef m) -> ExprIRef.ValBody m) ->
     Annotated b # Term v InternalName (OnceT (T m)) (T m) ->
-    Input.Payload m a # V.Term ->
-    ExtendVal m (Input.Payload m a # V.Term) ->
+    Input.Payload m # V.Term ->
+    ExtendVal m (Input.Payload m # V.Term) ->
     Composite v InternalName (OnceT (T m)) (T m) # Annotated b ->
     ConvertM m (Composite v InternalName (OnceT (T m)) (T m) # Annotated b)
 convertExtend cons valS exprPl extendV restC =
@@ -114,8 +114,8 @@ convertOneItemOpenComposite ::
     (V.RowExtend T.Tag V.Term V.Term # F (IRef m) -> ExprIRef.ValBody m) ->
     k # Term v InternalName (OnceT (T m)) (T m) ->
     k # Term v InternalName (OnceT (T m)) (T m) ->
-    Input.Payload m a # V.Term ->
-    ExtendVal m (Input.Payload m a # V.Term) ->
+    Input.Payload m # V.Term ->
+    ExtendVal m (Input.Payload m # V.Term) ->
     ConvertM m (Composite v InternalName (OnceT (T m)) (T m) # k)
 convertOneItemOpenComposite cons valS restS exprPl extendV =
     do
@@ -163,7 +163,7 @@ convertItem ::
     Monad m =>
     OnceT (T m) (TagChoice InternalName (T m)) ->
     (V.RowExtend T.Tag V.Term V.Term # F (IRef m) -> ExprIRef.ValBody m) ->
-    Input.Payload m a # V.Term ->
+    Input.Payload m # V.Term ->
     Set T.Tag ->
     h # Term v InternalName (OnceT (T m)) (T m) ->
     -- Using tuple in place of shared RecExtend/Case structure (no such in lamdu-calculus)
@@ -196,14 +196,14 @@ type BodyPrism m v a =
     (Composite v InternalName (OnceT (T m)) (T m) # Annotated (ConvertPayload m a))
 
 convert ::
-    (Monad m, Monoid a) =>
+    Monad m =>
     (V.RowExtend T.Tag V.Term V.Term # F (IRef m) -> ExprIRef.ValBody m) ->
-    BodyPrism m v a ->
-    ExpressionU v m a ->
-    ExpressionU v m a -> Input.Payload m a # V.Term ->
-    ExtendVal m (Input.Payload m a # V.Term) ->
-    ConvertM m (ExpressionU v m a)
-convert cons prism valS restS exprPl extendV =
+    BodyPrism m v () ->
+    ExpressionU v m () ->
+    ExpressionU v m () -> Ann (Input.Payload m) # V.Term ->
+    ExtendVal m (Input.Payload m # V.Term) ->
+    ConvertM m (ExpressionU v m ())
+convert cons prism valS restS expr extendV =
     Lens.view (ConvertM.scConfig . Config.sugarsEnabled . Config.composite) >>=
     \case
     False -> convertOneItem
@@ -211,20 +211,13 @@ convert cons prism valS restS exprPl extendV =
         case restS ^? hVal . prism of
         Nothing -> convertOneItem
         Just r ->
-            convertExtend cons valS exprPl extendV r
+            convertExtend cons valS (expr ^. hAnn) extendV r
             <&> (prism #)
-            -- Closed sugar Composites use their tail as an entity id,
-            -- unlike other sugar constructs.  All the extend entity ids
-            -- are "hidden", the vals are directly sugared separately, so
-            -- using addActions to add the hidden payloads is complex. No
-            -- subexprs given will add no hidden payloads. Then we add the
-            -- extend only to pUserData as the hidden payload
-            >>= addActions (Const ()) exprPl
-            <&> annotation . pInput . Input.entityId .~ restS ^. annotation . pInput . Input.entityId
-            <&> annotation . pInput . Input.userData <>~
-                exprPl ^. Input.userData <> restS ^. annotation . pInput . Input.userData
+            >>= addActions expr
+            -- Closed sugar Composites use their tail as an entity id.
+            <&> annotation . pEntityId .~ restS ^. annotation . pEntityId
     where
         convertOneItem =
-            convertOneItemOpenComposite cons valS restS exprPl extendV
+            convertOneItemOpenComposite cons valS restS (expr ^. hAnn) extendV
             <&> (prism #)
-            >>= addActions (Const ()) exprPl
+            >>= addActions expr

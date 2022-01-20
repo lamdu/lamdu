@@ -1,3 +1,5 @@
+{-# LANGUAGE TypeApplications, ScopedTypeVariables #-}
+
 module Lamdu.Sugar.Convert.Definition
     ( pane, repl
     ) where
@@ -10,7 +12,9 @@ import           Data.CurAndPrev (CurAndPrev(..))
 import qualified Data.Map as Map
 import           Data.Property (Property(Property))
 import qualified Data.Property as Property
+import qualified Data.Set as Set
 import           Hyper
+import           Hyper.Recurse (Recursive(..))
 import qualified Lamdu.Cache as Cache
 import           Lamdu.Calc.Definition (depsGlobalTypes)
 import           Lamdu.Calc.Infer (alphaEq)
@@ -125,6 +129,7 @@ convertInferDefExpr env defType defExpr defI =
         ConvertDefExpr.convert
             defType (defExpr & Definition.expr .~ valInferred) defI
             & ConvertM.run context
+            <&> _DefinitionBodyExpression . deContent %~ collectHiddenEntityIds valInferred
     where
         Load.InferOut valInferred newInferContext =
             Load.inferDef cachedInfer (env ^. has) defExpr defVar
@@ -196,7 +201,8 @@ repl env =
                 , scConvertSubexpression = ConvertExpr.convert
                 }
         Repl
-            <$> (addLightLambdas <*> convertBinder valInferred & ConvertM.run context)
+            <$> ConvertM.run context
+                (addLightLambdas <*> convertBinder valInferred <&> collectHiddenEntityIds valInferred)
             <*> runReaderT (mkVarInfo (valInferred ^. hAnn . Input.inferredType)) env
             ?? CurAndPrev Nothing Nothing
     where
@@ -206,6 +212,35 @@ repl env =
         setFrozenDeps deps =
             prop ^. Property.mkProperty
             >>= (`Property.pureModify` (Definition.exprFrozenDeps .~ deps))
+
+collectHiddenEntityIds ::
+    forall h m.
+    RTraversable h =>
+    Ann (Input.Payload m) # V.Term ->
+    Annotated (ConvertPayload m ()) # h ->
+    Annotated (ConvertPayload m [EntityId]) # h
+collectHiddenEntityIds top expr =
+    withDict (recurse (Proxy @(RTraversable h))) $
+    let nodes =
+            expr ^. hflipped
+            & hfoldMap (const (^.. Lens._Wrapped . pUnsugared . hAnn . Input.entityId))
+            & Set.fromList
+        goBody :: forall p. Recursively HFoldable p => p # Ann (Input.Payload m) -> [EntityId]
+        goBody =
+            withDict (recursively (Proxy @(HFoldable p))) $
+            hfoldMap (Proxy @(Recursively HFoldable) #> goNode)
+        goNode x
+            | nodes ^. Lens.contains (x ^. hAnn . Input.entityId) = []
+            | otherwise = x ^. hAnn . Input.entityId : goBody (x ^. hVal)
+    in
+    expr
+    & hflipped %~ hmap (const (Lens._Wrapped %~
+        \x ->
+        x & pUserData .~
+        filter (/= (x ^. pEntityId))
+        (x ^. pUnsugared . hAnn . Input.entityId : goBody (x ^. pUnsugared . hVal))
+    ))
+    & annotation . pUserData <>~ goNode top
 
 pane ::
     (Has Debug.Monitors env, Has Cache.Functions env, Has Config env, Monad m, Typeable m, Anchors.HasCodeAnchors env m) =>

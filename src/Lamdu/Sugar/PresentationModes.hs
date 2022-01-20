@@ -5,7 +5,7 @@ module Lamdu.Sugar.PresentationModes
 
 import qualified Control.Lens as Lens
 import           Control.Monad.Once (OnceT)
-import Control.Monad.Trans.Except.Extended (justToLeft, runMatcherT)
+import           Control.Monad.Trans.Except.Extended (justToLeft, runMatcherT)
 import           Control.Monad.Trans.Maybe (MaybeT(..))
 import           Control.Monad.Transaction (getP)
 import qualified Data.Map as Map
@@ -31,7 +31,7 @@ makeLabeledApply ::
     [ Sugar.AnnotatedArg v InternalName (OnceT (T m)) (T m) # Annotated (ConvertPayload m a)
     ] ->
     [Sugar.PunnedVar InternalName (T m) # Annotated (ConvertPayload m a)] ->
-    Input.Payload m a # Term ->
+    Input.Payload m # Term ->
     ConvertM m
     (Sugar.LabeledApply v InternalName (OnceT (T m)) (T m) # Annotated (ConvertPayload m a))
 makeLabeledApply func args punnedArgs exprPl =
@@ -43,7 +43,7 @@ makeLabeledApply func args punnedArgs exprPl =
                     Sugar.Delete
                     ( protectedSetToVal
                         (exprPl ^. Input.stored)
-                        (other ^. annotation . pInput . Input.stored . iref)
+                        (other ^. annotation . pStored . iref)
                         <&> EntityId.ofValI
                     )
         checkOk <- Lens.view ConvertM.scPostProcessRoot
@@ -72,14 +72,14 @@ makeLabeledApply func args punnedArgs exprPl =
                         _ -> DataOps.setToAppliedHole i d
                         & void
                         where
-                            i = s ^. annotation . pInput . Input.stored . iref
+                            i = s ^. annotation . pStored . iref
                     unwrap x =
                         case x ^? hVal . Sugar._BodyFragment . Sugar.fExpr of
                         Nothing -> (False, x)
                         Just i -> (True, i)
-                        & _2 %~ (^. annotation . pInput . Input.stored . iref)
-                    ls = l ^. annotation . pInput . Input.stored
-                    rs = r ^. annotation . pInput . Input.stored
+                        & _2 %~ (^. annotation . pStored . iref)
+                    ls = l ^. annotation . pStored
+                    rs = r ^. annotation . pStored
         let (specialArgs, removedKeys) =
                 case traverse argExpr presentationMode of
                 Just (Sugar.Operator (l, la) (r, ra)) ->

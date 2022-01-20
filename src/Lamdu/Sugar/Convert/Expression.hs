@@ -28,41 +28,34 @@ import           Lamdu.Prelude
 type T = Transaction
 
 convertLiteralCommon ::
-    (Monad m, Monoid b) =>
+    Monad m =>
     (Property (T m) a -> Literal (Property (T m))) ->
     (a -> PrimVal.KnownPrim) -> a ->
-    Input.Payload m b # V.Term -> ConvertM m (ExpressionU v m b)
+    Input.Payload m # V.Term -> ConvertM m (ExpressionU v m ())
 convertLiteralCommon mkLit mkBody x exprPl =
     Property
     { _pVal = x
-    , _pSet =
-      ExprIRef.writeValI iref . V.BLeaf . V.LLiteral .
-      PrimVal.fromKnown . mkBody
-    } & mkLit & LeafLiteral & BodyLeaf & addActions (Const ()) exprPl
+    , _pSet = ExprIRef.writeValI iref . bod
+    } & mkLit & LeafLiteral & BodyLeaf & addActions (Ann exprPl (bod x))
     <&> annotation . pActions . mApply .~ Nothing
     where
+        bod = V.BLeaf . V.LLiteral . PrimVal.fromKnown . mkBody
         iref = exprPl ^. Input.stored . ExprIRef.iref
 
-convertLiteralFloat ::
-    (Monad m, Monoid a) =>
-    Double -> Input.Payload m a # V.Term -> ConvertM m (ExpressionU v m a)
+convertLiteralFloat :: Monad m => Double -> Input.Payload m # V.Term -> ConvertM m (ExpressionU v m ())
 convertLiteralFloat = convertLiteralCommon LiteralNum PrimVal.Float
 
-convertLiteralBytes ::
-    (Monad m, Monoid a) =>
-    ByteString -> Input.Payload m a # V.Term -> ConvertM m (ExpressionU v m a)
+convertLiteralBytes :: Monad m => ByteString -> Input.Payload m # V.Term -> ConvertM m (ExpressionU v m ())
 convertLiteralBytes = convertLiteralCommon LiteralBytes PrimVal.Bytes
 
-convertLiteralChar ::
-    (Monad m, Monoid a) =>
-    Char -> Input.Payload m a # V.Term -> ConvertM m (ExpressionU v m a)
+convertLiteralChar :: Monad m => Char -> Input.Payload m # V.Term -> ConvertM m (ExpressionU v m ())
 convertLiteralChar = convertLiteralCommon LiteralChar PrimVal.Char
 
 convert ::
-    (Monad m, Monoid a, Typeable m) =>
+    (Monad m, Typeable m) =>
     PositionInfo ->
-    Ann (Input.Payload m a) # V.Term ->
-    ConvertM m (ExpressionU EvalPrep m a)
+    Ann (Input.Payload m) # V.Term ->
+    ConvertM m (ExpressionU EvalPrep m ())
 convert _ (Ann pl (V.BLam x)) = ConvertBinder.convertLam x pl
 convert _ (Ann pl (V.BRecExtend x)) = ConvertRecord.convertExtend x pl
 convert _ (Ann pl (V.BToNom x)) = ConvertNominal.convertToNom x pl

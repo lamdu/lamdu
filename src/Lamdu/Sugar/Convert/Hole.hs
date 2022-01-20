@@ -60,10 +60,10 @@ results posInfo typ scope =
             }
 
 convert ::
-    (Monad m, Monoid a, Typeable m) =>
+    (Monad m, Typeable m) =>
     ConvertM.PositionInfo ->
-    Input.Payload m a # V.Term ->
-    ConvertM m (ExpressionU EvalPrep m a)
+    Input.Payload m # V.Term ->
+    ConvertM m (ExpressionU EvalPrep m ())
 convert posInfo holePl =
     do
         tagsProp <- Lens.view Anchors.codeAnchors <&> Anchors.tags
@@ -76,7 +76,7 @@ convert posInfo holePl =
     -- they would flicker when editing the search term.
     & ConvertM.convertOnce
     <&> BodyLeaf . LeafHole . (`Hole` mempty)
-    >>= addActions (Const ()) holePl
+    >>= addActions (Ann holePl (V.BLeaf V.LHole))
     <&> annotation . pActions . delete .~ CannotDelete
     <&> annotation . pActions . mApply .~ Nothing
 

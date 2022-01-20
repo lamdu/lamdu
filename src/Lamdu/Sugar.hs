@@ -96,20 +96,20 @@ sugarWorkArea env0 =
     <&> Lens.mapped %~
     \(paren, pl) ->
     Sugar.Payload
-    { Sugar._plAnnotation = pl ^. pInput . Input.userData . _1
+    { Sugar._plAnnotation = pl ^. pUserData . _1
     , Sugar._plActions = pl ^. pActions
-    , Sugar._plEntityId = pl ^. pInput . Input.entityId
+    , Sugar._plEntityId = pl ^. pEntityId
     , Sugar._plParenInfo = paren
-    , Sugar._plHiddenEntityIds = pl ^. pInput . Input.userData . _2
+    , Sugar._plHiddenEntityIds = pl ^. pUserData . _2
     }
     where
         Debug.EvaluatorM report = env0 ^. has . Debug.naming . Debug.mAction
         initAnnotationEvalPrep pl =
-            pl & pInput . Input.userData %~ \(showAnn, x) -> ((showAnn, mkEvalPrep pl), x)
+            pl & pUserData %~ \(showAnn, x) -> ((showAnn, mkEvalPrep pl), x)
 
 mkEvalPrep :: ConvertPayload m a -> EvalPrep
 mkEvalPrep pl =
     EvalPrep
-    { _eType = pl ^. pInput . Input.inferredType
-    , _eEvalId = pl ^. pInput . Input.entityId
+    { _eType = pl ^. pUnsugared . hAnn . Input.inferredType
+    , _eEvalId = pl ^. pEntityId
     }
