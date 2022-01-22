@@ -182,8 +182,13 @@ instance (MonadTransaction m o, MonadTransaction m i) => Order i (Sugar.Term v n
         & Sugar.BodyLeaf
         & pure
 
-instance (MonadTransaction m o, MonadTransaction m i) => Order i (Sugar.FragOpt v name i o)
-instance (MonadTransaction m o, MonadTransaction m i) => Order i (Sugar.HoleOpt v name i o)
+instance (MonadTransaction m o, MonadTransaction m i) => Order i (Sugar.FragOpt v name i o) where
+    order (Sugar.FragArgument a) = order a <&> Sugar.FragArgument
+    order x = pure x
+
+instance (MonadTransaction m o, MonadTransaction m i) => Order i (Sugar.HoleOpt v name i o) where
+    order (Sugar.HoleBinder x) = order x <&> Sugar.HoleBinder
+    order (Sugar.HoleVarsRecord f) = Sugar.HoleVarsRecord f & pure -- TODO: Sort fields!
 
 orderNode ::
     (MonadTransaction m i, Order i f) =>
