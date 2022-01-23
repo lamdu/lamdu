@@ -75,10 +75,10 @@ instance MarkBodyAnnotations v m e => MarkAnnotations m (e v n i o) (e (ShowAnno
         where
             (showAnn, newBody) = markBodyAnnotations x
 
-instance Functor m => MarkBodyAnnotations v m Binder where
+instance MarkBodyAnnotations v m Binder where
     markBodyAnnotations = bBody markBodyAnnotations
 
-instance Functor m => MarkBodyAnnotations v m BinderBody where
+instance MarkBodyAnnotations v m BinderBody where
     markBodyAnnotations (BinderTerm body) =
         markBodyAnnotations body & _2 %~ BinderTerm
     markBodyAnnotations (BinderLet let_) =
@@ -87,20 +87,20 @@ instance Functor m => MarkBodyAnnotations v m BinderBody where
             & BinderLet
         )
 
-instance Functor m => MarkBodyAnnotations v m Assignment where
+instance MarkBodyAnnotations v m Assignment where
     markBodyAnnotations (BodyPlain (AssignPlain a b)) =
         markBodyAnnotations b
         & _2 %~ BodyPlain . AssignPlain a
     markBodyAnnotations (BodyFunction f) = markBodyAnnotations f & _2 %~ BodyFunction
 
-instance Functor m => MarkBodyAnnotations v m Else where
+instance MarkBodyAnnotations v m Else where
     markBodyAnnotations (SimpleElse body) = markBodyAnnotations body & _2 %~ SimpleElse . markCaseHandler
     markBodyAnnotations (ElseIf x) =
         ( neverShowAnnotations
         , x & eIfElse %~ morphMap (Proxy @(MarkAnnotations m) #?> markNodeAnnotations) & ElseIf
         )
 
-instance Functor m => MarkBodyAnnotations v m Function where
+instance MarkBodyAnnotations v m Function where
     markBodyAnnotations func =
         ( neverShowAnnotations
         , func
@@ -109,29 +109,29 @@ instance Functor m => MarkBodyAnnotations v m Function where
             }
         )
 
-instance Functor m => MarkBodyAnnotations v m HoleOpt where
+instance MarkBodyAnnotations v m HoleOpt where
     markBodyAnnotations (HoleBinder t) = markBodyAnnotations t & _2 %~ HoleBinder
     markBodyAnnotations (HoleVarsRecord x) = (neverShowAnnotations, HoleVarsRecord x)
 
-instance Functor m => MarkBodyAnnotations v m IfElse where
+instance MarkBodyAnnotations v m IfElse where
     markBodyAnnotations (IfElse i t e) =
         ( showAnnotationWhenVerbose
         , IfElse (markNodeAnnotations i) (markNodeAnnotations t & hVal %~ markCaseHandler) (markNodeAnnotations e)
         )
 
-instance Functor m => MarkBodyAnnotations v m Composite where
+instance MarkBodyAnnotations v m Composite where
     markBodyAnnotations x =
         ( neverShowAnnotations
         , morphMap (Proxy @(MarkAnnotations m) #?> markNodeAnnotations) x
         )
 
-instance Functor m => MarkBodyAnnotations v m PostfixFunc where
+instance MarkBodyAnnotations v m PostfixFunc where
     markBodyAnnotations x =
         ( neverShowAnnotations
         , morphMap (Proxy @(MarkAnnotations m) #?> markNodeAnnotations) x
         )
 
-instance Functor m => MarkBodyAnnotations v m Term where
+instance MarkBodyAnnotations v m Term where
     markBodyAnnotations (BodyLeaf (LeafLiteral x@LiteralBytes{})) = (dontShowEval, BodyLeaf (LeafLiteral x))
     markBodyAnnotations (BodyLeaf (LeafLiteral x)) = (neverShowAnnotations, BodyLeaf (LeafLiteral x))
     markBodyAnnotations (BodyRecord x) = markBodyAnnotations x & _2 %~ BodyRecord

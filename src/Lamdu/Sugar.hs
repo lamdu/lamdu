@@ -40,7 +40,6 @@ import           Lamdu.Prelude
 type T = Transaction
 
 markAnnotations ::
-    Functor m =>
     Sugar.WorkArea v n i o (ConvertPayload m a) ->
     Sugar.WorkArea (ShowAnnotation, v) n i o (ConvertPayload m (ShowAnnotation, a))
 markAnnotations workArea =
