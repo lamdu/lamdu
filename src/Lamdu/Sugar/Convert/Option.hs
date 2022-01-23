@@ -452,7 +452,7 @@ makeOption dstPl res =
             & local (ConvertM.scInferContext .~ ctx1)
             & -- Updated deps are required to sugar labeled apply
                 Lens.locally (ConvertM.scFrozenDeps . pVal) (<> res ^. rDeps)
-            <&> markNodeAnnotations @_ @_ @(HoleOpt (ShowAnnotation, EvalPrep) InternalName (OnceT (T m)) (T m))
+            <&> markNodeAnnotations @_ @(HoleOpt (ShowAnnotation, EvalPrep) InternalName (OnceT (T m)) (T m))
             <&> hflipped %~ hmap (const (Lens._Wrapped %~
                     \x -> convertPayload x & plAnnotation %~ (,) (x ^. pUserData . _1)
                 ))

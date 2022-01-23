@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell, TypeApplications, DataKinds, PolyKinds, UndecidableInstances #-}
+{-# LANGUAGE TemplateHaskell, TypeApplications, PolyKinds, UndecidableInstances #-}
 {-# LANGUAGE MultiParamTypeClasses, FlexibleInstances, ScopedTypeVariables #-}
 
 module Lamdu.Sugar.Annotations
@@ -56,51 +56,51 @@ dontShowType =
     , _showInEvalMode = True
     }
 
-class MarkBodyAnnotations v m e where
+class MarkBodyAnnotations v e where
     markBodyAnnotations ::
         e v n i o # Annotated (ConvertPayload m a) ->
         (ShowAnnotation, e (ShowAnnotation, v) n i o # Annotated (ConvertPayload m (ShowAnnotation, a)))
 
-class MarkAnnotations m t0 t1 where
+class MarkAnnotations t0 t1 where
     markNodeAnnotations ::
         Annotated (ConvertPayload m a) # t0 ->
         Annotated (ConvertPayload m (ShowAnnotation, a)) # t1
 
-instance MarkAnnotations m (Const a) (Const a) where
+instance MarkAnnotations (Const a) (Const a) where
     markNodeAnnotations (Ann a (Const b)) = Ann (a & Lens._Wrapped . pUserData %~ (,) neverShowAnnotations) (Const b)
 
-instance MarkBodyAnnotations v m e => MarkAnnotations m (e v n i o) (e (ShowAnnotation, v) n i o) where
+instance MarkBodyAnnotations v e => MarkAnnotations (e v n i o) (e (ShowAnnotation, v) n i o) where
     markNodeAnnotations (Ann (Const pl) x) =
         Ann (Const (pl & pUserData %~ (,) showAnn)) newBody
         where
             (showAnn, newBody) = markBodyAnnotations x
 
-instance MarkBodyAnnotations v m Binder where
+instance MarkBodyAnnotations v Binder where
     markBodyAnnotations = bBody markBodyAnnotations
 
-instance MarkBodyAnnotations v m BinderBody where
+instance MarkBodyAnnotations v BinderBody where
     markBodyAnnotations (BinderTerm body) =
         markBodyAnnotations body & _2 %~ BinderTerm
     markBodyAnnotations (BinderLet let_) =
         ( neverShowAnnotations
-        , morphMap (Proxy @(MarkAnnotations m) #?> markNodeAnnotations) let_
+        , morphMap (Proxy @MarkAnnotations #?> markNodeAnnotations) let_
             & BinderLet
         )
 
-instance MarkBodyAnnotations v m Assignment where
+instance MarkBodyAnnotations v Assignment where
     markBodyAnnotations (BodyPlain (AssignPlain a b)) =
         markBodyAnnotations b
         & _2 %~ BodyPlain . AssignPlain a
     markBodyAnnotations (BodyFunction f) = markBodyAnnotations f & _2 %~ BodyFunction
 
-instance MarkBodyAnnotations v m Else where
+instance MarkBodyAnnotations v Else where
     markBodyAnnotations (SimpleElse body) = markBodyAnnotations body & _2 %~ SimpleElse . markCaseHandler
     markBodyAnnotations (ElseIf x) =
         ( neverShowAnnotations
-        , x & eIfElse %~ morphMap (Proxy @(MarkAnnotations m) #?> markNodeAnnotations) & ElseIf
+        , x & eIfElse %~ morphMap (Proxy @MarkAnnotations #?> markNodeAnnotations) & ElseIf
         )
 
-instance MarkBodyAnnotations v m Function where
+instance MarkBodyAnnotations v Function where
     markBodyAnnotations func =
         ( neverShowAnnotations
         , func
@@ -109,29 +109,29 @@ instance MarkBodyAnnotations v m Function where
             }
         )
 
-instance MarkBodyAnnotations v m HoleOpt where
+instance MarkBodyAnnotations v HoleOpt where
     markBodyAnnotations (HoleBinder t) = markBodyAnnotations t & _2 %~ HoleBinder
     markBodyAnnotations (HoleVarsRecord x) = (neverShowAnnotations, HoleVarsRecord x)
 
-instance MarkBodyAnnotations v m IfElse where
+instance MarkBodyAnnotations v IfElse where
     markBodyAnnotations (IfElse i t e) =
         ( showAnnotationWhenVerbose
         , IfElse (markNodeAnnotations i) (markNodeAnnotations t & hVal %~ markCaseHandler) (markNodeAnnotations e)
         )
 
-instance MarkBodyAnnotations v m Composite where
+instance MarkBodyAnnotations v Composite where
     markBodyAnnotations x =
         ( neverShowAnnotations
-        , morphMap (Proxy @(MarkAnnotations m) #?> markNodeAnnotations) x
+        , morphMap (Proxy @MarkAnnotations #?> markNodeAnnotations) x
         )
 
-instance MarkBodyAnnotations v m PostfixFunc where
+instance MarkBodyAnnotations v PostfixFunc where
     markBodyAnnotations x =
         ( neverShowAnnotations
-        , morphMap (Proxy @(MarkAnnotations m) #?> markNodeAnnotations) x
+        , morphMap (Proxy @MarkAnnotations #?> markNodeAnnotations) x
         )
 
-instance MarkBodyAnnotations v m Term where
+instance MarkBodyAnnotations v Term where
     markBodyAnnotations (BodyLeaf (LeafLiteral x@LiteralBytes{})) = (dontShowEval, BodyLeaf (LeafLiteral x))
     markBodyAnnotations (BodyLeaf (LeafLiteral x)) = (neverShowAnnotations, BodyLeaf (LeafLiteral x))
     markBodyAnnotations (BodyRecord x) = markBodyAnnotations x & _2 %~ BodyRecord
@@ -167,17 +167,17 @@ instance MarkBodyAnnotations v m Term where
         )
     markBodyAnnotations (BodySimpleApply x) =
         ( showAnnotationWhenVerbose
-        , morphMap (Proxy @(MarkAnnotations m) #?> markNodeAnnotations) x
+        , morphMap (Proxy @MarkAnnotations #?> markNodeAnnotations) x
             & appFunc . nonHoleAnn .~ neverShowAnnotations
             & BodySimpleApply
         )
     markBodyAnnotations (BodyPostfixApply x) =
         ( neverShowAnnotations -- No need to see result of from-nom/get-field
-        , morphMap (Proxy @(MarkAnnotations m) #?> markNodeAnnotations) x & BodyPostfixApply
+        , morphMap (Proxy @MarkAnnotations #?> markNodeAnnotations) x & BodyPostfixApply
         )
     markBodyAnnotations (BodyLabeledApply x) =
         ( showAnnotationWhenVerbose
-        , morphMap (Proxy @(MarkAnnotations m) #?> markNodeAnnotations) x & BodyLabeledApply
+        , morphMap (Proxy @MarkAnnotations #?> markNodeAnnotations) x & BodyLabeledApply
         )
     markBodyAnnotations (BodyIfElse x) = markBodyAnnotations x & _2 %~ BodyIfElse
     markBodyAnnotations (BodyLeaf (LeafHole x)) =
