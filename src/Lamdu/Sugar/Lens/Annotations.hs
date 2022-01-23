@@ -45,10 +45,6 @@ class HAnnotations a b s t where
         ) => Traversal (s # h0) (t # h1) a b
     hAnnotations f = morphTraverse (Proxy @(HAnnotations a b) #?> hAnnotations f)
 
-instance Annotations a b (GetVar n o) (GetVar n o) where annotations _ = pure
-instance Annotations a b (TagRef n i o) (TagRef n i o) where annotations _ = pure
-instance Annotations a b (i (TagChoice n o)) (i (TagChoice n o)) where annotations _ = pure
-
 instance Annotations a b s0 t0 => Annotations a b (s0, x) (t0, x) where
     annotations = _1 . annotations
 
@@ -58,7 +54,7 @@ instance Annotations a b (Params a n i o) (Params b n i o) where
 instance Annotations a b (Payload a o) (Payload b o) where
     annotations = plAnnotation
 
-instance Annotations a b s t => Annotations a b (WorkArea a n i o s) (WorkArea b n i o t) where
+instance HAnnotations a b (Const s) (Const t) => Annotations a b (WorkArea a n i o s) (WorkArea b n i o t) where
     annotations f (WorkArea panes repl globals) =
         WorkArea
         <$> (traverse . paneBinder . hAnnotations) f panes
@@ -68,9 +64,12 @@ instance Annotations a b s t => Annotations a b (WorkArea a n i o s) (WorkArea b
 instance HAnnotations a b p0 p1 => HAnnotations a b (Ann p0) (Ann p1) where
     hAnnotations f (Ann p x) = Ann <$> hAnnotations f p <*> hAnnotations f x
 
-instance Annotations a b s t => HAnnotations a b (Const s) (Const t) where
-    hAnnotations = Lens._Wrapped . annotations
+instance HAnnotations a b (Const (Payload a o)) (Const (Payload b o)) where
+    hAnnotations = Lens._Wrapped . plAnnotation
 
+instance HAnnotations a b (Const (GetVar n o)) (Const (GetVar n o)) where hAnnotations _ = Lens._Wrapped pure
+instance HAnnotations a b (Const (i (TagChoice n o))) (Const (i (TagChoice n o))) where hAnnotations _ = Lens._Wrapped pure
+instance HAnnotations a b (Const (TagRef n i o)) (Const (TagRef n i o)) where hAnnotations _ = Lens._Wrapped pure
 instance HAnnotations a b (Composite a n i o) (Composite b n i o)
 instance HAnnotations a b (IfElse a n i o) (IfElse b n i o)
 instance HAnnotations a b (LabeledApply a n i o) (LabeledApply b n i o)
