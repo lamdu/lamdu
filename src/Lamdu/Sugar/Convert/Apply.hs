@@ -41,7 +41,7 @@ convert ::
     (Monad m, Typeable m) =>
     V.App V.Term # Ann (Input.Payload m) ->
     Input.Payload m # V.Term ->
-    ConvertM m (ExpressionU EvalPrep m ())
+    ConvertM m (ExpressionU EvalPrep m)
 convert app@(V.App funcI argI) exprPl =
     runMatcherT $
     do
@@ -89,9 +89,9 @@ defParamsMatchArgs var record frozenDeps =
 
 type AppS v m =
     App (Term v InternalName (OnceT (Transaction m)) (Transaction m)) #
-    Annotated (ConvertPayload m ())
+    Annotated (ConvertPayload m)
 
-convertEmptyInject :: Monad m => AppS v m -> MaybeT (ConvertM m) (BodyU v m ())
+convertEmptyInject :: Monad m => AppS v m -> MaybeT (ConvertM m) (BodyU v m)
 convertEmptyInject (App funcS argS) =
     do
         inject <- annValue (^? _BodyLeaf . _LeafInject . Lens._Unwrapped) funcS & maybeToMPlus
@@ -103,7 +103,7 @@ convertEmptyInject (App funcS argS) =
             & NullaryInject inject & BodyNullaryInject
             & pure
 
-convertPostfix :: Monad m => AppS v m -> Input.Payload m # V.Term -> MaybeT (ConvertM m) (BodyU v m ())
+convertPostfix :: Monad m => AppS v m -> Input.Payload m # V.Term -> MaybeT (ConvertM m) (BodyU v m)
 convertPostfix (App funcS argS) applyPl =
     do
         postfixFunc <- annValue (^? _BodyPostfixFunc) funcS & maybeToMPlus
@@ -122,7 +122,7 @@ convertPostfix (App funcS argS) applyPl =
 convertLabeled ::
     Monad m =>
     AppS v m -> Input.Payload m # V.Term ->
-    MaybeT (ConvertM m) (BodyU v m ())
+    MaybeT (ConvertM m) (BodyU v m)
 convertLabeled (App funcS argS) exprPl =
     do
         Lens.view (ConvertM.scConfig . Config.sugarsEnabled . Config.labeledApply) >>= guard
@@ -161,7 +161,7 @@ convertLabeled (App funcS argS) exprPl =
             & lift
     <&> BodyLabeledApply
 
-convertPrefix :: Monad m => AppS v m -> Input.Payload m # V.Term -> ConvertM m (BodyU v m ())
+convertPrefix :: Monad m => AppS v m -> Input.Payload m # V.Term -> ConvertM m (BodyU v m)
 convertPrefix (App funcS argS) applyPl =
     do
         del <- makeDel applyPl
@@ -185,7 +185,7 @@ convertPrefix (App funcS argS) applyPl =
 makeDel ::
     Monad m =>
     Input.Payload m # V.Term ->
-    ConvertM m ((Annotated (ConvertPayload m a2) # h) -> Delete (Transaction m))
+    ConvertM m ((Annotated (ConvertPayload m) # h) -> Delete (Transaction m))
 makeDel applyPl =
     ConvertM.typeProtectedSetToVal <&>
     \protectedSetToVal remain ->

@@ -41,8 +41,8 @@ class AddEvalToNode i n t0 t1 where
     addToNode ::
         (Monad m, Applicative i) =>
         AddEvalCtx ->
-        Annotated (ConvertPayload m (Annotation EvalPrep n, a)) # t0 ->
-        Annotated (ConvertPayload m (Annotation (EvaluationScopes InternalName i) n, a)) # t1
+        Annotated (Annotation EvalPrep n, a, ConvertPayload m) # t0 ->
+        Annotated (Annotation (EvaluationScopes InternalName i) n, a, ConvertPayload m) # t1
 
 instance AddEvalToNode i n (Const x) (Const x) where
     addToNode r (Ann (Const pl) (Const x)) = Ann (Const (addToPayload r pl)) (Const x)
@@ -55,15 +55,15 @@ instance
     addToNode results (Ann a b) =
         Ann
         { _hAnn = a & Lens._Wrapped %~ addToPayload results
-        , _hVal = addToBody results (a ^. Lens._Wrapped . pEntityId) b
+        , _hVal = addToBody results (a ^. Lens._Wrapped . _3 . pEntityId) b
         }
 
 type AddToBodyType e n (i :: Type -> Type) (o :: Type -> Type) m a =
     AddEvalCtx -> EntityId ->
     e (Annotation EvalPrep n) n i o #
-        Annotated (ConvertPayload m (Annotation EvalPrep n, a)) ->
+        Annotated (Annotation EvalPrep n, a, ConvertPayload m) ->
     e (Annotation (EvaluationScopes InternalName i) n) n i o #
-        Annotated (ConvertPayload m (Annotation (EvaluationScopes InternalName i) n, a))
+        Annotated (Annotation (EvaluationScopes InternalName i) n, a, ConvertPayload m)
 
 class AddEval i n e where
     addToBody :: (Applicative i, Monad m) => AddToBodyType e n i o m a
@@ -176,11 +176,11 @@ addToParams ctx i =
 addToPayload ::
     Applicative i =>
     AddEvalCtx ->
-    ConvertPayload m (Annotation EvalPrep n, a) ->
-    ConvertPayload m (Annotation (EvaluationScopes InternalName i) n, a)
+    (Annotation EvalPrep n, a, ConvertPayload m) ->
+    (Annotation (EvaluationScopes InternalName i) n, a, ConvertPayload m)
 addToPayload ctx a =
     a
-    & pUserData . _1 . _AnnotationVal %~
+    & _1 . _AnnotationVal %~
         \v ->
         ctx ^. evalResults
         <&> (^. erExprValues . Lens.at u)
@@ -189,17 +189,17 @@ addToPayload ctx a =
         & ConvertEval.results (EntityId.ofEvalOf i)
     where
         EntityId u = i
-        i = a ^. pEntityId
+        i = a ^. _3 . pEntityId
 
 addEvaluationResults ::
     forall n m i a.
     (Monad m, Applicative i) =>
     Anchors.CodeAnchors m ->
     CurAndPrev EvalResults ->
-    WorkArea (Annotation EvalPrep n) n i (T m) (ConvertPayload m (Annotation EvalPrep n, a)) ->
+    WorkArea (Annotation EvalPrep n) n i (T m) (Annotation EvalPrep n, a, ConvertPayload m) ->
     T m (
         WorkArea (Annotation (EvaluationScopes InternalName i) n) n i (T m)
-        (ConvertPayload m (Annotation (EvaluationScopes InternalName i) n, a)))
+        (Annotation (EvaluationScopes InternalName i) n, a, ConvertPayload m))
 addEvaluationResults cp r wa@(WorkArea panes repl globals) =
     makeNominalsMap
     ( wa ^..

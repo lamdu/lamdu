@@ -35,7 +35,7 @@ convert ::
     Pure # T.Scheme ->
     Definition.Expr (Ann (Input.Payload m) # V.Term) ->
     DefI m ->
-    ConvertM m (DefinitionBody EvalPrep InternalName (OnceT (T m)) (T m) (ConvertPayload m ()))
+    ConvertM m (DefinitionBody EvalPrep InternalName (OnceT (T m)) (T m) (ConvertPayload m))
 convert defType defExpr defI =
     do
         (presMode, content) <-

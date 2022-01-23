@@ -62,8 +62,8 @@ convertAppliedHole ::
     (Monad m, Typeable m) =>
     Ann (Input.Payload m) # V.Term ->
     Input.Payload m # V.Term ->
-    ExpressionU EvalPrep m () ->
-    MaybeT (ConvertM m) (ExpressionU EvalPrep m ())
+    ExpressionU EvalPrep m ->
+    MaybeT (ConvertM m) (ExpressionU EvalPrep m)
 convertAppliedHole funcI exprPl argS =
     do
         Lens.view (ConvertM.scConfig . Config.sugarsEnabled . Config.fragment) >>= guard

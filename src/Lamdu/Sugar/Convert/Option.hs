@@ -454,7 +454,7 @@ makeOption dstPl res =
                 Lens.locally (ConvertM.scFrozenDeps . pVal) (<> res ^. rDeps)
             <&> markNodeAnnotations @_ @(HoleOpt (ShowAnnotation, EvalPrep) InternalName (OnceT (T m)) (T m))
             <&> hflipped %~ hmap (const (Lens._Wrapped %~
-                    \x -> convertPayload x & plAnnotation %~ (,) (x ^. pUserData . _1)
+                    \(showAnn, x) -> convertPayload x & plAnnotation %~ (,) showAnn
                 ))
             -- We explicitly do want annotations of variables such as global defs to appear
             <&> Lens.filteredBy (hVal . _HoleBinder . bBody . _BinderTerm . _BodyLeaf . _LeafGetVar) .
@@ -550,14 +550,14 @@ makeLocals f scope =
                     (instantiate (scope ^?! V.scopeVarTypes . Lens.ix var . _HFlip) >>= applyBindings)
                     ^?! Lens._Right . _1 . _Pure . T._TRecord . T.flatRow . freExtends . Lens.ix tag
 
-mkEvalPrep :: ConvertPayload m a -> EvalPrep
+mkEvalPrep :: ConvertPayload m -> EvalPrep
 mkEvalPrep pl =
     EvalPrep
     { _eType = pl ^. pUnsugared . hAnn . Input.inferredType
     , _eEvalId = pl ^. pEntityId
     }
 
-convertPayload :: ConvertPayload m a -> Payload EvalPrep (T m)
+convertPayload :: ConvertPayload m -> Payload EvalPrep (T m)
 convertPayload pl =
     Payload
     { _plAnnotation = mkEvalPrep pl

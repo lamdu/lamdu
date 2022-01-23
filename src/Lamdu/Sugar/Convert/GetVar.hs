@@ -165,7 +165,7 @@ convertParam param exprPl =
     , _vVar = param
     }
 
-convert :: Monad m => V.Var -> Input.Payload m # V.Term -> ConvertM m (ExpressionU v m ())
+convert :: Monad m => V.Var -> Input.Payload m # V.Term -> ConvertM m (ExpressionU v m)
 convert param exprPl =
     do
         convertGlobal param exprPl & justToLeft

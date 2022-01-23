@@ -239,8 +239,8 @@ setChildReplaceParentActions ::
     Monad m =>
     ConvertM m (
         ExprIRef.HRef m # V.Term ->
-        Term v name (OnceT (T m)) (T m) # Annotated (ConvertPayload m a) ->
-        Term v name (OnceT (T m)) (T m) # Annotated (ConvertPayload m a)
+        Term v name (OnceT (T m)) (T m) # Annotated (ConvertPayload m) ->
+        Term v name (OnceT (T m)) (T m) # Annotated (ConvertPayload m)
     )
 setChildReplaceParentActions =
     ConvertM.typeProtectedSetToVal
@@ -264,8 +264,8 @@ setChildReplaceParentActions =
 addActions ::
     Monad m =>
     Ann (Input.Payload m) # V.Term ->
-    Term v InternalName (OnceT (T m)) (T m) # Annotated (ConvertPayload m ()) ->
-    ConvertM m (ExpressionU v m ())
+    Term v InternalName (OnceT (T m)) (T m) # Annotated (ConvertPayload m) ->
+    ConvertM m (ExpressionU v m)
 addActions expr bodyS =
     do
         actions <- makeActions (expr ^. hAnn)
@@ -277,7 +277,6 @@ addActions expr bodyS =
                 { _pUnsugared = expr
                 , _pActions = actions
                 , _pLambdas = []
-                , _pUserData = ()
                 , _pEntityId = expr ^. hAnn . Input.entityId
                 }
             } & pure

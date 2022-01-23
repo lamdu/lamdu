@@ -20,7 +20,7 @@ import           Lamdu.Prelude
 -- This is mostly a copy&paste of the Convert.Record module, yuck! DRY
 -- with some abstraction?
 
-convertAbsurd :: Monad m => Input.Payload m # V.Term -> ConvertM m (ExpressionU v m ())
+convertAbsurd :: Monad m => Input.Payload m # V.Term -> ConvertM m (ExpressionU v m)
 convertAbsurd pl =
     Composite.convertEmpty V.BCase (pl ^. Input.stored)
     <&> PfCase <&> BodyPostfixFunc
@@ -30,7 +30,7 @@ convert ::
     Monad m =>
     RowExtend T.Tag V.Term V.Term # Ann (Input.Payload m) ->
     Input.Payload m # V.Term ->
-    ConvertM m (ExpressionU EvalPrep m ())
+    ConvertM m (ExpressionU EvalPrep m)
 convert r@(RowExtend tag v rest) exprPl =
     do
         valS <-

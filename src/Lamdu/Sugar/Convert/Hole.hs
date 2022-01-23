@@ -63,7 +63,7 @@ convert ::
     (Monad m, Typeable m) =>
     ConvertM.PositionInfo ->
     Input.Payload m # V.Term ->
-    ConvertM m (ExpressionU EvalPrep m ())
+    ConvertM m (ExpressionU EvalPrep m)
 convert posInfo holePl =
     do
         tagsProp <- Lens.view Anchors.codeAnchors <&> Anchors.tags

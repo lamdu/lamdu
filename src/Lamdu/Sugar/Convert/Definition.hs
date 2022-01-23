@@ -97,7 +97,7 @@ convertInferDefExpr ::
     env ->
     Pure # T.Scheme -> Definition.Expr (Ann (HRef m) # V.Term) -> DefI m ->
     OnceT (T m)
-    (DefinitionBody EvalPrep InternalName (OnceT (T m)) (T m) (ConvertPayload m [EntityId]))
+    (DefinitionBody EvalPrep InternalName (OnceT (T m)) (T m) ([EntityId], ConvertPayload m))
 convertInferDefExpr env defType defExpr defI =
     do
         outdatedDefinitions <-
@@ -155,7 +155,7 @@ convertDefBody ::
     env ->
     Definition.Definition (Ann (HRef m) # V.Term) (DefI m) ->
     OnceT (T m)
-    (DefinitionBody EvalPrep InternalName (OnceT (T m)) (T m) (ConvertPayload m [EntityId]))
+    (DefinitionBody EvalPrep InternalName (OnceT (T m)) (T m) ([EntityId], ConvertPayload m))
 convertDefBody env (Definition.Definition bod defType defI) =
     case bod of
     Definition.BodyBuiltin builtin ->
@@ -173,7 +173,7 @@ repl ::
     ) =>
     env ->
     OnceT (T m)
-    (Repl EvalPrep InternalName (OnceT (T m)) (T m) (ConvertPayload m [EntityId]))
+    (Repl EvalPrep InternalName (OnceT (T m)) (T m) ([EntityId], ConvertPayload m))
 repl env =
     do
         defExpr <- ExprLoad.defExpr prop & lift
@@ -217,8 +217,8 @@ collectHiddenEntityIds ::
     forall h m.
     RTraversable h =>
     Ann (Input.Payload m) # V.Term ->
-    Annotated (ConvertPayload m ()) # h ->
-    Annotated (ConvertPayload m [EntityId]) # h
+    Annotated (ConvertPayload m) # h ->
+    Annotated ([EntityId], ConvertPayload m) # h
 collectHiddenEntityIds top expr =
     withDict (recurse (Proxy @(RTraversable h))) $
     let nodes =
@@ -236,15 +236,16 @@ collectHiddenEntityIds top expr =
     expr
     & hflipped %~ hmap (const (Lens._Wrapped %~
         \x ->
-        x & pUserData .~
-        filter (/= (x ^. pEntityId))
-        (x ^. pUnsugared . hAnn . Input.entityId : goBody (x ^. pUnsugared . hVal))
+        ( filter (/= (x ^. pEntityId))
+            (x ^. pUnsugared . hAnn . Input.entityId : goBody (x ^. pUnsugared . hVal))
+        , x
+        )
     ))
-    & annotation . pUserData <>~ goNode top
+    & annotation . _1 <>~ goNode top
 
 pane ::
     (Has Debug.Monitors env, Has Cache.Functions env, Has Config env, Monad m, Typeable m, Anchors.HasCodeAnchors env m) =>
-    env -> DefI m -> OnceT (T m) (PaneBody EvalPrep InternalName (OnceT (T m)) (T m) (ConvertPayload m [EntityId]))
+    env -> DefI m -> OnceT (T m) (PaneBody EvalPrep InternalName (OnceT (T m)) (T m) ([EntityId], ConvertPayload m))
 pane env defI =
     Definition
     <$> (ConvertTag.taggedEntityWith (env ^. Anchors.codeAnchors) Nothing defVar & join)

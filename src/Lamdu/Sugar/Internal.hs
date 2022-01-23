@@ -1,7 +1,7 @@
 {-# LANGUAGE TemplateHaskell, MultiParamTypeClasses, FlexibleInstances #-}
 
 module Lamdu.Sugar.Internal
-    ( ConvertPayload(..), pActions, pLambdas, pUserData, pUnsugared, pEntityId, pStored
+    ( ConvertPayload(..), pActions, pLambdas, pUnsugared, pEntityId, pStored
     , EvalPrep(..), eType, eEvalId
     , InternalName(..), inTag, inContext, inIsAutoName
     , internalNameMatch
@@ -25,7 +25,6 @@ import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.UniqueId as UniqueId
 import qualified Lamdu.Sugar.Convert.Input as Input
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
-import           Lamdu.Sugar.Lens.Annotations (HAnnotations(..))
 import           Lamdu.Sugar.Types
 import           Revision.Deltum.Transaction (Transaction)
 
@@ -33,10 +32,9 @@ import           Lamdu.Prelude
 
 type T = Transaction
 
-data ConvertPayload m a = ConvertPayload
+data ConvertPayload m = ConvertPayload
     { _pActions :: NodeActions (T m)
     , _pLambdas :: [UUID] -- Identifiers for lambdas that were swallowed by the sugar
-    , _pUserData :: a
     , _pUnsugared :: Ann (Input.Payload m) # V.Term
         -- Stored of top-level subtree for sugar expression subtree
     , _pEntityId :: EntityId
@@ -116,8 +114,8 @@ autoName VarVoid = Builtins.voidTag
 taggedName :: (MonadTransaction n m, UniqueId.ToUUID a) => Maybe VarInfo -> a -> m InternalName
 taggedName mVarInfo x = Anchors.assocTag x & getP <&> nameWithContext mVarInfo x
 
-type ExpressionU v m a = Annotated (ConvertPayload m a) # Term v InternalName (OnceT (T m)) (T m)
-type BodyU v m a = Term v InternalName (OnceT (T m)) (T m) # Annotated (ConvertPayload m a)
+type ExpressionU v m = Annotated (ConvertPayload m) # Term v InternalName (OnceT (T m)) (T m)
+type BodyU v m = Term v InternalName (OnceT (T m)) (T m) # Annotated (ConvertPayload m)
 
 replaceWith ::
     Monad m =>
@@ -132,8 +130,5 @@ Lens.makeLenses ''ConvertPayload
 Lens.makeLenses ''EvalPrep
 Lens.makeLenses ''InternalName
 
-instance HAnnotations a b (Const (ConvertPayload m (a, x))) (Const (ConvertPayload m (b, x))) where
-    hAnnotations = Lens._Wrapped . pUserData . _1
-
-pStored :: Lens' (ConvertPayload m a) (HRef m # V.Term)
+pStored :: Lens' (ConvertPayload m) (HRef m # V.Term)
 pStored = pUnsugared . hAnn . Input.stored

@@ -37,7 +37,7 @@ convertPaneBody ::
     ) =>
     env -> Anchors.Pane m ->
     OnceT (T m)
-    (PaneBody EvalPrep InternalName (OnceT (T m)) (T m) (ConvertPayload m [EntityId]))
+    (PaneBody EvalPrep InternalName (OnceT (T m)) (T m) ([EntityId], ConvertPayload m))
 convertPaneBody _ (Anchors.PaneTag tagId) =
     ExprIRef.readTagData tagId & lift <&>
     \tagData ->
@@ -69,7 +69,7 @@ convertPane ::
     Property (T m) [Anchors.Pane dummy] ->
     Int -> Anchors.Pane m ->
     OnceT (T m)
-    (Pane EvalPrep InternalName (OnceT (T m)) (T m) (ConvertPayload m [EntityId]))
+    (Pane EvalPrep InternalName (OnceT (T m)) (T m) ([EntityId], ConvertPayload m))
 convertPane env replEntityId (Property panes setPanes) i pane =
     do
         body <- convertPaneBody env pane
@@ -112,7 +112,7 @@ loadPanes ::
     , Anchors.HasCodeAnchors env m
     ) =>
     env -> EntityId ->
-    OnceT (T m) [Pane EvalPrep InternalName (OnceT (T m)) (T m) (ConvertPayload m [EntityId])]
+    OnceT (T m) [Pane EvalPrep InternalName (OnceT (T m)) (T m) ([EntityId], ConvertPayload m)]
 loadPanes env replEntityId =
     do
         prop <- Anchors.panes (env ^. Anchors.codeAnchors) ^. Property.mkProperty & lift
@@ -139,12 +139,12 @@ loadWorkArea ::
     , Anchors.HasCodeAnchors env m
     ) =>
     env ->
-    OnceT (T m) (WorkArea EvalPrep InternalName (OnceT (T m)) (T m) (ConvertPayload m [EntityId]))
+    OnceT (T m) (WorkArea EvalPrep InternalName (OnceT (T m)) (T m) ([EntityId], ConvertPayload m))
 loadWorkArea env =
     do
         repl <- ConvertDefinition.repl env
         panes <-
-            repl ^. replExpr . SugarLens.binderResultExpr . pEntityId
+            repl ^. replExpr . SugarLens.binderResultExpr . _2 . pEntityId
             & loadPanes env
         orderWorkArea WorkArea
             { _waRepl = repl

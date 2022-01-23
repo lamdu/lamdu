@@ -21,8 +21,8 @@ type T = Transaction
 convertIfElse ::
     Monad m =>
     (ValI m -> T m (ValI m)) ->
-    PostfixApply v InternalName (OnceT (T m)) (T m) # Annotated (ConvertPayload m a) ->
-    Maybe (IfElse v InternalName (OnceT (T m)) (T m) # Annotated (ConvertPayload m a))
+    PostfixApply v InternalName (OnceT (T m)) (T m) # Annotated (ConvertPayload m) ->
+    Maybe (IfElse v InternalName (OnceT (T m)) (T m) # Annotated (ConvertPayload m))
 convertIfElse setToVal postApp =
     do
         cond <-

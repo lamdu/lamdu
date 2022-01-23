@@ -10,7 +10,6 @@ import qualified Control.Lens as Lens
 import           Hyper
 import           Hyper.Class.Morph
 import qualified Lamdu.Builtins.Anchors as Builtins
-import           Lamdu.Sugar.Internal (ConvertPayload, pUserData)
 import qualified Lamdu.Sugar.Lens as SugarLens
 import           Lamdu.Sugar.Lens.Annotations (Annotations(..))
 import qualified Lamdu.Sugar.Props as SugarProps
@@ -58,20 +57,20 @@ dontShowType =
 
 class MarkBodyAnnotations v e where
     markBodyAnnotations ::
-        e v n i o # Annotated (ConvertPayload m a) ->
-        (ShowAnnotation, e (ShowAnnotation, v) n i o # Annotated (ConvertPayload m (ShowAnnotation, a)))
+        e v n i o # Annotated a ->
+        (ShowAnnotation, e (ShowAnnotation, v) n i o # Annotated (ShowAnnotation, a))
 
 class MarkAnnotations t0 t1 where
     markNodeAnnotations ::
-        Annotated (ConvertPayload m a) # t0 ->
-        Annotated (ConvertPayload m (ShowAnnotation, a)) # t1
+        Annotated a # t0 ->
+        Annotated (ShowAnnotation, a) # t1
 
 instance MarkAnnotations (Const a) (Const a) where
-    markNodeAnnotations (Ann a (Const b)) = Ann (a & Lens._Wrapped . pUserData %~ (,) neverShowAnnotations) (Const b)
+    markNodeAnnotations (Ann a (Const b)) = Ann (a & Lens._Wrapped %~ (,) neverShowAnnotations) (Const b)
 
 instance MarkBodyAnnotations v e => MarkAnnotations (e v n i o) (e (ShowAnnotation, v) n i o) where
     markNodeAnnotations (Ann (Const pl) x) =
-        Ann (Const (pl & pUserData %~ (,) showAnn)) newBody
+        Ann (Const (showAnn, pl)) newBody
         where
             (showAnn, newBody) = markBodyAnnotations x
 
@@ -148,11 +147,11 @@ instance MarkBodyAnnotations v Term where
         ( showAnnotationWhenVerbose
             & showInEvalMode .~
                 ( tid ^. tidTId == Builtins.textTid
-                    || newBinder ^. SugarLens.binderResultExpr . pUserData . _1 . showInEvalMode
+                    || newBinder ^. SugarLens.binderResultExpr . _1 . showInEvalMode
                 )
         , newBinder
             & Lens.filtered (not . SugarProps.isUnfinished . (^. hVal)) .
-                annotation . pUserData . _1 .~ dontShowEval
+                annotation . _1 .~ dontShowEval
             & Nominal tid & BodyToNom
         )
         where
@@ -162,7 +161,7 @@ instance MarkBodyAnnotations v Term where
         ( dontShowEval
         , x & hmap
                 (Proxy @(Recursively HFunctor) #>
-                    hflipped %~ hmap (const (Lens._Wrapped . pUserData %~ (,) neverShowAnnotations)))
+                    hflipped %~ hmap (const (Lens._Wrapped %~ (,) neverShowAnnotations)))
             & BodyNullaryInject
         )
     markBodyAnnotations (BodySimpleApply x) =
@@ -193,16 +192,15 @@ instance MarkBodyAnnotations v Term where
         )
 
 nonHoleAnn ::
-    Lens.Traversal' (Annotated (ConvertPayload m (ShowAnnotation, a)) # Term v1 n i o) ShowAnnotation
+    Lens.Traversal' (Annotated (ShowAnnotation, a) # Term v1 n i o) ShowAnnotation
 nonHoleAnn =
     Lens.filtered (Lens.nullOf (hVal . SugarLens.bodyUnfinished)) .
-    annotation . pUserData . _1
+    annotation . _1
 
 markCaseHandler ::
-    Term v n i o # Annotated (ConvertPayload m (ShowAnnotation, a)) ->
-    Term v n i o # Annotated (ConvertPayload m (ShowAnnotation, a))
+    Term v n i o # Annotated (ShowAnnotation, a) ->
+    Term v n i o # Annotated (ShowAnnotation, a)
 markCaseHandler =
     _BodyLam . lamFunc . fBody .
-    SugarLens.binderResultExpr . Lens.ifiltered (const . Lens.nullOf SugarLens.bodyUnfinished) .
-    pUserData . _1
+    SugarLens.binderResultExpr . Lens.ifiltered (const . Lens.nullOf SugarLens.bodyUnfinished) . _1
     .~ neverShowAnnotations

@@ -19,7 +19,7 @@ import           Lamdu.Sugar.Types
 import           Lamdu.Prelude
 
 convertGetFieldParam ::
-    Monad m => V.App V.Term # Ann (Input.Payload m) -> ConvertM m (Maybe (BodyU v m ()))
+    Monad m => V.App V.Term # Ann (Input.Payload m) -> ConvertM m (Maybe (BodyU v m))
 convertGetFieldParam (V.App (Ann _ (V.BLeaf (V.LGetField tag))) recExpr) =
     Lens.view (ConvertM.scScopeInfo . ConvertM.siRecordParams) <&>
     \recParams ->
@@ -42,7 +42,7 @@ convert ::
     Monad m =>
     T.Tag ->
     Input.Payload m # V.Term ->
-    ConvertM m (ExpressionU v m ())
+    ConvertM m (ExpressionU v m)
 convert tag exprPl =
     do
         protectedSetToVal <- ConvertM.typeProtectedSetToVal

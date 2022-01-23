@@ -97,7 +97,7 @@ data Context m = Context
     , _scConfig :: Config
     , scConvertSubexpression ::
         PositionInfo -> Ann (Input.Payload m) # V.Term ->
-        ConvertM m (ExpressionU EvalPrep m ())
+        ConvertM m (ExpressionU EvalPrep m)
     }
 Lens.makeLenses ''Context
 
@@ -162,7 +162,7 @@ convertOnce action =
     <&> (`run` action)
     >>= ConvertM . lift . once
 
-convertSubexpression :: Monad m => Ann (Input.Payload m) # V.Term -> ConvertM m (ExpressionU EvalPrep m ())
+convertSubexpression :: Monad m => Ann (Input.Payload m) # V.Term -> ConvertM m (ExpressionU EvalPrep m)
 convertSubexpression exprI =
     do
         convertSub <- Lens.view id <&> scConvertSubexpression

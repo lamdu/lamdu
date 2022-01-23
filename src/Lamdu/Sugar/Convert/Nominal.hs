@@ -46,7 +46,7 @@ convertToNom ::
     Monad m =>
     ToNom NominalId V.Term # Ann (Input.Payload m) ->
     Input.Payload m # V.Term ->
-    ConvertM m (ExpressionU EvalPrep m ())
+    ConvertM m (ExpressionU EvalPrep m)
 convertToNom t@(ToNom tid x) pl =
     do
         ConvertText.text t pl & justToLeft
@@ -59,7 +59,7 @@ convertToNom t@(ToNom tid x) pl =
     & runMatcherT
     <&> annotation . pActions . mApply .~ Nothing
 
-convertFromNom :: Monad m => NominalId -> Input.Payload m # V.Term -> ConvertM m (ExpressionU v m ())
+convertFromNom :: Monad m => NominalId -> Input.Payload m # V.Term -> ConvertM m (ExpressionU v m)
 convertFromNom tid pl =
     ConvertTId.convert tid <&> PfFromNom <&> BodyPostfixFunc
     >>= addActions (Ann pl (V.BLeaf (V.LFromNom tid)))

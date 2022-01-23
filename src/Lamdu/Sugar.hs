@@ -40,8 +40,8 @@ import           Lamdu.Prelude
 type T = Transaction
 
 markAnnotations ::
-    Sugar.WorkArea v n i o (ConvertPayload m a) ->
-    Sugar.WorkArea (ShowAnnotation, v) n i o (ConvertPayload m (ShowAnnotation, a))
+    Sugar.WorkArea v n i o a ->
+    Sugar.WorkArea (ShowAnnotation, v) n i o (ShowAnnotation, a)
 markAnnotations workArea =
     workArea
     { Sugar._waPanes = workArea ^. Sugar.waPanes <&> SugarLens.paneBinder %~ markNodeAnnotations
@@ -83,7 +83,7 @@ sugarWorkArea env0 =
     SugarConvert.loadWorkArea env0
     <&>
     \workArea getTagName env1 ->
-    let strippedLams = workArea ^.. traverse . pLambdas . traverse
+    let strippedLams = workArea ^.. traverse . _2 . pLambdas . traverse
     in
     markAnnotations workArea
     <&> initAnnotationEvalPrep
@@ -93,20 +93,19 @@ sugarWorkArea env0 =
     >>= report . AddNames.addToWorkArea env1 (fmap getTagName . lift . ExprIRef.readTagData)
     <&> AddParens.addToWorkArea
     <&> Lens.mapped %~
-    \(paren, pl) ->
+    \(paren, (ann, entityIds, pl)) ->
     Sugar.Payload
-    { Sugar._plAnnotation = pl ^. pUserData . _1
+    { Sugar._plAnnotation = ann
     , Sugar._plActions = pl ^. pActions
     , Sugar._plEntityId = pl ^. pEntityId
     , Sugar._plParenInfo = paren
-    , Sugar._plHiddenEntityIds = pl ^. pUserData . _2
+    , Sugar._plHiddenEntityIds = entityIds
     }
     where
         Debug.EvaluatorM report = env0 ^. has . Debug.naming . Debug.mAction
-        initAnnotationEvalPrep pl =
-            pl & pUserData %~ \(showAnn, x) -> ((showAnn, mkEvalPrep pl), x)
+        initAnnotationEvalPrep (showAnn, (entityIds, pl)) = ((showAnn, mkEvalPrep pl), entityIds, pl)
 
-mkEvalPrep :: ConvertPayload m a -> EvalPrep
+mkEvalPrep :: ConvertPayload m -> EvalPrep
 mkEvalPrep pl =
     EvalPrep
     { _eType = pl ^. pUnsugared . hAnn . Input.inferredType

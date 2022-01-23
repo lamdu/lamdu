@@ -16,7 +16,7 @@ import           Lamdu.Sugar.Types
 
 import           Lamdu.Prelude
 
-convertEmpty :: Monad m => Input.Payload m # V.Term -> ConvertM m (ExpressionU v m ())
+convertEmpty :: Monad m => Input.Payload m # V.Term -> ConvertM m (ExpressionU v m)
 convertEmpty pl =
     Composite.convertEmpty V.BRecExtend (pl ^. Input.stored)
     <&> BodyRecord
@@ -27,7 +27,7 @@ convertExtend ::
     Monad m =>
     RowExtend T.Tag V.Term V.Term # Ann (Input.Payload m) ->
     Input.Payload m # V.Term ->
-    ConvertM m (ExpressionU EvalPrep m ())
+    ConvertM m (ExpressionU EvalPrep m)
 convertExtend r@(RowExtend tag val rest) exprPl =
     do
         valS <- ConvertM.convertSubexpression val

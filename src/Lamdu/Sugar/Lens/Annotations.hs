@@ -1,5 +1,5 @@
 {-# LANGUAGE TypeApplications, FlexibleInstances, DefaultSignatures, MultiParamTypeClasses #-}
-{-# LANGUAGE ScopedTypeVariables, TypeFamilies #-}
+{-# LANGUAGE ScopedTypeVariables, TypeFamilies, UndecidableInstances #-}
 
 module Lamdu.Sugar.Lens.Annotations
     ( Annotations(..), HAnnotations(..), paneBinder
@@ -54,18 +54,26 @@ instance Annotations a b (Params a n i o) (Params b n i o) where
 instance Annotations a b (Payload a o) (Payload b o) where
     annotations = plAnnotation
 
-instance HAnnotations a b (Const s) (Const t) => Annotations a b (WorkArea a n i o s) (WorkArea b n i o t) where
+instance
+    (HAnnotations a b (Ann (Const s)) (Ann (Const t)), r ~ WorkArea b n i o t) =>
+    Annotations a b (WorkArea a n i o s) r where
     annotations f (WorkArea panes repl globals) =
         WorkArea
         <$> (traverse . paneBinder . hAnnotations) f panes
         <*> (replExpr . hAnnotations) f repl
         ?? globals
 
-instance HAnnotations a b p0 p1 => HAnnotations a b (Ann p0) (Ann p1) where
-    hAnnotations f (Ann p x) = Ann <$> hAnnotations f p <*> hAnnotations f x
+instance r ~ Ann (Const (b, x, y)) => HAnnotations a b (Ann (Const (a, x, y))) r where
+    hAnnotations f (Ann p x) =
+        Ann
+        <$> (Lens._Wrapped . _1) f p
+        <*> hAnnotations f x
 
-instance HAnnotations a b (Const (Payload a o)) (Const (Payload b o)) where
-    hAnnotations = Lens._Wrapped . plAnnotation
+instance HAnnotations a b (Ann (Const (Payload a o))) (Ann (Const (Payload b o))) where
+    hAnnotations f (Ann p x) =
+        Ann
+        <$> (Lens._Wrapped . plAnnotation) f p
+        <*> hAnnotations f x
 
 instance HAnnotations a b (Const (GetVar n o)) (Const (GetVar n o)) where hAnnotations _ = Lens._Wrapped pure
 instance HAnnotations a b (Const (i (TagChoice n o))) (Const (i (TagChoice n o))) where hAnnotations _ = Lens._Wrapped pure
@@ -77,7 +85,7 @@ instance HAnnotations a b (Let a n i o) (Let b n i o)
 instance HAnnotations a b (PostfixApply a n i o) (PostfixApply b n i o)
 instance HAnnotations a b (PostfixFunc a n i o) (PostfixFunc b n i o)
 
-instance HAnnotations a b (HoleOpt a n i o) (HoleOpt b n i o) where
+instance r ~ HoleOpt b n i o => HAnnotations a b (HoleOpt a n i o) r where
     hAnnotations f (HoleBinder x) = hAnnotations f x <&> HoleBinder
     hAnnotations _ (HoleVarsRecord x) = HoleVarsRecord x & pure
 

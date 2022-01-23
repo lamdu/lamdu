@@ -31,7 +31,7 @@ convertLiteralCommon ::
     Monad m =>
     (Property (T m) a -> Literal (Property (T m))) ->
     (a -> PrimVal.KnownPrim) -> a ->
-    Input.Payload m # V.Term -> ConvertM m (ExpressionU v m ())
+    Input.Payload m # V.Term -> ConvertM m (ExpressionU v m)
 convertLiteralCommon mkLit mkBody x exprPl =
     Property
     { _pVal = x
@@ -42,20 +42,20 @@ convertLiteralCommon mkLit mkBody x exprPl =
         bod = V.BLeaf . V.LLiteral . PrimVal.fromKnown . mkBody
         iref = exprPl ^. Input.stored . ExprIRef.iref
 
-convertLiteralFloat :: Monad m => Double -> Input.Payload m # V.Term -> ConvertM m (ExpressionU v m ())
+convertLiteralFloat :: Monad m => Double -> Input.Payload m # V.Term -> ConvertM m (ExpressionU v m)
 convertLiteralFloat = convertLiteralCommon LiteralNum PrimVal.Float
 
-convertLiteralBytes :: Monad m => ByteString -> Input.Payload m # V.Term -> ConvertM m (ExpressionU v m ())
+convertLiteralBytes :: Monad m => ByteString -> Input.Payload m # V.Term -> ConvertM m (ExpressionU v m)
 convertLiteralBytes = convertLiteralCommon LiteralBytes PrimVal.Bytes
 
-convertLiteralChar :: Monad m => Char -> Input.Payload m # V.Term -> ConvertM m (ExpressionU v m ())
+convertLiteralChar :: Monad m => Char -> Input.Payload m # V.Term -> ConvertM m (ExpressionU v m)
 convertLiteralChar = convertLiteralCommon LiteralChar PrimVal.Char
 
 convert ::
     (Monad m, Typeable m) =>
     PositionInfo ->
     Ann (Input.Payload m) # V.Term ->
-    ConvertM m (ExpressionU EvalPrep m ())
+    ConvertM m (ExpressionU EvalPrep m)
 convert _ (Ann pl (V.BLam x)) = ConvertBinder.convertLam x pl
 convert _ (Ann pl (V.BRecExtend x)) = ConvertRecord.convertExtend x pl
 convert _ (Ann pl (V.BToNom x)) = ConvertNominal.convertToNom x pl

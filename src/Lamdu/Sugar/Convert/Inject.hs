@@ -22,10 +22,10 @@ type T = Transaction
 
 convert ::
     Monad m =>
-    (TagRef InternalName (OnceT (T m)) (T m) -> Term v InternalName (OnceT (T m)) (T m) # Annotated (ConvertPayload m ())) ->
+    (TagRef InternalName (OnceT (T m)) (T m) -> Term v InternalName (OnceT (T m)) (T m) # Annotated (ConvertPayload m)) ->
     T.Tag ->
     Input.Payload m # V.Term ->
-    ConvertM m (ExpressionU v m ())
+    ConvertM m (ExpressionU v m)
 convert c tag exprPl =
     do
         protectedSetToVal <- ConvertM.typeProtectedSetToVal

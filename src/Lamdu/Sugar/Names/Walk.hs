@@ -18,7 +18,6 @@ import           Hyper.Class.Morph (morphTraverse1)
 import           Hyper.Syntax (FuncType(..))
 import qualified Lamdu.Calc.Type as T
 import           Lamdu.Sugar.Names.NewTag (newTagName)
-import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Lens as SugarLens
 import           Lamdu.Sugar.Names.CPS (CPS(..), liftCPS)
 import qualified Lamdu.Sugar.Types as Sugar
@@ -73,7 +72,7 @@ class Walk m s t where
 instance Walk m () () where walk = pure
 instance Walk m (Property o ParamKind) (Property o ParamKind) where walk = pure
 
-instance Walk m s t => Walk m (s, x) (t, x) where
+instance Walk m s t => Walk m (s, x, y) (t, x, y) where
     walk = _1 walk
 
 binderVarType :: VarForm name m -> NameType
@@ -539,14 +538,12 @@ instance
             repl <- replExpr (toNode toBody) _waRepl
             WorkArea panes repl <$> walk _waGlobals
 
-instance Walk m a b => Walk m (ConvertPayload n a) (ConvertPayload n b) where walk = pUserData walk
-
 toWorkArea ::
     MonadNaming m =>
     Top WorkArea (OldName m) (IM m) o
-        (ConvertPayload n (Annotation (EvaluationScopes (OldName m) (IM m)) (OldName m), a)) ->
+        (Annotation (EvaluationScopes (OldName m) (IM m)) (OldName m), a, b) ->
     m (Top WorkArea (NewName m) (IM m) o
-        (ConvertPayload n (Annotation (EvaluationScopes (NewName m) (IM m)) (NewName m), a)))
+        (Annotation (EvaluationScopes (NewName m) (IM m)) (NewName m), a, b))
 toWorkArea = walk
 
 toWorkAreaTest ::
