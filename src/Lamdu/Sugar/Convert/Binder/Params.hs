@@ -524,14 +524,30 @@ lamParamType lamExprPl =
     unsafeUnjust "Lambda value not inferred to a function type?!" $
     lamExprPl ^? Input.inferredType . _Pure . T._TFun . funcIn
 
-makeVarParamInfo ::
+mkVarInfo :: MonadTransaction n m => Pure # T.Type -> m VarInfo
+mkVarInfo (Pure T.TFun{}) = pure VarFunction
+mkVarInfo (Pure T.TVar{}) = pure VarGeneric
+mkVarInfo (Pure (T.TRecord (Pure T.REmpty))) = pure VarUnit
+mkVarInfo (Pure T.TRecord{}) = pure VarRecord
+mkVarInfo (Pure (T.TVariant (Pure T.REmpty))) = pure VarVoid
+mkVarInfo (Pure T.TVariant{}) = pure VarVariant
+mkVarInfo (Pure (T.TInst (NominalInst tid _))) =
+    ConvertTId.convert tid
+    <&> VarNominal . (tidName %~ (^. inTag))
+
+convertNonRecordParam ::
     Monad m =>
-    OptionalTag InternalName (OnceT (T m)) (T m) ->
-    BinderKind m -> StoredLam m ->
-    FuncParam v ->
-    ConvertM m (Var v InternalName (OnceT (T m)) (T m))
-makeVarParamInfo tag binderKind storedLam p =
+    BinderKind m ->
+    V.TypedLam V.Var (HCompose Prune T.Type) V.Term # Ann (Input.Payload m) ->
+    Input.Payload m # V.Term ->
+    ConvertM m (ConventionalParams m)
+convertNonRecordParam binderKind lam@(V.TypedLam param _ _) lamExprPl =
     do
+        nullParamSugar <-
+            Lens.view (ConvertM.scConfig . Config.sugarsEnabled . Config.nullaryParameter)
+        let typ = lamParamType lamExprPl
+        varInfo <- mkVarInfo typ
+        tag <- ConvertTag.taggedEntity (Just varInfo) param >>= ConvertM . lift
         del <- makeDeleteLambda binderKind storedLam
         postProcess <- ConvertM.postProcessAssert
         oldParam <- Anchors.assocTag param & getP
@@ -546,68 +562,26 @@ makeVarParamInfo tag binderKind storedLam p =
                             >>= ConvertM . lift <&> AddNext
         addPrev <- mkAddParam NewParamBefore
         addNext <- mkAddParam NewParamAfter
-        pure Var
-            { _vParam = p
-            , _vTag = tag
-            , _vAddPrev = addPrev
-            , _vAddNext = addNext
-            , _vDelete = del <* postProcess
-            , _vIsNullParam = False
-            }
-    where
-        param = storedLam ^. slLam . V.tlIn
-
-mkVarInfo :: MonadTransaction n m => Pure # T.Type -> m VarInfo
-mkVarInfo (Pure T.TFun{}) = pure VarFunction
-mkVarInfo (Pure T.TVar{}) = pure VarGeneric
-mkVarInfo (Pure (T.TRecord (Pure T.REmpty))) = pure VarUnit
-mkVarInfo (Pure T.TRecord{}) = pure VarRecord
-mkVarInfo (Pure (T.TVariant (Pure T.REmpty))) = pure VarVoid
-mkVarInfo (Pure T.TVariant{}) = pure VarVariant
-mkVarInfo (Pure (T.TInst (NominalInst tid _))) =
-    ConvertTId.convert tid
-    <&> VarNominal . (tidName %~ (^. inTag))
-
-mkFuncParam ::
-    Monad m =>
-    EntityId -> Input.Payload m # V.Term ->
-    ConvertM m (FuncParam EvalPrep)
-mkFuncParam entityId lamExprPl =
-    mkVarInfo typ <&>
-    \vinfo ->
-    FuncParam
-    { _fpAnnotation =
-        EvalPrep
-        { _eType = typ
-        , _eEvalId = entityId
-        }
-    , _fpVarInfo = vinfo
-    }
-    where
-        typ = lamParamType lamExprPl
-
-convertNonRecordParam ::
-    Monad m =>
-    BinderKind m ->
-    V.TypedLam V.Var (HCompose Prune T.Type) V.Term # Ann (Input.Payload m) ->
-    Input.Payload m # V.Term ->
-    ConvertM m (ConventionalParams m)
-convertNonRecordParam binderKind lam@(V.TypedLam param _ _) lamExprPl =
-    do
-        nullParamSugar <-
-            Lens.view (ConvertM.scConfig . Config.sugarsEnabled . Config.nullaryParameter)
-        varInfo <- lamParamType lamExprPl & mkVarInfo
-        funcParam <-
-            do
-                tag <- ConvertTag.taggedEntity (Just varInfo) param >>= ConvertM . lift
-                mkFuncParam (tag ^. oTag . tagRefTag . tagInstance) lamExprPl
-                    >>= makeVarParamInfo tag binderKind storedLam
-            <&> vIsNullParam .~
-                (nullParamSugar
-                    && Lens.has (_Pure . T._TRecord . _Pure . T._REmpty) (lamParamType lamExprPl)
-                    && null (lamExprPl ^. Input.varRefsOfLambda))
-            <&> ParamVar
-        postProcess <- ConvertM.postProcessAssert
+        let funcParam =
+                ParamVar Var
+                { _vParam =
+                    FuncParam
+                    { _fpAnnotation =
+                        EvalPrep
+                        { _eType = typ
+                        , _eEvalId = tag ^. oTag . tagRefTag . tagInstance
+                        }
+                    , _fpVarInfo = varInfo
+                    }
+                , _vTag = tag
+                , _vAddPrev = addPrev
+                , _vAddNext = addNext
+                , _vDelete = del <* postProcess
+                , _vIsNullParam =
+                    nullParamSugar
+                    && Lens.has (_Pure . T._TRecord . _Pure . T._REmpty) typ
+                    && null (lamExprPl ^. Input.varRefsOfLambda)
+                }
         addFirst <-
             convertToRecordParams ?? DataOps.newHole ?? binderKind ?? storedLam
             ?? NewParamBefore
@@ -615,7 +589,6 @@ convertNonRecordParam binderKind lam@(V.TypedLam param _ _) lamExprPl =
         let resultInfo () = ConvertTag.TagResultInfo <$> EntityId.ofTaggedEntity param <*> addFirst
         addFirstParam <-
             do
-                oldParam <- Anchors.assocTag param & getP
                 if oldParam == Anchors.anonTag
                     then NeedToPickTagToAddNext (EntityId.ofTaggedEntity param oldParam) & pure
                     else
