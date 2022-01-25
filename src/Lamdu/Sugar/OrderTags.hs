@@ -102,7 +102,7 @@ instance (MonadTransaction m o, MonadTransaction m i) => Order i (Sugar.Lambda v
 instance (MonadTransaction m o, MonadTransaction m i) => Order i (Sugar.Function v name i o) where
     order (Sugar.Function chosenScope params body bodyScopes) =
         Sugar.Function chosenScope
-        <$> Sugar._RecordParams (orderTaggedList [] pure) params
+        <$> Sugar._ParamsRecord (orderTaggedList [] pure) params
         <*> orderNode body
         ?? bodyScopes
 
@@ -216,7 +216,7 @@ orderDef def =
     def
     & (SugarLens.defSchemes . Sugar.schemeType) orderType
     >>= (Sugar.drBody . Sugar._DefinitionBodyExpression . Sugar.deContent)
-        (orderNode >=> (hVal . Sugar._BodyFunction . Sugar.fParams . Sugar._RecordParams) processPresentationMode)
+        (orderNode >=> (hVal . Sugar._BodyFunction . Sugar.fParams . Sugar._ParamsRecord) processPresentationMode)
     where
         processPresentationMode orig =
             do

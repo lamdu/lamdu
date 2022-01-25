@@ -144,16 +144,16 @@ mkLightLambda params myId =
     where
         paramIds =
             case params of
-            Sugar.NullParam{} -> []
-            Sugar.VarParam (_, p) -> [p ^. Sugar.vpiTag . Sugar.oTag . Sugar.tagRefTag . Sugar.tagInstance]
-            Sugar.RecordParams ps -> ps ^.. SugarLens.taggedListItems . Sugar.tiTag . Sugar.tagRefTag . Sugar.tagInstance
+            Sugar.ParamVar p -> [p ^. Sugar.vTag . Sugar.oTag . Sugar.tagRefTag . Sugar.tagInstance]
+            Sugar.ParamsRecord ps -> ps ^.. SugarLens.taggedListItems . Sugar.tiTag . Sugar.tagRefTag . Sugar.tagInstance
 
 makeLhs ::
     _ =>
     Bool -> Sugar.Params v a i o ->
     Maybe (Responsive o) -> Maybe (Widget.Widget o) -> EventMap (o GuiState.Update) -> Widget.Id ->
     m [Responsive o]
-makeLhs _ Sugar.NullParam{} mParamsEdit mScopeEdit _ _ = mkLhsEdits ?? mParamsEdit ?? mScopeEdit
+makeLhs _ (Sugar.ParamVar p) mParamsEdit mScopeEdit _ _
+    | p ^. Sugar.vIsNullParam = mkLhsEdits ?? mParamsEdit ?? mScopeEdit
 makeLhs True params mParamsEdit mScopeEdit _ myId = mkLightLambda params myId ?? mParamsEdit ?? mScopeEdit
 makeLhs _ _ mParamsEdit mScopeEdit lhsEventMap _ = mkExpanded ?? mParamsEdit ?? mScopeEdit <&> Lens.ix 0 %~ M.weakerEvents lhsEventMap
 
@@ -189,38 +189,38 @@ makeBody ::
     GuiM env i o (EventMap (o GuiState.Update), [Responsive o])
 makeBody annotationOpts delVarBackwardsId lhsId rhsId params =
     case params of
-    Sugar.NullParam (p, actions) ->
+    Sugar.ParamsRecord items -> ParamEdit.makeParams annotationOpts delVarBackwardsId rhsId items
+    Sugar.ParamVar p | p ^. Sugar.vIsNullParam ->
         Widget.weakerEvents
         <$> ( Lens.view id <&>
                 \env ->
                 E.keyPresses (env ^. has . (Config.delForwardKeys <> Config.delBackwardKeys))
                 (E.toDoc env [has . MomentuTexts.edit, has . MomentuTexts.delete])
-                (GuiState.updateCursor rhsId <$ actions ^. Sugar.npDeleteLambda)
+                (GuiState.updateCursor rhsId <$ p ^. Sugar.vDelete)
             )
         <*> ( (Widget.makeFocusableView ?? nullParamId <&> (M.tValue %~))
                 <*> grammar (label Texts.defer)
-                >>= ParamEdit.addAnnotation annotationOpts p nullParamId
+                >>= ParamEdit.addAnnotation annotationOpts (p ^. Sugar.vParam) nullParamId
             )
         <&> (:[])
         <&> (,) mempty
         where
             nullParamId = Widget.joinId lhsId ["param"]
-    Sugar.RecordParams items -> ParamEdit.makeParams annotationOpts delVarBackwardsId rhsId items
-    Sugar.VarParam (param, pInfo) ->
+    Sugar.ParamVar p ->
         do
             env <- Lens.view id
             let eventMap =
-                    TaggedList.delEventMap (has . Texts.parameter) (pInfo ^. Sugar.vpiDelete) delVarBackwardsId rhsId env <>
-                    ParamEdit.eventMapAddNextParamOrPickTag widgetId (pInfo ^. Sugar.vpiAddNext) env
+                    TaggedList.delEventMap (has . Texts.parameter) (p ^. Sugar.vDelete) delVarBackwardsId rhsId env <>
+                    ParamEdit.eventMapAddNextParamOrPickTag widgetId (p ^. Sugar.vAddNext) env
             mconcat
-                [ foldMap (`ParamEdit.mkAddParam` lhsId) (pInfo ^? Sugar.vpiAddPrev . Sugar._AddNext)
+                [ foldMap (`ParamEdit.mkAddParam` lhsId) (p ^? Sugar.vAddPrev . Sugar._AddNext)
                 , TagEdit.makeParamTag (Just (tag ^. Sugar.oPickAnon)) (tag ^. Sugar.oTag)
-                    >>= ParamEdit.addAnnotation annotationOpts param widgetId
+                    >>= ParamEdit.addAnnotation annotationOpts (p ^. Sugar.vParam) widgetId
                     <&> M.weakerEvents eventMap <&> (:[])
-                , foldMap (`ParamEdit.mkAddParam` widgetId) (pInfo ^? Sugar.vpiAddNext . Sugar._AddNext)
+                , foldMap (`ParamEdit.mkAddParam` widgetId) (p ^? Sugar.vAddNext . Sugar._AddNext)
                 ]
-                <&> (,) (ParamEdit.eventMapAddNextParamOrPickTag lhsId (pInfo ^. Sugar.vpiAddPrev) env)
+                <&> (,) (ParamEdit.eventMapAddNextParamOrPickTag lhsId (p ^. Sugar.vAddPrev) env)
         where
-            tag = pInfo ^. Sugar.vpiTag
+            tag = p ^. Sugar.vTag
             widgetId = tag ^. Sugar.oTag . Sugar.tagRefTag . Sugar.tagInstance & WidgetIds.fromEntityId
     & local (has . Menu.configKeysPickOptionAndGotoNext <>~ [noMods M.Key'Space])

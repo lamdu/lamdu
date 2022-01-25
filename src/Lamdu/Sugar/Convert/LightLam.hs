@@ -98,11 +98,13 @@ instance AddLightLams (Term v InternalName i o) where
     markLightParams paramNames bod = defaultMarkLightParams paramNames bod
     getVars x = x ^? _BodyLeaf . _LeafGetVar <&> Const >>= getVars
     lighten used =
-        _BodyLam . Lens.filtered (Lens.nullOf (lamFunc . fParams . _NullParam)) %~
+        _BodyLam . Lens.filtered (Lens.nullOf (lamFunc . fParams . _ParamVar . vIsNullParam . Lens.only True)) %~
         \lam ->
         let funcParams =
                 lam ^.. lamFunc . fParams .
-                (_RecordParams . SugarLens.taggedListItems . tiTag <> _VarParam . _2 . vpiTag . oTag) . tagRefTag . tagName
+                ( _ParamsRecord . SugarLens.taggedListItems . tiTag
+                    <> _ParamVar . Lens.filteredBy (vIsNullParam . Lens.only False) . vTag . oTag
+                ) . tagRefTag . tagName
                 & Set.fromList
         in
         if Lens.allOf Lens.folded ((used ^.) . Lens.contains) funcParams

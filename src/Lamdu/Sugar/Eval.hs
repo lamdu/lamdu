@@ -136,23 +136,15 @@ addToParams ::
     Params (Annotation (EvaluationScopes InternalName i) n) n i o
 addToParams ctx i =
     \case
-    NullParam (p, a) ->
-        NullParam
-        ( p & fpAnnotation . _AnnotationVal %~
-            ConvertEval.param (EntityId.ofEvalOf i) . appliesOfLam
-        , a
-        )
-    VarParam (fp, info) ->
-        VarParam
-        ( fp & fpAnnotation . _AnnotationVal %~
-            ConvertEval.param (EntityId.ofEvalOf (info ^. vpiTag . oTag . tagRefTag . tagInstance)) .
+    ParamVar v ->
+        v & vParam . fpAnnotation . _AnnotationVal %~
+            ConvertEval.param (EntityId.ofEvalOf (v ^. vTag . oTag . tagRefTag . tagInstance)) .
             appliesOfLam
-        , info
-        )
-    RecordParams ps ->
+        & ParamVar
+    ParamsRecord ps ->
         ps
         & SugarLens.taggedListItems %~ fixItem
-        & RecordParams
+        & ParamsRecord
     where
         EntityId u = i
         appliesOfLam v =

@@ -189,7 +189,7 @@ makeFunction chosenScopeProp params funcBody =
             ctx
             & ConvertM.siRecordParams <>~
                 ( case params ^. cpParams of
-                    Just (RecordParams r) ->
+                    Just (ParamsRecord r) ->
                         p
                         <&> (,) ?? Set.fromList (r ^.. SugarLens.taggedListItems . tiTag . tagRefTag . tagVal)
                         & Map.fromList
@@ -197,7 +197,7 @@ makeFunction chosenScopeProp params funcBody =
                 )
             & ConvertM.siNullParams <>~
             case params ^. cpParams of
-            Just NullParam{} -> Set.fromList p
+            Just (ParamVar v) | v ^. vIsNullParam -> Set.fromList p
             _ -> Set.empty
             where
                 p = params ^.. cpMLamParam .Lens._Just . _2
@@ -231,7 +231,7 @@ convertAssignment ::
 convertAssignment binderKind defVar expr =
     convertBinder expr >>= toAssignment binderKind expr <&>
     \r ->
-    ( presMode <$ r ^? hVal . _BodyFunction . fParams . _RecordParams . tlItems . Lens._Just . tlTail . traverse
+    ( presMode <$ r ^? hVal . _BodyFunction . fParams . _ParamsRecord . tlItems . Lens._Just . tlTail . traverse
     , r
     )
     where

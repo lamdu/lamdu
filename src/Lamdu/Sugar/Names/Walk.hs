@@ -439,18 +439,6 @@ withRecordParam unambig (TaggedItem t d a v) =
     <*> liftCPS (opRun <&> \run -> a >>= run . walk)
     <*> withFuncParam v
 
-withVarParamInfo ::
-    MonadNaming m =>
-    IsUnambiguous ->
-    VarParamInfo (OldName m) (IM m) o ->
-    CPS m (VarParamInfo (NewName m) (IM m) o)
-withVarParamInfo unambig x@VarParamInfo{_vpiTag, _vpiAddPrev, _vpiAddNext} =
-    (,,)
-    <$> withOptionalTag unambig TaggedVar _vpiTag
-    <*> liftCPS (opRun <&> \run -> _vpiAddPrev & _AddNext %~ (>>= run . walk))
-    <*> liftCPS (opRun <&> \run -> _vpiAddNext & _AddNext %~ (>>= run . walk))
-    <&> \(_vpiTag, _vpiAddPrev, _vpiAddNext) -> x{_vpiTag, _vpiAddPrev, _vpiAddNext}
-
 withFuncParam ::
     (MonadNaming m, Walk m v0 v1) =>
     FuncParam v0 ->
@@ -462,16 +450,16 @@ withParams ::
     IsUnambiguous ->
     Params v0 (OldName m) (IM m) o ->
     CPS m (Params v1 (NewName m) (IM m) o)
-withParams _ (NullParam (funcParam, info)) = withFuncParam funcParam <&> (,) ?? info <&> NullParam
-withParams u (RecordParams (TaggedList addFirst items)) =
+withParams u (ParamsRecord (TaggedList addFirst items)) =
     TaggedList
     <$> liftCPS (opRun <&> \run -> addFirst >>= run . walk)
-    <*> (Lens._Just . SugarLens.taggedListBodyItems) (withRecordParam u) items <&> RecordParams
-withParams u (VarParam (funcParam, info)) =
-    (,)
-    <$> withFuncParam funcParam
-    <*> withVarParamInfo u info
-    <&> VarParam
+    <*> (Lens._Just . SugarLens.taggedListBodyItems) (withRecordParam u) items <&> ParamsRecord
+withParams u (ParamVar v) =
+    (\_vParam _vTag _vAddPrev _vAddNext -> ParamVar v{_vParam, _vTag, _vAddPrev, _vAddNext})
+    <$> withFuncParam (v ^. vParam)
+    <*> withOptionalTag u TaggedVar (v ^. vTag)
+    <*> liftCPS (opRun <&> \run -> v ^. vAddPrev & _AddNext %~ (>>= run . walk))
+    <*> liftCPS (opRun <&> \run -> v ^. vAddNext & _AddNext %~ (>>= run . walk))
 
 type Top t n i (o :: Type -> Type) p = t (Annotation (EvaluationScopes n i) n) n i o p
 

@@ -172,11 +172,14 @@ funcExpr paramVar paramTag (Ann (Const ba) bx) =
     { Sugar._fChosenScopeProp = prop Nothing & pure
     , Sugar._fBodyScopes = mempty
     , Sugar._fParams =
-        Sugar.VarParam
-        ( Sugar.FuncParam Sugar.AnnotationNone Sugar.VarGeneric
-        , Sugar.VarParamInfo (Sugar.OptionalTag (mkTag (Just paramVar) paramTag) Unit)
-            (Sugar.AddNext (Identity tagRefReplace)) (Sugar.AddNext (Identity tagRefReplace)) Unit
-        )
+        Sugar.ParamVar Sugar.Var
+        { Sugar._vParam = Sugar.FuncParam Sugar.AnnotationNone Sugar.VarGeneric
+        , Sugar._vTag = Sugar.OptionalTag (mkTag (Just paramVar) paramTag) Unit
+        , Sugar._vAddPrev = Sugar.AddNext (Identity tagRefReplace)
+        , Sugar._vAddNext = Sugar.AddNext (Identity tagRefReplace)
+        , Sugar._vDelete = Unit
+        , Sugar._vIsNullParam = False
+        }
     , Sugar._fBody = Ann (Const ba) (Sugar.Binder Unit (Sugar.BinderTerm bx))
     }
 

@@ -19,10 +19,10 @@ module Lamdu.Sugar.Types.Parts
     , TaggedListBody(..), tlHead, tlTail
     , TaggedItem(..), tiTag, tiDelete, tiValue, tiAddAfter
     , -- Binders
-      Params(..), _NullParam, _VarParam, _RecordParams
+      Params(..), _ParamVar, _ParamsRecord
     , FuncParam(..), fpAnnotation, fpVarInfo
     , NullParamActions(..), npDeleteLambda
-    , VarParamInfo(..), vpiTag, vpiAddPrev, vpiAddNext, vpiDelete
+    , Var(..), vTag, vAddPrev, vAddNext, vDelete, vIsNullParam, vParam
     , AddParam(..), _AddNext, _NeedToPickTagToAddNext
     , -- Expressions
       Payload(..), plEntityId, plAnnotation, plActions, plHiddenEntityIds, plParenInfo
@@ -80,13 +80,6 @@ newtype NullParamActions o = NullParamActions
     { _npDeleteLambda :: o ()
     } deriving stock Generic
 
-data VarParamInfo name i o = VarParamInfo
-    { _vpiTag :: OptionalTag name i o
-    , _vpiAddPrev :: AddParam name i o
-    , _vpiAddNext :: AddParam name i o
-    , _vpiDelete :: o ()
-    } deriving Generic
-
 data FuncParam v = FuncParam
     { _fpAnnotation :: v
     , _fpVarInfo :: VarInfo
@@ -141,13 +134,18 @@ data TaggedList name i o a = TaggedList
     , _tlItems :: Maybe (TaggedListBody name i o a)
     } deriving (Generic, Functor, Foldable, Traversable)
 
+data Var v name i o = Var
+    { _vParam :: FuncParam v
+    , _vTag :: OptionalTag name i o
+    , _vAddPrev :: AddParam name i o
+    , _vAddNext :: AddParam name i o
+    , _vDelete :: o ()
+    , _vIsNullParam :: Bool
+    } deriving Generic
+
 data Params v name i o
-    = -- null param represents a lambda whose parameter's type is inferred
-      -- to be the empty record.
-      -- This is often used to represent "deferred execution"
-      NullParam (FuncParam v, NullParamActions o)
-    | VarParam (FuncParam v, VarParamInfo name i o)
-    | RecordParams (TaggedList name i o (FuncParam v))
+    = ParamVar (Var v name i o)
+    | ParamsRecord (TaggedList name i o (FuncParam v))
     deriving Generic
 
 -- VarInfo is used for:
@@ -231,9 +229,9 @@ data Query = Query
 
 traverse Lens.makeLenses
     [ ''ClosedCompositeActions, ''FuncParam, ''NodeActions
-    , ''NullParamActions, ''NullaryInject, ''VarParamInfo, ''Option, ''ParenInfo, ''Payload, ''PunnedVar
+    , ''NullParamActions, ''NullaryInject, ''Option, ''ParenInfo, ''Payload, ''PunnedVar
     , ''Query, ''QueryLangInfo
-    , ''TaggedList, ''TaggedListBody, ''TaggedItem, ''TaggedSwappableItem
+    , ''TaggedList, ''TaggedListBody, ''TaggedItem, ''TaggedSwappableItem, ''Var
     ] <&> concat
 traverse Lens.makePrisms
     [ ''AddParam, ''Annotation, ''Params, ''Delete

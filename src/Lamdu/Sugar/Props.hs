@@ -37,7 +37,9 @@ instance SugarExpr (FragOpt v name i o)
 instance SugarExpr (Const (GetVar name o)) where isUnfinished = Lens.has (Lens._Wrapped . varRefUnfinished)
 instance SugarExpr (Assignment v name i o) where isUnfinished = Lens.anyOf (_BodyPlain . apBody) isUnfinished
 instance SugarExpr (Else v name i o) where isUnfinished = Lens.anyOf _SimpleElse isUnfinished
-instance SugarExpr (Function v name i o) where isForbiddenInLightLam = Lens.nullOf (fParams . _NullParam)
+
+instance SugarExpr (Function v name i o) where
+    isForbiddenInLightLam = Lens.nullOf (fParams . _ParamVar . vIsNullParam . Lens.only True)
 
 instance SugarExpr (Binder v name i o) where
     isUnfinished = isUnfinished . (^. bBody)

@@ -19,9 +19,8 @@ binderParamsFuncParams ::
     (Params v1 name i o)
     (FuncParam v0)
     (FuncParam v1)
-binderParamsFuncParams f (NullParam x) = _1 f x <&> NullParam
-binderParamsFuncParams f (RecordParams x) = traverse f x <&> RecordParams
-binderParamsFuncParams f (VarParam x) = _1 f x <&> VarParam
+binderParamsFuncParams f (ParamsRecord x) = traverse f x <&> ParamsRecord
+binderParamsFuncParams f (ParamVar x) = vParam f x <&> ParamVar
 
 paneBinder :: Traversal (Pane v0 n i o a0) (Pane v1 n i o a1) (Annotated a0 # Assignment v0 n i o) (Annotated a1 # Assignment v1 n i o)
 paneBinder = paneBody . _PaneDefinition . drBody . _DefinitionBodyExpression . deContent

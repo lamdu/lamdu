@@ -397,7 +397,7 @@ convertRecordParams mPresMode binderKind fieldParams lam@(V.TypedLam param _ _) 
             ConvertTag.replace (nameWithContext Nothing param) (Set.fromList tags) (pure ()) resultInfo >>= ConvertM . lift
         pure ConventionalParams
             { cpTags = Set.fromList tags
-            , _cpParams = ConvertTaggedList.convert addFirstSelection ps & RecordParams & Just
+            , _cpParams = ConvertTaggedList.convert addFirstSelection ps & ParamsRecord & Just
             , _cpAddFirstParam = AddNext addFirstSelection
             , _cpMLamParam = Just (entityId, param)
             }
@@ -528,8 +528,9 @@ makeVarParamInfo ::
     Monad m =>
     OptionalTag InternalName (OnceT (T m)) (T m) ->
     BinderKind m -> StoredLam m ->
-    ConvertM m (VarParamInfo InternalName (OnceT (T m)) (T m))
-makeVarParamInfo tag binderKind storedLam =
+    FuncParam v ->
+    ConvertM m (Var v InternalName (OnceT (T m)) (T m))
+makeVarParamInfo tag binderKind storedLam p =
     do
         del <- makeDeleteLambda binderKind storedLam
         postProcess <- ConvertM.postProcessAssert
@@ -545,11 +546,13 @@ makeVarParamInfo tag binderKind storedLam =
                             >>= ConvertM . lift <&> AddNext
         addPrev <- mkAddParam NewParamBefore
         addNext <- mkAddParam NewParamAfter
-        pure VarParamInfo
-            { _vpiTag = tag
-            , _vpiAddPrev = addPrev
-            , _vpiAddNext = addNext
-            , _vpiDelete = del <* postProcess
+        pure Var
+            { _vParam = p
+            , _vTag = tag
+            , _vAddPrev = addPrev
+            , _vAddNext = addNext
+            , _vDelete = del <* postProcess
+            , _vIsNullParam = False
             }
     where
         param = storedLam ^. slLam . V.tlIn
@@ -567,21 +570,19 @@ mkVarInfo (Pure (T.TInst (NominalInst tid _))) =
 
 mkFuncParam ::
     Monad m =>
-    EntityId -> Input.Payload m # V.Term -> info ->
-    ConvertM m (FuncParam EvalPrep, info)
-mkFuncParam entityId lamExprPl info =
+    EntityId -> Input.Payload m # V.Term ->
+    ConvertM m (FuncParam EvalPrep)
+mkFuncParam entityId lamExprPl =
     mkVarInfo typ <&>
     \vinfo ->
-    ( FuncParam
-        { _fpAnnotation =
-            EvalPrep
-            { _eType = typ
-            , _eEvalId = entityId
-            }
-        , _fpVarInfo = vinfo
+    FuncParam
+    { _fpAnnotation =
+        EvalPrep
+        { _eType = typ
+        , _eEvalId = entityId
         }
-    , info
-    )
+    , _fpVarInfo = vinfo
+    }
     where
         typ = lamParamType lamExprPl
 
@@ -597,17 +598,15 @@ convertNonRecordParam binderKind lam@(V.TypedLam param _ _) lamExprPl =
             Lens.view (ConvertM.scConfig . Config.sugarsEnabled . Config.nullaryParameter)
         varInfo <- lamParamType lamExprPl & mkVarInfo
         funcParam <-
-            case lamParamType lamExprPl ^. _Pure of
-            T.TRecord (Pure T.REmpty)
-                | nullParamSugar && null (lamExprPl ^. Input.varRefsOfLambda) ->
-                    makeDeleteLambda binderKind storedLam <&> void <&> NullParamActions
-                    >>= mkFuncParam (EntityId.ofBinder param) lamExprPl <&> NullParam
-            _ ->
-                do
-                    tag <- ConvertTag.taggedEntity (Just varInfo) param >>= ConvertM . lift
-                    makeVarParamInfo tag binderKind storedLam
-                        >>= mkFuncParam (tag ^. oTag . tagRefTag . tagInstance) lamExprPl
-                <&> VarParam
+            do
+                tag <- ConvertTag.taggedEntity (Just varInfo) param >>= ConvertM . lift
+                mkFuncParam (tag ^. oTag . tagRefTag . tagInstance) lamExprPl
+                    >>= makeVarParamInfo tag binderKind storedLam
+            <&> vIsNullParam .~
+                (nullParamSugar
+                    && Lens.has (_Pure . T._TRecord . _Pure . T._REmpty) (lamParamType lamExprPl)
+                    && null (lamExprPl ^. Input.varRefsOfLambda))
+            <&> ParamVar
         postProcess <- ConvertM.postProcessAssert
         addFirst <-
             convertToRecordParams ?? DataOps.newHole ?? binderKind ?? storedLam
