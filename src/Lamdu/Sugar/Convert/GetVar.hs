@@ -10,7 +10,6 @@ import           Control.Monad.Trans.Except.Extended (runMatcherT, justToLeft)
 import           Control.Monad.Trans.Maybe (MaybeT)
 import           Control.Monad.Transaction (MonadTransaction, getP, setP)
 import qualified Control.Monad.Transaction as Transaction
-import           Data.Maybe.Extended (maybeToMPlus)
 import qualified Data.Property as Property
 import qualified Data.Set as Set
 import           Hyper
@@ -122,21 +121,18 @@ convertGlobal var exprPl =
     where
         defI = ExprIRef.defI var
 
-convertGetLet ::
-    Monad m =>
-    V.Var -> Input.Payload m # V.Term -> MaybeT (ConvertM m) (GetVar InternalName (T m))
-convertGetLet param exprPl =
+convertParam ::
+    Monad m => V.Var -> Input.Payload m # V.Term -> ConvertM m (GetVar InternalName (T m))
+convertParam param exprPl =
     do
-        inline <-
-            Lens.view (ConvertM.scScopeInfo . ConvertM.siLetItems . Lens.at param)
-            >>= maybeToMPlus
+        inline <- Lens.view (ConvertM.scScopeInfo . ConvertM.siLetItems . Lens.at param)
         varInfo <- mkVarInfo (exprPl ^. Input.inferredType)
         nameRef <- convertLocalNameRef varInfo param
         pure GetVar
             { _vNameRef = nameRef
             , _vVar = param
             , _vForm = GetNormalVar
-            , _vInline = inline (exprPl ^. Input.entityId)
+            , _vInline = maybe CannotInline (exprPl ^. Input.entityId &) inline
             }
 
 convertLocalNameRef ::
@@ -150,26 +146,10 @@ convertLocalNameRef varInfo param =
     , _nrGotoDefinition = EntityId.ofTaggedEntity param tag & pure
     }
 
-convertParam ::
-    (MonadTransaction u m, Applicative n) =>
-    V.Var -> Input.Payload u # V.Term -> m (GetVar InternalName n)
-convertParam param exprPl =
-    mkVarInfo (exprPl ^. Input.inferredType)
-    >>= (`convertLocalNameRef` param)
-    <&>
-    \nameRef ->
-    GetVar
-    { _vNameRef = nameRef
-    , _vForm = GetNormalVar
-    , _vInline = CannotInline -- TODO: In some cases can inline param
-    , _vVar = param
-    }
-
 convert :: Monad m => V.Var -> Input.Payload m # V.Term -> ConvertM m (ExpressionU v m)
 convert param exprPl =
     do
         convertGlobal param exprPl & justToLeft
-        convertGetLet param exprPl & justToLeft
         convertParam param exprPl & lift
     & runMatcherT
     <&> BodyLeaf . LeafGetVar
