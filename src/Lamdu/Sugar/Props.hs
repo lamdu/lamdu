@@ -47,7 +47,9 @@ instance SugarExpr (Binder v name i o) where
 
 instance SugarExpr (BinderBody v name i o) where
     isUnfinished = Lens.anyOf _BinderTerm isUnfinished
-    isForbiddenInLightLam = Lens.allOf _BinderTerm isForbiddenInLightLam
+    isForbiddenInLightLam =
+        -- Let expressions not allowed in light lambdas (would be anyOf if they were)
+        Lens.allOf _BinderTerm isForbiddenInLightLam
 
 instance SugarExpr (Term v name i o) where
     isUnfinished (BodyLeaf LeafHole{}) = True
