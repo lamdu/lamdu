@@ -1,3 +1,5 @@
+{-# LANGUAGE TypeApplications #-}
+
 module Lamdu.Sugar.Convert.Binder
     ( convertDefinitionBinder, convertLam
     , convertBinder
@@ -75,7 +77,8 @@ convertBinderBody rawExpr expr =
             BodySimpleApply (App (Ann lamPl (BodyLam lam)) argT) | supportLet ->
                 do
                     postProcess <- ConvertM.postProcessAssert
-                    convertBinderBody rawExpr argT >>= toAssignment BinderKindLambda rawExpr <&>
+                    convertBinderBody rawExpr argT >>=
+                        toAssignment binderKind <&>
                         \argA ->
                         expr
                         & annValue .~
@@ -93,7 +96,12 @@ convertBinderBody rawExpr expr =
                             }
                         & annotation . pLambdas <>~ [toUUID (lamPl ^. Lens._Wrapped . pStored . ExprIRef.iref)]
                     where
-                        mVar = rawExpr ^? hVal . V._BApp . V.appFunc . hVal . V._BLam . V.tlIn
+                        mLam = rawExpr ^? hVal . V._BApp . V.appFunc . hVal . V._BLam
+                        mVar = mLam ^? Lens._Just . V.tlIn
+                        binderKind =
+                            maybe BinderKindLambda -- <- Shouldn't happen?
+                            (BinderKindLet . hmap (Proxy @(Recursively HFunctor) #> hflipped %~ hmap (const (^. Input.stored))))
+                            mLam
             _ -> expr & annValue %~ BinderTerm & pure
     <&> annValue %~ Binder (DataOps.redexWrap topStored <&> EntityId.ofValI)
     where
@@ -163,7 +171,7 @@ convertAssignment ::
     )
 convertAssignment binderKind defVar expr =
     convertBinder expr
-    >>= toAssignment binderKind expr <&>
+    >>= toAssignment binderKind <&>
     \r ->
     ( presMode <$ r ^? hVal . _BodyFunction . fParams . _ParamsRecord . tlItems . Lens._Just . tlTail . traverse
     , r
@@ -173,15 +181,17 @@ convertAssignment binderKind defVar expr =
 
 toAssignment ::
     Monad m =>
-    BinderKind m -> Ann (Input.Payload m) # V.Term ->
+    BinderKind m ->
     Annotated (ConvertPayload m) # Binder v name i (T m) ->
     ConvertM m (Annotated (ConvertPayload m) # Assignment v name i (T m))
-toAssignment binderKind expr b =
+toAssignment binderKind b =
     do
         enabled <- Lens.view (ConvertM.scConfig . Config.sugarsEnabled . Config.assignmentParameters)
         case b ^? hVal . bBody . _BinderTerm . _BodyLam of
             Just l | enabled && not (l ^. lamLightweight) -> b & annValue .~ BodyFunction (l ^. lamFunc) & pure
-            _ -> convertEmptyParams binderKind expr <&> \addFirstParam -> b & annValue %~ BodyPlain . AssignPlain addFirstParam
+            _ ->
+                convertEmptyParams binderKind (b ^. annotation . pUnsugared)
+                <&> \addFirstParam -> b & annValue %~ BodyPlain . AssignPlain addFirstParam
 
 convertDefinitionBinder ::
     Monad m =>

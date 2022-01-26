@@ -665,7 +665,7 @@ convertVarToCalls mkArg var =
         change x = mkArg >>= ExprIRef.newValI . V.BApp . V.App x
 
 convertBinderToFunction ::
-    Monad m =>
+    (HasCallStack, Monad m) =>
     T m (ValI m) -> BinderKind m -> Ann (HRef m) # V.Term ->
     T m (V.Var, HRef m # V.Term)
 convertBinderToFunction mkArg binderKind x =

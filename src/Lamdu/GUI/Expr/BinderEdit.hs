@@ -44,7 +44,7 @@ makeLetEdit item myId =
                         ])
                     . fmap ExprEventMap.extractCursor
                 ) (item ^? Sugar.lValue . annotation . Sugar.plActions . Sugar.extract)
-        (_, paramsEdit) <- ParamsEdit.make (pure Nothing) ParamsEdit.ScopeNavNotFocused myId myId bodyId (item ^. Sugar.lNames)
+        (_, paramsEdit) <- ParamsEdit.make True (pure Nothing) ParamsEdit.ScopeNavNotFocused myId myId bodyId (item ^. Sugar.lNames)
         grammar (label Texts.let_)
             M./|/ Spacer.stdHSpace
             M./|/ (

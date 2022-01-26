@@ -205,7 +205,7 @@ makeFunctionParts funcApplyLimit (Ann (Const pl) func) delVarBackwardsId =
                 _ -> ParamsEdit.ScopeNavNotFocused
         do
             (lhsEventMap, paramsEdit) <-
-                ParamsEdit.make mScopeCursor isScopeNavFocused delVarBackwardsId myId
+                ParamsEdit.make False mScopeCursor isScopeNavFocused delVarBackwardsId myId
                 bodyId (func ^. Sugar.fParams)
             rhs <- GuiM.makeBinder (func ^. Sugar.fBody)
             Parts lhsEventMap (Just paramsEdit) mScopeNavEdit rhs scopeEventMap (Just pl) bodyId & pure
