@@ -106,7 +106,8 @@ instance AddLightLams (Term v InternalName i o) where
                     <> _ParamVar . Lens.filteredBy (vIsNullParam . Lens.only False) . vTag . oTag
                 ) . tagRefTag . tagName
                 & Set.fromList
+            isUsed = funcParams ^.. Lens.folded <&> (used ^.) . Lens.contains
         in
-        if Lens.allOf Lens.folded ((used ^.) . Lens.contains) funcParams
+        if and isUsed || not (or isUsed)
         then lam & lamLightweight .~ True & lamFunc %~ markLightParams funcParams
         else lam
