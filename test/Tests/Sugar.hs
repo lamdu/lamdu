@@ -44,6 +44,7 @@ test =
     , testFloatToRepl
     , floatLetWithGlobalRef
     , lightConst
+    , addParamToLet
     , testHoleTypeShown
     , testUnnamed
     , testPunnedIso
@@ -147,6 +148,14 @@ testExtract =
         action =
             replBody . _BodyLam . lamFunc . fBody . annotation . plActions .
             extract
+
+addParamToLet :: Test
+addParamToLet =
+    testSugarActions "let-used-twice.json" [lift . (^?! action)]
+    & testCase "add-param-to-let"
+    where
+        action =
+            replLet . lValue . hVal . _BodyPlain . apAddFirstParam
 
 testCannotInline :: Test
 testCannotInline =
