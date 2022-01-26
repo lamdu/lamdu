@@ -43,6 +43,7 @@ test =
     , testCreateLetInLetVal
     , testFloatToRepl
     , floatLetWithGlobalRef
+    , lightConst
     , testHoleTypeShown
     , testUnnamed
     , testPunnedIso
@@ -193,6 +194,15 @@ testInline =
         afterInline =
             replBody . _BodyLam . lamFunc . fBody .
             hVal . bBody . _BinderTerm . _BodyLeaf . _LeafLiteral . _LiteralNum
+
+lightConst :: Test
+lightConst =
+    testSugarActions "const-five.json" [verify]
+    & testCase "param-annotations"
+    where
+        verify workArea
+            | Lens.has (replBody . _BodyLam . lamLightweight . Lens.only True) workArea = pure ()
+            | otherwise = error "Expected light lambda"
 
 paramAnnotations :: Test
 paramAnnotations =
