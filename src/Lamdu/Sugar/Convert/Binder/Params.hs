@@ -54,7 +54,7 @@ type T = Transaction
 
 data ConventionalParams m = ConventionalParams
     { cpTags :: Set T.Tag
-    , _cpParams :: Maybe (Params EvalPrep InternalName (OnceT (T m)) (T m))
+    , _cpParams :: Maybe (LhsNames EvalPrep InternalName (OnceT (T m)) (T m))
     , _cpAddFirstParam :: AddParam InternalName (OnceT (T m)) (T m)
     , _cpMLamParam :: Maybe ({- lambda's -}EntityId, V.Var)
     }
@@ -401,7 +401,7 @@ convertRecordParams mPresMode binderKind fieldParams lam@(V.TypedLam param _ _) 
             ConvertTag.replace (nameWithContext Nothing param) (Set.fromList tags) (pure ()) resultInfo >>= ConvertM . lift
         pure ConventionalParams
             { cpTags = Set.fromList tags
-            , _cpParams = ConvertTaggedList.convert addFirstSelection ps & ParamsRecord & Just
+            , _cpParams = ConvertTaggedList.convert addFirstSelection ps & LhsRecord & Just
             , _cpAddFirstParam = AddNext addFirstSelection
             , _cpMLamParam = Just (entityId, param)
             }
@@ -567,7 +567,7 @@ convertNonRecordParam binderKind lam@(V.TypedLam param _ _) lamExprPl =
         addPrev <- mkAddParam NewParamBefore
         addNext <- mkAddParam NewParamAfter
         let funcParam =
-                ParamVar Var
+                LhsVar Var
                 { _vParam =
                     FuncParam
                     { _fpAnnotation =
@@ -644,10 +644,10 @@ convertNonEmptyParams ::
     ConvertM m (ConventionalParams m)
 convertNonEmptyParams mPresMode binderKind lambda lambdaPl =
     do
-        sugarParamsRecord <- Lens.view (ConvertM.scConfig . Config.sugarsEnabled . Config.parametersRecord)
+        sugarLhsRecord <- Lens.view (ConvertM.scConfig . Config.sugarsEnabled . Config.parametersRecord)
         case lambdaPl ^. Input.inferredType . _Pure of
             T.TFun (FuncType (Pure (T.TRecord composite)) _)
-                | sugarParamsRecord
+                | sugarLhsRecord
                 , FlatRowExtends fieldsMap (Pure T.REmpty) <- composite ^. T.flatRow
                 , let fields = fieldsMap ^@.. Lens.itraversed
                 , List.isLengthAtLeast 2 fields

@@ -39,7 +39,7 @@ instance SugarExpr (Assignment v name i o) where isUnfinished = Lens.anyOf (_Bod
 instance SugarExpr (Else v name i o) where isUnfinished = Lens.anyOf _SimpleElse isUnfinished
 
 instance SugarExpr (Function v name i o) where
-    isForbiddenInLightLam = Lens.nullOf (fParams . _ParamVar . vIsNullParam . Lens.only True)
+    isForbiddenInLightLam = Lens.nullOf (fParams . _LhsVar . vIsNullParam . Lens.only True)
 
 instance SugarExpr (Binder v name i o) where
     isUnfinished = isUnfinished . (^. bBody)

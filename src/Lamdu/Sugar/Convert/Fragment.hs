@@ -275,7 +275,7 @@ toFragOpt o =
     BinderTerm (BodyIfElse i) -> i ^. iThen & FragIf & Ann (Const (o ^. annotation))
     BinderTerm (BodyLam l) ->
         o & annValue .~
-        if Lens.has (lamFunc . fParams . _ParamVar . vIsNullParam . Lens.only True) l
+        if Lens.has (lamFunc . fParams . _LhsVar . vIsNullParam . Lens.only True) l
         then FragDefer
         else FragLam
     BinderTerm (BodyRecord r) ->

@@ -195,7 +195,7 @@ makeFunctionParts funcApplyLimit (Ann (Const pl) func) delVarBackwardsId =
                 guard (funcApplyLimit == Sugar.UnlimitedFuncApply)
                 scope <- fallbackToPrev mScopeCursor
                 guard $
-                    Lens.nullOf (Sugar.fParams . Sugar._ParamVar . Sugar.vIsNullParam . Lens.only True) func ||
+                    Lens.nullOf (Sugar.fParams . Sugar._LhsVar . Sugar.vIsNullParam . Lens.only True) func ||
                     Lens.has (Lens.traversed . Lens._Just) [ParamsEdit.sMPrevParamScope scope, ParamsEdit.sMNextParamScope scope]
                 Just scope
                 & maybe (pure (mempty, Nothing)) (makeScopeNavEdit func scopesNavId)
@@ -217,11 +217,11 @@ makeFunctionParts funcApplyLimit (Ann (Const pl) func) delVarBackwardsId =
         myId = WidgetIds.fromExprPayload pl
         destId =
             case func ^. Sugar.fParams of
-            Sugar.ParamVar v
+            Sugar.LhsVar v
                 | v ^. Sugar.vIsNullParam -> bodyId
                 | otherwise ->
                     v ^. Sugar.vTag . Sugar.oTag . Sugar.tagRefTag . Sugar.tagInstance & WidgetIds.fromEntityId
-            Sugar.ParamsRecord ps ->
+            Sugar.LhsRecord ps ->
                 ps ^?! SugarLens.taggedListItems . Sugar.tiTag . Sugar.tagRefTag . Sugar.tagInstance
                 & WidgetIds.fromEntityId
         scopesNavId = Widget.joinId myId ["scopesNav"]

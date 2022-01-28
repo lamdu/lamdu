@@ -15,12 +15,12 @@ import           Lamdu.Prelude
 
 binderParamsFuncParams ::
     Traversal
-    (Params v0 name i o)
-    (Params v1 name i o)
+    (LhsNames v0 name i o)
+    (LhsNames v1 name i o)
     (FuncParam v0)
     (FuncParam v1)
-binderParamsFuncParams f (ParamsRecord x) = traverse f x <&> ParamsRecord
-binderParamsFuncParams f (ParamVar x) = vParam f x <&> ParamVar
+binderParamsFuncParams f (LhsRecord x) = traverse f x <&> LhsRecord
+binderParamsFuncParams f (LhsVar x) = vParam f x <&> LhsVar
 
 paneBinder :: Traversal (Pane v0 n i o a0) (Pane v1 n i o a1) (Annotated a0 # Assignment v0 n i o) (Annotated a1 # Assignment v1 n i o)
 paneBinder = paneBody . _PaneDefinition . drBody . _DefinitionBodyExpression . deContent
@@ -47,7 +47,7 @@ class HAnnotations a b s t where
 instance Annotations a b s0 t0 => Annotations a b (s0, x) (t0, x) where
     annotations = _1 . annotations
 
-instance Annotations a b (Params a n i o) (Params b n i o) where
+instance Annotations a b (LhsNames a n i o) (LhsNames b n i o) where
     annotations = binderParamsFuncParams . fpAnnotation
 
 instance Annotations a b (Payload a o) (Payload b o) where

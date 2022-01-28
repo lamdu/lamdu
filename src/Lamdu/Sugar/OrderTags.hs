@@ -99,7 +99,7 @@ instance (MonadTransaction m o, MonadTransaction m i) => Order i (Sugar.Let v na
     order l =
         l
         & htraverse (Proxy @(Order i) #> orderNode)
-        >>= (Sugar.lNames . Sugar._ParamsRecord) (orderTaggedList [] pure)
+        >>= (Sugar.lNames . Sugar._LhsRecord) (orderTaggedList [] pure)
 
 instance (MonadTransaction m o, MonadTransaction m i) => Order i (Sugar.Lambda v name i o) where
     order = Sugar.lamFunc order
@@ -107,7 +107,7 @@ instance (MonadTransaction m o, MonadTransaction m i) => Order i (Sugar.Lambda v
 instance (MonadTransaction m o, MonadTransaction m i) => Order i (Sugar.Function v name i o) where
     order (Sugar.Function chosenScope params body bodyScopes) =
         Sugar.Function chosenScope
-        <$> Sugar._ParamsRecord (orderTaggedList [] pure) params
+        <$> Sugar._LhsRecord (orderTaggedList [] pure) params
         <*> orderNode body
         ?? bodyScopes
 
@@ -221,7 +221,7 @@ orderDef def =
     def
     & (SugarLens.defSchemes . Sugar.schemeType) orderType
     >>= (Sugar.drBody . Sugar._DefinitionBodyExpression . Sugar.deContent)
-        (orderNode >=> (hVal . Sugar._BodyFunction . Sugar.fParams . Sugar._ParamsRecord) processPresentationMode)
+        (orderNode >=> (hVal . Sugar._BodyFunction . Sugar.fParams . Sugar._LhsRecord) processPresentationMode)
     where
         processPresentationMode orig =
             do

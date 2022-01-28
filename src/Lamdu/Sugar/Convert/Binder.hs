@@ -86,7 +86,7 @@ convertBinderBody rawExpr expr =
                             { _lValue = argA
                             , _lNames =
                                 lam ^. lamFunc . fParams
-                                & _ParamVar . vDelete .~
+                                & _LhsVar . vDelete .~
                                 do
                                     traverse_ (`SubExprs.getVarsToHole` (rawExpr & hflipped %~ hmap (const (^. Input.stored)))) mVar
                                     lam ^. lamFunc . fBody . annotation . pStored
@@ -130,7 +130,7 @@ makeFunction chosenScopeProp params funcBody =
             ctx
             & ConvertM.siRecordParams <>~
                 ( case params ^. cpParams of
-                    Just (ParamsRecord r) ->
+                    Just (LhsRecord r) ->
                         p
                         <&> (,) ?? Set.fromList (r ^.. SugarLens.taggedListItems . tiTag . tagRefTag . tagVal)
                         & Map.fromList
@@ -138,7 +138,7 @@ makeFunction chosenScopeProp params funcBody =
                 )
             & ConvertM.siNullParams <>~
             case params ^. cpParams of
-            Just (ParamVar v) | v ^. vIsNullParam -> Set.fromList p
+            Just (LhsVar v) | v ^. vIsNullParam -> Set.fromList p
             _ -> Set.empty
             where
                 p = params ^.. cpMLamParam .Lens._Just . _2
@@ -173,7 +173,7 @@ convertAssignment binderKind defVar expr =
     convertBinder expr
     >>= toAssignment binderKind <&>
     \r ->
-    ( presMode <$ r ^? hVal . _BodyFunction . fParams . _ParamsRecord . tlItems . Lens._Just . tlTail . traverse
+    ( presMode <$ r ^? hVal . _BodyFunction . fParams . _LhsRecord . tlItems . Lens._Just . tlTail . traverse
     , r
     )
     where

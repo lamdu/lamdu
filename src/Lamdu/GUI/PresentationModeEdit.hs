@@ -31,10 +31,10 @@ lens mode =
 make ::
     _ =>
     Widget.Id ->
-    Sugar.Params v name i o ->
+    Sugar.LhsNames v name i o ->
     Property f Sugar.PresentationMode ->
     m (Align.TextWidget f)
-make myId (Sugar.ParamsRecord params) prop =
+make myId (Sugar.LhsRecord params) prop =
     do
         theme <- Lens.view has
         pairs <-

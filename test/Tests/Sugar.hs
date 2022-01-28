@@ -115,7 +115,7 @@ testChangeParam =
             workArea ^?!
             replBody . _BodySimpleApply . V.appFunc .
             hVal . _BodySimpleApply . V.appArg .
-            hVal . _BodyLam . lamFunc . fParams . _ParamsRecord .
+            hVal . _BodyLam . lamFunc . fParams . _LhsRecord .
             tlItems . Lens._Just . tlHead . tiTag . tagRefReplace
             >>= lift . (^. tcNewTag . toPick)
 
@@ -222,7 +222,7 @@ paramAnnotations =
         verify workArea =
             unless
             (Lens.allOf
-                (replBody . _BodyLam . lamFunc . fParams . _ParamVar . vParam . fpAnnotation)
+                (replBody . _BodyLam . lamFunc . fParams . _LhsVar . vParam . fpAnnotation)
                 (Lens.has _AnnotationNone) workArea)
             (error "parameter should not have type annotation")
 
@@ -231,7 +231,7 @@ delParam =
     testSugarActions "const-five.json" [lift . (^?! action), verify]
     & testCase "del-param"
     where
-        action = replBody . _BodyLam . lamFunc . fParams . _ParamVar . vDelete
+        action = replBody . _BodyLam . lamFunc . fParams . _LhsVar . vDelete
         verify workArea
             | Lens.has afterDel workArea = pure ()
             | otherwise = error "Expected 5"
@@ -400,7 +400,7 @@ delDefParam =
         action =
             waPanes . traverse . SugarLens.paneBinder .
             hVal . _BodyFunction .
-            fParams . _ParamsRecord . tlItems . Lens._Just . tlHead . tiDelete
+            fParams . _LhsRecord . tlItems . Lens._Just . tlHead . tiDelete
 
 updateDef :: Test
 updateDef =
@@ -552,7 +552,7 @@ testNullParamUnused =
     Env.make >>= testProgram "null-param-cond.json" . convertWorkArea ""
     <&> Lens.has
         ( replBinder . _BinderLet . lValue . hVal . _BodyFunction
-        . fParams . _ParamVar . vIsNullParam . Lens.only False)
+        . fParams . _LhsVar . vIsNullParam . Lens.only False)
     >>= assertBool "Null param only if unused"
 
 -- Test for https://github.com/lamdu/lamdu/issues/123
@@ -596,7 +596,7 @@ testParamsOrder =
         funcParams :: Lens.Traversal' (WorkArea v n i o a) (TaggedListBody n i o (FuncParam v))
         funcParams =
             replBinder . _BinderLet . lValue .
-            hVal . _BodyFunction . fParams . _ParamsRecord . tlItems . Lens._Just
+            hVal . _BodyFunction . fParams . _LhsRecord . tlItems . Lens._Just
 
 testAddToInferredParamList :: Test
 testAddToInferredParamList =
@@ -620,7 +620,7 @@ testAddToInferredParamList =
             hVal . _SimpleElse . _BodyLam . lamFunc . fBody .
             hVal . bBody . _BinderTerm
         lamBodyParams :: Lens.Traversal' (Term v n i o # k) (TaggedItem n i o (FuncParam v))
-        lamBodyParams = _BodyLam . lamFunc . fParams . _ParamsRecord . SugarLens.taggedListItems
+        lamBodyParams = _BodyLam . lamFunc . fParams . _LhsRecord . SugarLens.taggedListItems
 
 testInfixWithArgParens :: Test
 testInfixWithArgParens =
@@ -669,7 +669,7 @@ testSuspendedHoleResultSimple =
         let optLam =
                 opt ^? optionExpr . hVal . _HoleBinder . bBody . _BinderTerm . _BodyLam
                 & fromMaybe (error "First opt is not a lam")
-        Lens.has (lamFunc . fParams . _ParamVar . vIsNullParam . Lens.only True) optLam
+        Lens.has (lamFunc . fParams . _LhsVar . vIsNullParam . Lens.only True) optLam
             & assertBool "First opt is not being sugared as a null param lambda"
     where
         replHole = replBinder . _BinderTerm . _BodyIfElse . iThen . hVal
@@ -683,7 +683,7 @@ testSuspendedHoleResult =
         opt ^. optionTypeMatch & assertBool "First opt is not a type match"
         Lens.has
             ( optionExpr . hVal . _HoleBinder . bBody . _BinderTerm . _BodyLam
-            . lamFunc . fParams . _ParamVar . vIsNullParam . Lens.only True
+            . lamFunc . fParams . _LhsVar . vIsNullParam . Lens.only True
             ) opt
             & assertBool "First opt is not a null param lambda"
     where

@@ -117,7 +117,7 @@ lamId = (`Widget.joinId` ["lam"])
 
 mkLightLambda ::
     _ =>
-    Sugar.Params v a i o -> Widget.Id ->
+    Sugar.LhsNames v a i o -> Widget.Id ->
     f (Maybe (Responsive o) -> Maybe (M.Widget o) -> [Responsive o])
 mkLightLambda params myId =
     do
@@ -143,15 +143,15 @@ mkLightLambda params myId =
     where
         paramIds =
             case params of
-            Sugar.ParamVar p -> [p ^. Sugar.vTag . Sugar.oTag . Sugar.tagRefTag . Sugar.tagInstance]
-            Sugar.ParamsRecord ps -> ps ^.. SugarLens.taggedListItems . Sugar.tiTag . Sugar.tagRefTag . Sugar.tagInstance
+            Sugar.LhsVar p -> [p ^. Sugar.vTag . Sugar.oTag . Sugar.tagRefTag . Sugar.tagInstance]
+            Sugar.LhsRecord ps -> ps ^.. SugarLens.taggedListItems . Sugar.tiTag . Sugar.tagRefTag . Sugar.tagInstance
 
 makeLhs ::
     _ =>
-    Bool -> Sugar.Params v a i o ->
+    Bool -> Sugar.LhsNames v a i o ->
     Maybe (Responsive o) -> Maybe (Widget.Widget o) -> EventMap (o GuiState.Update) -> Widget.Id ->
     m [Responsive o]
-makeLhs _ (Sugar.ParamVar p) mParamsEdit mScopeEdit _ _
+makeLhs _ (Sugar.LhsVar p) mParamsEdit mScopeEdit _ _
     | p ^. Sugar.vIsNullParam = mkLhsEdits ?? mParamsEdit ?? mScopeEdit
 makeLhs True params mParamsEdit mScopeEdit _ myId = mkLightLambda params myId ?? mParamsEdit ?? mScopeEdit
 makeLhs _ _ mParamsEdit mScopeEdit lhsEventMap _ = mkExpanded ?? mParamsEdit ?? mScopeEdit <&> Lens.ix 0 %~ M.weakerEvents lhsEventMap
@@ -162,7 +162,7 @@ make ::
     CurAndPrev (Maybe ScopeCursor) -> IsScopeNavFocused ->
     Widget.Id -> Widget.Id ->
     Widget.Id ->
-    Sugar.Params (Sugar.Annotation (Sugar.EvaluationScopes Name i) Name) Name i o ->
+    Sugar.LhsNames (Sugar.Annotation (Sugar.EvaluationScopes Name i) Name) Name i o ->
     GuiM env i o (EventMap (o GuiState.Update), Responsive o)
 make isLet mScopeCursor isScopeNavFocused delVarBackwardsId myId bodyId params =
     makeBody isLet annotationMode delVarBackwardsId myId bodyId params
@@ -183,12 +183,12 @@ makeBody ::
     Bool ->
     Annotation.EvalAnnotationOptions ->
     Widget.Id -> Widget.Id -> Widget.Id ->
-    Sugar.Params (Sugar.Annotation (Sugar.EvaluationScopes Name i) Name) Name i o ->
+    Sugar.LhsNames (Sugar.Annotation (Sugar.EvaluationScopes Name i) Name) Name i o ->
     GuiM env i o (EventMap (o GuiState.Update), Responsive o)
 makeBody isLet annotationOpts delVarBackwardsId lhsId rhsId params =
     case params of
-    Sugar.ParamsRecord items -> ParamEdit.makeParams annotationOpts delVarBackwardsId rhsId items
-    Sugar.ParamVar p | p ^. Sugar.vIsNullParam ->
+    Sugar.LhsRecord items -> ParamEdit.makeParams annotationOpts delVarBackwardsId rhsId items
+    Sugar.LhsVar p | p ^. Sugar.vIsNullParam ->
         Widget.weakerEvents
         <$> ( Lens.view id <&>
                 \env ->
@@ -203,7 +203,7 @@ makeBody isLet annotationOpts delVarBackwardsId lhsId rhsId params =
         <&> (,) mempty
         where
             nullParamId = Widget.joinId lhsId ["param"]
-    Sugar.ParamVar p ->
+    Sugar.LhsVar p ->
         do
             env <- Lens.view id
             let eventMap

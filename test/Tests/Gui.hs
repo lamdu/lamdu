@@ -230,7 +230,7 @@ topLevelLamParamCursor :: Env -> OnceT (T ViewM) WidgetId.Id
 topLevelLamParamCursor env =
     fromWorkArea env
     (replExpr . Sugar._BodyLam . Sugar.lamFunc .
-        Sugar.fParams . Sugar._ParamVar .
+        Sugar.fParams . Sugar._LhsVar .
         Sugar.vTag . Sugar.oTag . Sugar.tagRefTag . Sugar.tagInstance)
     <&> WidgetIds.fromEntityId
 

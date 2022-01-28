@@ -139,19 +139,19 @@ instance AddEval i n Term where
 addToParams ::
     Applicative i =>
     AddEvalCtx -> EntityId ->
-    Params (Annotation EvalPrep n) n i o ->
-    Params (Annotation (EvaluationScopes InternalName i) n) n i o
+    LhsNames (Annotation EvalPrep n) n i o ->
+    LhsNames (Annotation (EvaluationScopes InternalName i) n) n i o
 addToParams ctx i =
     \case
-    ParamVar v ->
+    LhsVar v ->
         v & vParam . fpAnnotation . _AnnotationVal %~
             ConvertEval.param (EntityId.ofEvalOf (v ^. vTag . oTag . tagRefTag . tagInstance)) .
             appliesOfLam
-        & ParamVar
-    ParamsRecord ps ->
+        & LhsVar
+    LhsRecord ps ->
         ps
         & SugarLens.taggedListItems %~ fixItem
-        & ParamsRecord
+        & LhsRecord
     where
         EntityId u = i
         appliesOfLam v =

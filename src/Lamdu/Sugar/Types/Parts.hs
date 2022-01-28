@@ -19,7 +19,7 @@ module Lamdu.Sugar.Types.Parts
     , TaggedListBody(..), tlHead, tlTail
     , TaggedItem(..), tiTag, tiDelete, tiValue, tiAddAfter
     , -- Binders
-      Params(..), _ParamVar, _ParamsRecord
+      LhsNames(..), _LhsVar, _LhsRecord
     , FuncParam(..), fpAnnotation, fpUsages, fpVarInfo
     , NullParamActions(..), npDeleteLambda
     , Var(..), vTag, vAddPrev, vAddNext, vDelete, vIsNullParam, vParam
@@ -80,7 +80,7 @@ newtype NullParamActions o = NullParamActions
     { _npDeleteLambda :: o ()
     } deriving stock Generic
 
-data FuncParam v = FuncParam
+data FuncParam v = FuncParam -- TODO: Better name
     { _fpAnnotation :: v
     , _fpUsages :: [EntityId]
     , _fpVarInfo :: VarInfo
@@ -144,9 +144,10 @@ data Var v name i o = Var
     , _vIsNullParam :: Bool
     } deriving Generic
 
-data Params v name i o
-    = ParamVar (Var v name i o)
-    | ParamsRecord (TaggedList name i o (FuncParam v))
+-- TODO: Is there a standard term for this?
+data LhsNames v name i o
+    = LhsVar (Var v name i o)
+    | LhsRecord (TaggedList name i o (FuncParam v))
     deriving Generic
 
 -- VarInfo is used for:
@@ -235,8 +236,8 @@ traverse Lens.makeLenses
     , ''TaggedList, ''TaggedListBody, ''TaggedItem, ''TaggedSwappableItem, ''Var
     ] <&> concat
 traverse Lens.makePrisms
-    [ ''AddParam, ''Annotation, ''Params, ''Delete
-    , ''DetachAction, ''FuncApplyLimit, ''Literal, ''VarInfo
+    [ ''AddParam, ''Annotation, ''Delete, ''DetachAction
+    , ''FuncApplyLimit, ''LhsNames, ''Literal, ''VarInfo
     ] <&> concat
 traverse makeHTraversableAndBases [''NullaryInject, ''PunnedVar] <&> concat
 makeHMorph ''NullaryInject

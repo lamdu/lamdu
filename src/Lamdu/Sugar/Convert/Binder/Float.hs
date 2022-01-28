@@ -136,11 +136,11 @@ convertLetParamToRecord var letLam storedLam =
     where
         mkNewArg = V.LVar var & V.BLeaf & ExprIRef.newValI
 
-addFieldToLetParamsRecord ::
+addFieldToLetLhsRecord ::
     Monad m =>
     [T.Tag] -> V.Var -> V.TypedLam V.Var (HCompose Prune T.Type) V.Term # Ann (HRef m) ->
     Params.StoredLam m -> ConvertM m (T m (HRef m # V.Term))
-addFieldToLetParamsRecord fieldTags var letLam storedLam =
+addFieldToLetLhsRecord fieldTags var letLam storedLam =
     Params.addFieldParam <&>
     \addParam ->
     do
@@ -165,7 +165,7 @@ addLetParam var lam val =
         T.TFun (FuncType (Pure (T.TRecord composite)) _)
             | FlatRowExtends fieldsMap (Pure T.REmpty) <- composite ^. T.flatRow
             , Params.isParamAlwaysUsedWithGetField innerLam ->
-            addFieldToLetParamsRecord (fieldsMap ^.. Lens.itraversed . Lens.asIndex)
+            addFieldToLetLhsRecord (fieldsMap ^.. Lens.itraversed . Lens.asIndex)
             var lam storedLam
         _ -> convertLetParamToRecord var lam storedLam
         where

@@ -448,14 +448,14 @@ withFuncParam = fpAnnotation (liftCPS . walk)
 withParams ::
     (MonadNaming m, Walk m v0 v1) =>
     IsUnambiguous ->
-    Params v0 (OldName m) (IM m) o ->
-    CPS m (Params v1 (NewName m) (IM m) o)
-withParams u (ParamsRecord (TaggedList addFirst items)) =
+    LhsNames v0 (OldName m) (IM m) o ->
+    CPS m (LhsNames v1 (NewName m) (IM m) o)
+withParams u (LhsRecord (TaggedList addFirst items)) =
     TaggedList
     <$> liftCPS (opRun <&> \run -> addFirst >>= run . walk)
-    <*> (Lens._Just . SugarLens.taggedListBodyItems) (withRecordParam u) items <&> ParamsRecord
-withParams u (ParamVar v) =
-    (\_vParam _vTag _vAddPrev _vAddNext -> ParamVar v{_vParam, _vTag, _vAddPrev, _vAddNext})
+    <*> (Lens._Just . SugarLens.taggedListBodyItems) (withRecordParam u) items <&> LhsRecord
+withParams u (LhsVar v) =
+    (\_vParam _vTag _vAddPrev _vAddNext -> LhsVar v{_vParam, _vTag, _vAddPrev, _vAddNext})
     <$> withFuncParam (v ^. vParam)
     <*> withOptionalTag u TaggedVar (v ^. vTag)
     <*> liftCPS (opRun <&> \run -> v ^. vAddPrev & _AddNext %~ (>>= run . walk))
