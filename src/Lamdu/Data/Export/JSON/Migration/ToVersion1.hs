@@ -35,24 +35,23 @@ asIdentifierSet Nothing = Right mempty
 asIdentifierSet (Just (Aeson.String x)) = Set.singleton x & Right
 asIdentifierSet (Just _) = Left "identifier must be a string"
 
+-- TODO: Why does applying hint makes test fail?
+{-# ANN scanVars ("HLint: ignore Redundant <$>"::String) #-}
 scanVars :: Aeson.Value -> Either Text (Set DefId)
 scanVars val =
-    (<>)
-    <$> (traverse scanVars (children val) <&> mconcat)
-    <*> case val of
+    (<>) <$> (traverse scanVars (children val) <&> mconcat) <*>
+    case val of
         Aeson.Object obj -> obj ^. Lens.at "var" & asIdentifierSet
         _ -> pure mempty
 
 scanNomIds :: Aeson.Value -> Either Text (Set NominalId)
 scanNomIds val =
-    (<>)
-    <$> recurse
-    <*> case val of
-        Aeson.Object obj ->
-            (<>)
-            <$> asIdentifierSet (obj ^. Lens.at "fromNomId")
-            <*> asIdentifierSet (obj ^. Lens.at "toNomId")
-        _ -> pure mempty
+    recurse <>
+    case val of
+    Aeson.Object obj ->
+        asIdentifierSet (obj ^. Lens.at "fromNomId") <>
+        asIdentifierSet (obj ^. Lens.at "toNomId")
+    _ -> pure mempty
     where
         recurse :: Either Text (Set NominalId)
         recurse = children val & traverse scanNomIds <&> mconcat

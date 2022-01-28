@@ -34,6 +34,7 @@ data LightAndBold a = LightAndBold
     , _bold :: a
     } deriving Eq
 
+{-# ANN module ("HLint: ignore Redundant <$>"::String) #-}
 traverse (\x -> (<>) <$> Lens.makeLenses x <*> JsonTH.derivePrefixed "_" x)
     [''ProportionalAndMonospace, ''SansAndSerif, ''RomanAndItalic, ''LightAndBold]
     <&> concat

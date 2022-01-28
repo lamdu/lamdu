@@ -8,6 +8,7 @@
     rules:
     - warn: {lhs: traverse (pure . a), rhs: (fmap . fmap) a}
     - warn: {lhs: foldr (\a b c -> d c >>= b) pure, rhs: flip (foldM (flip (\a -> d)))}
+    - warn: {lhs: "(<>) <$> a <*> b", rhs: "a <> b", note: "Requires Semigroup instance"}
 
 - group:
     name: lamdu-style

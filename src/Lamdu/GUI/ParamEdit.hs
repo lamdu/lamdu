@@ -102,11 +102,10 @@ makeParam ::
     TaggedList.Item Name i o (Sugar.FuncParam (Sugar.Annotation (Sugar.EvaluationScopes Name i) Name)) ->
     GuiM env i o [Responsive o]
 makeParam annotationOpts item =
-    (<>)
-    <$> (TagEdit.makeParamTag Nothing (item ^. TaggedList.iTag)
-            >>= addAnnotationAndEvents annotationOpts (item ^. TaggedList.iValue) myId
-            <&> M.weakerEvents (item ^. TaggedList.iEventMap) <&> (:[]))
-    <*> mkAddParam (item ^. TaggedList.iAddAfter) myId
+    (TagEdit.makeParamTag Nothing (item ^. TaggedList.iTag)
+        >>= addAnnotationAndEvents annotationOpts (item ^. TaggedList.iValue) myId
+        <&> M.weakerEvents (item ^. TaggedList.iEventMap) <&> (:[]))
+    <> mkAddParam (item ^. TaggedList.iAddAfter) myId
     & local (M.animIdPrefix .~ Widget.toAnimId myId)
     where
         myId = TaggedList.itemId (item ^. TaggedList.iTag)
@@ -131,9 +130,8 @@ makeParams annotationOpts prevId nextId items =
             sequenceA
             [ label (Styled.label Texts.recordOpener)
             , (Options.boxSpaced ?? Options.disambiguationNone) <*>
-                ((<>)
-                <$> mkAddParam (items ^. Sugar.tlAddFirst) prevId
-                <*> (traverse (makeParam annotationOpts) itemsR <&> concat))
+                mkAddParam (items ^. Sugar.tlAddFirst) prevId
+                <> (traverse (makeParam annotationOpts) itemsR <&> concat)
             , label (Styled.label Texts.recordCloser)
             ]
             <&> (,) addFirstEventMap

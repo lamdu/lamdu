@@ -73,6 +73,7 @@ nameToText name =
 toGlobal :: Int -> (Text, Lens.ALens' TextColors M.Color, Sugar.NameRef Name o) -> Global o
 toGlobal idx (prefix, color, nameRef) = Global idx prefix color nameRef
 
+{-# ANN makeOptions ("HLint: ignore Redundant <$>"::String) #-}
 makeOptions ::
     ( MonadReader env m, Has (Texts.Navigation Text) env, Has (Texts.Name Text) env
     , M.HasCursor env, M.HasAnimIdPrefix env, Has Theme env, Has TextView.Style env

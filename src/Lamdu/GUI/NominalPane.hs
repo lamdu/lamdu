@@ -52,9 +52,8 @@ make nom =
             <&> Responsive.fromWithTextPos
             <&> M.weakerEvents addFirstEventMap
         paramEdits <-
-            (<>)
-            <$> ParamEdit.mkAddParam (nom ^. Sugar.npParams . Sugar.tlAddFirst) nameEditId
-            <*> (traverse makeParam itemsR <&> concat)
+            ParamEdit.mkAddParam (nom ^. Sugar.npParams . Sugar.tlAddFirst) nameEditId
+            <> (traverse makeParam itemsR <&> concat)
         sep <- Styled.grammar (Label.make ":") <&> Responsive.fromTextView
         bodyEdit <- makeNominalPaneBody (nom ^. Sugar.npBody)
         hbox [hbox ((nameEdit : paramEdits) <> [sep]), bodyEdit]
