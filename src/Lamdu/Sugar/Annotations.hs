@@ -1,5 +1,5 @@
 {-# LANGUAGE TemplateHaskell, TypeApplications, PolyKinds, UndecidableInstances #-}
-{-# LANGUAGE MultiParamTypeClasses, FlexibleInstances, ScopedTypeVariables #-}
+{-# LANGUAGE MultiParamTypeClasses, FlexibleInstances #-}
 
 module Lamdu.Sugar.Annotations
     ( ShowAnnotation(..), showTypeAlways, showInTypeMode, showInEvalMode
@@ -11,7 +11,6 @@ import           Hyper
 import           Hyper.Class.Morph
 import qualified Lamdu.Builtins.Anchors as Builtins
 import qualified Lamdu.Sugar.Lens as SugarLens
-import           Lamdu.Sugar.Lens.Annotations (Annotations(..))
 import qualified Lamdu.Sugar.Props as SugarProps
 import           Lamdu.Sugar.Types
 
@@ -85,7 +84,7 @@ instance  MarkBodyAnnotations v Let where
     markBodyAnnotations l =
         ( neverShowAnnotations
         , l { _lValue = l ^. lValue & markNodeAnnotations
-            , _lNames = l ^. lNames & annotations @v %~ (,) showAnnotationWhenVerbose
+            , _lNames = l ^. lNames & traverse %~ (,) showAnnotationWhenVerbose
             , _lBody = l ^. lBody & markNodeAnnotations
             }
         )
@@ -108,7 +107,7 @@ instance MarkBodyAnnotations v Function where
         ( neverShowAnnotations
         , func
             { _fBody = func ^. fBody & markNodeAnnotations
-            , _fParams = func ^. fParams & annotations @v %~ (,) showAnnotationWhenVerbose
+            , _fParams = func ^. fParams & traverse %~ (,) showAnnotationWhenVerbose
             }
         )
 

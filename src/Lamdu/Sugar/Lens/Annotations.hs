@@ -13,15 +13,6 @@ import           Lamdu.Sugar.Types
 
 import           Lamdu.Prelude
 
-binderParamsFuncParams ::
-    Traversal
-    (LhsNames v0 name i o)
-    (LhsNames v1 name i o)
-    (FuncParam v0)
-    (FuncParam v1)
-binderParamsFuncParams f (LhsRecord x) = traverse f x <&> LhsRecord
-binderParamsFuncParams f (LhsVar x) = vParam f x <&> LhsVar
-
 paneBinder :: Traversal (Pane v0 n i o a0) (Pane v1 n i o a1) (Annotated a0 # Assignment v0 n i o) (Annotated a1 # Assignment v1 n i o)
 paneBinder = paneBody . _PaneDefinition . drBody . _DefinitionBodyExpression . deContent
 
@@ -46,9 +37,6 @@ class HAnnotations a b s t where
 
 instance Annotations a b s0 t0 => Annotations a b (s0, x) (t0, x) where
     annotations = _1 . annotations
-
-instance Annotations a b (LhsNames a n i o) (LhsNames b n i o) where
-    annotations = binderParamsFuncParams . fpAnnotation
 
 instance Annotations a b (Payload a o) (Payload b o) where
     annotations = plAnnotation
@@ -87,7 +75,7 @@ instance HAnnotations a b (Let a n i o) (Let b n i o) where
     hAnnotations f l =
         (\_lValue _lNames _lBody -> l {_lValue, _lNames, _lBody})
         <$> hAnnotations f (l ^. lValue)
-        <*> annotations f (l ^. lNames)
+        <*> traverse f (l ^. lNames)
         <*> hAnnotations f (l ^. lBody)
 
 instance r ~ HoleOpt b n i o => HAnnotations a b (HoleOpt a n i o) r where
@@ -127,7 +115,7 @@ instance HAnnotations a b (Fragment a n i o) (Fragment b n i o) where
 instance HAnnotations a b (Function a n i o) (Function b n i o) where
     hAnnotations f x =
         (,)
-        <$> annotations f (x ^. fParams)
+        <$> traverse f (x ^. fParams)
         <*> hAnnotations f (x ^. fBody)
         <&> \(p, b) -> x { _fParams = p, _fBody = b }
 

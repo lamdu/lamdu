@@ -139,8 +139,8 @@ instance AddEval i n Term where
 addToParams ::
     Applicative i =>
     AddEvalCtx -> EntityId ->
-    LhsNames (Annotation EvalPrep n) n i o ->
-    LhsNames (Annotation (EvaluationScopes InternalName i) n) n i o
+    LhsNames n i o (Annotation EvalPrep n) ->
+    LhsNames n i o (Annotation (EvaluationScopes InternalName i) n)
 addToParams ctx i =
     \case
     LhsVar v ->

@@ -117,7 +117,7 @@ lamId = (`Widget.joinId` ["lam"])
 
 mkLightLambda ::
     _ =>
-    Sugar.LhsNames v a i o -> Widget.Id ->
+    Sugar.LhsNames a i o v -> Widget.Id ->
     f (Maybe (Responsive o) -> Maybe (M.Widget o) -> [Responsive o])
 mkLightLambda params myId =
     do
@@ -148,7 +148,7 @@ mkLightLambda params myId =
 
 makeLhs ::
     _ =>
-    Bool -> Sugar.LhsNames v a i o ->
+    Bool -> Sugar.LhsNames a i o v ->
     Maybe (Responsive o) -> Maybe (Widget.Widget o) -> EventMap (o GuiState.Update) -> Widget.Id ->
     m [Responsive o]
 makeLhs _ (Sugar.LhsVar p) mParamsEdit mScopeEdit _ _
@@ -162,7 +162,7 @@ make ::
     CurAndPrev (Maybe ScopeCursor) -> IsScopeNavFocused ->
     Widget.Id -> Widget.Id ->
     Widget.Id ->
-    Sugar.LhsNames (Sugar.Annotation (Sugar.EvaluationScopes Name i) Name) Name i o ->
+    Sugar.LhsNames Name i o (Sugar.Annotation (Sugar.EvaluationScopes Name i) Name) ->
     GuiM env i o (EventMap (o GuiState.Update), Responsive o)
 make isLet mScopeCursor isScopeNavFocused delVarBackwardsId myId bodyId params =
     makeBody isLet annotationMode delVarBackwardsId myId bodyId params
@@ -183,7 +183,7 @@ makeBody ::
     Bool ->
     Annotation.EvalAnnotationOptions ->
     Widget.Id -> Widget.Id -> Widget.Id ->
-    Sugar.LhsNames (Sugar.Annotation (Sugar.EvaluationScopes Name i) Name) Name i o ->
+    Sugar.LhsNames Name i o (Sugar.Annotation (Sugar.EvaluationScopes Name i) Name) ->
     GuiM env i o (EventMap (o GuiState.Update), Responsive o)
 makeBody isLet annotationOpts delVarBackwardsId lhsId rhsId params =
     case params of

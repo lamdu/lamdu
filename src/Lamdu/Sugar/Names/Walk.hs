@@ -448,8 +448,8 @@ withFuncParam = fpAnnotation (liftCPS . walk)
 withParams ::
     (MonadNaming m, Walk m v0 v1) =>
     IsUnambiguous ->
-    LhsNames v0 (OldName m) (IM m) o ->
-    CPS m (LhsNames v1 (NewName m) (IM m) o)
+    LhsNames (OldName m) (IM m) o v0 ->
+    CPS m (LhsNames (NewName m) (IM m) o v1)
 withParams u (LhsRecord (TaggedList addFirst items)) =
     TaggedList
     <$> liftCPS (opRun <&> \run -> addFirst >>= run . walk)

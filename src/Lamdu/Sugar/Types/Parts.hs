@@ -84,7 +84,7 @@ data FuncParam v = FuncParam -- TODO: Better name
     { _fpAnnotation :: v
     , _fpUsages :: [EntityId]
     , _fpVarInfo :: VarInfo
-    } deriving Generic
+    } deriving (Generic, Functor, Foldable, Traversable)
 
 data ExtractDestination
     = ExtractToLet EntityId
@@ -135,20 +135,20 @@ data TaggedList name i o a = TaggedList
     , _tlItems :: Maybe (TaggedListBody name i o a)
     } deriving (Generic, Functor, Foldable, Traversable)
 
-data Var v name i o = Var
+data Var name i o v = Var
     { _vParam :: FuncParam v
     , _vTag :: OptionalTag name i o
     , _vAddPrev :: AddParam name i o
     , _vAddNext :: AddParam name i o
     , _vDelete :: o ()
     , _vIsNullParam :: Bool
-    } deriving Generic
+    } deriving (Generic, Functor, Foldable, Traversable)
 
 -- TODO: Is there a standard term for this?
-data LhsNames v name i o
-    = LhsVar (Var v name i o)
+data LhsNames name i o v
+    = LhsVar (Var name i o v)
     | LhsRecord (TaggedList name i o (FuncParam v))
-    deriving Generic
+    deriving (Generic, Functor, Foldable, Traversable)
 
 -- VarInfo is used for:
 -- * Differentiating Mut actions so UI can suggest executing them

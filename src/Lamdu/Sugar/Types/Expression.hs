@@ -210,7 +210,7 @@ data Term v name i o k
 
 data Let v name i o k = Let
     { _lValue :: k :# Assignment v name i o -- "let foo = [[bar]] in x"
-    , _lNames :: LhsNames v name i o -- let [[foo]] = bar in x
+    , _lNames :: LhsNames name i o v -- let [[foo]] = bar in x
     , _lBody :: k :# Binder v name i o -- "let foo = bar in [[x]]"
     } deriving Generic
 
@@ -232,7 +232,7 @@ data BinderBody v name i o k
 
 data Function v name i o k = Function
     { _fChosenScopeProp :: i (Property o (Maybe BinderParamScopeId))
-    , _fParams :: LhsNames v name i o
+    , _fParams :: LhsNames name i o v
     , _fBody :: k :# Binder v name i o
     , -- The scope inside a lambda
       _fBodyScopes :: ParamScopes
