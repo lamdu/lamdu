@@ -23,6 +23,7 @@ module Lamdu.Sugar.Types.Parts
     , FuncParam(..), fpAnnotation, fpUsages, fpVarInfo
     , NullParamActions(..), npDeleteLambda
     , Var(..), vTag, vAddPrev, vAddNext, vDelete, vIsNullParam, vParam
+    , LhsField(..), fParam, fSubFields
     , AddParam(..), _AddNext, _NeedToPickTagToAddNext
     , -- Expressions
       Payload(..), plEntityId, plAnnotation, plActions, plHiddenEntityIds, plParenInfo
@@ -145,9 +146,14 @@ data Var name i o v = Var
     } deriving (Generic, Functor, Foldable, Traversable)
 
 -- TODO: Is there a standard term for this?
+data LhsField name i o v = LhsField
+    { _fParam :: FuncParam v
+    , _fSubFields :: Maybe (TaggedList name i o (LhsField name i o v))
+    } deriving (Generic, Functor, Foldable, Traversable)
+
 data LhsNames name i o v
     = LhsVar (Var name i o v)
-    | LhsRecord (TaggedList name i o (FuncParam v))
+    | LhsRecord (TaggedList name i o (LhsField name i o v))
     deriving (Generic, Functor, Foldable, Traversable)
 
 -- VarInfo is used for:
@@ -230,7 +236,7 @@ data Query = Query
     }
 
 traverse Lens.makeLenses
-    [ ''ClosedCompositeActions, ''FuncParam, ''NodeActions
+    [ ''ClosedCompositeActions, ''FuncParam, ''LhsField, ''NodeActions
     , ''NullParamActions, ''NullaryInject, ''Option, ''ParenInfo, ''Payload, ''PunnedVar
     , ''Query, ''QueryLangInfo
     , ''TaggedList, ''TaggedListBody, ''TaggedItem, ''TaggedSwappableItem, ''Var

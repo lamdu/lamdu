@@ -431,13 +431,23 @@ toExpression = toNode toBody
 withRecordParam ::
     (MonadNaming m, Walk m v0 v1) =>
     IsUnambiguous ->
-    TaggedItem (OldName m) (IM m) o (FuncParam v0) ->
-    CPS m (TaggedItem (NewName m) (IM m) o (FuncParam v1))
+    TaggedItem (OldName m) (IM m) o (LhsField (OldName m) (IM m) o v0) ->
+    CPS m (TaggedItem (NewName m) (IM m) o (LhsField (NewName m) (IM m) o v1))
 withRecordParam unambig (TaggedItem t d a v) =
     (`TaggedItem` d)
     <$> withTagRef unambig TaggedVar t
     <*> liftCPS (opRun <&> \run -> a >>= run . walk)
-    <*> withFuncParam v
+    <*> withLhsField unambig v
+
+withLhsField ::
+    (MonadNaming m, Walk m v0 v1) =>
+    IsUnambiguous ->
+    LhsField (OldName m) (IM m) o v0 ->
+    CPS m (LhsField (NewName m) (IM m) o v1)
+withLhsField unambig (LhsField v s) =
+    LhsField
+    <$> withFuncParam v
+    <*> Lens._Just (withLhsRecord unambig) s
 
 withFuncParam ::
     (MonadNaming m, Walk m v0 v1) =>
@@ -445,15 +455,22 @@ withFuncParam ::
     CPS m (FuncParam v1)
 withFuncParam = fpAnnotation (liftCPS . walk)
 
+withLhsRecord ::
+    (MonadNaming m, Walk m v0 v1) =>
+    IsUnambiguous ->
+    TaggedList (OldName m) (IM m) o (LhsField (OldName m) (IM m) o v0) ->
+    CPS m (TaggedList (NewName m) (IM m) o (LhsField (NewName m) (IM m) o v1))
+withLhsRecord u (TaggedList addFirst items) =
+    TaggedList
+    <$> liftCPS (opRun <&> \run -> addFirst >>= run . walk)
+    <*> (Lens._Just . SugarLens.taggedListBodyItems) (withRecordParam u) items
+
 withParams ::
     (MonadNaming m, Walk m v0 v1) =>
     IsUnambiguous ->
     LhsNames (OldName m) (IM m) o v0 ->
     CPS m (LhsNames (NewName m) (IM m) o v1)
-withParams u (LhsRecord (TaggedList addFirst items)) =
-    TaggedList
-    <$> liftCPS (opRun <&> \run -> addFirst >>= run . walk)
-    <*> (Lens._Just . SugarLens.taggedListBodyItems) (withRecordParam u) items <&> LhsRecord
+withParams u (LhsRecord r) = withLhsRecord u r <&> LhsRecord
 withParams u (LhsVar v) =
     (\_vParam _vTag _vAddPrev _vAddNext -> LhsVar v{_vParam, _vTag, _vAddPrev, _vAddNext})
     <$> withFuncParam (v ^. vParam)

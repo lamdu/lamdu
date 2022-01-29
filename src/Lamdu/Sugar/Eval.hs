@@ -160,7 +160,7 @@ addToParams ctx i =
             <&> fromMaybe mempty
             <&> Lens.mapped . Lens.mapped . _2 %~ addTypes (ctx ^. nominalsMap) (v ^. eType)
         fixItem taggedItem =
-            taggedItem & tiValue . fpAnnotation . _AnnotationVal %~
+            taggedItem & tiValue . traverse . _AnnotationVal %~
             \v ->
             ctx ^. evalResults
             <&> (^. erAppliesOfLam . Lens.at u)

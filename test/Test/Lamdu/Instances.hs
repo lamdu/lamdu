@@ -99,7 +99,7 @@ instance Eq (Sugar.TagPane f) where
     x == y = x ^. Sugar.tpTag == y ^. Sugar.tpTag
 
 [makeDerivings [''Eq], makeInstances [''NFData]] ??
-    [ ''Sugar.Annotation, ''Sugar.LhsNames, ''Sugar.CompositeFields
+    [ ''Sugar.Annotation, ''Sugar.LhsField, ''Sugar.LhsNames, ''Sugar.CompositeFields
     , ''Sugar.DefinitionOutdatedType, ''Sugar.FuncParam, ''Sugar.Type
     , ''Sugar.ResBody, ''Sugar.ResInject, ''Sugar.ResRecord, ''Sugar.ResTable
     , ''Sugar.AnnotatedArg, ''Sugar.AssignPlain, ''Sugar.Assignment, ''Sugar.Binder, ''Sugar.BinderBody
