@@ -1,7 +1,6 @@
-{-# LANGUAGE TemplateHaskell, TupleSections, TypeFamilies, TypeApplications #-}
+{-# LANGUAGE TemplateHaskell, TypeFamilies, TypeApplications #-}
 module Lamdu.Sugar.Convert.Binder.Params
     ( convertLamParams, convertEmptyParams
-    , mkStoredLam, makeDeleteLambda
     , convertBinderToFunction
     , convertToRecordParams
     , StoredLam(..), slLam, slLambdaProp

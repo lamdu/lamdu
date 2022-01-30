@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell, GeneralizedNewtypeDeriving, KindSignatures, TupleSections #-}
+{-# LANGUAGE TemplateHaskell, GeneralizedNewtypeDeriving, TupleSections #-}
 
 module Lamdu.GUI.IOTrans
     ( IOTrans(..), ioTrans, trans, liftTrans, liftIO, liftIOT, liftTIO

@@ -1,5 +1,5 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving, TypeFamilies, TemplateHaskell #-}
-{-# LANGUAGE NoMonomorphismRestriction, TupleSections, DerivingVia, NamedFieldPuns #-}
+{-# LANGUAGE NoMonomorphismRestriction, DerivingVia, NamedFieldPuns #-}
 {-# LANGUAGE MultiParamTypeClasses, FlexibleInstances, TypeApplications #-}
 
 module Lamdu.Sugar.Names.Add
