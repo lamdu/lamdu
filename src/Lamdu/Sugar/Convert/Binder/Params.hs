@@ -66,7 +66,7 @@ mkStoredLam ::
     Input.Payload m # V.Term -> StoredLam m
 mkStoredLam lam pl =
     StoredLam
-    (hmap (Proxy @(Recursively HFunctor) #>  hflipped %~ hmap (const (^. Input.stored))) lam)
+    (hmap (Proxy @(Recursively HFunctor) #> hflipped %~ hmap (const (^. Input.stored))) lam)
     (pl ^. Input.stored)
 
 unappliedUsesOfVar :: V.Var -> Ann a # V.Term -> [a # V.Term]
@@ -378,12 +378,9 @@ setFieldParamTag mPresMode binderKind storedLam prevTagList prevTag =
 
 convertRecordParams ::
     Monad m =>
-    Maybe (MkProperty' (T m) PresentationMode) ->
-    BinderKind m -> [FieldParam] ->
-    V.TypedLam V.Var (HCompose Prune T.Type) V.Term # Ann (Input.Payload m) ->
-    Input.Payload m # V.Term ->
+    Maybe (MkProperty' (T m) PresentationMode) -> BinderKind m -> [FieldParam] -> StoredLam m ->
     ConvertM m (LhsNames InternalName (OnceT (T m)) (T m) EvalPrep)
-convertRecordParams mPresMode binderKind fieldParams lam@(V.TypedLam param _ _) lamPl =
+convertRecordParams mPresMode binderKind fieldParams storedLam =
     do
         ps <- traverse mkParam fieldParams
         postProcess <- ConvertM.postProcessAssert
@@ -397,7 +394,7 @@ convertRecordParams mPresMode binderKind fieldParams lam@(V.TypedLam param _ _) 
         ConvertTaggedList.convert addFirstSelection ps & LhsRecord & pure
     where
         tags = fieldParams <&> fpTag
-        storedLam = mkStoredLam lam lamPl
+        param = storedLam ^. slLam . V.tlIn
         mkParam fp =
             do
                 setField <- setFieldParamTag mPresMode binderKind storedLam tagList tag
@@ -613,7 +610,7 @@ convertLamParams lambda lambdaPl =
                 , List.isLengthAtLeast 2 fields
                 , isParamAlwaysUsedWithGetField lambda
                 , let fieldParams = fields <&> uncurry FieldParam
-                -> convertRecordParams Nothing BinderKindLambda fieldParams lambda lambdaPl
+                -> convertRecordParams Nothing BinderKindLambda fieldParams (mkStoredLam lambda lambdaPl)
             _ -> convertNonRecordParam BinderKindLambda lambda lambdaPl
 
 convertVarToCalls ::
