@@ -1,6 +1,6 @@
 {-# LANGUAGE TemplateHaskell, TupleSections, TypeFamilies, TypeApplications #-}
 module Lamdu.Sugar.Convert.Binder.Params
-    ( convertLamParams, convertNonEmptyParams, convertEmptyParams
+    ( convertLamParams, convertEmptyParams
     , mkStoredLam, makeDeleteLambda
     , convertBinderToFunction
     , convertToRecordParams
@@ -603,16 +603,7 @@ convertLamParams ::
     V.TypedLam V.Var (HCompose Prune T.Type) V.Term # Ann (Input.Payload m) ->
     Input.Payload m # V.Term ->
     ConvertM m (LhsNames InternalName (OnceT (T m)) (T m) EvalPrep)
-convertLamParams = convertNonEmptyParams Nothing BinderKindLambda
-
-convertNonEmptyParams ::
-    Monad m =>
-    Maybe (MkProperty' (T m) PresentationMode) ->
-    BinderKind m ->
-    V.TypedLam V.Var (HCompose Prune T.Type) V.Term # Ann (Input.Payload m) ->
-    Input.Payload m # V.Term ->
-    ConvertM m (LhsNames InternalName (OnceT (T m)) (T m) EvalPrep)
-convertNonEmptyParams mPresMode binderKind lambda lambdaPl =
+convertLamParams lambda lambdaPl =
     do
         sugarLhsRecord <- Lens.view (ConvertM.scConfig . Config.sugarsEnabled . Config.parametersRecord)
         case lambdaPl ^. Input.inferredType . _Pure of
@@ -623,8 +614,8 @@ convertNonEmptyParams mPresMode binderKind lambda lambdaPl =
                 , List.isLengthAtLeast 2 fields
                 , isParamAlwaysUsedWithGetField lambda
                 , let fieldParams = fields <&> uncurry FieldParam
-                -> convertRecordParams mPresMode binderKind fieldParams lambda lambdaPl
-            _ -> convertNonRecordParam binderKind lambda lambdaPl
+                -> convertRecordParams Nothing BinderKindLambda fieldParams lambda lambdaPl
+            _ -> convertNonRecordParam BinderKindLambda lambda lambdaPl
 
 convertVarToCalls ::
     Monad m => T m (ValI m) -> V.Var -> Ann (HRef m) # V.Term -> T m ()
