@@ -1,7 +1,6 @@
 {-# LANGUAGE TemplateHaskell, TupleSections, TypeFamilies, TypeApplications #-}
 module Lamdu.Sugar.Convert.Binder.Params
-    ( ConventionalParams(..), cpParams, cpLamParam
-    , convertLamParams, convertNonEmptyParams, convertEmptyParams
+    ( convertLamParams, convertNonEmptyParams, convertEmptyParams
     , mkStoredLam, makeDeleteLambda
     , convertBinderToFunction
     , convertToRecordParams
@@ -51,12 +50,6 @@ import           Revision.Deltum.Transaction (Transaction)
 import           Lamdu.Prelude
 
 type T = Transaction
-
-data ConventionalParams m = ConventionalParams
-    { _cpParams :: LhsNames InternalName (OnceT (T m)) (T m) EvalPrep
-    , _cpLamParam :: V.Var
-    }
-Lens.makeLenses ''ConventionalParams
 
 data FieldParam = FieldParam
     { fpTag :: T.Tag
@@ -390,7 +383,7 @@ convertRecordParams ::
     BinderKind m -> [FieldParam] ->
     V.TypedLam V.Var (HCompose Prune T.Type) V.Term # Ann (Input.Payload m) ->
     Input.Payload m # V.Term ->
-    ConvertM m (ConventionalParams m)
+    ConvertM m (LhsNames InternalName (OnceT (T m)) (T m) EvalPrep)
 convertRecordParams mPresMode binderKind fieldParams lam@(V.TypedLam param _ _) lamPl =
     do
         ps <- traverse mkParam fieldParams
@@ -402,10 +395,7 @@ convertRecordParams mPresMode binderKind fieldParams lam@(V.TypedLam param _ _) 
                 (add DataOps.newHole binderKind storedLam (: (fieldParams <&> fpTag)) tag >> postProcess)
         addFirstSelection <-
             ConvertTag.replace (nameWithContext Nothing param) (Set.fromList tags) (pure ()) resultInfo >>= ConvertM . lift
-        pure ConventionalParams
-            { _cpParams = ConvertTaggedList.convert addFirstSelection ps & LhsRecord
-            , _cpLamParam = param
-            }
+        ConvertTaggedList.convert addFirstSelection ps & LhsRecord & pure
     where
         tags = fieldParams <&> fpTag
         storedLam = mkStoredLam lam lamPl
@@ -544,7 +534,7 @@ convertNonRecordParam ::
     BinderKind m ->
     V.TypedLam V.Var (HCompose Prune T.Type) V.Term # Ann (Input.Payload m) ->
     Input.Payload m # V.Term ->
-    ConvertM m (ConventionalParams m)
+    ConvertM m (LhsNames InternalName (OnceT (T m)) (T m) EvalPrep)
 convertNonRecordParam binderKind lam@(V.TypedLam param _ _) lamExprPl =
     do
         nullParamSugar <-
@@ -566,34 +556,29 @@ convertNonRecordParam binderKind lam@(V.TypedLam param _ _) lamExprPl =
                             >>= ConvertM . lift <&> AddNext
         addPrev <- mkAddParam NewParamBefore
         addNext <- mkAddParam NewParamAfter
-        let funcParam =
-                LhsVar Var
-                { _vParam =
-                    FuncParam
-                    { _fpAnnotation =
-                        EvalPrep
-                        { _eType = typ
-                        , _eEvalId = tag ^. oTag . tagRefTag . tagInstance
-                        }
-                    , _fpVarInfo = varInfo
-                    , _fpUsages =
-                        -- TODO: Replace varRefsOfLambda mechanism with one that traverses the sugar,
-                        -- So it goes to actual first use after reordering by sugar.
-                        lamExprPl ^. Input.varRefsOfLambda
+        LhsVar Var
+            { _vParam =
+                FuncParam
+                { _fpAnnotation =
+                    EvalPrep
+                    { _eType = typ
+                    , _eEvalId = tag ^. oTag . tagRefTag . tagInstance
                     }
-                , _vTag = tag
-                , _vAddPrev = addPrev
-                , _vAddNext = addNext
-                , _vDelete = del <* postProcess
-                , _vIsNullParam =
-                    nullParamSugar
-                    && Lens.has (_Pure . T._TRecord . _Pure . T._REmpty) typ
-                    && null (lamExprPl ^. Input.varRefsOfLambda)
+                , _fpVarInfo = varInfo
+                , _fpUsages =
+                    -- TODO: Replace varRefsOfLambda mechanism with one that traverses the sugar,
+                    -- So it goes to actual first use after reordering by sugar.
+                    lamExprPl ^. Input.varRefsOfLambda
                 }
-        pure ConventionalParams
-            { _cpParams = funcParam
-            , _cpLamParam = param
-            }
+            , _vTag = tag
+            , _vAddPrev = addPrev
+            , _vAddNext = addNext
+            , _vDelete = del <* postProcess
+            , _vIsNullParam =
+                nullParamSugar
+                && Lens.has (_Pure . T._TRecord . _Pure . T._REmpty) typ
+                && null (lamExprPl ^. Input.varRefsOfLambda)
+            } & pure
     where
         storedLam = mkStoredLam lam lamExprPl
 
@@ -617,7 +602,7 @@ convertLamParams ::
     Monad m =>
     V.TypedLam V.Var (HCompose Prune T.Type) V.Term # Ann (Input.Payload m) ->
     Input.Payload m # V.Term ->
-    ConvertM m (ConventionalParams m)
+    ConvertM m (LhsNames InternalName (OnceT (T m)) (T m) EvalPrep)
 convertLamParams = convertNonEmptyParams Nothing BinderKindLambda
 
 convertNonEmptyParams ::
@@ -626,7 +611,7 @@ convertNonEmptyParams ::
     BinderKind m ->
     V.TypedLam V.Var (HCompose Prune T.Type) V.Term # Ann (Input.Payload m) ->
     Input.Payload m # V.Term ->
-    ConvertM m (ConventionalParams m)
+    ConvertM m (LhsNames InternalName (OnceT (T m)) (T m) EvalPrep)
 convertNonEmptyParams mPresMode binderKind lambda lambdaPl =
     do
         sugarLhsRecord <- Lens.view (ConvertM.scConfig . Config.sugarsEnabled . Config.parametersRecord)

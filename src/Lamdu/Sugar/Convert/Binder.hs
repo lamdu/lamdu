@@ -23,7 +23,7 @@ import           Lamdu.Expr.IRef (DefI)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import           Lamdu.Expr.UniqueId (ToUUID(..))
 import qualified Lamdu.Sugar.Config as Config
-import           Lamdu.Sugar.Convert.Binder.Params (ConventionalParams(..), convertLamParams, convertEmptyParams, cpParams, cpLamParam)
+import           Lamdu.Sugar.Convert.Binder.Params (convertLamParams, convertEmptyParams)
 import           Lamdu.Sugar.Convert.Binder.Types (BinderKind(..))
 import           Lamdu.Sugar.Convert.Expression.Actions (addActions)
 import qualified Lamdu.Sugar.Convert.Input as Input
@@ -110,34 +110,37 @@ convertBinderBody rawExpr expr =
 
 makeFunction ::
     Monad m =>
-    MkProperty' (T m) (Maybe BinderParamScopeId) ->
-    ConventionalParams m -> Ann (Input.Payload m) # V.Term ->
+    V.TypedLam V.Var (HCompose Prune T.Type) V.Term # Ann (Input.Payload m) ->
+    Input.Payload m # V.Term ->
     ConvertM m (Function EvalPrep InternalName (OnceT (T m)) (T m) # Annotated (ConvertPayload m))
-makeFunction chosenScopeProp params funcBody =
-    convertBinder funcBody
-    <&> mkRes
-    & local (ConvertM.scScopeInfo %~ addParams)
-    where
-        mkRes assignmentBody =
+makeFunction lam exprPl =
+    do
+        params <- convertLamParams lam exprPl
+        let addParams ctx =
+                ctx
+                & ConvertM.siRecordParams <>~
+                    ( case params of
+                        LhsRecord r ->
+                            (lam ^. V.tlIn) ~~>
+                            Set.fromList (r ^.. SugarLens.taggedListItems . tiTag . tagRefTag . tagVal)
+                        _ -> Map.empty
+                    )
+                & ConvertM.siNullParams <>~
+                case params of
+                LhsVar v | v ^. vIsNullParam -> Set.singleton (lam ^. V.tlIn)
+                _ -> Set.empty
+        assignmentBody <-
+            convertBinder (lam ^. V.tlOut)
+            & local (ConvertM.scScopeInfo %~ addParams)
+        pure
             Function
-            { _fParams = params ^. cpParams
+            { _fParams = params
             , _fChosenScopeProp = chosenScopeProp ^. Property.mkProperty & lift
             , _fBody = assignmentBody
             , _fBodyScopes = mempty
             }
-        addParams ctx =
-            ctx
-            & ConvertM.siRecordParams <>~
-                ( case params ^. cpParams of
-                    LhsRecord r ->
-                        (params ^. cpLamParam) ~~>
-                        Set.fromList (r ^.. SugarLens.taggedListItems . tiTag . tagRefTag . tagVal)
-                    _ -> Map.empty
-                )
-            & ConvertM.siNullParams <>~
-            case params ^. cpParams of
-            LhsVar v | v ^. vIsNullParam -> Set.singleton (params ^. cpLamParam)
-            _ -> Set.empty
+    where
+        chosenScopeProp = lam ^. V.tlIn & Anchors.assocScopeRef
 
 convertLam ::
     Monad m =>
@@ -146,11 +149,7 @@ convertLam ::
     ConvertM m (ExpressionU EvalPrep m)
 convertLam lam exprPl =
     do
-        convParams <- convertLamParams lam exprPl
-        func <-
-            makeFunction
-            (lam ^. V.tlIn & Anchors.assocScopeRef)
-            convParams (lam ^. V.tlOut)
+        func <- makeFunction lam exprPl
         Lambda False UnlimitedFuncApply func & BodyLam
             & addActions (Ann exprPl (V.BLam lam))
             <&> hVal %~
