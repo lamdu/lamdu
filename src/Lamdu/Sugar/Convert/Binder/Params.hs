@@ -1,6 +1,6 @@
 {-# LANGUAGE TemplateHaskell, TupleSections, TypeFamilies, TypeApplications #-}
 module Lamdu.Sugar.Convert.Binder.Params
-    ( ConventionalParams(..), cpParams, cpAddFirstParam, cpMLamParam
+    ( ConventionalParams(..), cpParams, cpLamParam
     , convertLamParams, convertNonEmptyParams, convertEmptyParams
     , mkStoredLam, makeDeleteLambda
     , convertBinderToFunction
@@ -53,10 +53,8 @@ import           Lamdu.Prelude
 type T = Transaction
 
 data ConventionalParams m = ConventionalParams
-    { cpTags :: Set T.Tag
-    , _cpParams :: Maybe (LhsNames InternalName (OnceT (T m)) (T m) EvalPrep)
-    , _cpAddFirstParam :: AddParam InternalName (OnceT (T m)) (T m)
-    , _cpMLamParam :: Maybe ({- lambda's -}EntityId, V.Var)
+    { _cpParams :: LhsNames InternalName (OnceT (T m)) (T m) EvalPrep
+    , _cpLamParam :: V.Var
     }
 Lens.makeLenses ''ConventionalParams
 
@@ -405,13 +403,10 @@ convertRecordParams mPresMode binderKind fieldParams lam@(V.TypedLam param _ _) 
         addFirstSelection <-
             ConvertTag.replace (nameWithContext Nothing param) (Set.fromList tags) (pure ()) resultInfo >>= ConvertM . lift
         pure ConventionalParams
-            { cpTags = Set.fromList tags
-            , _cpParams = ConvertTaggedList.convert addFirstSelection ps & LhsRecord & Just
-            , _cpAddFirstParam = AddNext addFirstSelection
-            , _cpMLamParam = Just (entityId, param)
+            { _cpParams = ConvertTaggedList.convert addFirstSelection ps & LhsRecord
+            , _cpLamParam = param
             }
     where
-        entityId = lamPl ^. Input.entityId
         tags = fieldParams <&> fpTag
         storedLam = mkStoredLam lam lamPl
         mkParam fp =
@@ -595,24 +590,9 @@ convertNonRecordParam binderKind lam@(V.TypedLam param _ _) lamExprPl =
                     && Lens.has (_Pure . T._TRecord . _Pure . T._REmpty) typ
                     && null (lamExprPl ^. Input.varRefsOfLambda)
                 }
-        addFirst <-
-            convertToRecordParams ?? DataOps.newHole ?? binderKind ?? storedLam
-            ?? NewParamBefore
-            <&> Lens.mapped %~ (<* postProcess)
-        let resultInfo () = ConvertTag.TagResultInfo <$> EntityId.ofTaggedEntity param <*> addFirst
-        addFirstParam <-
-            do
-                if oldParam == Anchors.anonTag
-                    then NeedToPickTagToAddNext (EntityId.ofTaggedEntity param oldParam) & pure
-                    else
-                        ConvertTag.replace (nameWithContext (Just varInfo) param) (Set.singleton oldParam) (pure ()) resultInfo
-                        >>= ConvertM . lift
-                        <&> AddNext
         pure ConventionalParams
-            { cpTags = mempty
-            , _cpParams = Just funcParam
-            , _cpAddFirstParam = addFirstParam
-            , _cpMLamParam = Just (lamExprPl ^. Input.entityId, param)
+            { _cpParams = funcParam
+            , _cpLamParam = param
             }
     where
         storedLam = mkStoredLam lam lamExprPl

@@ -6,6 +6,7 @@ module Lamdu.Sugar.Convert.Binder
     ) where
 
 import qualified Control.Lens as Lens
+import           Control.Lens.Extended ((~~>))
 import           Control.Monad.Once (OnceT)
 import qualified Data.Map as Map
 import           Data.Property (MkProperty')
@@ -22,7 +23,7 @@ import           Lamdu.Expr.IRef (DefI)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import           Lamdu.Expr.UniqueId (ToUUID(..))
 import qualified Lamdu.Sugar.Config as Config
-import           Lamdu.Sugar.Convert.Binder.Params (ConventionalParams(..), convertLamParams, convertEmptyParams, cpParams, cpMLamParam)
+import           Lamdu.Sugar.Convert.Binder.Params (ConventionalParams(..), convertLamParams, convertEmptyParams, cpParams, cpLamParam)
 import           Lamdu.Sugar.Convert.Binder.Types (BinderKind(..))
 import           Lamdu.Sugar.Convert.Expression.Actions (addActions)
 import qualified Lamdu.Sugar.Convert.Input as Input
@@ -119,9 +120,7 @@ makeFunction chosenScopeProp params funcBody =
     where
         mkRes assignmentBody =
             Function
-            { _fParams =
-                -- TODO: avoid partiality here
-                params ^?! cpParams . Lens._Just
+            { _fParams = params ^. cpParams
             , _fChosenScopeProp = chosenScopeProp ^. Property.mkProperty & lift
             , _fBody = assignmentBody
             , _fBodyScopes = mempty
@@ -130,18 +129,15 @@ makeFunction chosenScopeProp params funcBody =
             ctx
             & ConvertM.siRecordParams <>~
                 ( case params ^. cpParams of
-                    Just (LhsRecord r) ->
-                        p
-                        <&> (,) ?? Set.fromList (r ^.. SugarLens.taggedListItems . tiTag . tagRefTag . tagVal)
-                        & Map.fromList
+                    LhsRecord r ->
+                        (params ^. cpLamParam) ~~>
+                        Set.fromList (r ^.. SugarLens.taggedListItems . tiTag . tagRefTag . tagVal)
                     _ -> Map.empty
                 )
             & ConvertM.siNullParams <>~
             case params ^. cpParams of
-            Just (LhsVar v) | v ^. vIsNullParam -> Set.fromList p
+            LhsVar v | v ^. vIsNullParam -> Set.singleton (params ^. cpLamParam)
             _ -> Set.empty
-            where
-                p = params ^.. cpMLamParam .Lens._Just . _2
 
 convertLam ::
     Monad m =>
