@@ -51,7 +51,7 @@ convertBinder ::
     ConvertM m (Annotated (ConvertPayload m) # Binder EvalPrep InternalName (OnceT (T m)) (T m))
 convertBinder expr =
     do
-        convertSub <- Lens.view id <&> \env -> ConvertM.scConvertSubexpression env
+        convertSub <- Lens.view id <&> ConvertM.scConvertSubexpression
         convertSub ConvertM.BinderPos expr
     >>= convertBinderBody expr
     & local (ConvertM.scScopeInfo %~ addPos)
@@ -147,12 +147,9 @@ convertLam ::
     Input.Payload m # V.Term ->
     ConvertM m (ExpressionU EvalPrep m)
 convertLam lam exprPl =
-    do
-        func <- makeFunction lam exprPl
-        Lambda False UnlimitedFuncApply func & BodyLam
-            & addActions (Ann exprPl (V.BLam lam))
-            <&> hVal %~
-                hmap (const (annotation . pActions . mReplaceParent . Lens._Just %~ (lamParamToHole lam >>)))
+    makeFunction lam exprPl
+    >>= addActions (Ann exprPl (V.BLam lam)) . BodyLam . Lambda False UnlimitedFuncApply
+    <&> hVal %~ hmap (const (annotation . pActions . mReplaceParent . Lens._Just %~ (lamParamToHole lam >>)))
 
 toAssignment ::
     Monad m =>
