@@ -5,6 +5,7 @@ module Lamdu.Sugar.Convert.DefExpr
 
 import qualified Control.Lens as Lens
 import           Control.Monad.Once (OnceT)
+import qualified Lamdu.Data.Anchors as Anchors
 import qualified Data.Property as Property
 import           Hyper.Syntax.Scheme (saveScheme)
 import           Hyper.Unify (UVar)
@@ -38,8 +39,7 @@ convert ::
     ConvertM m (DefinitionBody EvalPrep InternalName (OnceT (T m)) (T m) (ConvertPayload m))
 convert defType defExpr defI =
     do
-        (presMode, content) <-
-            convertDefinitionBinder defI (defExpr ^. Definition.expr)
+        content <- convertDefinitionBinder defI (defExpr ^. Definition.expr)
         inferContext <- Lens.view ConvertM.scInferContext
         let inferredType =
                 generalize (defExpr ^. Definition.expr . hAnn . Input.inferredTypeUVar)
@@ -51,8 +51,11 @@ convert defType defExpr defI =
         defTypeS <- ConvertType.convertScheme (EntityId.currentTypeOf entityId) defType
         DefinitionBodyExpression DefinitionExpression
             { _deType = defTypeS
-            , _dePresentationMode = presMode <&> (^. Property.mkProperty) <&> lift
+            , _dePresentationMode =
+                lift (presMode ^. Property.mkProperty) <$
+                content ^? hVal . _BodyFunction . fParams . _LhsRecord . tlItems . Lens._Just . tlTail . traverse
             , _deContent = content
             } & pure
     where
         entityId = ExprIRef.globalId defI & EntityId.ofBinder
+        presMode = Anchors.assocPresentationMode (ExprIRef.globalId defI)

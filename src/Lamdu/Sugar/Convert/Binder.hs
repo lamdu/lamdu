@@ -9,7 +9,6 @@ import qualified Control.Lens as Lens
 import           Control.Lens.Extended ((~~>))
 import           Control.Monad.Once (OnceT)
 import qualified Data.Map as Map
-import           Data.Property (MkProperty')
 import qualified Data.Property as Property
 import qualified Data.Set as Set
 import           Hyper
@@ -155,25 +154,6 @@ convertLam lam exprPl =
             <&> hVal %~
                 hmap (const (annotation . pActions . mReplaceParent . Lens._Just %~ (lamParamToHole lam >>)))
 
--- Let-item or definition (form of <name> [params] = <body>)
-convertAssignment ::
-    Monad m =>
-    BinderKind m -> V.Var ->
-    Ann (Input.Payload m) # V.Term ->
-    ConvertM m
-    ( Maybe (MkProperty' (T m) PresentationMode)
-    , Annotated (ConvertPayload m) # Assignment EvalPrep InternalName (OnceT (T m)) (T m)
-    )
-convertAssignment binderKind defVar expr =
-    convertBinder expr
-    >>= toAssignment binderKind <&>
-    \r ->
-    ( presMode <$ r ^? hVal . _BodyFunction . fParams . _LhsRecord . tlItems . Lens._Just . tlTail . traverse
-    , r
-    )
-    where
-        presMode = Anchors.assocPresentationMode defVar
-
 toAssignment ::
     Monad m =>
     BinderKind m ->
@@ -191,10 +171,6 @@ toAssignment binderKind b =
 convertDefinitionBinder ::
     Monad m =>
     DefI m -> Ann (Input.Payload m) # V.Term ->
-    ConvertM m
-    ( Maybe (MkProperty' (T m) PresentationMode)
-    , Annotated (ConvertPayload m)
-        # Assignment EvalPrep InternalName (OnceT (T m)) (T m)
-    )
+    ConvertM m (Annotated (ConvertPayload m) # Assignment EvalPrep InternalName (OnceT (T m)) (T m))
 convertDefinitionBinder defI t =
-    (addLightLambdas <&> (_2 %~)) <*> convertAssignment (BinderKindDef defI) (ExprIRef.globalId defI) t
+    addLightLambdas <*> (convertBinder t >>= toAssignment (BinderKindDef defI))
