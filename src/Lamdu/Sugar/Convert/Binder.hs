@@ -163,7 +163,7 @@ toAssignment binderKind b =
     do
         enabled <- Lens.view (ConvertM.scConfig . Config.sugarsEnabled . Config.assignmentParameters)
         case b ^? hVal . bBody . _BinderTerm . _BodyLam of
-            Just l | enabled && not (l ^. lamLightweight) -> b & annValue .~ BodyFunction (l ^. lamFunc) & pure
+            Just l | enabled -> b & annValue .~ BodyFunction (l ^. lamFunc) & pure
             _ ->
                 convertEmptyParams binderKind (b ^. annotation . pUnsugared)
                 <&> \addFirstParam -> b & annValue %~ BodyPlain . AssignPlain addFirstParam
