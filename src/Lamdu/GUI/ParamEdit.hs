@@ -1,23 +1,20 @@
 module Lamdu.GUI.ParamEdit
-    ( makeParams, addAnnotationAndEvents, eventMapAddNextParamOrPickTag, mkAddParam
-    , mkParamPickResult
+    ( addAnnotationAndEvents, eventMapAddNextParamOrPickTag, mkAddParam
+    , mkParamPickResult, makeParam
     ) where
 
 import qualified Control.Lens as Lens
 import qualified GUI.Momentu as M
 import           GUI.Momentu.Align (TextWidget)
-import           GUI.Momentu.Direction (Orientation(..), Order(..))
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.I18N as MomentuTexts
 import           GUI.Momentu.ModKey (noMods)
 import           GUI.Momentu.Responsive (Responsive)
 import qualified GUI.Momentu.Responsive as Responsive
-import qualified GUI.Momentu.Responsive.Options as Options
 import qualified GUI.Momentu.State as GuiState
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Menu as Menu
-import           GUI.Momentu.Widgets.StdKeys (dirKey)
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Theme.TextColors as TextColors
 import qualified Lamdu.GUI.Expr.TagEdit as TagEdit
@@ -26,7 +23,6 @@ import           Lamdu.GUI.Monad (GuiM, im)
 import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.GUI.TaggedList as TaggedList
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
-import qualified Lamdu.I18N.Code as Texts
 import qualified Lamdu.I18N.CodeUI as Texts
 import qualified Lamdu.I18N.Navigation as Texts
 import           Lamdu.Name (Name)
@@ -109,31 +105,3 @@ makeParam annotationOpts item =
     & local (M.animIdPrefix .~ Widget.toAnimId myId)
     where
         myId = TaggedList.itemId (item ^. TaggedList.iTag)
-
-makeParams ::
-    _ =>
-    Annotation.EvalAnnotationOptions ->
-    Widget.Id -> Widget.Id ->
-    Sugar.TaggedList Name i o (Sugar.LhsField Name (Sugar.Annotation (Sugar.EvaluationScopes Name i) Name)) ->
-    GuiM env i o (EventMap (o GuiState.Update), Responsive o)
-makeParams annotationOpts prevId nextId items =
-    do
-        o <- Lens.view has <&> \d -> Lens.cloneLens . dirKey d Horizontal
-        keys <-
-            traverse Lens.view TaggedList.Keys
-            { TaggedList._kAdd = has . Config.addNextParamKeys
-            , TaggedList._kOrderBefore = has . Config.orderDirKeys . o Backward
-            , TaggedList._kOrderAfter = has . Config.orderDirKeys . o Forward
-            }
-        (addFirstEventMap, itemsR) <- TaggedList.make (has . Texts.parameter) keys prevId nextId items
-        (Options.box ?? Options.disambiguationNone) <*>
-            sequenceA
-            [ label (Styled.label Texts.recordOpener)
-            , (Options.boxSpaced ?? Options.disambiguationNone) <*>
-                mkAddParam (items ^. Sugar.tlAddFirst) prevId
-                <> (traverse (makeParam annotationOpts) itemsR <&> concat)
-            , label (Styled.label Texts.recordCloser)
-            ]
-            <&> (,) addFirstEventMap
-    where
-        label x = Styled.grammar x <&> Responsive.fromTextView

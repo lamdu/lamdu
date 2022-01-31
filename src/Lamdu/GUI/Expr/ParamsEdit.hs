@@ -5,6 +5,8 @@ module Lamdu.GUI.Expr.ParamsEdit
     , makeLhs
     ) where
 
+import           GUI.Momentu.Direction (Orientation(..), Order(..))
+import           GUI.Momentu.Widgets.StdKeys (dirKey)
 import           Control.Applicative ((<|>))
 import qualified Control.Lens as Lens
 import           Data.CurAndPrev (CurAndPrev, current)
@@ -187,7 +189,7 @@ makeBody ::
     GuiM env i o (EventMap (o GuiState.Update), Responsive o)
 makeBody isLet annotationOpts delVarBackwardsId lhsId rhsId params =
     case params of
-    Sugar.LhsRecord items -> ParamEdit.makeParams annotationOpts delVarBackwardsId rhsId items
+    Sugar.LhsRecord items -> makeParams annotationOpts delVarBackwardsId rhsId items
     Sugar.LhsVar p | p ^. Sugar.vIsNullParam ->
         Widget.weakerEvents
         <$> ( Lens.view id <&>
@@ -224,3 +226,31 @@ makeBody isLet annotationOpts delVarBackwardsId lhsId rhsId params =
             tag = p ^. Sugar.vTag
             widgetId = tag ^. Sugar.oTag . Sugar.tagRefTag . Sugar.tagInstance & WidgetIds.fromEntityId
     & local (has . Menu.configKeysPickOptionAndGotoNext <>~ [noMods M.Key'Space])
+
+makeParams ::
+    _ =>
+    Annotation.EvalAnnotationOptions ->
+    Widget.Id -> Widget.Id ->
+    Sugar.TaggedList Name i o (Sugar.LhsField Name (Sugar.Annotation (Sugar.EvaluationScopes Name i) Name)) ->
+    GuiM env i o (EventMap (o GuiState.Update), Responsive o)
+makeParams annotationOpts prevId nextId items =
+    do
+        o <- Lens.view has <&> \d -> Lens.cloneLens . dirKey d Horizontal
+        keys <-
+            traverse Lens.view TaggedList.Keys
+            { TaggedList._kAdd = has . Config.addNextParamKeys
+            , TaggedList._kOrderBefore = has . Config.orderDirKeys . o Backward
+            , TaggedList._kOrderAfter = has . Config.orderDirKeys . o Forward
+            }
+        (addFirstEventMap, itemsR) <- TaggedList.make (has . Texts.parameter) keys prevId nextId items
+        (Options.box ?? Options.disambiguationNone) <*>
+            sequenceA
+            [ mkLabel (label Texts.recordOpener)
+            , (Options.boxSpaced ?? Options.disambiguationNone) <*>
+                ParamEdit.mkAddParam (items ^. Sugar.tlAddFirst) prevId
+                <> (traverse (ParamEdit.makeParam annotationOpts) itemsR <&> concat)
+            , mkLabel (label Texts.recordCloser)
+            ]
+            <&> (,) addFirstEventMap
+    where
+        mkLabel x = grammar x <&> Responsive.fromTextView
