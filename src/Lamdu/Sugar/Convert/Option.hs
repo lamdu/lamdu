@@ -20,6 +20,7 @@ import           Control.Monad ((>=>))
 import           Control.Monad.Once (OnceT)
 import           Control.Monad.Transaction (MonadTransaction(..))
 import qualified Data.ByteString.Extended as BS
+import           Data.Containers.ListUtils (nubOrd)
 import           Data.List (sortOn)
 import           Data.Property (MkProperty', getP, modP, pureModify, pVal)
 import qualified Data.Text as Text
@@ -442,7 +443,7 @@ makeOption dstPl res =
                 do
                     v <- resExpr ^? hVal . V._BLeaf . V._LVar
                     recordVars ^. Lens.at v
-                        <&> map (nameWithContext Nothing v) . (^.. Lens.folded)
+                        <&> map (nameWithContext Nothing v) . nubOrd . map head . (^.. Lens.folded)
 
         s <-
             convertBinder resExpr <&> annValue %~
@@ -540,15 +541,17 @@ makeLocals f scope =
             simpleResult
             <$> transaction (f typ (_Pure . V._BLeaf . V._LVar # var))
             <*> localName typ var
-        mkGetField ctx (var, tag) =
+        mkGetField ctx (var, tags) =
             simpleResult
-            <$> f typ (V.BLeafP (V.LGetField tag) `V.BAppP` V.BLeafP (V.LVar var) ^. hPlain)
-            <*> taggedVar var tag
+            <$> f typ (foldr V.BAppP (V.BLeafP (V.LVar var)) (reverse tags <&> V.BLeafP . V.LGetField) ^. hPlain)
+            <*> taggedVar var (last tags)
             where
                 typ =
-                    Infer.runPureInfer scope ctx
+                    foldl (\ty t -> ty ^?! _Pure . T._TRecord . T.flatRow . freExtends . Lens.ix t)
+                    (Infer.runPureInfer scope ctx
                     (instantiate (scope ^?! V.scopeVarTypes . Lens.ix var . _HFlip) >>= applyBindings)
-                    ^?! Lens._Right . _1 . _Pure . T._TRecord . T.flatRow . freExtends . Lens.ix tag
+                        ^?! Lens._Right . _1)
+                    tags
 
 mkEvalPrep :: ConvertPayload m -> EvalPrep
 mkEvalPrep pl =

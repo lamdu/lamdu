@@ -19,7 +19,7 @@ import qualified Data.Set as Set
 import           Hyper
 import           Hyper.Syntax (FuncType(..), funcIn)
 import           Hyper.Syntax.Nominal (NominalInst(..))
-import           Hyper.Syntax.Row (RowExtend(..), FlatRowExtends(..))
+import           Hyper.Syntax.Row (RowExtend(..), FlatRowExtends(..), freExtends, freRest)
 import qualified Hyper.Syntax.Row as Row
 import           Hyper.Type.Functor (F)
 import           Hyper.Type.Prune (Prune(..), _Unpruned)
@@ -298,11 +298,34 @@ fieldParamInfo binderKind tags fp storedLam tag =
                     , _fpUsages = []
                     , _fpVarInfo = vinfo
                     }
-                , _fSubFields = Nothing
+                , _fSubFields = subFields
                 }
             }
     where
         param = storedLam ^. slLam . V.tlIn
+        subFields =
+            fpFieldType fp
+            ^? _Pure . T._TRecord . T.flatRow . Lens.filteredBy (freRest . _Pure . T._REmpty) . freExtends
+            <&> (^@.. Lens.itraversed)
+            <&> Lens.mapped %~ makeSubField
+        makeSubField (subTag, subTyp) =
+            ( Tag
+                { _tagName = nameWithContext Nothing param subTag
+                , _tagInstance = subId
+                , _tagVal = subTag
+                }
+            , LhsField
+                { _fParam =
+                    FuncParam
+                    { _fpAnnotation = EvalPrep subTyp subId
+                    , _fpUsages = []
+                    , _fpVarInfo = VarGeneric -- TODO: Shouldn't matter!
+                    }
+                , _fSubFields = Nothing -- Don't support further nesting now
+                }
+            )
+            where
+                subId = EntityId.ofTaggedEntity param subTag
 
 changeGetFieldTags ::
     Monad m =>
@@ -375,6 +398,9 @@ setFieldParamTag mPresMode binderKind storedLam prevTagList prevTag =
     where
         storedParamType = storedLam ^. slLam . V.tlInType
 
+lhsFieldTags :: Lens.Getting _ (LhsField InternalName v) T.Tag
+lhsFieldTags = fSubFields . Lens._Just . Lens.folded . (_1 . tagVal <> _2 . lhsFieldTags)
+
 convertRecordParams ::
     Monad m =>
     Maybe (MkProperty' (T m) PresentationMode) -> BinderKind m -> [FieldParam] -> StoredLam m ->
@@ -382,6 +408,11 @@ convertRecordParams ::
 convertRecordParams mPresMode binderKind fieldParams storedLam =
     do
         ps <- traverse mkParam fieldParams
+        let allRecursiveFields = ps ^.. traverse . (tiTag . tagRefTag . tagVal <> tiValue . lhsFieldTags)
+        let hasDups = List.sort allRecursiveFields & List.group & Lens.has (traverse . Lens.ix 1)
+        let fixedParams
+                | hasDups = ps <&> tiValue . fSubFields .~ Nothing
+                | otherwise = ps
         postProcess <- ConvertM.postProcessAssert
         add <- addFieldParam
         let resultInfo () tag =
@@ -390,7 +421,7 @@ convertRecordParams mPresMode binderKind fieldParams storedLam =
                 (add DataOps.newHole binderKind storedLam (: (fieldParams <&> fpTag)) tag >> postProcess)
         addFirstSelection <-
             ConvertTag.replace (nameWithContext Nothing param) (Set.fromList tags) (pure ()) resultInfo >>= ConvertM . lift
-        ConvertTaggedList.convert addFirstSelection ps & LhsRecord & pure
+        ConvertTaggedList.convert addFirstSelection fixedParams & LhsRecord & pure
     where
         tags = fieldParams <&> fpTag
         param = storedLam ^. slLam . V.tlIn

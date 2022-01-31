@@ -107,7 +107,11 @@ instance AddLightLams (Term v InternalName i o) where
                 ) . tagRefTag . tagName
                 & Set.fromList
             isUsed = funcParams ^.. Lens.folded <&> (used ^.) . Lens.contains
+            allUsed =
+                and isUsed
+                -- Avoid light lambda with recursive destructure
+                && Lens.nullOf (lamFunc . fParams . _LhsRecord . SugarLens.taggedListItems . tiValue . fSubFields . Lens._Just) lam
         in
-        if and isUsed || not (or isUsed)
+        if allUsed || not (or isUsed)
         then lam & lamLightweight .~ True & lamFunc %~ markLightParams funcParams
         else lam

@@ -25,18 +25,21 @@ import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Menu as Menu
 import qualified GUI.Momentu.Widgets.TextView as TextView
 import qualified Lamdu.Config as Config
+import qualified Lamdu.Config.Theme.TextColors as TextColors
 import qualified Lamdu.GUI.Annotation as Annotation
 import qualified Lamdu.GUI.Expr.TagEdit as TagEdit
 import qualified Lamdu.GUI.LightLambda as LightLambda
+import qualified Lamdu.GUI.NameView as NameView
 import           Lamdu.GUI.Monad (GuiM)
 import qualified Lamdu.GUI.Monad as GuiM
 import qualified Lamdu.GUI.ParamEdit as ParamEdit
-import           Lamdu.GUI.Styled (grammar, label)
+import           Lamdu.GUI.Styled (grammar, label, withColor)
 import qualified Lamdu.GUI.TaggedList as TaggedList
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.I18N.Code as Texts
 import qualified Lamdu.I18N.CodeUI as Texts
 import           Lamdu.Name (Name(..))
+import qualified Lamdu.Style as Style
 import qualified Lamdu.Sugar.Lens as SugarLens
 import qualified Lamdu.Sugar.Types as Sugar
 
@@ -248,9 +251,39 @@ makeParams annotationOpts prevId nextId items =
             [ mkLabel (label Texts.recordOpener)
             , (Options.boxSpaced ?? Options.disambiguationNone) <*>
                 ParamEdit.mkAddParam (items ^. Sugar.tlAddFirst) prevId
-                <> (traverse (ParamEdit.makeParam annotationOpts) itemsR <&> concat)
+                <> (traverse makeParam itemsR <&> concat)
             , mkLabel (label Texts.recordCloser)
             ]
             <&> (,) addFirstEventMap
     where
         mkLabel x = grammar x <&> Responsive.fromTextView
+        makeParam x =
+            do
+                p <-
+                    foldr
+                    (`GuiState.assignCursor` myId)
+                    (ParamEdit.makeParam annotationOpts x)
+                    (x ^.. TaggedList.iValue . Sugar.fSubFields . Lens._Just . traverse . _1 . Sugar.tagInstance
+                        <&> WidgetIds.fromEntityId)
+                s <-
+                    traverse makeSubFields
+                    (x ^.. TaggedList.iValue . Sugar.fSubFields . Lens._Just)
+                    & local (M.animIdPrefix .~ Widget.toAnimId myId)
+                newP0 <- Options.box ?? Options.disambiguationNone ?? p ^.. Lens.ix 0 <> s
+                p & Lens.ix 0 .~ newP0 & pure
+            where
+                myId = x ^. TaggedList.iTag . Sugar.tagRefTag . Sugar.tagInstance & WidgetIds.fromEntityId
+        makeSubFields subFields =
+            (Options.box ?? Options.disambiguationNone) <*>
+            sequenceA
+            [ mkLabel (label Texts.recordOpener)
+            , (Options.boxSpaced ?? Options.disambiguationNone) <*> traverse makeSubField subFields
+            , mkLabel (label Texts.recordCloser)
+            ]
+        makeSubField (subTag, _) =
+            -- TODO: Recursive sub-fields
+            NameView.make (subTag ^. Sugar.tagName)
+            & withColor TextColors.variableColor
+            & local (\env -> env & has .~ env ^. has . Style.nameAtBinder)
+            <&> Responsive.fromTextView
+            & local (M.animIdPrefix .~ Widget.toAnimId (WidgetIds.fromEntityId (subTag ^. Sugar.tagInstance)))

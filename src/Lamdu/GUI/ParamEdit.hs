@@ -1,6 +1,5 @@
 module Lamdu.GUI.ParamEdit
-    ( addAnnotationAndEvents, eventMapAddNextParamOrPickTag, mkAddParam
-    , mkParamPickResult, makeParam
+    ( addAnnotationAndEvents, eventMapAddNextParamOrPickTag, mkAddParam, makeParam
     ) where
 
 import qualified Control.Lens as Lens

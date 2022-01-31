@@ -121,7 +121,7 @@ makeFunction lam exprPl =
                     ( case params of
                         LhsRecord r ->
                             (lam ^. V.tlIn) ~~>
-                            Set.fromList (r ^.. SugarLens.taggedListItems . tiTag . tagRefTag . tagVal)
+                            Set.fromList (r ^.. SugarLens.taggedListItems >>= mkTags)
                         _ -> Map.empty
                     )
                 & ConvertM.siNullParams <>~
@@ -140,6 +140,11 @@ makeFunction lam exprPl =
             }
     where
         chosenScopeProp = lam ^. V.tlIn & Anchors.assocScopeRef
+        mkTags item =
+            [] : (item ^.. tiValue . fSubFields . Lens._Just . traverse . _1 . tagVal <&> (:[]))
+            <&> (t:)
+            where
+                t = item ^. tiTag . tagRefTag . tagVal
 
 convertLam ::
     Monad m =>

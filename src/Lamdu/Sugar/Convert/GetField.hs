@@ -18,24 +18,32 @@ import           Lamdu.Sugar.Types
 
 import           Lamdu.Prelude
 
+getFieldChain :: Ann a # V.Term -> ([T.Tag], Ann a # V.Term)
+getFieldChain (Ann _ (V.BApp (App (Ann _ (V.BLeaf (V.LGetField tag))) rest))) =
+    getFieldChain rest & _1 %~ (tag:)
+getFieldChain x = ([], x)
+
 convertGetFieldParam ::
     Monad m => V.App V.Term # Ann (Input.Payload m) -> ConvertM m (Maybe (BodyU v m))
 convertGetFieldParam (V.App (Ann _ (V.BLeaf (V.LGetField tag))) recExpr) =
     Lens.view (ConvertM.scScopeInfo . ConvertM.siRecordParams) <&>
     \recParams ->
     do
-        param <- recExpr ^? ExprLens.valVar
+        param <- tailExpr ^? ExprLens.valVar
         tags <- recParams ^. Lens.at param
-        guard (tags ^. Lens.contains tag)
+        guard (tags ^. Lens.contains chain)
         LeafGetVar GetVar
             { _vNameRef = NameRef
-                { _nrName = nameWithContext Nothing param tag
+                { _nrName = nameWithContext Nothing param (last chain)
                 , _nrGotoDefinition = EntityId.ofTaggedEntity param tag & pure
                 }
             , _vForm = GetNormalVar
             , _vVar = param
             , _vInline = CannotInline
             } & BodyLeaf & Just
+    where
+        chain = reverse (tag:restTags)
+        (restTags, tailExpr) = getFieldChain recExpr
 convertGetFieldParam _ = pure Nothing
 
 convert ::

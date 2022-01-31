@@ -60,7 +60,7 @@ data RecursiveRef m = RecursiveRef
 Lens.makeLenses ''RecursiveRef
 
 data ScopeInfo m = ScopeInfo
-    { _siRecordParams :: Map V.Var (Set T.Tag)
+    { _siRecordParams :: Map V.Var (Set [T.Tag])
     , _siNullParams :: Set V.Var
     , -- Each let item potentially has an inline action
       _siLetItems :: Map V.Var (Sugar.EntityId -> Sugar.VarInline (T m))
