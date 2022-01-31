@@ -5,6 +5,7 @@ module Lamdu.Sugar.Convert.Binder.Float
     ) where
 
 import qualified Control.Lens as Lens
+import           Data.Containers.ListUtils (nubOrd)
 import qualified Data.Property as Property
 import qualified Data.Set as Set
 import           Hyper
@@ -174,10 +175,6 @@ addLetParam var lam val =
     where
         valStored = val & hflipped %~ hmap (const (^. Input.stored))
 
-{-# ANN ordNub ("HLint: ignore Use ^.."::String) #-}
-ordNub :: Ord a => [a] -> [a]
-ordNub = Set.toList . Set.fromList
-
 processLet ::
     Monad m =>
     V.TypedLam V.Var (HCompose Prune T.Type) V.Term # Ann (HRef m) ->
@@ -188,7 +185,7 @@ processLet lam val =
         scopeInfo <- Lens.view ConvertM.scScopeInfo
         let usedLocalVars =
                 val ^.. ExprLens.valLeafs . V._LVar
-                & ordNub
+                & nubOrd
                 & filter (\x -> innerScopeLocalVars ^. Lens.contains x)
         let varsExitingScope =
                 case scopeInfo ^. ConvertM.siFloatPos of

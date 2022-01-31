@@ -8,7 +8,7 @@ import           Control.Monad.Once (OnceT, _OnceT, evalOnceT)
 import           Control.Monad.State (mapStateT)
 import           Control.Monad.Unit (Unit(..))
 import           Data.Char (isAscii)
-import qualified Data.Map as Map
+import           Data.Containers.ListUtils (nubOrdOn)
 import qualified Data.Property as Property
 import qualified Data.Text as Text
 import           Data.Vector.Vector2 (Vector2(..))
@@ -514,9 +514,6 @@ testProgramGuiAtPos baseEnv enter =
         testActionsAndNavigation (GuiState.update upd baseEnv)
             (VirtualCursor (enter ^. Widget.enterResultRect))
 
-nubOn :: Ord k => (a -> k) -> [a] -> [a]
-nubOn f xs = (xs <&> (\x -> (f x, x)) & Map.fromList) ^.. Lens.folded
-
 programTest ::
     HasCallStack =>
     Env.Env -> FilePath -> IO ()
@@ -537,7 +534,7 @@ programTest baseEnv filename =
             Just enterPoint ->
                 Vector2 <$> [0, 0.1 .. 1] <*> [0, 0.3 .. 1] <&> (* size)
                 <&> enterPoint
-                & nubOn (^. Widget.enterResultRect)
+                & nubOrdOn (^. Widget.enterResultRect)
                 & traverse_ (testProgramGuiAtPos baseEnv)
 
 testPrograms :: Test
