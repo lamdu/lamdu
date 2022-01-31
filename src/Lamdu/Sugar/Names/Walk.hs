@@ -431,8 +431,8 @@ toExpression = toNode toBody
 withRecordParam ::
     (MonadNaming m, Walk m v0 v1) =>
     IsUnambiguous ->
-    TaggedItem (OldName m) (IM m) o (LhsField (OldName m) (IM m) o v0) ->
-    CPS m (TaggedItem (NewName m) (IM m) o (LhsField (NewName m) (IM m) o v1))
+    TaggedItem (OldName m) (IM m) o (LhsField (OldName m) v0) ->
+    CPS m (TaggedItem (NewName m) (IM m) o (LhsField (NewName m) v1))
 withRecordParam unambig (TaggedItem t d a v) =
     (`TaggedItem` d)
     <$> withTagRef unambig TaggedVar t
@@ -442,12 +442,17 @@ withRecordParam unambig (TaggedItem t d a v) =
 withLhsField ::
     (MonadNaming m, Walk m v0 v1) =>
     IsUnambiguous ->
-    LhsField (OldName m) (IM m) o v0 ->
-    CPS m (LhsField (NewName m) (IM m) o v1)
+    LhsField (OldName m) v0 ->
+    CPS m (LhsField (NewName m) v1)
 withLhsField unambig (LhsField v s) =
     LhsField
     <$> withFuncParam v
-    <*> Lens._Just (withLhsRecord unambig) s
+    <*> (Lens._Just . traverse) nested s
+    where
+        nested (t, f) =
+            (,)
+            <$> tagName (opWithName unambig TaggedVar) t
+            <*> withLhsField unambig f
 
 withFuncParam ::
     (MonadNaming m, Walk m v0 v1) =>
@@ -458,8 +463,8 @@ withFuncParam = fpAnnotation (liftCPS . walk)
 withLhsRecord ::
     (MonadNaming m, Walk m v0 v1) =>
     IsUnambiguous ->
-    TaggedList (OldName m) (IM m) o (LhsField (OldName m) (IM m) o v0) ->
-    CPS m (TaggedList (NewName m) (IM m) o (LhsField (NewName m) (IM m) o v1))
+    TaggedList (OldName m) (IM m) o (LhsField (OldName m) v0) ->
+    CPS m (TaggedList (NewName m) (IM m) o (LhsField (NewName m) v1))
 withLhsRecord u (TaggedList addFirst items) =
     TaggedList
     <$> liftCPS (opRun <&> \run -> addFirst >>= run . walk)

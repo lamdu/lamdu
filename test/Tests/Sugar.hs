@@ -593,7 +593,7 @@ testParamsOrder =
                 params2 <- readTags
                 assertEq "params should be same" params0 params2
     where
-        funcParams :: Lens.Traversal' (WorkArea v n i o a) (TaggedListBody n i o (LhsField n i o v))
+        funcParams :: Lens.Traversal' (WorkArea v n i o a) (TaggedListBody n i o (LhsField n v))
         funcParams =
             replBinder . _BinderLet . lValue .
             hVal . _BodyFunction . fParams . _LhsRecord . tlItems . Lens._Just
@@ -619,7 +619,7 @@ testAddToInferredParamList =
             hVal . bBody . _BinderTerm . _BodyIfElse . iElse .
             hVal . _SimpleElse . _BodyLam . lamFunc . fBody .
             hVal . bBody . _BinderTerm
-        lamBodyParams :: Lens.Traversal' (Term v n i o # k) (TaggedItem n i o (LhsField n i o v))
+        lamBodyParams :: Lens.Traversal' (Term v n i o # k) (TaggedItem n i o (LhsField n v))
         lamBodyParams = _BodyLam . lamFunc . fParams . _LhsRecord . SugarLens.taggedListItems
 
 testInfixWithArgParens :: Test

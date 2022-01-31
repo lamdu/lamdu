@@ -272,8 +272,7 @@ fieldParamInfo ::
     Monad m =>
     BinderKind m -> [T.Tag] -> FieldParam -> StoredLam m ->
     TagRef InternalName (OnceT (T m)) (T m) ->
-    ConvertM m (TaggedItem InternalName (OnceT (T m)) (T m)
-        (LhsField InternalName (OnceT (T m)) (T m) EvalPrep))
+    ConvertM m (TaggedItem InternalName (OnceT (T m)) (T m) (LhsField InternalName EvalPrep))
 fieldParamInfo binderKind tags fp storedLam tag =
     do
         postProcess <- ConvertM.postProcessAssert

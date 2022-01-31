@@ -146,14 +146,14 @@ data Var name i o v = Var
     } deriving (Generic, Functor, Foldable, Traversable)
 
 -- TODO: Is there a standard term for this?
-data LhsField name i o v = LhsField
+data LhsField name v = LhsField
     { _fParam :: FuncParam v
-    , _fSubFields :: Maybe (TaggedList name i o (LhsField name i o v))
+    , _fSubFields :: Maybe [(Tag name, LhsField name v)]
     } deriving (Generic, Functor, Foldable, Traversable)
 
 data LhsNames name i o v
     = LhsVar (Var name i o v)
-    | LhsRecord (TaggedList name i o (LhsField name i o v))
+    | LhsRecord (TaggedList name i o (LhsField name v))
     deriving (Generic, Functor, Foldable, Traversable)
 
 -- VarInfo is used for:

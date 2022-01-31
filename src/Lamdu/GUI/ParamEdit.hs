@@ -99,7 +99,7 @@ mkAddParam addParam myId =
 makeParam ::
     _ =>
     Annotation.EvalAnnotationOptions ->
-    TaggedList.Item Name i o (Sugar.LhsField Name i o (Sugar.Annotation (Sugar.EvaluationScopes Name i) Name)) ->
+    TaggedList.Item Name i o (Sugar.LhsField Name (Sugar.Annotation (Sugar.EvaluationScopes Name i) Name)) ->
     GuiM env i o [Responsive o]
 makeParam annotationOpts item =
     (TagEdit.makeParamTag Nothing (item ^. TaggedList.iTag)
@@ -114,7 +114,7 @@ makeParams ::
     _ =>
     Annotation.EvalAnnotationOptions ->
     Widget.Id -> Widget.Id ->
-    Sugar.TaggedList Name i o (Sugar.LhsField Name i o (Sugar.Annotation (Sugar.EvaluationScopes Name i) Name)) ->
+    Sugar.TaggedList Name i o (Sugar.LhsField Name (Sugar.Annotation (Sugar.EvaluationScopes Name i) Name)) ->
     GuiM env i o (EventMap (o GuiState.Update), Responsive o)
 makeParams annotationOpts prevId nextId items =
     do
