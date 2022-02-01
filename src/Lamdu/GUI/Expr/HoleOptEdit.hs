@@ -48,5 +48,6 @@ make (Ann (Const pl) b) =
                 )
                 , grammar (label Texts.recordCloser) <&> Responsive.fromTextView
                 ] <&> respondToCursor
+        & local (M.animIdPrefix .~ Widget.toAnimId myId)
     where
         myId = WidgetIds.fromExprPayload pl
