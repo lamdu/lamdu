@@ -77,21 +77,19 @@ convertBinderBody rawExpr expr =
             BodySimpleApply (App (Ann lamPl (BodyLam lam)) argT) | supportLet ->
                 do
                     postProcess <- ConvertM.postProcessAssert
-                    convertBinderBody rawExpr argT >>=
-                        toAssignment binderKind <&>
+                    let del =
+                            do
+                                traverse_ (`SubExprs.getVarsToHole` (rawExpr & hflipped %~ hmap (const (^. Input.stored)))) mVar
+                                (lam ^. lamFunc . fBody . annotation . pStored
+                                    & replaceWith topStored)
+                                    <* postProcess
+                    convertBinderBody rawExpr argT >>= toAssignment binderKind <&>
                         \argA ->
                         expr
                         & annValue .~
                             BinderLet Let
-                            { _lValue = argA
-                            , _lNames =
-                                lam ^. lamFunc . fParams
-                                & _LhsVar . vDelete .~
-                                do
-                                    traverse_ (`SubExprs.getVarsToHole` (rawExpr & hflipped %~ hmap (const (^. Input.stored)))) mVar
-                                    lam ^. lamFunc . fBody . annotation . pStored
-                                        & replaceWith topStored & void
-                                    postProcess
+                            { _lValue = argA & annotation . pActions . delete . _Delete .~ del
+                            , _lNames = lam ^. lamFunc . fParams & _LhsVar . vDelete .~ void del
                             , _lBody = lam ^. lamFunc . fBody
                             }
                         & annotation . pLambdas <>~ [toUUID (lamPl ^. Lens._Wrapped . pStored . ExprIRef.iref)]
