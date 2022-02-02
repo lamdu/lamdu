@@ -1,5 +1,5 @@
 module Lamdu.GUI.ParamEdit
-    ( addAnnotationAndEvents, eventMapAddNextParamOrPickTag, mkAddParam, makeParam
+    ( addAnnotationAndEvents, addAnnotation, eventMapAddNextParamOrPickTag, mkAddParam, makeParam
     ) where
 
 import qualified Control.Lens as Lens
@@ -48,6 +48,23 @@ mkParamPickResult tagInstance =
         WidgetIds.fromEntityId tagInstance & TagEdit.addItemId & Just
     }
 
+addAnnotation ::
+    _ =>
+    Annotation.EvalAnnotationOptions ->
+    Sugar.FuncParam (Sugar.Annotation (Sugar.EvaluationScopes Name i) Name) ->
+    Widget.Id -> TextWidget o ->
+    GuiM env i o (Responsive o)
+addAnnotation annotationOpts param myId widget =
+    do
+        postProcessAnnotation <-
+            GuiState.isSubCursor ?? myId
+            <&> Annotation.postProcessAnnotationFromSelected
+        Annotation.maybeAddAnnotationWith annotationOpts postProcessAnnotation
+            (param ^. Sugar.fpAnnotation)
+            <&> (Widget.widget %~)
+            ?? Responsive.fromWithTextPos widget
+    & local (M.animIdPrefix .~ Widget.toAnimId myId)
+
 addAnnotationAndEvents ::
     _ =>
     Annotation.EvalAnnotationOptions ->
@@ -56,9 +73,6 @@ addAnnotationAndEvents ::
     GuiM env i o (Responsive o)
 addAnnotationAndEvents annotationOpts param myId widget =
     do
-        postProcessAnnotation <-
-            GuiState.isSubCursor ?? myId
-            <&> Annotation.postProcessAnnotationFromSelected
         env <- Lens.view id
         let eventMap =
                 foldMap
@@ -69,12 +83,8 @@ addAnnotationAndEvents annotationOpts param myId widget =
                         ])
                     . pure . WidgetIds.fromEntityId
                 ) (param ^? Sugar.fpUsages . traverse)
-        Annotation.maybeAddAnnotationWith annotationOpts postProcessAnnotation
-            (param ^. Sugar.fpAnnotation)
-            <&> (Widget.widget %~)
-            ?? Responsive.fromWithTextPos widget
+        addAnnotation annotationOpts param myId widget
             <&> M.weakerEvents eventMap
-    & local (M.animIdPrefix .~ Widget.toAnimId myId)
 
 mkAddParam :: _ => i (Sugar.TagChoice Name a) -> Widget.Id -> GuiM env i a [Responsive a]
 mkAddParam addParam myId =
