@@ -171,17 +171,24 @@ make ::
     GuiM env i o (EventMap (o GuiState.Update), Responsive o)
 make isLet mScopeCursor isScopeNavFocused delVarBackwardsId myId bodyId params =
     makeBody isLet annotationMode delVarBackwardsId myId bodyId params
-    & GuiM.withLocalMScopeId (mScopeCursor <&> Lens.traversed %~ (^. Sugar.bParamScopeId) . sBinderScope)
+    & fixScopeId
     where
         mCurCursor =
             do
                 ScopeNavIsFocused == isScopeNavFocused & guard
                 mScopeCursor ^. current
-        annotationMode =
-            Annotation.NeighborVals
-            (mCurCursor >>= sMPrevParamScope)
-            (mCurCursor >>= sMNextParamScope)
-            & Annotation.WithNeighbouringEvalAnnotations
+        fixScopeId
+            | isLet = id
+            | otherwise =
+                GuiM.withLocalMScopeId
+                (mScopeCursor <&> Lens.traversed %~ (^. Sugar.bParamScopeId) . sBinderScope)
+        annotationMode
+            | isLet = Annotation.NormalEvalAnnotation
+            | otherwise =
+                Annotation.NeighborVals
+                (mCurCursor >>= sMPrevParamScope)
+                (mCurCursor >>= sMNextParamScope)
+                & Annotation.WithNeighbouringEvalAnnotations
 
 makeBody ::
     _ =>

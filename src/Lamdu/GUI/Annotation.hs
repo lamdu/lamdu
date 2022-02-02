@@ -242,8 +242,6 @@ getAnnotationMode opt ann =
             case opt of
             NormalEvalAnnotation -> pure Nothing
             WithNeighbouringEvalAnnotations neighbors ->
-                -- neighbors <&> (>>= valOfScopePreferCur ann . (^. Sugar.bParamScopeId))
-                -- & Just
                 neighbors & traverse . Lens._Just %%~
                     GuiM.im . valOfScopePreferCur ann . (^. Sugar.bParamScopeId)
                 <&> traverse %~ join

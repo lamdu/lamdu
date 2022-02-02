@@ -8,6 +8,7 @@ module Lamdu.Sugar.Eval
 import qualified Control.Lens as Lens
 import           Data.CurAndPrev (CurAndPrev)
 import           Data.Kind (Type)
+import qualified Data.Map as Map
 import           Hyper
 import           Hyper.Class.Morph
 import           Hyper.Syntax.Nominal (NominalDecl)
@@ -98,7 +99,7 @@ instance AddEval i n Else where
 instance AddEval i n Function where
     addToBody ctx i x@Function{..} =
         x
-        { _fParams = addToParams ctx i _fParams
+        { _fParams = addToParams nomsMap lamApplies _fParams
         , _fBody = addToNode ctx _fBody
         , _fBodyScopes =
             ctx ^. evalResults
@@ -107,6 +108,12 @@ instance AddEval i n Function where
         }
         where
             EntityId u = i
+            nomsMap = ctx ^. nominalsMap
+            lamApplies =
+                ctx ^. evalResults
+                <&> (^. R.erAppliesOfLam . Lens.ix u)
+                <&> Map.fromList . (^.. traverse . traverse)
+
 
 instance AddEval i n IfElse
 instance AddEval i n LabeledApply
@@ -114,12 +121,15 @@ instance AddEval i n PostfixApply
 instance AddEval i n PostfixFunc
 
 instance AddEval i n Let where
-    addToBody r i l =
+    addToBody r _ l =
         l
         { _lValue = l ^. lValue & addToNode r
-        , _lNames = l ^. lNames & addToParams r i
+        , _lNames = l ^. lNames & addToParams (r ^. nominalsMap) vals
         , _lBody = l ^. lBody & addToNode r
         }
+        where
+            EntityId u = l ^. lValue . annotation . _3 . pEntityId
+            vals = r ^. evalResults <&> (^. R.erExprValues . Lens.ix u)
 
 instance AddEval i n Term where
     addToBody r i =
@@ -139,30 +149,28 @@ instance AddEval i n Term where
 
 addToParams ::
     Applicative i =>
-    AddEvalCtx -> EntityId ->
+    Map NominalId (Pure # NominalDecl T.Type) ->
+    CurAndPrev (Map ScopeId (R.Val ())) ->
     LhsNames n i o (Annotation EvalPrep n) ->
     LhsNames n i o (Annotation (EvaluationScopes InternalName i) n)
-addToParams ctx i =
+addToParams nomsMap lamApplies =
     \case
     LhsVar v ->
         v & vParam . fpAnnotation . _AnnotationVal %~
-            ConvertEval.param (EntityId.ofEvalOf (v ^. vTag . oTag . tagRefTag . tagInstance)) .
+            ConvertEval.results (EntityId.ofEvalOf (v ^. vTag . oTag . tagRefTag . tagInstance)) .
             appliesOfLam
         & LhsVar
     LhsRecord ps ->
         ps
-        & SugarLens.taggedListItems %~ fixItem (ctx ^. nominalsMap) lamApplies
+        & SugarLens.taggedListItems %~ fixItem nomsMap lamApplies
         & LhsRecord
     where
-        EntityId u = i
-        lamApplies = ctx ^. evalResults <&> (^. R.erAppliesOfLam . Lens.at u) <&> fromMaybe mempty
-        appliesOfLam v =
-            lamApplies <&> Lens.mapped . Lens.mapped . _2 %~ addTypes (ctx ^. nominalsMap) (v ^. eType)
+        appliesOfLam v = lamApplies <&> traverse %~ addTypes nomsMap (v ^. eType)
 
 fixItem ::
     Applicative i =>
     Map NominalId (Pure # NominalDecl T.Type) ->
-    CurAndPrev (Map ScopeId [(ScopeId, R.Val ())]) ->
+    CurAndPrev (Map ScopeId (R.Val ())) ->
     TaggedItem n i o (LhsField n (Annotation EvalPrep n)) ->
     TaggedItem n i o (LhsField n (Annotation (EvaluationScopes InternalName i) n))
 fixItem nomsMap lamApplies item =
@@ -173,7 +181,7 @@ fixItem nomsMap lamApplies item =
 fixLhsField ::
     Applicative i =>
     Map NominalId (Pure # NominalDecl T.Type) ->
-    CurAndPrev (Map ScopeId [(ScopeId, R.Val ())]) ->
+    CurAndPrev (Map ScopeId (R.Val ())) ->
     Tag n ->
     LhsField n (Annotation EvalPrep n) ->
     LhsField n (Annotation (EvaluationScopes InternalName i) n)
@@ -181,15 +189,15 @@ fixLhsField nomsMap lamApplies tag (LhsField p s) =
     LhsField
     (p <&> _AnnotationVal %~
         \v ->
-        apps <&> Lens.mapped . Lens.mapped . _2 %~ addTypes nomsMap (v ^. eType)
-        & ConvertEval.param (EntityId.ofEvalOf (tag ^. tagInstance))
+        apps <&> traverse %~ addTypes nomsMap (v ^. eType)
+        & ConvertEval.results (EntityId.ofEvalOf (tag ^. tagInstance))
     )
     (s <&> traverse %~
         \(t, f) ->
         (t, fixLhsField nomsMap apps t f)
     )
     where
-        apps = lamApplies <&> Lens.mapped . Lens.mapped . _2 %~ R.extractField () (tag ^. tagVal)
+        apps = lamApplies <&> traverse %~ R.extractField () (tag ^. tagVal)
 
 addToPayload ::
     Applicative i =>

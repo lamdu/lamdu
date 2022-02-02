@@ -83,11 +83,15 @@ instance MarkBodyAnnotations v BinderBody where
 instance  MarkBodyAnnotations v Let where
     markBodyAnnotations l =
         ( neverShowAnnotations
-        , l { _lValue = l ^. lValue & markNodeAnnotations
-            , _lNames = l ^. lNames & markParamAnnotations
+        , l { _lValue = val & annotation . _1 .~ neverShowAnnotations
+            , _lNames =
+                l ^. lNames & markParamAnnotations
+                & _LhsVar . traverse . _1 .~ val ^. annotation . _1
             , _lBody = l ^. lBody & markNodeAnnotations
             }
         )
+        where
+            val = l ^. lValue & markNodeAnnotations
 
 instance MarkBodyAnnotations v Assignment where
     markBodyAnnotations (BodyPlain (AssignPlain a b)) =
