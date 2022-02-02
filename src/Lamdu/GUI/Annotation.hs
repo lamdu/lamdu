@@ -137,7 +137,7 @@ makeEvaluationResultView res =
 data NeighborVals a = NeighborVals
     { prevNeighbor :: a
     , nextNeighbor :: a
-    } deriving (Functor, Foldable, Traversable)
+    } deriving (Functor, Foldable, Traversable, Show)
 
 makeEvalView ::
     _ =>
@@ -230,6 +230,7 @@ maybeAddAnnotationPl pl =
 data EvalAnnotationOptions
     = NormalEvalAnnotation
     | WithNeighbouringEvalAnnotations (NeighborVals (Maybe Sugar.BinderParamScopeId))
+    deriving Show
 
 getAnnotationMode ::
     Monad i =>
