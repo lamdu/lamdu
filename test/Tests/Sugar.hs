@@ -28,6 +28,7 @@ test =
     , updateDef
     , delParam
     , delInfixArg
+    , delLet
     , paramAnnotations
     , testChangeParam
     , testExtract
@@ -253,6 +254,16 @@ delInfixArg =
             | Lens.has afterDel workArea = pure ()
             | otherwise = error "Expected 1"
         afterDel = replBody . _BodyLeaf . _LeafLiteral . _LiteralNum
+
+delLet :: Test
+delLet =
+    testSugarActions "simple-let.json" [lift . void . (^?! letDel), verify]
+    & testCase "del-let"
+    where
+        letDel = replBinder . _BinderLet . lValue . annotation . plActions . delete . _Delete
+        verify workArea
+            | Lens.has (replBody . _BodyLeaf . _LeafLiteral . _LiteralNum) workArea = pure ()
+            | otherwise = error "Expected 1"
 
 testExtractForRecursion :: Test
 testExtractForRecursion =
