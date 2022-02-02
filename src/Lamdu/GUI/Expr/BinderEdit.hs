@@ -34,6 +34,7 @@ makeLetEdit :: _ => ExprGui.Body Sugar.Let i o -> Widget.Id -> GuiM env i o (Res
 makeLetEdit item myId =
     do
         env <- Lens.view id
+        delKeys <- Config.delKeys
         let eventMap =
                 foldMap
                 ( E.keysEventMapMovesCursor (env ^. has . Config.extractKeys)
@@ -44,6 +45,12 @@ makeLetEdit item myId =
                         ])
                     . fmap ExprEventMap.extractCursor
                 ) (item ^? Sugar.lValue . annotation . Sugar.plActions . Sugar.extract)
+                <>
+                foldMap
+                ( E.keysEventMapMovesCursor delKeys
+                    (E.toDoc env [has . MomentuTexts.edit, has . Texts.let_, has . MomentuTexts.delete])
+                    . fmap (const bodyId)
+                ) (item ^? Sugar.lNames . Sugar._LhsVar . Sugar.vDelete)
         (_, paramsEdit) <- ParamsEdit.make True (pure Nothing) ParamsEdit.ScopeNavNotFocused myId myId bodyId (item ^. Sugar.lNames)
         grammar (label Texts.let_)
             M./|/ Spacer.stdHSpace
