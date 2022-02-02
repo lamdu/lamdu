@@ -28,7 +28,7 @@ minNamePrec = 1
 
 -- Higher precedences are reserved for grammars
 maxNamePrec :: Prec
-maxNamePrec = 13
+maxNamePrec = 12
 
 class HasPrecedence a where
     -- | Returns a precedence between minNamePrec..maxNamePrec
