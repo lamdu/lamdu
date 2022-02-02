@@ -84,7 +84,7 @@ instance  MarkBodyAnnotations v Let where
     markBodyAnnotations l =
         ( neverShowAnnotations
         , l { _lValue = l ^. lValue & markNodeAnnotations
-            , _lNames = l ^. lNames & traverse %~ (,) showAnnotationWhenVerbose
+            , _lNames = l ^. lNames & markParamAnnotations
             , _lBody = l ^. lBody & markNodeAnnotations
             }
         )
@@ -107,9 +107,21 @@ instance MarkBodyAnnotations v Function where
         ( neverShowAnnotations
         , func
             { _fBody = func ^. fBody & markNodeAnnotations
-            , _fParams = func ^. fParams & traverse %~ (,) showAnnotationWhenVerbose
+            , _fParams = func ^. fParams & markParamAnnotations
             }
         )
+
+markParamAnnotations :: LhsNames n i o v -> LhsNames n i o (ShowAnnotation, v)
+markParamAnnotations (LhsVar v) = v <&> (,) showAnnotationWhenVerbose & LhsVar
+markParamAnnotations (LhsRecord r) = r <&> markLhsFieldAnnotations & LhsRecord
+
+markLhsFieldAnnotations :: LhsField n v -> LhsField n (ShowAnnotation, v)
+markLhsFieldAnnotations (LhsField f s) =
+    LhsField (f <&> (,) r) (s <&> traverse . _2 %~ markLhsFieldAnnotations)
+    where
+        r = case s of
+            Nothing -> showAnnotationWhenVerbose
+            Just{} -> neverShowAnnotations
 
 instance MarkBodyAnnotations v HoleOpt where
     markBodyAnnotations (HoleBinder t) = markBodyAnnotations t & _2 %~ HoleBinder

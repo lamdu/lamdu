@@ -280,10 +280,13 @@ makeParams annotationOpts prevId nextId items =
             , (Options.boxSpaced ?? Options.disambiguationNone) <*> traverse makeSubField subFields
             , mkLabel (label Texts.recordCloser)
             ]
-        makeSubField (subTag, _) =
+        makeSubField (subTag, f) =
             -- TODO: Recursive sub-fields
             NameView.make (subTag ^. Sugar.tagName)
             & withColor TextColors.variableColor
             & local (\env -> env & has .~ env ^. has . Style.nameAtBinder)
-            <&> Responsive.fromTextView
-            & local (M.animIdPrefix .~ Widget.toAnimId (WidgetIds.fromEntityId (subTag ^. Sugar.tagInstance)))
+            <&> M.tValue %~ Widget.fromView
+            >>= ParamEdit.addAnnotation annotationOpts (f ^. Sugar.fParam) subId
+            & local (M.animIdPrefix .~ Widget.toAnimId subId)
+            where
+                subId = WidgetIds.fromEntityId (subTag ^. Sugar.tagInstance)

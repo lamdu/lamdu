@@ -14,7 +14,8 @@ import           Hyper.Syntax.Nominal (NominalDecl)
 import           Lamdu.Calc.Lens (tIds)
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Data.Anchors as Anchors
-import           Lamdu.Eval.Results (EvalResults, erExprValues, erAppliesOfLam, erCompleted, extractField)
+import qualified Lamdu.Eval.Results as R
+import           Lamdu.Eval.Results (EvalResults)
 import           Lamdu.Eval.Results.Process (addTypes)
 import qualified Lamdu.Sugar.Convert.Eval as ConvertEval
 import           Lamdu.Sugar.Convert.Load (makeNominalsMap)
@@ -101,7 +102,7 @@ instance AddEval i n Function where
         , _fBody = addToNode ctx _fBody
         , _fBodyScopes =
             ctx ^. evalResults
-            <&> (^. erAppliesOfLam . Lens.ix u)
+            <&> (^. R.erAppliesOfLam . Lens.ix u)
             <&> Lens.mapped . Lens.mapped %~ BinderParamScopeId . (^. _1)
         }
         where
@@ -150,23 +151,45 @@ addToParams ctx i =
         & LhsVar
     LhsRecord ps ->
         ps
-        & SugarLens.taggedListItems %~ fixItem
+        & SugarLens.taggedListItems %~ fixItem (ctx ^. nominalsMap) lamApplies
         & LhsRecord
     where
         EntityId u = i
-        lamApplies = ctx ^. evalResults <&> (^. erAppliesOfLam . Lens.at u) <&> fromMaybe mempty
+        lamApplies = ctx ^. evalResults <&> (^. R.erAppliesOfLam . Lens.at u) <&> fromMaybe mempty
         appliesOfLam v =
             lamApplies <&> Lens.mapped . Lens.mapped . _2 %~ addTypes (ctx ^. nominalsMap) (v ^. eType)
-        fixItem taggedItem =
-            taggedItem & tiValue . traverse . _AnnotationVal %~
-            \v ->
-            lamApplies
-            <&> Lens.mapped . Lens.mapped . _2 %~
-                addTypes (ctx ^. nominalsMap) (v ^. eType) .
-                extractField () (t ^. tagVal)
-            & ConvertEval.param (EntityId.ofEvalOf (t ^. tagInstance))
-            where
-                t = taggedItem ^. tiTag . tagRefTag
+
+fixItem ::
+    Applicative i =>
+    Map NominalId (Pure # NominalDecl T.Type) ->
+    CurAndPrev (Map ScopeId [(ScopeId, R.Val ())]) ->
+    TaggedItem n i o (LhsField n (Annotation EvalPrep n)) ->
+    TaggedItem n i o (LhsField n (Annotation (EvaluationScopes InternalName i) n))
+fixItem nomsMap lamApplies item =
+    item & tiValue %~ fixLhsField nomsMap lamApplies tag
+    where
+        tag = item ^. tiTag . tagRefTag
+
+fixLhsField ::
+    Applicative i =>
+    Map NominalId (Pure # NominalDecl T.Type) ->
+    CurAndPrev (Map ScopeId [(ScopeId, R.Val ())]) ->
+    Tag n ->
+    LhsField n (Annotation EvalPrep n) ->
+    LhsField n (Annotation (EvaluationScopes InternalName i) n)
+fixLhsField nomsMap lamApplies tag (LhsField p s) =
+    LhsField
+    (p <&> _AnnotationVal %~
+        \v ->
+        apps <&> Lens.mapped . Lens.mapped . _2 %~ addTypes nomsMap (v ^. eType)
+        & ConvertEval.param (EntityId.ofEvalOf (tag ^. tagInstance))
+    )
+    (s <&> traverse %~
+        \(t, f) ->
+        (t, fixLhsField nomsMap apps t f)
+    )
+    where
+        apps = lamApplies <&> Lens.mapped . Lens.mapped . _2 %~ R.extractField () (tag ^. tagVal)
 
 addToPayload ::
     Applicative i =>
@@ -178,7 +201,7 @@ addToPayload ctx a =
     & _1 . _AnnotationVal %~
         \v ->
         ctx ^. evalResults
-        <&> (^. erExprValues . Lens.at u)
+        <&> (^. R.erExprValues . Lens.at u)
         <&> fromMaybe mempty
         <&> Lens.mapped %~ addTypes (ctx ^. nominalsMap) (v ^. eType)
         & ConvertEval.results (EntityId.ofEvalOf i)
@@ -208,6 +231,6 @@ addEvaluationResults cp r wa@(WorkArea panes repl globals) =
     ( panes <&> SugarLens.paneBinder %~ addToNode ctx)
     ( repl
         & replExpr %~ addToNode ctx
-        & replResult .~ (r <&> (^. erCompleted) & ConvertEval.completion cp)
+        & replResult .~ (r <&> (^. R.erCompleted) & ConvertEval.completion cp)
         )
     globals
