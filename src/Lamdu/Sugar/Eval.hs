@@ -99,7 +99,7 @@ instance AddEval i n Else where
 instance AddEval i n Function where
     addToBody ctx i x@Function{..} =
         x
-        { _fParams = addToParams nomsMap lamApplies _fParams
+        { _fParams = addToParams False nomsMap lamApplies _fParams
         , _fBody = addToNode ctx _fBody
         , _fBodyScopes =
             ctx ^. evalResults
@@ -124,7 +124,7 @@ instance AddEval i n Let where
     addToBody r _ l =
         l
         { _lValue = l ^. lValue & addToNode r
-        , _lNames = l ^. lNames & addToParams (r ^. nominalsMap) vals
+        , _lNames = l ^. lNames & addToParams True (r ^. nominalsMap) vals
         , _lBody = l ^. lBody & addToNode r
         }
         where
@@ -149,52 +149,57 @@ instance AddEval i n Term where
 
 addToParams ::
     Applicative i =>
+    Bool ->
     Map NominalId (Pure # NominalDecl T.Type) ->
     CurAndPrev (Map ScopeId (R.Val ())) ->
     LhsNames n i o (Annotation EvalPrep n) ->
     LhsNames n i o (Annotation (EvaluationScopes InternalName i) n)
-addToParams nomsMap lamApplies =
+addToParams isLet nomsMap lamApplies =
     \case
     LhsVar v ->
         v & vParam . fpAnnotation . _AnnotationVal %~
-            ConvertEval.results (EntityId.ofEvalOf (v ^. vTag . oTag . tagRefTag . tagInstance)) .
+            (if isLet then ConvertEval.results else ConvertEval.param)
+            (EntityId.ofEvalOf (v ^. vTag . oTag . tagRefTag . tagInstance)) .
             appliesOfLam
         & LhsVar
     LhsRecord ps ->
         ps
-        & SugarLens.taggedListItems %~ fixItem nomsMap lamApplies
+        & SugarLens.taggedListItems %~ fixItem isLet nomsMap lamApplies
         & LhsRecord
     where
         appliesOfLam v = lamApplies <&> traverse %~ addTypes nomsMap (v ^. eType)
 
 fixItem ::
     Applicative i =>
+    Bool ->
     Map NominalId (Pure # NominalDecl T.Type) ->
     CurAndPrev (Map ScopeId (R.Val ())) ->
     TaggedItem n i o (LhsField n (Annotation EvalPrep n)) ->
     TaggedItem n i o (LhsField n (Annotation (EvaluationScopes InternalName i) n))
-fixItem nomsMap lamApplies item =
-    item & tiValue %~ fixLhsField nomsMap lamApplies tag
+fixItem isLet nomsMap lamApplies item =
+    item & tiValue %~ fixLhsField isLet nomsMap lamApplies tag
     where
         tag = item ^. tiTag . tagRefTag
 
 fixLhsField ::
     Applicative i =>
+    Bool ->
     Map NominalId (Pure # NominalDecl T.Type) ->
     CurAndPrev (Map ScopeId (R.Val ())) ->
     Tag n ->
     LhsField n (Annotation EvalPrep n) ->
     LhsField n (Annotation (EvaluationScopes InternalName i) n)
-fixLhsField nomsMap lamApplies tag (LhsField p s) =
+fixLhsField isLet nomsMap lamApplies tag (LhsField p s) =
     LhsField
     (p <&> _AnnotationVal %~
         \v ->
         apps <&> traverse %~ addTypes nomsMap (v ^. eType)
-        & ConvertEval.results (EntityId.ofEvalOf (tag ^. tagInstance))
+        & (if isLet then ConvertEval.results else ConvertEval.param)
+            (EntityId.ofEvalOf (tag ^. tagInstance))
     )
     (s <&> traverse %~
         \(t, f) ->
-        (t, fixLhsField nomsMap apps t f)
+        (t, fixLhsField isLet nomsMap apps t f)
     )
     where
         apps = lamApplies <&> traverse %~ R.extractField () (tag ^. tagVal)

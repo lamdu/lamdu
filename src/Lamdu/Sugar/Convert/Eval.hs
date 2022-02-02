@@ -219,10 +219,8 @@ results = convertEvalResultsWith . entityIdForEvalResult
 -- (deeply) nested scope
 param ::
     Applicative i =>
-    EntityId -> EvalScopes [(ScopeId, ERV)] -> EvaluationScopes InternalName i
-param entityId evalResults =
-    evalResults <&> (^.. Lens.folded . Lens.folded) <&> Map.fromList
-    & convertEvalResultsWith (entityIdForParam entityId)
+    EntityId -> EvalScopes ERV -> EvaluationScopes InternalName i
+param = convertEvalResultsWith . entityIdForParam
 
 completion ::
     Monad m =>
