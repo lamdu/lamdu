@@ -154,17 +154,13 @@ addToParams ctx i =
         & LhsRecord
     where
         EntityId u = i
+        lamApplies = ctx ^. evalResults <&> (^. erAppliesOfLam . Lens.at u) <&> fromMaybe mempty
         appliesOfLam v =
-            ctx ^. evalResults
-            <&> (^. erAppliesOfLam . Lens.at u)
-            <&> fromMaybe mempty
-            <&> Lens.mapped . Lens.mapped . _2 %~ addTypes (ctx ^. nominalsMap) (v ^. eType)
+            lamApplies <&> Lens.mapped . Lens.mapped . _2 %~ addTypes (ctx ^. nominalsMap) (v ^. eType)
         fixItem taggedItem =
             taggedItem & tiValue . traverse . _AnnotationVal %~
             \v ->
-            ctx ^. evalResults
-            <&> (^. erAppliesOfLam . Lens.at u)
-            <&> fromMaybe mempty
+            lamApplies
             <&> Lens.mapped . Lens.mapped . _2 %~
                 addTypes (ctx ^. nominalsMap) (v ^. eType) .
                 extractField () (t ^. tagVal)
