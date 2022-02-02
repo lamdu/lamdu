@@ -54,6 +54,7 @@ test =
     , testParamsOrder
     , testAddToInferredParamList
     , testInfixWithArgParens
+    , testNoParenForPrefixInInfix
     , testDisambig
     , testSuspendedHoleResultSimple
     , testSuspendedHoleResult
@@ -632,6 +633,18 @@ testAddToInferredParamList =
             hVal . bBody . _BinderTerm
         lamBodyParams :: Lens.Traversal' (Term v n i o # k) (TaggedItem n i o (LhsField n v))
         lamBodyParams = _BodyLam . lamFunc . fParams . _LhsRecord . SugarLens.taggedListItems
+
+testNoParenForPrefixInInfix :: Test
+testNoParenForPrefixInInfix =
+    testSugarActions "from-array-map.json" [verify]
+    & testCase "perfix-in-infix-no-parens"
+    where
+        verify workArea
+            | Lens.has expected workArea = pure ()
+            | otherwise = error "Expected no parens"
+        expected =
+            replBody . _BodyLabeledApply . aMOpArgs . Lens._Just . oaLhs .
+            annotation . plParenInfo . piNeedParens . Lens.only False
 
 testInfixWithArgParens :: Test
 testInfixWithArgParens =
