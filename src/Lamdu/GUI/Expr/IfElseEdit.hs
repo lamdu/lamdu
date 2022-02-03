@@ -137,11 +137,27 @@ renderRows mParensId =
 
 make :: _ => ExprGui.Expr Sugar.IfElse i o -> GuiM env i o (Responsive o)
 make (Ann (Const pl) ifElse) =
-    renderRows (ExprGui.mParensId pl)
-    <*>
-    ( (:)
-        <$> makeIfThen If animId ifElse
-        <*> makeElse animId (ifElse ^. Sugar.iElse)
-    ) & stdWrapParentExpr pl
+    do
+        rows <-
+            (:)
+            <$> makeIfThen If animId ifElse
+            <*> makeElse animId (ifElse ^. Sugar.iElse)
+        res <- renderRows (ExprGui.mParensId pl) ?? rows
+        case rows of
+            [if_, else_]
+                | Lens.has (Sugar.iThen . hVal . noLet) ifElse
+                && Lens.has (Sugar.iElse . hVal . Sugar._SimpleElse . noLet) ifElse ->
+                do
+                    hbox <-
+                        Options.hbox
+                        <*> maybe (pure id) (ResponsiveExpr.addParens ??) (ExprGui.mParensId pl)
+                        ?? id
+                    s <- Spacer.stdHSpace <&> Responsive.fromView
+                    Options.tryWideLayout hbox
+                        (if_ ^.. traverse <> [s, else_ ^. rKeyword, else_ ^. rPredicate, s, else_ ^. rResult])
+                        res & pure
+            _ -> pure res
+    & stdWrapParentExpr pl
     where
         animId = WidgetIds.fromExprPayload pl & Widget.toAnimId
+        noLet = Sugar._BodyLam . Sugar.lamFunc . Sugar.fBody . hVal . Sugar.bBody . Sugar._BinderTerm
