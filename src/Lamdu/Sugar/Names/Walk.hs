@@ -11,6 +11,7 @@ module Lamdu.Sugar.Names.Walk
     ) where
 
 import qualified Control.Lens as Lens
+import           Data.Bitraversable (Bitraversable(..))
 import           Data.Kind (Type)
 import           Data.Property (Property)
 import qualified Data.Set as Set
@@ -84,10 +85,8 @@ instance
     Walk m (CompositeFields a fa) (CompositeFields b fb) where
     walk (CompositeFields fields mExt) =
         CompositeFields
-        <$> traverse toField fields
+        <$> traverse (bitraverse (toTagOf Tag) walk) fields
         <*> Lens._Just (opGetName Nothing MayBeAmbiguous TypeVar) mExt
-        where
-            toField (tag, typ) = (,) <$> toTagOf Tag tag <*> walk typ
 
 instance (a ~ OldName m, b ~ NewName m) => Walk m (TId a o) (TId b o) where
     walk = tidName %%~ opGetName Nothing MayBeAmbiguous TaggedNominal
@@ -98,9 +97,9 @@ instance (a ~ OldName m, b ~ NewName m) => Walk m (Sugar.Type a o # Annotated p)
     walk (TRecord composite) = TRecord <$> walk composite
     walk (TVariant composite) = TVariant <$> walk composite
     walk (TInst tid params) =
-        TInst <$> walk tid <*> traverse f params
-        where
-            f (k, v) = (,) <$> opGetName Nothing MayBeAmbiguous TypeVar k <*> walk v
+        TInst
+        <$> walk tid
+        <*> traverse (bitraverse (opGetName Nothing MayBeAmbiguous TypeVar) walk) params
 
 instance (a ~ OldName m, b ~ NewName m) => Walk m (Annotated p # Sugar.Type a o) (Annotated p # Sugar.Type b o) where
     walk (Ann (Const pl) x) = walk x <&> Ann (Const pl)
@@ -447,12 +446,8 @@ withLhsField ::
 withLhsField unambig (LhsField v s) =
     LhsField
     <$> withFuncParam v
-    <*> (Lens._Just . traverse) nested s
-    where
-        nested (t, f) =
-            (,)
-            <$> tagName (opWithName unambig TaggedVar) t
-            <*> withLhsField unambig f
+    <*> (Lens._Just . traverse)
+        (bitraverse (tagName (opWithName unambig TaggedVar)) (withLhsField unambig)) s
 
 withFuncParam ::
     (MonadNaming m, Walk m v0 v1) =>

@@ -22,6 +22,7 @@ import           Control.Monad.Cont (ContT(..))
 import           Control.Monad.Trans.State (State, runState)
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Types as Json
+import           Data.Bitraversable (Bitraversable(..))
 import qualified Data.ByteString.Extended as BS
 import           Data.Either (fromRight)
 import           Data.IORef
@@ -248,13 +249,8 @@ completionError obj =
                 exceptionMStr <- x .:? "exception"
                 ER.decodeJsErrorException errTypeStr exceptionMStr
         <*> (
-            case (,) <$> (x .: "globalId") <*> (x .: "exprId") of
-            Left{} -> pure Nothing
-            Right (g, e) ->
-                (,)
-                <$> ER.decodeWhichGlobal g
-                ?? parseUUID e
-                <&> Just
+            ((,) <$> (x .: "globalId") <*> (x .: "exprId")) ^? Lens._Right
+            & Lens._Just (bitraverse ER.decodeWhichGlobal (pure . parseUUID))
         )
         & either error pure
 

@@ -12,6 +12,7 @@ import           Data.Aeson ((.:))
 import           Data.Aeson.Lens (_Object)
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Types as AesonTypes
+import           Data.Bitraversable (Bitraversable(..))
 import qualified Data.ByteString.Base16 as Hex
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.HashMap.Strict as HashMap
@@ -140,13 +141,8 @@ decodeIdentMap ::
 decodeIdentMap fromIdent decode json =
     Aeson.parseJSON json
     <&> Map.toList
-    >>= Lens.traverse %%~ decodePair
+    >>= traverse (bitraverse (fmap fromIdent . fromEither . identFromHex) decode)
     <&> Map.fromList
-    where
-        decodePair (k, v) =
-            (,)
-            <$> (identFromHex k & fromEither <&> fromIdent)
-            <*> decode v
 
 encodeSquash ::
     (Eq a, Monoid a, Aeson.ToJSON j) =>

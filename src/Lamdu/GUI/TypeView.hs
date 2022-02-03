@@ -4,6 +4,7 @@ module Lamdu.GUI.TypeView
     ) where
 
 import qualified Control.Lens as Lens
+import           Data.Bitraversable (Bitraversable(..))
 import qualified Data.ByteString.Char8 as BS8
 import qualified Data.Text as Text
 import           Data.Vector.Vector2 (Vector2(..))
@@ -151,10 +152,7 @@ makeField ::
     _ =>
     (Sugar.Tag Name, Annotated Sugar.EntityId # Sugar.Type Name o) ->
     m (WithTextPos View, WithTextPos View)
-makeField (tag, fieldType) =
-    (,)
-    <$> TagView.make tag
-    <*> makeInternal (Prec 0) fieldType
+makeField = bitraverse TagView.make (makeInternal (Prec 0))
 
 makeVariantField ::
     _ =>
@@ -162,7 +160,7 @@ makeVariantField ::
     m (WithTextPos View, WithTextPos View)
 makeVariantField (tag, Ann _ (Sugar.TRecord (Sugar.CompositeFields [] Nothing))) =
     TagView.make tag <&> (, Element.empty)
-makeVariantField (tag, fieldType) = makeField (tag, fieldType)
+makeVariantField t = makeField t
 
 gridViewTopLeftAlign :: _ => m (vert (horiz (Aligned View)) -> Aligned View)
 gridViewTopLeftAlign =
