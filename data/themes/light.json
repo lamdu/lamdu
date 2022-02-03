@@ -36,7 +36,7 @@
         },
         "grammarColor"                  : [0.1, 0.1, 0.2, 0.6],
         "literalColor"                  : [0.25, 0.5, 0.25, 1.0],
-        "nomColor"                      : [0.0, 0.0, 0.0, 0.5],
+        "nomColor"                      : [0.6, 0.45, 0.3, 1.0],
         "recordTailColor"               : [0.6, 0.6, 0.6, 1.0],
         "caseTailColor"                 : [0.42, 0.6, 0.42, 1.0],
         "foreignVarColor"               : [0.8, 0.55, 0.4, 1.0],
@@ -46,7 +46,7 @@
         "variableColor"              : [0.25, 0.4, 0.5, 1.0],
         "definitionColor"            : [0.5, 0.25, 0.5, 1.0],
         "collisionSuffixTextColor"   : [0, 0, 0, 1.0],
-        "recordTagColor"             : [0.25, 0.25, 0.25, 1.0],
+        "recordTagColor"             : [0.15, 0.3, 0.2, 1.0],
         "caseTagColor"               : [0.25, 0.5, 0.25, 1.0],
         "argTagColor"                : [0.35, 0.35, 0.35, 1.0]
     },

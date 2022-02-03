@@ -70,7 +70,7 @@
         },
         "grammarColor": [1.0, 1.0, 1.0, 1.0],
         "literalColor": [0.5, 1.0, 0.5, 1.0],
-        "nomColor": [1.0, 1.0, 1.0, 0.5],
+        "nomColor": [1.0, 1.0, 0.5, 1.0],
         "recordTailColor": [0.5, 0.5, 0.5, 1.0],
         "caseTailColor": [0.5, 1.0, 0.5, 1.0],
         "lightLambdaUnderlineColor": [1.0, 1.0, 1.0, 0.5],
@@ -80,7 +80,7 @@
         "variableColor": [0.5, 1.0, 1.0, 1.0],
         "definitionColor": [1.0, 0.5, 1.0, 1.0],
         "collisionSuffixTextColor": [1.0, 1.0, 1.0, 1.0],
-        "recordTagColor": [1.0, 1.0, 1.0, 1.0],
+        "recordTagColor": [0.5, 0.5, 0.5, 1.0],
         "caseTagColor": [0.5, 1.0, 0.5, 1.0],
         "argTagColor": [0.5, 0.5, 0.5, 1.0]
     },
