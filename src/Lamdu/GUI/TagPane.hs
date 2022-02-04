@@ -51,7 +51,7 @@ makeTagNameEdit :: _ => Property f Text -> Widget.Id -> m (TextWidget f)
 makeTagNameEdit prop myId =
     TextEdits.makeWordEdit
     ?? pure "  "
-    ?? prop
+    ?? (prop & Property.pSet %~ (. (Lens.ix 0 %~ Char.toLower)))
     ?? tagRenameId myId
     <&> Align.tValue . Widget.eventMapMaker . Lens.mapped %~ E.filterChars (`Set.notMember` disallowedNameChars)
 

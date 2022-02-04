@@ -13,6 +13,7 @@ module Lamdu.Data.Ops
 
 import qualified Control.Lens as Lens
 import qualified Data.ByteString.Extended as BS
+import           Data.Char (toLower)
 import           Data.Property (MkProperty', Property(..))
 import qualified Data.Property as Property
 import qualified Data.Set as Set
@@ -124,7 +125,8 @@ assocTagName =
                     | otherwise =
                         info
                         & tagSymbol .~ NoSymbol
-                        & tagTexts . Lens.at lang ?~ TextsInLang x Nothing Nothing
+                        & tagTexts . Lens.at lang ?~
+                            TextsInLang (x & Lens.ix 0 %~ toLower) Nothing Nothing
         isOperator = Lens.allOf Lens.each (`elem` Chars.operator)
     in  ExprIRef.readTagData tag
         <&> result

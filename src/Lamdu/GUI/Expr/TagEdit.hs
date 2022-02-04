@@ -94,7 +94,7 @@ makeNewTagPreEvent tagOpt =
     else
         Just Widget.PreEvent
         { Widget._pDesc = newNameText
-        , Widget._pAction = newTag searchTerm mkPickResult
+        , Widget._pAction = newTag (searchTerm & Lens.ix 0 %~ Char.toLower) mkPickResult
         , Widget._pTextRemainder = ""
         }
 
