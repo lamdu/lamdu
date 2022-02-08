@@ -22,7 +22,7 @@ import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified Lamdu.GUI.Expr.EventMap as ExprEventMap
 import           Lamdu.GUI.Monad (GuiM)
 import qualified Lamdu.GUI.Monad as GuiM
-import           Lamdu.GUI.Styled (label, grammar)
+import           Lamdu.GUI.Styled (label, grammar, addValFrame)
 import qualified Lamdu.GUI.Types as ExprGui
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.GUI.Wrap (stdWrapParentExpr)
@@ -148,9 +148,10 @@ make (Ann (Const pl) ifElse) =
                 | Lens.has (Sugar.iThen . hVal . noLet) ifElse
                 && Lens.has (Sugar.iElse . hVal . Sugar._SimpleElse . noLet) ifElse ->
                 do
+                    frame <- addValFrame
                     hbox <-
                         Options.hbox
-                        <*> maybe (pure id) (ResponsiveExpr.addParens ??) (ExprGui.mParensId pl)
+                        <*> (maybe (pure id) (ResponsiveExpr.addParens ??) (ExprGui.mParensId pl) <&> (frame .))
                         ?? id
                     s <- Spacer.stdHSpace <&> Responsive.fromView
                     Options.tryWideLayout hbox
