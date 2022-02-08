@@ -29,7 +29,8 @@ data Sugars a = Sugars
     , _literalText :: a
     , _nullaryInject :: a
     , _nullaryParameter :: a
-    , _parametersRecord :: a
+    , _destructure :: a
+    , _destructureNested :: a
     } deriving stock (Eq, Show, Functor, Generic, Generic1)
     deriving Applicative via Generically1 Sugars
 JsonTH.derivePrefixed "_" ''Sugars

@@ -28,7 +28,8 @@
             "literalText": true,
             "nullaryInject": true,
             "nullaryParameter": true,
-            "parametersRecord": true
+            "destructure": true,
+            "destructureNested": true
         }
     },
     "zoom": {
