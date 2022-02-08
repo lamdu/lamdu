@@ -170,7 +170,7 @@ makeOpenCase rest animId altsGui =
         (|---|) <- Glue.mkGlue ?? Glue.Vertical
         vbox <- Responsive.vboxWithSeparator
         vbox False
-            (separationBar (theme ^. Theme.textColors) animId <&> (|---| vspace))
+            (separationBar (theme ^. Theme.textColors) animId <&> (\x -> vspace |---| x |---| vspace))
             altsGui restExpr & pure
 
 closedCaseEventMap :: _ => env -> Sugar.ClosedCompositeActions o -> EventMap (o GuiState.Update)
