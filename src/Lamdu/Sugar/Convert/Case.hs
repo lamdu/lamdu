@@ -36,7 +36,9 @@ convert r@(RowExtend tag v rest) exprPl =
         valS <-
             ConvertM.convertSubexpression v
             <&> hVal . _BodyLam . lamApplyLimit .~ AtMostOneFuncApply
-        restS <- ConvertM.convertSubexpression rest
+        restS <-
+            ConvertM.convertSubexpression rest
+            <&> hVal . _BodyLam . lamApplyLimit .~ AtMostOneFuncApply
         let caseP =
                 Composite.ExtendVal
                 { Composite._extendTag = tag
