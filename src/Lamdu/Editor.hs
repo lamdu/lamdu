@@ -393,12 +393,16 @@ run opts rawDb =
         initialSettings <- EditorSettings.read
         let initialTheme = initialSettings ^. Settings.sSelectedTheme
         let initialLanguage = initialSettings ^. Settings.sSelectedLanguage
-        configSampler <- ConfigSampler.new (const refresh) initialTheme initialLanguage
+        cacheRef <- newIORef Nothing
+        let invalidate _ =
+                do
+                    writeIORef cacheRef Nothing
+                    refresh
+        configSampler <- ConfigSampler.new invalidate initialTheme initialLanguage
         (cache, cachedFunctions) <- Cache.make
         let Debug.EvaluatorM reportDb = monitors ^. Debug.database . Debug.mAction
         let db = Transaction.onStoreM reportDb rawDb
         let stateStorage = stateStorageInIRef db DbLayout.guiState
-        cacheRef <- newIORef Nothing
         withMVarProtection db $
             \dbMVar ->
             M.withGLFW $
