@@ -102,8 +102,8 @@ makeToNoms t tid =
 makeResultsSyntax :: Monad m => Pure # T.Type -> ConvertM.PositionInfo -> T m [Result (Pure # V.Term)]
 makeResultsSyntax typ posInfo =
     sequenceA
-    [ genLamVar <&> \v -> r (lamTexts typ) (V.BLamP v Pruned (V.BLeafP V.LHole))
-    , r recTexts (V.BLeafP V.LRecEmpty) & pure
+    [ r recTexts (V.BLeafP V.LRecEmpty) & pure
+    , genLamVar <&> \v -> r (lamTexts typ) (V.BLamP v Pruned (V.BLeafP V.LHole))
     , r caseTexts (V.BLeafP V.LAbsurd) & pure
     ] <>
     sequenceA
