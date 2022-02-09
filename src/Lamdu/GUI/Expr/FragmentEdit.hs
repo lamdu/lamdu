@@ -90,8 +90,14 @@ make (Ann (Const pl) fragment) =
             & local (has . Menu.configKeysPickOptionAndGotoNext <>~ [noMods ModKey.Key'Space])
             <&> Lens.mapped %~ Widget.weakerEventsWithoutPreevents delHealsEventMap
             <&> Lens.mapped %~ Widget.strongerEventsWithoutPreevents applyActionsEventMap
-        hbox <- ResponsiveExpr.boxSpacedMDisamb ?? ExprGui.mParensId pl
-
+        hbox <- Options.boxSpaced ?? Options.disambiguationNone
+        addParens <-
+            if pl ^. Sugar.plParenInfo . Sugar.piNeedParens
+            then
+                ResponsiveExpr.addParens ??
+                -- Use id of inner expr for better animations
+                Widget.toAnimId (fragment ^. Sugar.fExpr . annotation & WidgetIds.fromExprPayload)
+            else pure id
         addInnerType <-
             case fragment ^. Sugar.fTypeMismatch of
             Nothing -> pure id
@@ -99,15 +105,14 @@ make (Ann (Const pl) fragment) =
                 do
                     color <- Lens.view (has . Theme.errorColor)
                     animId <- Element.subAnimId ?? ["err-line"]
-                    spacing <- Lens.view
-                        (has . Theme.valAnnotation . ValAnnotation.valAnnotationSpacing)
+                    spacing <- Lens.view (has . Theme.valAnnotation . ValAnnotation.valAnnotationSpacing)
                     stdFontHeight <- Spacer.stdFontHeight
                     addInferredType mismatchedType shrinkValAnnotationsIfNeeded
                         <&> (lineBelow color animId (spacing * stdFontHeight) .)
             & Element.locallyAugmented ("inner type"::Text)
 
         hbox
-            [ fragmentExprGui
+            [ fragmentExprGui & Responsive.alignedWidget %~ addParens
             , Responsive.fromWithTextPos searchMenu
             ]
             & Widget.widget %~ addInnerType
