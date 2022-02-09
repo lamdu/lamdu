@@ -104,9 +104,12 @@ instance HasPrecedence name => AddParens (Term v name i o) where
                 , _iElse = Const (0, Precedence 0 0) :*: x ^. iElse
                 }
             )
-        BodyFragment     x -> (True, x & fExpr %~ (Const (13, pure 1) :*:) & BodyFragment)
+        BodyFragment x ->
+            ( parentPrec ^. before > 0 || parentPrec ^. after > 0
+            , x & fExpr %~ (Const (13, pure 1) :*:) & BodyFragment
+            )
         BodyNullaryInject x -> (False, unambiguousBody x & BodyNullaryInject)
-        BodyLeaf         x ->
+        BodyLeaf x ->
             -- A quite hacky rule for inject
             (Lens.has _LeafInject x && parentPrec ^. after /= 13, BodyLeaf x)
         where
