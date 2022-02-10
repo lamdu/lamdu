@@ -133,7 +133,7 @@ renderRows mParensId =
             \rows ->
             vbox (rows <&> vert)
             & Options.tryWideLayout table (Compose (prepareRows rows))
-            & Responsive.rWideDisambig %~ addParens
+            & Responsive.rWide . Responsive.lWideDisambig %~ addParens
 
 make :: _ => ExprGui.Expr Sugar.IfElse i o -> GuiM env i o (Responsive o)
 make (Ann (Const pl) ifElse) =

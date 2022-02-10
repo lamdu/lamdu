@@ -92,7 +92,7 @@ makeResult mkGui ctx res =
                 \w ->
                 Menu.RenderedOption
                 { Menu._rWidget =
-                    w ^. Responsive.rWide & M.tValue . Widget.enterResultCursor .~ resId
+                    w ^. Responsive.rWide . Responsive.lWide & M.tValue . Widget.enterResultCursor .~ resId
                     <&> mCreateNew
                     <&> Widget.widget . Widget.eventMapMaker . Lens.mapped %~ remUnwanted
                     <&> -- Disable strolling between hole results

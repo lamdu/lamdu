@@ -84,7 +84,7 @@ replExpr ::
 replExpr = Sugar.waRepl . Sugar.replExpr . hVal . Sugar.bBody . Sugar._BinderTerm
 
 wideFocused :: Lens.Traversal' (Responsive f) (Widget.Surrounding -> Widget.Focused (f GuiState.Update))
-wideFocused = Responsive.rWide . Align.tValue . Widget.wState . Widget._StateFocused
+wideFocused = Responsive.rWide . Responsive.lWide . Align.tValue . Widget.wState . Widget._StateFocused
 
 type SugarAnn = Sugar.Annotation (Sugar.EvaluationScopes Name (OnceT (T ViewM))) Name
 
@@ -253,7 +253,7 @@ testFragmentSize =
         guiCursorElseWhere <- convertAndMakeGui "" baseEnv
         unless (guiCursorOnFrag ^. sz == guiCursorElseWhere ^. sz) (error "fragment size inconsistent")
     where
-        sz = Responsive.rWide . Align.tValue . Element.size
+        sz = Responsive.rWide . Responsive.lWide . Align.tValue . Element.size
 
 -- | Test for issue #375
 -- https://trello.com/c/KFLJPNmO/375-operator-precedence-crosses-lambda-boundaries-add-test
@@ -521,7 +521,7 @@ programTest baseEnv filename =
     testProgram filename $
     do
         baseGui <- convertAndMakeGui "" baseEnv
-        let size = baseGui ^. Responsive.rWide . Align.tValue . Widget.wSize
+        let size = baseGui ^. Responsive.rWide . Responsive.lWide . Align.tValue . Widget.wSize
         let narrowSize =
                 (baseGui ^. Responsive.rNarrow) (Responsive.NarrowLayoutParams 0 False)
                 ^. Align.tValue . Widget.wSize
