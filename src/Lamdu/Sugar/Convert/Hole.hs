@@ -25,6 +25,7 @@ import qualified Lamdu.Sugar.Convert.Input as Input
 import           Lamdu.Sugar.Convert.Monad (ConvertM)
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
 import           Lamdu.Sugar.Convert.Option
+import           Lamdu.Sugar.Convert.Suggest
 import           Lamdu.Sugar.Internal
 import           Lamdu.Sugar.Types
 import qualified Revision.Deltum.Transaction as Transaction

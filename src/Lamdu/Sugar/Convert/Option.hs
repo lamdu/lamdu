@@ -8,7 +8,6 @@ module Lamdu.Sugar.Convert.Option
     , Matches, matchResult
     , TypeMatch(..)
     , makeTagRes, makeNoms, makeForType, makeLocals
-    , suggestVal, genLamVar, suggestRec, suggestCase
     , getListing, makeGlobals
     , tagTexts, recTexts, caseTexts, ifTexts, symTexts, lamTexts
     , makeOption
@@ -19,27 +18,23 @@ import qualified Control.Lens as Lens
 import           Control.Monad ((>=>))
 import           Control.Monad.Once (OnceT)
 import           Control.Monad.Transaction (MonadTransaction(..))
-import qualified Data.ByteString.Extended as BS
 import           Data.Containers.ListUtils (nubOrd)
 import           Data.List (sortOn)
 import           Data.Property (MkProperty', getP, modP, pureModify, pVal)
 import qualified Data.Text as Text
-import qualified Data.UUID as UUID
 import           GUI.Momentu.Direction (Layout(..))
 import           Hyper
 import           Hyper.Infer
 import           Hyper.Recurse
-import           Hyper.Syntax (FuncType(..), funcIn, funcOut)
-import           Hyper.Syntax.Nominal (NominalInst, nId, nScheme)
-import           Hyper.Syntax.Row (RowExtend(..), freExtends)
+import           Hyper.Syntax (funcIn)
+import           Hyper.Syntax.Nominal (nScheme)
+import           Hyper.Syntax.Row (freExtends)
 import           Hyper.Syntax.Scheme (sTyp)
 import           Hyper.Type.Functor (_F)
-import           Hyper.Type.Prune (Prune(..))
 import           Hyper.Unify (UVar, applyBindings, unify)
 import           Hyper.Unify.Generalize (instantiate)
 import qualified Lamdu.Annotations as Annotations
 import           Lamdu.Calc.Definition (Deps, depsNominals, depsGlobalTypes)
-import           Lamdu.Calc.Identifier (Identifier(..))
 import qualified Lamdu.Calc.Infer as Infer
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
@@ -60,6 +55,7 @@ import           Lamdu.Sugar.Convert.Binder.Params (mkVarInfo)
 import qualified Lamdu.Sugar.Convert.Input as Input
 import           Lamdu.Sugar.Convert.Monad (ConvertM)
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
+import           Lamdu.Sugar.Convert.Suggest (suggestTopLevelVal)
 import           Lamdu.Sugar.Internal
 import           Lamdu.Sugar.Internal.EntityId (EntityId(..))
 import           Lamdu.Sugar.Lens.Annotations (HAnnotations(..))
@@ -167,86 +163,6 @@ matchResult query result
     where
         e = [result ^. rExpr]
         s = query ^. qSearchTerm & Text.toLower
-
--- Suggest expression to fit a type.
--- Not used for subexpressions of suggested expression,
--- so may suggest multiple expressions.
-suggestTopLevelVal :: Monad m => Pure # T.Type -> T m [(Deps, Pure # V.Term)]
-suggestTopLevelVal t =
-    (t ^.. _Pure . T._TFun . funcIn . _Pure . T._TInst & foldMap suggestFromNom) <>
-    (t ^.. _Pure . T._TVariant & foldMap suggestVariantValues <&> Lens.mapped %~ (,) mempty) <>
-    ( suggestVal t
-        <&> (^? Lens.filtered (Lens.nullOf (_Pure . V._BLeaf . V._LHole)))
-        <&> Lens._Just %~ (,) mempty
-        <&> (^.. Lens._Just)
-    )
-    <&>
-    (<> ((t ^.. _Pure . T._TFun . funcOut . _Pure . T._TVariant >>= suggestInjectOrGetFields V.LInject)
-            <> (t ^.. _Pure . T._TFun . funcIn . _Pure . T._TRecord >>= suggestInjectOrGetFields V.LGetField)
-            <&> (,) mempty
-        )
-    )
-
-suggestFromNom :: Monad m => NominalInst NominalId T.Types # Pure -> Transaction m [(Deps, Pure # V.Term)]
-suggestFromNom n =
-    Load.nominal tid <&> (^.. Lens._Right) <&> Lens.mapped %~
-    \s -> (mempty & depsNominals . Lens.at tid ?~ s, _Pure . V._BLeaf . V._LFromNom # tid)
-    where
-        tid = n ^. nId
-
-suggestInjectOrGetFields :: (T.Tag -> V.Leaf) -> Pure # T.Row -> [Pure # V.Term]
-suggestInjectOrGetFields o t =
-    case t ^. _Pure of
-    T.RExtend (RowExtend tag _ rest) -> Pure (V.BLeaf (o tag)) : suggestInjectOrGetFields o rest
-    _ -> []
-
-suggestVariantValues :: Monad m => Pure # T.Row -> T m [Pure # V.Term]
-suggestVariantValues t =
-    case t ^. _Pure of
-    T.RExtend (RowExtend tag val rest) ->
-        (:)
-        <$> (suggestVal val <&> Pure . V.BApp . V.App (Pure (V.BLeaf (V.LInject tag))))
-        <*> suggestVariantValues rest
-    _ -> pure []
-
--- Suggest an expression to fit a type.
--- Used in suggested sub-expressions, so does not suggest to-noms.
-suggestVal :: Monad m => Pure # T.Type -> T m (Pure # V.Term)
-suggestVal t =
-    case t ^. _Pure of
-    T.TRecord r -> suggestRec r
-    T.TFun f ->
-        case f ^? funcIn . _Pure . T._TVariant of
-        Just r -> suggestCase r (f ^. funcOut)
-        Nothing ->
-            genLamVar <&>
-            \v -> _Pure . V._BLam # V.TypedLam v (_Pure . _HCompose # Pruned) (_Pure # V.BLeaf V.LHole)
-    _ -> _Pure # V.BLeaf V.LHole & pure
-
-suggestCase :: Monad m => Pure # T.Row -> Pure # T.Type -> T m (Pure # V.Term)
-suggestCase r t =
-    case r ^. _Pure of
-    T.RVar{} -> _Pure # V.BLeaf V.LHole & pure
-    T.REmpty -> _Pure # V.BLeaf V.LAbsurd & pure
-    T.RExtend (RowExtend tag fieldType rest) ->
-        RowExtend tag
-        <$> suggestVal (_Pure . T._TFun # FuncType fieldType t)
-        <*> suggestCase rest t
-        <&> (_Pure . V._BCase #)
-
-suggestRec :: Monad m => Pure # T.Row -> T m (Pure # V.Term)
-suggestRec t =
-    case t ^. _Pure of
-    T.RVar{} -> _Pure # V.BLeaf V.LHole & pure
-    T.REmpty -> _Pure # V.BLeaf V.LRecEmpty & pure
-    T.RExtend (RowExtend tag fieldType rest) ->
-        RowExtend tag
-        <$> suggestVal fieldType
-        <*> suggestRec rest
-        <&> (_Pure . V._BRecExtend #)
-
-genLamVar :: Monad m => T m V.Var
-genLamVar = Transaction.newKey <&> V.Var . Identifier . BS.strictify . UUID.toByteString
 
 makeTagRes ::
     Monad m =>
