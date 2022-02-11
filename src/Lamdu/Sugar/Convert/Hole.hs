@@ -27,7 +27,7 @@ import qualified Lamdu.Sugar.Convert.Monad as ConvertM
 import           Lamdu.Sugar.Convert.Option
 import           Lamdu.Sugar.Convert.Suggest
 import           Lamdu.Sugar.Internal
-import           Lamdu.Sugar.Types
+import qualified Lamdu.Sugar.Types as Sugar
 import qualified Revision.Deltum.Transaction as Transaction
 
 import           Lamdu.Prelude
@@ -76,12 +76,12 @@ convert posInfo holePl =
     -- If we remove all calls to convertOnce (replacing with "fmap pure"),
     -- they would flicker when editing the search term.
     & ConvertM.convertOnce
-    <&> BodyLeaf . LeafHole . (`Hole` mempty)
+    <&> Sugar.BodyLeaf . Sugar.LeafHole . (`Sugar.Hole` mempty)
     >>= addActions (Ann holePl (V.BLeaf V.LHole))
-    <&> annotation . pActions . delete .~ CannotDelete
-    <&> annotation . pActions . mApply .~ Nothing
+    <&> annotation . pActions . Sugar.delete .~ Sugar.CannotDelete
+    <&> annotation . pActions . Sugar.mApply .~ Nothing
 
-makeToNoms :: Monad m => Pure # T.Type -> NominalId -> T m [Result (Pure # V.Term)]
+makeToNoms :: Monad m => Pure # T.Type -> T.NominalId -> T m [Result (Pure # V.Term)]
 makeToNoms t tid =
     case t ^. _Pure of
     -- Many nominals (like Maybe, List) wrap a sum type, suggest their various injections
@@ -110,7 +110,7 @@ makeResultsSyntax typ posInfo =
     sequenceA
     [ genLamVar <&>
         \v ->
-        r (^.. qCodeTexts . Texts.let_)
+        r (^.. Sugar.qCodeTexts . Texts.let_)
         (V.BLamP v Pruned (V.BLeafP V.LHole) `V.BAppP` V.BLeafP V.LHole)
     | posInfo == ConvertM.BinderPos
     ] <>

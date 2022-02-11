@@ -45,7 +45,7 @@ import           Lamdu.Sugar.Convert.Option
 import           Lamdu.Sugar.Convert.Suggest
 import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
-import           Lamdu.Sugar.Types
+import qualified Lamdu.Sugar.Types as Sugar
 import           Revision.Deltum.Hyper (Write(..))
 import qualified Revision.Deltum.Transaction as Transaction
 
@@ -114,7 +114,7 @@ convertAppliedHole funcI exprPl argS =
                                 ]
                             )
                         } <&> (>>= traverse (makeOption exprPl))
-                        <&> Lens.mapped . traverse . rExpr . _2 . optionExpr %~ toFragOpt
+                        <&> Lens.mapped . traverse . rExpr . _2 . Sugar.optionExpr %~ toFragOpt
                         & traverse ConvertM.convertOnce
                 & ConvertM.convertOnce
             argOpts <-
@@ -142,37 +142,37 @@ convertAppliedHole funcI exprPl argS =
                 }
                 <&> toArg . (^. rExpr . _2)
                 & ConvertM.convertOnce
-            BodyFragment Fragment
-                { _fExpr =
+            Sugar.BodyFragment Sugar.Fragment
+                { Sugar._fExpr =
                     argS
-                    & annotation . pActions . detach .~ FragmentedAlready storedEntityId
-                    & annotation . pActions . delete .~
-                        SetToHole
+                    & annotation . pActions . Sugar.detach .~ Sugar.FragmentedAlready storedEntityId
+                    & annotation . pActions . Sugar.delete .~
+                        Sugar.SetToHole
                         (DataOps.setToHole stored <* postProcess <&> EntityId.ofValI)
-                    & annotation . pActions . mApply ?~ apply
-                , _fHeal =
+                    & annotation . pActions . Sugar.mApply ?~ apply
+                , Sugar._fHeal =
                     ( if isTypeMatch
                         then DataOps.replace stored argIRef <* postProcess
                         else argIRef <$ healMis (stored ^. iref)
                     )
                     <&> EntityId.ofValI
-                , _fTypeMismatch = typeMismatch
-                , _fOptions = opts <> argOpts <&> filterResults tagsProp (\outerMatch innerMatch -> (innerMatch, outerMatch))
-                , _fOptApply = optApply
-                , _fTagSuffixes = mempty
+                , Sugar._fTypeMismatch = typeMismatch
+                , Sugar._fOptions = opts <> argOpts <&> filterResults tagsProp (\outerMatch innerMatch -> (innerMatch, outerMatch))
+                , Sugar._fOptApply = optApply
+                , Sugar._fTagSuffixes = mempty
                 } & pure
-            >>= Actions.addActions (Ann exprPl (V.BApp (App funcI argI)))
+            >>= Actions.addActions (Ann exprPl (V.BApp (V.App funcI argI)))
             & lift
-        <&> annotation . pActions . detach .~ FragmentedAlready storedEntityId
+        <&> annotation . pActions . Sugar.detach .~ Sugar.FragmentedAlready storedEntityId
     where
         argI = argS ^. annotation . pUnsugared
-        toArg = optionExpr . annValue %~ FragArgument
+        toArg = Sugar.optionExpr . annValue %~ Sugar.FragArgument
         topRef = exprPl ^. Input.stored . ExprIRef.iref
         funcOpt = traverse . rExpr %~ makeFuncOpts
         argIRef = argI ^. hAnn . Input.stored . iref
         stored = exprPl ^. Input.stored
         storedEntityId = stored ^. iref & EntityId.ofValI
-        makeFuncOpts opt = emplaceArg argI <&> _2 %~ Ann (ExistingRef topRef) . V.BApp . App (writeNew opt)
+        makeFuncOpts opt = emplaceArg argI <&> _2 %~ Ann (ExistingRef topRef) . V.BApp . V.App (writeNew opt)
 
 applyArg :: Ann (Input.Payload m) # V.Term -> Pure # V.Term -> [(TypeMatch, Ann (Write m) # V.Term)]
 applyArg argI x =
@@ -221,8 +221,8 @@ transformArg topPl arg =
                     \c ->
                     emplaceArg arg
                     <&> _2 %~
-                        Ann WriteNew . V.BApp . App (writeNew c) .
-                        Ann WriteNew . V.BApp . App (Ann WriteNew (V.BLeaf (V.LFromNom tid)))
+                        Ann WriteNew . V.BApp . V.App (writeNew c) .
+                        Ann WriteNew . V.BApp . V.App (Ann WriteNew (V.BLeaf (V.LFromNom tid)))
                 )
             <*> (symTexts "." tid <&> (<> const (fromNomTexts tid)))
             <&> rDeps . depsNominals . Lens.at tid ?~ s
@@ -235,7 +235,7 @@ transformArg topPl arg =
             <&> Lens.mapped . rExpr %~
             \f ->
             emplaceArg arg
-            <&> _2 %~ Ann (ExistingRef (topPl ^. Input.stored . ExprIRef.iref)) . V.BApp . App (writeNew f)
+            <&> _2 %~ Ann (ExistingRef (topPl ^. Input.stored . ExprIRef.iref)) . V.BApp . V.App (writeNew f)
 
 makeLocal ::
     Monad m =>
@@ -247,55 +247,55 @@ makeLocal top arg typ val =
     T.TVar{} -> emplaceArg arg <&> _2 %~ r & Just & pure
     _ -> pure Nothing
     where
-        r = Ann (ExistingRef top) . V.BApp . App (writeNew val)
+        r = Ann (ExistingRef top) . V.BApp . V.App (writeNew val)
 
-toFragOpt :: Annotated (Payload a m) # HoleOpt v name i o -> Annotated (Payload a m) # FragOpt v name i o
+toFragOpt :: Annotated (Sugar.Payload a m) # Sugar.HoleOpt v name i o -> Annotated (Sugar.Payload a m) # Sugar.FragOpt v name i o
 toFragOpt o =
-    case o ^?! hVal . _HoleBinder . bBody of
-    BinderTerm (BodyPostfixApply (PostfixApply a f)) ->
+    case o ^?! hVal . Sugar._HoleBinder . Sugar.bBody of
+    Sugar.BinderTerm (Sugar.BodyPostfixApply (Sugar.PostfixApply a f)) ->
         reverse (f : match a)
-        <&> annotation . plActions . detach .~ o ^. annotation . plActions . detach
-        & FragPostfix & Ann (Const (f ^. annotation))
+        <&> annotation . Sugar.plActions . Sugar.detach .~ o ^. annotation . Sugar.plActions . Sugar.detach
+        & Sugar.FragPostfix & Ann (Const (f ^. annotation))
         where
-            match (Ann _ (BodyPostfixApply (PostfixApply a' f'))) = f' : match a'
+            match (Ann _ (Sugar.BodyPostfixApply (Sugar.PostfixApply a' f'))) = f' : match a'
             match _ = []
-    BinderTerm (BodySimpleApply a) ->
-        a ^. appFunc
+    Sugar.BinderTerm (Sugar.BodySimpleApply a) ->
+        a ^. V.appFunc
         & annValue %~
         \case
-        BodyLeaf (LeafInject x) -> FragInject x
-        BodyLeaf (LeafGetVar x) -> FragApplyFunc x
+        Sugar.BodyLeaf (Sugar.LeafInject x) -> Sugar.FragInject x
+        Sugar.BodyLeaf (Sugar.LeafGetVar x) -> Sugar.FragApplyFunc x
         _ -> error "unexpected result in fragment apply"
-    BinderTerm (BodyLabeledApply x) ->
-        FragOp FragOperator
-        { _oFunc = x ^. aFunc
-        , _oRightArg = x ^?! (aMOpArgs . Lens._Just . oaRhs <> aAnnotatedArgs . Lens.ix 1 . aaExpr)
-        , _oAnnotatedArgs = x ^.. aAnnotatedArgs . traverse . aaTag
+    Sugar.BinderTerm (Sugar.BodyLabeledApply x) ->
+        Sugar.FragOp Sugar.FragOperator
+        { Sugar._oFunc = x ^. Sugar.aFunc
+        , Sugar._oRightArg = x ^?! (Sugar.aMOpArgs . Lens._Just . Sugar.oaRhs <> Sugar.aAnnotatedArgs . Lens.ix 1 . Sugar.aaExpr)
+        , Sugar._oAnnotatedArgs = x ^.. Sugar.aAnnotatedArgs . traverse . Sugar.aaTag
         } & Ann (Const (o ^. annotation))
-    BinderTerm (BodyToNom n) -> n ^. nTId & FragToNom & Ann (Const (o ^. annotation))
-    BinderTerm (BodyIfElse i) -> i ^. iThen & FragIf & Ann (Const (o ^. annotation))
-    BinderTerm (BodyLam l) ->
+    Sugar.BinderTerm (Sugar.BodyToNom n) -> n ^. Sugar.nTId & Sugar.FragToNom & Ann (Const (o ^. annotation))
+    Sugar.BinderTerm (Sugar.BodyIfElse i) -> i ^. Sugar.iThen & Sugar.FragIf & Ann (Const (o ^. annotation))
+    Sugar.BinderTerm (Sugar.BodyLam l) ->
         o & annValue .~
-        if Lens.has (lamFunc . fParams . _LhsVar . vIsNullParam . Lens.only True) l
-        then FragDefer
-        else FragLam
-    BinderTerm (BodyRecord r) ->
-        r ^?! cList . tlItems . Lens._Just . tlHead . tiTag & FragWrapInRec & Ann (Const (o ^. annotation))
-    BinderTerm x -> error ("unexpected result in fragment result: " <> show (gconIndex x))
-    BinderLet{} -> error "let in fragment result"
+        if Lens.has (Sugar.lamFunc . Sugar.fParams . Sugar._LhsVar . Sugar.vIsNullParam . Lens.only True) l
+        then Sugar.FragDefer
+        else Sugar.FragLam
+    Sugar.BinderTerm (Sugar.BodyRecord r) ->
+        r ^?! Sugar.cList . Sugar.tlItems . Lens._Just . Sugar.tlHead . Sugar.tiTag & Sugar.FragWrapInRec & Ann (Const (o ^. annotation))
+    Sugar.BinderTerm x -> error ("unexpected result in fragment result: " <> show (gconIndex x))
+    Sugar.BinderLet{} -> error "let in fragment result"
     & fixActions
     where
         -- HACK: The options represent the function or transformation used,
         -- But we want actions (at least fragment) to represent the whole transformed expression.
         -- Not really clear that this is the clean way to do it..
-        fixActions = annotation . plActions . detach .~ o ^. annotation . plActions . detach
+        fixActions = annotation . Sugar.plActions . Sugar.detach .~ o ^. annotation . Sugar.plActions . Sugar.detach
 
 emplaceTag :: Monad m => FlatRowExtends T.Tag a b # h -> V.Var -> T m T.Tag
 emplaceTag r v =
     Anchors.assocPresentationMode v & getP >>=
     \case
-    Operator x _ -> pure x
-    Verbose ->
+    Sugar.Operator x _ -> pure x
+    Sugar.Verbose ->
         r ^.. freExtends . Lens.itraversed . Lens.asIndex
         & traverse (\x -> ExprIRef.readTagData x <&> \t -> (t ^. tagOrder, x))
         <&> snd . minimum . assertNotEmpty
@@ -306,7 +306,7 @@ emplaceTag r v =
 emplaceArg :: Ann (Input.Payload m) # V.Term -> [(TypeMatch, Ann (Write m) # V.Term)]
 emplaceArg arg =
     [ (TypeMatches, a)
-    , (TypeMismatch, App (Ann WriteNew (V.BLeaf V.LHole)) a & V.BApp & Ann WriteNew)
+    , (TypeMismatch, V.App (Ann WriteNew (V.BLeaf V.LHole)) a & V.BApp & Ann WriteNew)
     ]
     where
         a = arg & hflipped %~ hmap (const (ExistingRef . (^. Input.stored . ExprIRef.iref)))
@@ -328,14 +328,14 @@ emplaceExtendArg typ arg =
     in
     (TypeMatches, a) :
     (if length h == 1 then h else []) <>
-    [(TypeMismatch, App (Ann WriteNew (V.BLeaf V.LHole)) a & V.BApp & Ann WriteNew)]
+    [(TypeMismatch, V.App (Ann WriteNew (V.BLeaf V.LHole)) a & V.BApp & Ann WriteNew)]
     where
         a = arg & hflipped %~ hmap (const (ExistingRef . (^. Input.stored . ExprIRef.iref)))
 
 makeFromNom ::
     Monad m =>
     Input.Payload m # V.Term -> Ann (Input.Payload m) # V.Term ->
-    Pure # T.Type -> NominalId ->
+    Pure # T.Type -> T.NominalId ->
     T m (Result [(TypeMatch, Ann (Write m) # V.Term)])
 makeFromNom topPl arg t tid =
     case t ^. _Pure of
@@ -343,7 +343,7 @@ makeFromNom topPl arg t tid =
         suggestCase r (topPl ^. Input.inferredType) <&>
         \c ->
         simpleResult
-        (fromNom WriteNew <&> _2 %~ Ann WriteNew . V.BApp . App (writeNew c))
+        (fromNom WriteNew <&> _2 %~ Ann WriteNew . V.BApp . V.App (writeNew c))
         (const (fromNomTexts tid))
     _ -> simpleResult (fromNom (ExistingRef (topPl ^. Input.stored . ExprIRef.iref))) mempty & pure
     where
@@ -351,13 +351,13 @@ makeFromNom topPl arg t tid =
             emplaceArg arg
             <&> _2 %~ asHyper . Ann w . V.BApp . V.App (V._BLeaf . V._LFromNom # tid & Ann WriteNew)
 
-fromNomTexts :: NominalId -> QueryLangInfo -> [Text]
+fromNomTexts :: T.NominalId -> Sugar.QueryLangInfo -> [Text]
 fromNomTexts tid | tid == Builtins.boolTid = ifTexts
 fromNomTexts _ = caseTexts
 
 makeToNom ::
     Monad m =>
-    Ann (Input.Payload m) # V.Term -> Pure # T.Type -> NominalId ->
+    Ann (Input.Payload m) # V.Term -> Pure # T.Type -> T.NominalId ->
     T m [(TypeMatch, Ann (Write m) # V.Term)]
 makeToNom arg t tid =
     emplaceExtendArg t arg <&> Lens.mapped . _2 %~ Ann WriteNew . V.BToNom . V.ToNom tid
@@ -384,13 +384,13 @@ makeGetDef top arg v t =
                 <&> writeNew
             emplaceExtendArg (flat ^?! freExtends . Lens.ix e) arg
                 <&> traverse . _2 %~
-                    Ann WriteNew . V.BApp . App (Ann WriteNew (V.BLeaf (V.LVar v))) .
+                    Ann WriteNew . V.BApp . V.App (Ann WriteNew (V.BLeaf (V.LVar v))) .
                     Ann WriteNew . V.BRecExtend . ext rest
         where
             flat = r ^. T.flatRow
     typ ->
         emplaceExtendArg typ arg
-        <&> traverse . _2 %~ Ann (ExistingRef top) . V.BApp . App (Ann WriteNew (V.BLeaf (V.LVar v)))
+        <&> traverse . _2 %~ Ann (ExistingRef top) . V.BApp . V.App (Ann WriteNew (V.BLeaf (V.LVar v)))
 
 toOpName :: Text -> Text
 toOpName t = "." <> t <$ t ^? Lens._head . Lens.filtered Char.isAlpha & fromMaybe t

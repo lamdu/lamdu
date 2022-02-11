@@ -59,7 +59,7 @@ import           Lamdu.Sugar.Convert.Suggest (suggestTopLevelVal)
 import           Lamdu.Sugar.Internal
 import           Lamdu.Sugar.Internal.EntityId (EntityId(..))
 import           Lamdu.Sugar.Lens.Annotations (HAnnotations(..))
-import           Lamdu.Sugar.Types
+import qualified Lamdu.Sugar.Types as Sugar
 import           Revision.Deltum.Hyper (Write(..), writeRecursively)
 import qualified Revision.Deltum.IRef as IRef
 import           Revision.Deltum.Transaction (Transaction)
@@ -79,7 +79,7 @@ data Matches a = Matches
 Lens.makeLenses ''Matches
 
 data ResultQuery
-    = QueryTexts !(TagSuffixes -> QueryLangInfo -> [Text])
+    = QueryTexts !(Sugar.TagSuffixes -> Sugar.QueryLangInfo -> [Text])
     | QueryNewTag T.Tag
 Lens.makePrisms ''ResultQuery
 
@@ -92,7 +92,7 @@ data Result a = Result
     } deriving (Functor, Foldable, Traversable)
 Lens.makeLenses ''Result
 
-simpleResult :: a -> (TagSuffixes -> QueryLangInfo -> [Text]) -> Result a
+simpleResult :: a -> (Sugar.TagSuffixes -> Sugar.QueryLangInfo -> [Text]) -> Result a
 simpleResult expr texts =
     Result
     { _rDeps = mempty
@@ -121,17 +121,17 @@ filterResults ::
     (Monad m, Ord b) =>
     MkProperty' (T m) (Set T.Tag) ->
     (TypeMatch -> a -> b) ->
-    ResultGroups (OnceT (T m) [Result (a, Option t name i (T m))]) -> Query ->
-    OnceT (T m) [Option t name i (T m)]
+    ResultGroups (OnceT (T m) [Result (a, Sugar.Option t name i (T m))]) -> Sugar.Query ->
+    OnceT (T m) [Sugar.Option t name i (T m)]
 filterResults tagsProp order res query =
     resGroups <&> (^. traverse)
     where
         resGroups
-            | "" == query ^. qSearchTerm = groups (gForType <> gSyntax <> gLocals)
-            | "." `Text.isPrefixOf` (query ^. qSearchTerm) =
+            | "" == query ^. Sugar.qSearchTerm = groups (gForType <> gSyntax <> gLocals)
+            | "." `Text.isPrefixOf` (query ^. Sugar.qSearchTerm) =
                 groups (gForType <> gSyntax <> gDefs <> gFromNoms <> gGetFields)
-            | "'" `Text.isPrefixOf` (query ^. qSearchTerm) = groups (gForType <> gToNoms <> gInjects)
-            | "{" `Text.isPrefixOf` (query ^. qSearchTerm) =
+            | "'" `Text.isPrefixOf` (query ^. Sugar.qSearchTerm) = groups (gForType <> gToNoms <> gInjects)
+            | "{" `Text.isPrefixOf` (query ^. Sugar.qSearchTerm) =
                 groups (gForType <> gSyntax <> gWrapInRecs)
             | otherwise =
                 -- Within certain search-term matching level (exact/prefix/infix),
@@ -139,15 +139,15 @@ filterResults tagsProp order res query =
                 groups (gForType <> gLocals) <> groups (gSyntax <> gDefs <> gToNoms)
         groups f =
             f res
-            <&> Lens.mapped . Lens.filteredBy (rTexts . _QueryNewTag) <. rExpr . _2 . optionPick %@~
+            <&> Lens.mapped . Lens.filteredBy (rTexts . _QueryNewTag) <. rExpr . _2 . Sugar.optionPick %@~
                 (\t -> (modP tagsProp (Lens.contains t .~ True) <>))
             <&> foldMap (matchResult query)
             <&> fmap ((^.. traverse . _2) . sortOn s)
-        s (i, opt) = order (if opt ^. optionTypeMatch then TypeMatches else TypeMismatch) i
+        s (i, opt) = order (if opt ^. Sugar.optionTypeMatch then TypeMatches else TypeMismatch) i
 
-matchResult :: Query -> Result a -> Matches [a]
+matchResult :: Sugar.Query -> Result a -> Matches [a]
 matchResult query result
-    | query ^. qSearchTerm == "" && not (result ^. rAllowEmptyQuery) = mempty
+    | query ^. Sugar.qSearchTerm == "" && not (result ^. rAllowEmptyQuery) = mempty
     | otherwise =
         case result ^. rTexts of
         QueryTexts makeTexts
@@ -157,12 +157,12 @@ matchResult query result
             | otherwise -> mempty
             where
                 texts =
-                    makeTexts (query ^. qTagSuffixes) (query ^. qLangInfo)
+                    makeTexts (query ^. Sugar.qTagSuffixes) (query ^. Sugar.qLangInfo)
                     <&> Text.toLower >>= unicodeAlts
         QueryNewTag{} -> mempty & mCreateNew .~ e
     where
         e = [result ^. rExpr]
-        s = query ^. qSearchTerm & Text.toLower
+        s = query ^. Sugar.qSearchTerm & Text.toLower
 
 makeTagRes ::
     Monad m =>
@@ -187,10 +187,10 @@ makeTagRes newTag prefix f =
             , _rTexts = QueryNewTag newTag
             }
 
-taggedVar :: (Monad m, ToUUID a) => a -> T.Tag -> Transaction m (TagSuffixes -> QueryLangInfo -> [Text])
-taggedVar v t = ExprIRef.readTagData t <&> tagTexts (Just (TaggedVarId (toUUID v) t))
+taggedVar :: (Monad m, ToUUID a) => a -> T.Tag -> Transaction m (Sugar.TagSuffixes -> Sugar.QueryLangInfo -> [Text])
+taggedVar v t = ExprIRef.readTagData t <&> tagTexts (Just (Sugar.TaggedVarId (toUUID v) t))
 
-symTexts :: (Monad m, ToUUID a) => Text -> a -> T m (TagSuffixes -> QueryLangInfo -> [Text])
+symTexts :: (Monad m, ToUUID a) => Text -> a -> T m (Sugar.TagSuffixes -> Sugar.QueryLangInfo -> [Text])
 symTexts prefix tid =
     getP (Anchors.assocTag tid) >>= taggedVar tid
     <&> Lens.mapped . Lens.mapped . traverse %~ (prefix <>)
@@ -199,7 +199,7 @@ makeNoms ::
     Monad m =>
     [T.NominalId] ->
     Text ->
-    (Pure # T.Type -> NominalId -> T m [Result a]) ->
+    (Pure # T.Type -> T.NominalId -> T m [Result a]) ->
     ConvertM m [Result a]
 makeNoms avoid prefix f =
     getListing Anchors.tids >>= traverse (transaction . mk) <&> (^.. traverse . Lens._Just . traverse)
@@ -267,14 +267,14 @@ makeForType t =
             V.BApp (V.App (Pure (V.BLeaf (V.LInject tag))) _) -> symTexts "'" tag
             _ -> mempty
 
-tagTexts :: Maybe TaggedVarId -> Tag.Tag -> TagSuffixes -> QueryLangInfo -> [Text]
+tagTexts :: Maybe Sugar.TaggedVarId -> Tag.Tag -> Sugar.TagSuffixes -> Sugar.QueryLangInfo -> [Text]
 tagTexts v t suffixes l
-    | null names = l ^.. qNameTexts . Texts.unnamed
+    | null names = l ^.. Sugar.qNameTexts . Texts.unnamed
     | otherwise = names
     where
         names =
             t ^..
-            ( Tag.tagTexts . Lens.ix (l ^. qLangId) . (Tag.name <> Tag.abbreviation . Lens._Just)
+            ( Tag.tagTexts . Lens.ix (l ^. Sugar.qLangId) . (Tag.name <> Tag.abbreviation . Lens._Just)
                 <> Tag.tagSymbol . (Tag._UniversalSymbol <> Tag._DirectionalSymbol . dir)
             ) <&> addSuffix
         addSuffix =
@@ -282,31 +282,31 @@ tagTexts v t suffixes l
             Nothing -> id
             Just tv -> suffixes ^. Lens.at tv & maybe id (flip mappend . Text.pack . show)
         dir =
-            case l ^. qLangDir of
+            case l ^. Sugar.qLangDir of
             LeftToRight -> Tag.opLeftToRight
             RightToLeft -> Tag.opRightToLeft
 
-recTexts :: QueryLangInfo -> [Text]
-recTexts = (^.. qCodeTexts . Texts.recordOpener) <> (^.. qCodeTexts . Texts.recordCloser)
+recTexts :: Sugar.QueryLangInfo -> [Text]
+recTexts = (^.. Sugar.qCodeTexts . Texts.recordOpener) <> (^.. Sugar.qCodeTexts . Texts.recordCloser)
 
-caseTexts :: QueryLangInfo -> [Text]
-caseTexts = (<&> ("." <>)) . (^.. qCodeTexts . Texts.case_)
+caseTexts :: Sugar.QueryLangInfo -> [Text]
+caseTexts = (<&> ("." <>)) . (^.. Sugar.qCodeTexts . Texts.case_)
 
-lamTexts :: Pure # T.Type -> QueryLangInfo -> [Text]
+lamTexts :: Pure # T.Type -> Sugar.QueryLangInfo -> [Text]
 lamTexts typ =
-    (^.. qUITexts . Texts.lambda) <> const ("\\" : pipe)
+    (^.. Sugar.qUITexts . Texts.lambda) <> const ("\\" : pipe)
     where
         pipe = ["|" | Lens.has (_Pure . T._TFun . funcIn . _Pure . T._TRecord . _Pure . T._REmpty) typ]
 
-ifTexts :: QueryLangInfo -> [Text]
-ifTexts = (^.. qCodeTexts . Texts.if_)
+ifTexts :: Sugar.QueryLangInfo -> [Text]
+ifTexts = (^.. Sugar.qCodeTexts . Texts.if_)
 
 makeOption ::
     forall a m.
     Monad m =>
     Input.Payload m # V.Term ->
     Result [(a, Ann (Write m) # V.Term)] ->
-    ConvertM m (Result (a, Option HoleOpt InternalName (OnceT (T m)) (T m)))
+    ConvertM m (Result (a, Sugar.Option Sugar.HoleOpt InternalName (OnceT (T m)) (T m)))
 makeOption dstPl res =
     do
         curCtx <- Lens.view ConvertM.scInferContext
@@ -364,41 +364,41 @@ makeOption dstPl res =
         s <-
             convertBinder resExpr <&> annValue %~
                 case recordVarTags of
-                Just t -> const (HoleVarsRecord t)
-                Nothing -> HoleBinder
+                Just t -> const (Sugar.HoleVarsRecord t)
+                Nothing -> Sugar.HoleBinder
             & local (ConvertM.scInferContext .~ ctx1)
             & -- Updated deps are required to sugar labeled apply
                 Lens.locally (ConvertM.scFrozenDeps . pVal) (<> res ^. rDeps)
-            <&> markNodeAnnotations @_ @(HoleOpt (ShowAnnotation, EvalPrep) InternalName (OnceT (T m)) (T m))
+            <&> markNodeAnnotations @_ @(Sugar.HoleOpt (ShowAnnotation, EvalPrep) InternalName (OnceT (T m)) (T m))
             <&> hflipped %~ hmap (const (Lens._Wrapped %~
-                    \(showAnn, x) -> convertPayload x & plAnnotation %~ (,) showAnn
+                    \(showAnn, x) -> convertPayload x & Sugar.plAnnotation %~ (,) showAnn
                 ))
             -- We explicitly do want annotations of variables such as global defs to appear
-            <&> Lens.filteredBy (hVal . _HoleBinder . bBody . _BinderTerm . _BodyLeaf . _LeafGetVar) .
-                annotation . plAnnotation . _1 .~ alwaysShowAnnotations
-            <&> hVal . _HoleBinder . bBody . _BinderTerm . _BodySimpleApply . appFunc .
-                Lens.filteredBy (hVal . _BodyLeaf . _LeafGetVar) .
-                annotation . plAnnotation . _1 .~ alwaysShowAnnotations
+            <&> Lens.filteredBy (hVal . Sugar._HoleBinder . Sugar.bBody . Sugar._BinderTerm . Sugar._BodyLeaf . Sugar._LeafGetVar) .
+                annotation . Sugar.plAnnotation . _1 .~ alwaysShowAnnotations
+            <&> hVal . Sugar._HoleBinder . Sugar.bBody . Sugar._BinderTerm . Sugar._BodySimpleApply . Sugar.appFunc .
+                Lens.filteredBy (hVal . Sugar._BodyLeaf . Sugar._LeafGetVar) .
+                annotation . Sugar.plAnnotation . _1 .~ alwaysShowAnnotations
             >>= hAnnotations mkAnn
         depsProp <- Lens.view ConvertM.scFrozenDeps
         pick <- ConvertM.typeProtectedSetToVal ?? dstPl ^. Input.stored <&> Lens.mapped %~ void
         res & rExpr .~
             ( i
-            , Option
-                { _optionPick =
+            , Sugar.Option
+                { Sugar._optionPick =
                     do
                         pureModify depsProp (<> res ^. rDeps)
                         Transaction.merge changes
                         pick (written ^. hAnn . Input.stored . ExprIRef.iref)
-                , _optionExpr = s
-                , _optionTypeMatch = Lens.has Lens._Right unifyResult
-                , _optionMNewTag = res ^? rTexts . _QueryNewTag
+                , Sugar._optionExpr = s
+                , Sugar._optionTypeMatch = Lens.has Lens._Right unifyResult
+                , Sugar._optionMNewTag = res ^? rTexts . _QueryNewTag
                 }
             ) & pure
     where
         mkAnn x
-            | res ^. rWithTypeAnnotations = makeAnnotation Annotations.Evaluation x <&> _AnnotationVal .~ ()
-            | otherwise = pure AnnotationNone
+            | res ^. rWithTypeAnnotations = makeAnnotation Annotations.Evaluation x <&> Sugar._AnnotationVal .~ ()
+            | otherwise = pure Sugar.AnnotationNone
         mkPayload (stored :*: inferRes) =
             Input.Payload
             { Input._entityId = stored ^. ExprIRef.iref . _F & IRef.uuid & EntityId
@@ -476,18 +476,18 @@ mkEvalPrep pl =
     , _eEvalId = pl ^. pEntityId
     }
 
-convertPayload :: ConvertPayload m -> Payload EvalPrep (T m)
+convertPayload :: ConvertPayload m -> Sugar.Payload EvalPrep (T m)
 convertPayload pl =
-    Payload
-    { _plAnnotation = mkEvalPrep pl
-    , _plActions = pl ^. pActions
-    , _plEntityId = pl ^. pEntityId
-    , _plParenInfo = ParenInfo 0 False
-    , _plHiddenEntityIds = []
+    Sugar.Payload
+    { Sugar._plAnnotation = mkEvalPrep pl
+    , Sugar._plActions = pl ^. pActions
+    , Sugar._plEntityId = pl ^. pEntityId
+    , Sugar._plParenInfo = Sugar.ParenInfo 0 False
+    , Sugar._plHiddenEntityIds = []
     }
 
  -- Duplicate name-gen behaviour for locals
-localName :: MonadTransaction n m => Pure # T.Type -> V.Var -> m (TagSuffixes -> QueryLangInfo -> [Text])
+localName :: MonadTransaction n m => Pure # T.Type -> V.Var -> m (Sugar.TagSuffixes -> Sugar.QueryLangInfo -> [Text])
 localName typ var =
     do
         tag <- Anchors.assocTag var & getP & transaction
