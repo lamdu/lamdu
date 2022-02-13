@@ -89,6 +89,6 @@
     },
     "valAnnotation": {
         "bgColor": [0.0, 0.0, 0.0, 0.2],
-        "hoverBGColor": [0.2, 0.2, 0.2, 1.0]
+        "hoverBGColor": [0.0, 0.0, 0.0, 0.8]
     }
 }
