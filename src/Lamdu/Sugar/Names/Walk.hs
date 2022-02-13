@@ -1,4 +1,5 @@
 {-# LANGUAGE TypeFamilies, NamedFieldPuns, TemplateHaskell, MultiParamTypeClasses, FlexibleInstances #-}
+{-# LANGUAGE TypeApplications, ScopedTypeVariables #-}
 
 module Lamdu.Sugar.Names.Walk
     ( MonadNaming(..)
@@ -15,6 +16,7 @@ import           Data.Bitraversable (Bitraversable(..))
 import           Data.Kind (Type)
 import           Data.Property (Property)
 import qualified Data.Set as Set
+import           Hyper
 import           Hyper.Class.Morph (morphTraverse1)
 import           Hyper.Syntax (FuncType(..))
 import qualified Lamdu.Calc.Type as T
@@ -131,10 +133,14 @@ toBinderVarRef mDisambig (GetVar nameRef form var inline) =
 instance (a ~ OldName m, b ~ NewName m) => Walk m (GetVar a o) (GetVar b o) where
     walk = toBinderVarRef Nothing
 
-instance (a ~ OldName m, b ~ NewName m) => Walk m (ResRecord a p) (ResRecord b p) where
-    walk = recordFields . traverse . _1 %%~ toTagOf Tag
+instance (a ~ OldName m, b ~ NewName m) => Walk m (ResInject a # Annotated p) (ResInject b # Annotated p) where
+    walk (ResInject t v) = ResInject <$> toTagOf Tag t <*> (Lens._Just . annValue) walk v
 
-instance (a ~ OldName m, b ~ NewName m, Walk m p q) => Walk m (ResBody a p) (ResBody b q) where
+instance (a ~ OldName m, b ~ NewName m) => Walk m (ResTable a # Annotated p) (ResTable b # Annotated p) where
+    walk (ResTable t v) =
+        ResTable <$> traverse (toTagOf Tag) t <*> (traverse . traverse . annValue) walk v
+
+instance (a ~ OldName m, b ~ NewName m) => Walk m (Result a # Annotated p) (Result b # Annotated p) where
     walk =
         \case
         RFunc    x -> RFunc x & pure
@@ -143,22 +149,18 @@ instance (a ~ OldName m, b ~ NewName m, Walk m p q) => Walk m (ResBody a p) (Res
         RFloat   x -> RFloat x & pure
         RText    x -> RText x & pure
         RChar    x -> RChar x & pure
-        RArray   x -> RArray x & pure
-        RList    x -> RList x & pure
-        RTree    x -> RTree x & pure
-        RTable   x -> (rtHeaders . traverse) (toTagOf Tag) x <&> RTable
-        RRecord  x -> walk x <&> RRecord
-        RInject  x -> riTag (toTagOf Tag) x <&> RInject
-        <&> (>>= traverse walk)
-
-instance (a ~ OldName m, b ~ NewName m) => Walk m (ResVal a) (ResVal b) where
-    walk = resBody walk
+        RArray   x -> (traverse . annValue) walk x <&> RArray
+        RList    x -> annValue walk x <&> RList
+        RTree    x -> (morphTraverse1 @_ @_ @(Result a) @(Result b) . annValue) walk x <&> RTree
+        RTable   x -> walk x <&> RTable
+        RRecord  x -> traverse (bitraverse (toTagOf Tag) (annValue walk)) x <&> RRecord
+        RInject  x -> walk x <&> RInject
 
 instance (a ~ OldName m, b ~ NewName m, i ~ IM m) => Walk m (EvaluationScopes a i) (EvaluationScopes b i) where
     walk evalRes =
         opRun <&>
         \run ->
-        evalRes <&> traverse . traverse %~ (>>= run . walk)
+        evalRes <&> traverse . traverse %~ (>>= run . annValue walk)
 
 instance (a ~ OldName m, b ~ NewName m, Walk m va vb) => Walk m (Annotation va a) (Annotation vb b) where
     walk AnnotationNone = pure AnnotationNone

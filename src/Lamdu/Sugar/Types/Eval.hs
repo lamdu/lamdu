@@ -1,5 +1,5 @@
 -- | Sugared evaluation results
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TemplateHaskell, GADTs, TypeFamilies, MultiParamTypeClasses #-}
 module Lamdu.Sugar.Types.Eval
     ( EvalScopes
     , ParamScopes, EvaluationScopes
@@ -11,19 +11,17 @@ module Lamdu.Sugar.Types.Eval
     , EvalException(..), evalExceptionType, evalExceptionJumpTo
     , EvalCompletionResult(..), _EvalSuccess, _EvalError
     , EvalCompletion
-    , ResRecord(..), recordFields
     , ResTable(..), rtHeaders, rtRows
     , ResTree(..), rtRoot, rtSubtrees
-    , ResList(..), rsHead
     , ResInject(..), riTag, riVal
-    , ResBody(..)
+    , Result(..)
     , _RRecord, _RInject, _RFunc, _RArray, _RError, _RBytes, _RFloat
     , _RList, _RTree, _RText
-    , ResVal(..), resPayload, resBody
     ) where
 
 import qualified Control.Lens as Lens
 import           Data.CurAndPrev (CurAndPrev)
+import           Hyper
 import           Lamdu.Data.Anchors (BinderParamScopeId)
 import           Lamdu.Eval.Results (ScopeId)
 import qualified Lamdu.Eval.Results as ER
@@ -32,49 +30,36 @@ import           Lamdu.Sugar.Types.Tag
 
 import           Lamdu.Prelude
 
-newtype ResRecord name v = ResRecord
-    { _recordFields :: [(Tag name, v)]
-    } deriving stock (Functor, Foldable, Traversable, Generic)
-
-data ResInject name v = ResInject
+data ResInject name h = ResInject
     { _riTag :: Tag name
-    , _riVal :: Maybe v
-    } deriving (Functor, Foldable, Traversable, Generic)
+    , _riVal :: Maybe (h :# Result name)
+    } deriving Generic
 
-data ResTree v = ResTree
-    { _rtRoot :: v
-    , _rtSubtrees :: [v]
-    } deriving (Functor, Foldable, Traversable, Generic)
+data ResTree name h = ResTree
+    { _rtRoot :: h :# Result name
+    , _rtSubtrees :: [h :# Result name]
+    } deriving Generic
 
-data ResTable name v = ResTable
+data ResTable name h = ResTable
     { _rtHeaders :: [Tag name]
-    , _rtRows :: [[v]] -- All rows are same length as each other and the headers
-    } deriving (Functor, Foldable, Traversable, Generic)
+    , _rtRows :: [[h :# Result name]] -- All rows are same length as each other and the headers
+    } deriving Generic
 
-newtype ResList v = ResList
-    { _rsHead :: v
-    } deriving stock (Functor, Foldable, Traversable, Generic)
-
-data ResBody name v
-    = RRecord (ResRecord name v)
-    | RInject (ResInject name v)
+data Result name h
+    = RRecord [(Tag name, h :# Result name)]
+    | RInject (ResInject name h)
     | RFunc Int -- Identifier for function instance
-    | RArray [v] -- TODO: Vector here?
+    | RArray [h :# Result name]
     | RError ER.EvalTypeError
     | RBytes ByteString
     | RFloat Double
     -- Sugared forms:
-    | RTable (ResTable name v)
-    | RList (ResList v)
-    | RTree (ResTree v)
+    | RTable (ResTable name h)
+    | RList (h :# Result name) -- Only head is visible
+    | RTree (ResTree name h)
     | RText Text
     | RChar Char
-    deriving (Functor, Foldable, Traversable, Generic)
-
-data ResVal name = ResVal
-    { _resPayload :: EntityId
-    , _resBody :: ResBody name (ResVal name)
-    } deriving (Generic)
+    deriving Generic
 
 type EvalScopes a = CurAndPrev (Map ScopeId a)
 
@@ -88,7 +73,7 @@ type ParamScopes = EvalScopes [BinderParamScopeId]
 --
 -- Values are wrapped in an "i" action to avoid unnecessarily passing on all
 -- values during the names pass.
-type EvaluationScopes name i = CurAndPrev (Maybe (Map ScopeId (i (ResVal name))))
+type EvaluationScopes name i = CurAndPrev (Maybe (Map ScopeId (i (Annotated EntityId # Result name))))
 
 data EvalException o = EvalException
     { _evalExceptionType :: ER.Error
@@ -102,8 +87,9 @@ data EvalCompletionResult o
 
 type EvalCompletion o = CurAndPrev (Maybe (EvalCompletionResult o))
 
-traverse Lens.makeLenses
-    [''EvalException, ''ResInject, ''ResRecord, ''ResList, ''ResTable, ''ResTree, ''ResVal]
-    <&> concat
+traverse Lens.makeLenses [''EvalException, ''ResInject, ''ResTable, ''ResTree] <&> concat
 Lens.makePrisms ''EvalCompletionResult
-Lens.makePrisms ''ResBody
+Lens.makePrisms ''Result
+
+traverse makeHTraversableAndBases [''Result, ''ResTree, ''ResInject, ''ResTable] <&> concat
+traverse makeHMorph [''ResTree] <&> concat

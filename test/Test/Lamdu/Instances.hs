@@ -101,7 +101,7 @@ instance Eq (Sugar.TagPane f) where
 [makeDerivings [''Eq], makeInstances [''NFData]] ??
     [ ''Sugar.Annotation, ''Sugar.LhsField, ''Sugar.LhsNames, ''Sugar.CompositeFields
     , ''Sugar.DefinitionOutdatedType, ''Sugar.FuncParam, ''Sugar.Type
-    , ''Sugar.ResBody, ''Sugar.ResInject, ''Sugar.ResRecord, ''Sugar.ResTable
+    , ''Sugar.ResInject, ''Sugar.ResTable, ''Sugar.ResTree, ''Sugar.Result
     , ''Sugar.AnnotatedArg, ''Sugar.AssignPlain, ''Sugar.Assignment, ''Sugar.Binder, ''Sugar.BinderBody
     , ''Sugar.Composite, ''Sugar.CompositeTail, ''Sugar.OptionalTag
     , ''Sugar.TaggedItem, ''Sugar.TaggedSwappableItem, ''Sugar.TaggedList, ''Sugar.TaggedListBody
@@ -113,12 +113,10 @@ instance Eq (Sugar.TagPane f) where
     , ''Sugar.WorkArea, ''Sugar.VarInline, ''Sugar.ClosedCompositeActions, ''Sugar.Delete
     , ''Sugar.DetachAction, ''Sugar.EvalCompletionResult, ''Sugar.EvalException, ''Sugar.Hole
     , ''Sugar.Literal, ''Sugar.NodeActions, ''Sugar.NullParamActions, ''Sugar.Globals
-    , ''Sugar.ResList, ''Sugar.ResTree, ''Sugar.AddParam
-    , ''Sugar.VarForm, ''Sugar.Payload
-    , ''Sugar.DefinitionBuiltin, ''Sugar.DefinitionForm
+    , ''Sugar.AddParam, ''Sugar.VarForm, ''Sugar.Payload
+    , ''Sugar.DefinitionBuiltin, ''Sugar.DefinitionForm, ''Sugar.NominalPane
     , ''Sugar.GetVar, ''Sugar.Leaf, ''Sugar.NameRef, ''Sugar.Var
-    , ''Sugar.ResVal, ''Sugar.Scheme, ''Sugar.TagRef, ''Sugar.TagChoice, ''Sugar.TagOption
-    , ''Sugar.NominalPane
+    , ''Sugar.Scheme, ''Sugar.TagRef, ''Sugar.TagChoice, ''Sugar.TagOption
     ] & sequenceA <&> concat
 
 makeInstances [''NFData]

@@ -39,7 +39,7 @@ nullToNothing m
     | Map.null m = Nothing
     | otherwise = Just m
 
-convertPrimVal :: Pure # T.Type -> V.PrimVal -> ResBody name a
+convertPrimVal :: Pure # T.Type -> V.PrimVal -> Result name # Annotated EntityId
 convertPrimVal (Pure (T.TInst (NominalInst tid (T.Types (QVarInstances tp) (QVarInstances rp))))) p
     | isSimpleBuiltin Builtins.textTid =
         case PrimVal.toKnown p of
@@ -72,13 +72,13 @@ flattenRecord (Ann _ (ER.RRecExtend (RowExtend tag v rest))) =
 flattenRecord (Ann _ (ER.RError err)) = Left err
 flattenRecord _ = Left (EvalTypeError "Record extents non-record")
 
-convertNullaryInject :: EntityId -> ER.Inject # Ann a -> Maybe (ResVal InternalName)
+convertNullaryInject :: EntityId -> ER.Inject # Ann a -> Maybe (Annotated EntityId # Result InternalName)
 convertNullaryInject entityId (ER.Inject tag (Ann _ ER.RRecEmpty)) =
     RInject (ResInject (ConvertTag.withoutContext entityId tag) Nothing)
-    & ResVal entityId & Just
+    & Ann (Const entityId) & Just
 convertNullaryInject _ _ = Nothing
 
-convertList :: EntityId -> Pure # T.Type -> ER.Inject # Annotated (Pure # T.Type) -> Maybe (ResVal InternalName)
+convertList :: EntityId -> Pure # T.Type -> ER.Inject # Annotated (Pure # T.Type) -> Maybe (Annotated EntityId # Result InternalName)
 convertList entityId typ (ER.Inject _ x) =
     do
         Pure (T.TInst (NominalInst tid _)) <- Just typ
@@ -87,16 +87,16 @@ convertList entityId typ (ER.Inject _ x) =
         hd <- fields ^? Lens.ix Builtins.headTag & maybeToMPlus
         ER.RFunc{} <- fields ^? Lens.ix Builtins.tailTag . hVal & maybeToMPlus
         convertVal (EntityId.ofEvalField Builtins.headTag entityId) hd
-            & ResList & RList & ResVal entityId & Just
+             & RList & Ann (Const entityId) & Just
 
-simpleInject :: EntityId -> ER.Inject # Annotated (Pure # T.Type) -> ResVal InternalName
+simpleInject :: EntityId -> ER.Inject # Annotated (Pure # T.Type) -> Annotated EntityId # Result InternalName
 simpleInject entityId (ER.Inject tag x) =
     convertVal (EntityId.ofEvalField tag entityId) x
     & Just
     & ResInject (ConvertTag.withoutContext entityId tag) & RInject
-    & ResVal entityId
+    & Ann (Const entityId)
 
-convertInject :: EntityId -> Pure # T.Type -> ER.Inject # Annotated (Pure # T.Type) -> ResVal InternalName
+convertInject :: EntityId -> Pure # T.Type -> ER.Inject # Annotated (Pure # T.Type) -> Annotated EntityId # Result InternalName
 convertInject entityId typ inj =
     convertNullaryInject entityId inj
     <|> convertList entityId typ inj
@@ -104,12 +104,12 @@ convertInject entityId typ inj =
 
 convertPlainRecord ::
     EntityId -> Either EvalTypeError [(T.Tag, ERV)] ->
-    ResVal InternalName
-convertPlainRecord entityId (Left err) = RError err & ResVal entityId
+    Annotated EntityId # Result InternalName
+convertPlainRecord entityId (Left err) = RError err & Ann (Const entityId)
 convertPlainRecord entityId (Right fields) =
     fields
     <&> convertField
-    & ResRecord & RRecord & ResVal entityId
+    & RRecord & Ann (Const entityId)
     where
         convertField (tag, x) =
             convertVal (EntityId.ofEvalField tag entityId) x
@@ -117,7 +117,7 @@ convertPlainRecord entityId (Right fields) =
 
 convertTree ::
     EntityId -> Pure # T.Type -> Either e (Map T.Tag ERV) ->
-    Maybe (ResVal InternalName)
+    Maybe (Annotated EntityId # Result InternalName)
 convertTree entityId typ fr =
     do
         Right fields <- Just fr
@@ -130,14 +130,14 @@ convertTree entityId typ fr =
             , _rtSubtrees =
                 subtrees ^.. (hVal . ER._RArray) .> Lens.folded
                 & Lens.imapped %@~ convertSubtree
-            } & ResVal entityId & Just
+            } & Ann (Const entityId) & Just
     where
         convertSubtree idx =
             EntityId.ofEvalField Builtins.subtreesTag entityId
             & EntityId.ofEvalArrayIdx idx
             & convertVal
 
-convertRecord :: EntityId -> Pure # T.Type -> ERV -> ResVal InternalName
+convertRecord :: EntityId -> Pure # T.Type -> ERV -> Annotated EntityId # Result InternalName
 convertRecord entityId typ v =
     convertTree entityId typ (fr <&> snd)
     & fromMaybe (convertPlainRecord entityId (fr <&> fst))
@@ -145,13 +145,13 @@ convertRecord entityId typ v =
         fr = flattenRecord v
 
 -- | Array of records -> Record of arrays
-convertRecordArray :: EntityId -> [ResVal name] -> Maybe (ResVal name)
+convertRecordArray :: EntityId -> [Annotated EntityId # Result name] -> Maybe (Annotated EntityId # Result name)
 convertRecordArray entityId rows =
     do
         -- at least 2 rows:
         Lens.has (Lens.ix 1) rows & guard
         -- all eval to a record:
-        recordRows <- traverse (^? resBody . _RRecord) rows <&> map (^. recordFields)
+        recordRows <- traverse (^? hVal . _RRecord) rows
         -- get the record tags (# columns)
         tags <- recordRows ^? Lens.ix 0 <&> map fst
         -- At least 1 column should exist
@@ -161,7 +161,7 @@ convertRecordArray entityId rows =
         ResTable
             { _rtHeaders = tags
             , _rtRows = taggedRecordRows <&> toRow tagVals
-            } & RTable & ResVal entityId & Just
+            } & RTable & Ann (Const entityId) & Just
     where
         toRow tags rowFields
            | length tags /= length rowFields =
@@ -170,20 +170,20 @@ convertRecordArray entityId rows =
                traverse (`List.lookup` rowFields) tags
                & fromMaybe (error "makeArray: tags mismatch")
 
-convertArray :: EntityId -> Pure # T.Type -> [ERV] -> ResVal InternalName
+convertArray :: EntityId -> Pure # T.Type -> [ERV] -> Annotated EntityId # Result InternalName
 convertArray entityId _typ vs =
     convertRecordArray entityId vsS
-    & fromMaybe (RArray vsS & ResVal entityId)
+    & fromMaybe (RArray vsS & Ann (Const entityId))
     where
         vsS = Lens.imap convertElem vs
         convertElem idx = convertVal (EntityId.ofEvalArrayIdx idx entityId)
 
-convertVal :: EntityId -> ERV -> ResVal InternalName
-convertVal entityId (Ann _ (ER.RError err)) = RError err & ResVal entityId
-convertVal entityId (Ann _ (ER.RFunc i)) = RFunc i & ResVal entityId
-convertVal entityId (Ann _ ER.RRecEmpty) = ResRecord [] & RRecord & ResVal entityId
+convertVal :: EntityId -> ERV -> Annotated EntityId # Result InternalName
+convertVal entityId (Ann _ (ER.RError err)) = RError err & Ann (Const entityId)
+convertVal entityId (Ann _ (ER.RFunc i)) = RFunc i & Ann (Const entityId)
+convertVal entityId (Ann _ ER.RRecEmpty) = RRecord [] & Ann (Const entityId)
 convertVal entityId v@(Ann (Const typ) ER.RRecExtend{}) = convertRecord entityId typ v
-convertVal entityId (Ann (Const typ) (ER.RPrimVal p)) = convertPrimVal typ p & ResVal entityId
+convertVal entityId (Ann (Const typ) (ER.RPrimVal p)) = convertPrimVal typ p & Ann (Const entityId)
 convertVal entityId (Ann (Const typ) (ER.RInject x)) = convertInject entityId typ x
 convertVal entityId (Ann (Const typ) (ER.RArray x)) = convertArray entityId typ x
 

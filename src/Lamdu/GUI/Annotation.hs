@@ -121,7 +121,7 @@ processAnnotationGui postProcessAnnotation =
 
 data EvalResDisplay name = EvalResDisplay
     { erdSource :: CurPrevTag
-    , erdVal :: Sugar.ResVal name
+    , erdVal :: Annotated Sugar.EntityId # Sugar.Result name
     }
 
 makeEvaluationResultView :: _ => EvalResDisplay Name -> GuiM env i o (M.WithTextPos M.View)
@@ -167,7 +167,7 @@ makeEvalView mNeighbours evalRes =
             & pure
     where
         evalAnimId erd =
-            erdVal erd ^. Sugar.resPayload & WidgetIds.fromEntityId & Widget.toAnimId
+            erdVal erd ^. annotation & WidgetIds.fromEntityId & Widget.toAnimId
         makeEvaluationResultViewBG res =
             ( addAnnotationBackground
             & local (M.animIdPrefix .~ evalAnimId res)
@@ -208,8 +208,8 @@ addEvaluationResult ::
     EvalResDisplay Name -> PostProcessAnnotation (GuiM env i o) ->
     GuiM env i o (M.Widget f -> M.Widget f)
 addEvaluationResult mNeigh resDisp postProcess =
-    case erdVal resDisp ^. Sugar.resBody of
-    Sugar.RRecord (Sugar.ResRecord []) -> Styled.addBgColor Theme.evaluatedPathBGColor
+    case erdVal resDisp ^. hVal of
+    Sugar.RRecord [] -> Styled.addBgColor Theme.evaluatedPathBGColor
     Sugar.RFunc _ -> pure id
     _ -> addAnnotationH (makeEvalView mNeigh resDisp) (postProcess ValAnnotation)
 
