@@ -2,7 +2,7 @@
 {-# LANGUAGE ScopedTypeVariables, UndecidableInstances #-}
 
 module Lamdu.Sugar.OrderTags
-    ( orderWorkArea
+    ( orderWorkArea, orderType
     ) where
 
 import qualified Control.Lens as Lens

@@ -10,6 +10,7 @@ import           Lamdu.Sugar.Annotations
 import           Lamdu.Sugar.Internal
 import           Lamdu.Sugar.Internal.EntityId (EntityId)
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
+import           Lamdu.Sugar.OrderTags (orderType)
 import           Lamdu.Sugar.Convert.Type (convertType)
 import qualified Lamdu.Sugar.Types as Sugar
 
@@ -35,4 +36,4 @@ typeAnnotationFromEvalRes x =
 makeTypeAnnotation ::
     MonadTransaction n m =>
     EntityId -> Pure # T.Type -> m (Annotated EntityId # Sugar.Type InternalName Unit)
-makeTypeAnnotation = convertType . EntityId.ofTypeOf
+makeTypeAnnotation e t = convertType (EntityId.ofTypeOf e) t >>= orderType
