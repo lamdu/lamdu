@@ -195,6 +195,11 @@ symTexts prefix tid =
     getP (Anchors.assocTag tid) >>= taggedVar tid
     <&> Lens.mapped . Lens.mapped . traverse %~ (prefix <>)
 
+tagWithPrefix :: Monad m => Text -> T.Tag -> T m (Sugar.TagSuffixes -> Sugar.QueryLangInfo -> [Text])
+tagWithPrefix prefix t =
+    ExprIRef.readTagData t <&> tagTexts Nothing
+    <&> Lens.mapped . Lens.mapped . traverse %~ (prefix <>)
+
 makeNoms ::
     Monad m =>
     [T.NominalId] ->
@@ -262,9 +267,9 @@ makeForType t =
             V.BCase{} -> pure (const caseTexts)
             V.BLeaf V.LAbsurd -> pure (const caseTexts)
             V.BLeaf (V.LFromNom nomId) -> symTexts "." nomId
-            V.BLeaf (V.LGetField tag) -> symTexts "." tag
-            V.BLeaf (V.LInject tag) -> symTexts "'" tag
-            V.BApp (V.App (Pure (V.BLeaf (V.LInject tag))) _) -> symTexts "'" tag
+            V.BLeaf (V.LGetField tag) -> tagWithPrefix "." tag
+            V.BLeaf (V.LInject tag) -> tagWithPrefix "'" tag
+            V.BApp (V.App (Pure (V.BLeaf (V.LInject tag))) _) -> tagWithPrefix "'" tag
             _ -> mempty
 
 tagTexts :: Maybe Sugar.TaggedVarId -> Tag.Tag -> Sugar.TagSuffixes -> Sugar.QueryLangInfo -> [Text]
