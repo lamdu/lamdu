@@ -540,10 +540,10 @@ instance
     (a ~ OldName m, b ~ NewName m, i ~ IM m, Walk m pa pb) =>
     Walk m (Top WorkArea a i o pa) (Top WorkArea b i o pb) where
     walk WorkArea { _waPanes, _waRepl, _waGlobals } =
-        do
-            panes <- (traverse . paneBody) walk _waPanes
-            repl <- replExpr (toNode toBody) _waRepl
-            WorkArea panes repl <$> walk _waGlobals
+        WorkArea
+        <$> (traverse . paneBody) walk _waPanes
+        <*> replExpr (toNode toBody) _waRepl
+        <*> walk _waGlobals
 
 toWorkArea ::
     MonadNaming m =>
