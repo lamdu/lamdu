@@ -42,11 +42,7 @@ type T = Transaction
 markAnnotations ::
     Sugar.WorkArea v n i o a ->
     Sugar.WorkArea (ShowAnnotation, v) n i o (ShowAnnotation, a)
-markAnnotations workArea =
-    workArea
-    { Sugar._waPanes = workArea ^. Sugar.waPanes <&> SugarLens.paneBinder %~ markNodeAnnotations
-    , Sugar._waRepl = workArea ^. Sugar.waRepl & Sugar.replExpr %~ markNodeAnnotations
-    }
+markAnnotations = Sugar.waPanes . traverse . SugarLens.paneBinder %~ markNodeAnnotations
 
 redirectLams :: [UUID] -> EvalResults -> EvalResults
 redirectLams lams results =

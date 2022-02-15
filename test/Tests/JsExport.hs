@@ -4,12 +4,15 @@
 
 module Tests.JsExport (test) where
 
+import qualified Control.Lens as Lens
 import           Control.Monad ((>=>))
+import           Lamdu.Calc.Identifier (identFromHex)
+import qualified Lamdu.Calc.Term as V
 import           Lamdu.Data.Db.Layout (runDbTransaction)
 import qualified Lamdu.Data.Export.JS as ExportJS
+import           Lamdu.Data.Export.JSON.Migration.ToVersion16 (replVar)
 import           Lamdu.VersionControl (runAction)
 import           System.FilePath ((</>))
-import           Test.Lamdu.Code (readRepl)
 import           Test.Lamdu.Db (ramDB)
 import           Test.Lamdu.Exec (runJS)
 
@@ -26,7 +29,7 @@ compile :: FilePath -> IO String
 compile program =
     do
         db <- ramDB ["test/programs" </> program] & join
-        runDbTransaction db $ runAction $ readRepl >>= ExportJS.compile
+        identFromHex replVar ^?! Lens._Right & V.Var & ExportJS.compile & runAction & runDbTransaction db
 
 run :: FilePath -> IO ByteString
 run = compile >=> runJS

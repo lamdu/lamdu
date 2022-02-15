@@ -31,7 +31,6 @@ import qualified Lamdu.GUI.Expr as ExpressionEdit
 import qualified Lamdu.GUI.Expr.BinderEdit as BinderEdit
 import qualified Lamdu.GUI.Monad as GuiM
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
-import qualified Lamdu.Sugar.Lens as SugarLens
 import qualified Lamdu.Sugar.Types as Sugar
 
 import           Test.Lamdu.Prelude
@@ -57,19 +56,20 @@ makeGui ::
     String -> Env -> WorkArea -> OnceT (T ViewM) (Responsive (T ViewM))
 makeGui afterDoc env workArea =
     do
-        let repl = workArea ^. Sugar.waRepl . Sugar.replExpr
-        let replExprId = repl ^. SugarLens.binderResultExpr & WidgetIds.fromExprPayload
+        let defId =
+                workArea ^?!
+                Sugar.waPanes . traverse . Sugar.paneBody .
+                Sugar._PaneDefinition . Sugar.drBody . Sugar._DefinitionBodyExpression .
+                Sugar.deContent . annotation
+                & WidgetIds.fromExprPayload
         let assocTagName = DataOps.assocTagName env
         gui <-
-            do
-                replGui <-
-                    GuiM.makeBinder repl
-                    & GuiState.assignCursor WidgetIds.replId replExprId
-                paneGuis <-
-                    workArea ^..
-                    Sugar.waPanes . traverse
-                    & traverse CodeEdit.makePaneBodyEdit
-                Responsive.vbox ?? (replGui : paneGuis)
+            Responsive.vbox <*>
+            ( workArea ^..
+                Sugar.waPanes . traverse
+                & traverse CodeEdit.makePaneBodyEdit
+                & GuiState.assignCursor WidgetIds.defaultCursor defId
+            )
             & GuiM.run assocTagName ExpressionEdit.make BinderEdit.make
                 (Anchors.onGui (Property.mkProperty %~ lift) DbLayout.guiAnchors)
                 env

@@ -42,9 +42,6 @@ data Global o = Global
     }
 Lens.makeLenses ''Global
 
-myId :: Widget.Id
-myId = Widget.Id ["goto-def"]
-
 -- TODO: This is redundant to injectSymbol, hard-code it and remove from languages json?
 getTagPrefix :: Text -> Maybe Char
 getTagPrefix searchTerm = searchTerm ^? Lens.ix 0 . Lens.filtered (`elem` ['\'', '.'])
@@ -144,8 +141,8 @@ make globals =
                 x
                 & SearchMenu.emptyStrings . Lens.mapped .~ goto
                 & SearchMenu.bgColors . Lens.mapped .~ M.Color 0 0 0 0
-        SearchMenu.make (SearchMenu.searchTermEdit myId (pure . allowSearchTerm))
-            (makeOptions globals) M.empty myId ?? Menu.Below
+        SearchMenu.make (SearchMenu.searchTermEdit WidgetIds.gotoDefId (pure . allowSearchTerm))
+            (makeOptions globals) M.empty WidgetIds.gotoDefId ?? Menu.Below
             & local (has . Theme.searchTerm %~ onTermStyle)
             <&> \searchWidget -> StatusBar.StatusWidget
             { StatusBar._widget = searchWidget

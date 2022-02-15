@@ -15,6 +15,7 @@ import qualified Lamdu.Data.Export.JSON.Migration.ToVersion12 as ToVersion12
 import qualified Lamdu.Data.Export.JSON.Migration.ToVersion13 as ToVersion13
 import qualified Lamdu.Data.Export.JSON.Migration.ToVersion14 as ToVersion14
 import qualified Lamdu.Data.Export.JSON.Migration.ToVersion15 as ToVersion15
+import qualified Lamdu.Data.Export.JSON.Migration.ToVersion16 as ToVersion16
 import qualified Lamdu.Data.Export.JSON.Migration.ToVersion2 as ToVersion2
 import qualified Lamdu.Data.Export.JSON.Migration.ToVersion3 as ToVersion3
 import qualified Lamdu.Data.Export.JSON.Migration.ToVersion4 as ToVersion4
@@ -55,6 +56,7 @@ versionMigrations =
     , ToVersion13.migrate
     , ToVersion14.migrate
     , ToVersion15.migrate
+    , ToVersion16.migrate
     ]
 
 currentVersion :: Codec.Version

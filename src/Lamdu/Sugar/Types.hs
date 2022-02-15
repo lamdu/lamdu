@@ -5,14 +5,13 @@ module Lamdu.Sugar.Types
     , PaneBody(..), _PaneDefinition
     , Pane(..), paneBody, paneClose, paneMoveDown, paneMoveUp, paneEntityId, paneDefinitionState
     , TagPane(..), tpTag, tpTagData, tpSetTexts, tpSetSymbol, tpSetOrder
-    , Repl(..), replExpr, replVarInfo, replResult
-    , WorkArea(..), waPanes, waRepl, waGlobals
+    , WorkArea(..), waPanes, waGlobals
     , Globals(..), allGlobals, globalDefs, globalNominals, globalTags
     , ParamKind(..), _TypeParam, _RowParam
     , NominalPane(..), npName, npParams, npNominalId, npEntityId, npBody
     , Definition(..), drName, drBody, drDefI, drGotoNextOutdated
     , DefinitionBody(..), _DefinitionBodyExpression, _DefinitionBodyBuiltin
-    , DefinitionExpression(..), deContent, dePresentationMode, deType
+    , DefinitionExpression(..), deContent, dePresentationMode, deType, deVarInfo, deResult
     , Meta.SpecialArgs(..), Meta.PresentationMode, Meta._Operator, Meta._Verbose
     , Meta.DefinitionState(..)
     , DefinitionBuiltin(..), biType, biName, biSetName
@@ -43,6 +42,8 @@ data DefinitionExpression v name i o a = DefinitionExpression
     { _deType :: Scheme name Unit
     , _dePresentationMode :: Maybe (i (Property o Meta.PresentationMode))
     , _deContent :: Annotated a # Assignment v name i o
+    , _deVarInfo :: VarInfo
+    , _deResult :: EvalCompletion o
     } deriving Generic
 
 Lens.makeLenses ''DefinitionExpression
@@ -109,23 +110,6 @@ data Pane v name i o a = Pane
     , _paneMoveUp :: Maybe (o ())
     } deriving (Functor, Foldable, Traversable, Generic)
 
-data Repl v name i o a = Repl
-    { _replExpr :: Annotated a # Binder v name i o
-    , _replVarInfo :: VarInfo
-    , _replResult :: EvalCompletion o
-    } deriving Generic
-
-Lens.makeLenses ''Repl
-
-instance Functor (Repl v name i o) where
-    fmap f = replExpr %~ hflipped %~ hmap (\_ -> Lens._Wrapped %~ f)
-
-instance Foldable (Repl v name i o) where
-    foldMap f = (^. replExpr . hflipped . Lens.to (hfoldMap (\_ (Const x) -> f x)))
-
-instance Traversable (Repl v name i o) where
-    traverse f = replExpr (htraverseFlipped (\_ -> Lens._Wrapped f))
-
 data Globals name i o = Globals
     { _globalDefs     :: i [NameRef name o]
     , _globalNominals :: i [NameRef name o]
@@ -139,7 +123,6 @@ allGlobals f (Globals x y z) = Globals <$> f x <*> f y <*> f z
 
 data WorkArea v name i o a = WorkArea
     { _waPanes :: [Pane v name i o a]
-    , _waRepl :: Repl v name i o a
     , _waGlobals :: Globals name i o
     } deriving (Functor, Foldable, Traversable, Generic)
 

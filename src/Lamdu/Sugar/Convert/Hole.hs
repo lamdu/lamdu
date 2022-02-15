@@ -112,7 +112,7 @@ makeResultsSyntax typ posInfo =
         \v ->
         r (^.. Sugar.qCodeTexts . Texts.let_)
         (V.BLamP v Pruned (V.BLeafP V.LHole) `V.BAppP` V.BLeafP V.LHole)
-    | posInfo == ConvertM.BinderPos
+    | posInfo /= ConvertM.ExpressionPos
     ] <>
     do
         -- Suggest if-else only if bool is in the stdlib (otherwise tests fail)

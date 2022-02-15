@@ -238,11 +238,6 @@ completion cp completions =
                     <&>
                     \(whichGlobal, valI) ->
                     EntityId.EntityId valI
-                    <$ case whichGlobal of
-                    ER.GlobalRepl -> pure ()
-                    ER.GlobalDef varId ->
-                        ExprIRef.defI varId
-                        & Anchors.PaneDefinition
-                        & DataOps.newPane cp
+                    <$ DataOps.newPane cp (Anchors.PaneDefinition (ExprIRef.defI whichGlobal))
                 }
         f Right{} = EvalSuccess

@@ -4,7 +4,6 @@
 module Lamdu.Sugar.Convert.Load
     ( InferOut(..), irVal, irCtx
     , inferDef
-    , inferDefExpr
     , makeNominalsMap
     , readValAndAddProperties
     , InferFunc, unmemoizedInfer
@@ -134,10 +133,3 @@ inferDef inferFunc monitors defExpr defVar =
             & local (V.scopeVarTypes . Lens.at defVar ?~ MkHFlip (GMono defTv))
         (inferredVal, scope) <$ unify defTv (inferredVal ^. hAnn . _2 . inferResult)
     & runInferResult monitors
-
-inferDefExpr ::
-    InferFunc (HRef m) -> Debug.Monitors ->
-    Definition.Expr (Ann (HRef m) # V.Term) ->
-    Either (Pure # T.TypeError) (InferOut m)
-inferDefExpr inferFunc monitors defExpr =
-    inferFunc defExpr & runInferResult monitors

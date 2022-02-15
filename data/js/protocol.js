@@ -77,26 +77,16 @@ module.exports = {
             arg:arg
         });
     },
-    sendCompletionSuccess: function(result) {
-        sendEvent({
-            event:"CompletionSuccess",
-            result:result
-        });
-    },
-    sendCompletionError: function(err) {
-        if (Error.prototype.isPrototypeOf(err))
-        {
-            sendEvent({
-                event:"CompletionError",
-                err: {
-                    error: "RuntimeError",
-                    exception: err.toString()
-                }
-            });
-            return;
+    sendCompletionError: function(repl, err) {
+        if (Error.prototype.isPrototypeOf(err)) {
+            err = {
+                error:"RuntimeError",
+                exception: err.toString()
+            };
         }
         sendEvent({
             event:"CompletionError",
+            repl:repl,
             err:err
         });
     },

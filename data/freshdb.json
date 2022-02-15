@@ -1,6 +1,6 @@
 [
     {
-        "schemaVersion": 15
+        "schemaVersion": 16
     },
     {
         "names": {
@@ -31628,14 +31628,6 @@
                 ]
             },
             "lamVar": "c6af3dfd34584655baf1c6c343643d6a"
-        }
-    },
-    {
-        "repl": {
-            "val": {
-                "hole": {},
-                "id": "4d078a85-cd3f-4985-a57f-cd49d156e9a8"
-            }
         }
     }
 ]

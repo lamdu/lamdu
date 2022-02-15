@@ -1,32 +1,41 @@
 [
     {
-        "schemaVersion": 15
+        "schemaVersion": 16
     },
     {
+        "lamVar": "71efc62499da48e2ac12b8734b807cfc",
+        "tag": null
+    },
+    {
+        "def": "7265706c7265706c7265706c7265706c",
+        "defPresentationMode": "Verbose",
         "tag": null,
-        "lamVar": "71efc62499da48e2ac12b8734b807cfc"
+        "typ": {
+            "schemeType": {
+                "nomId": "42493a666c6f61740000000000000000"
+            }
+        },
+        "val": {
+            "applyArg": {
+                "hole": {},
+                "id": "cbe81d47-a019-4c37-81fe-d41379cb6804"
+            },
+            "applyFunc": {
+                "id": "6dbb2d05-2720-423f-8a2e-3bdb9b032e22",
+                "lamBody": {
+                    "id": "4d078a85-cd3f-4985-a57f-cd49d156e9a8",
+                    "primBytes": "0101000000000000000700000000000010ffffffffffffffcc",
+                    "primId": "42493a666c6f61740000000000000000"
+                },
+                "lamParamType": {
+                    "id": "89fa2d41-a51c-4207-b1fe-76ef0cef4a06"
+                },
+                "lamVar": "71efc62499da48e2ac12b8734b807cfc"
+            },
+            "id": "80e1338f-043a-4914-ac24-358916dde215"
+        }
     },
     {
-        "repl": {
-            "val": {
-                "applyFunc": {
-                    "lamParamType": {
-                        "id": "89fa2d41-a51c-4207-b1fe-76ef0cef4a06"
-                    },
-                    "lamVar": "71efc62499da48e2ac12b8734b807cfc",
-                    "id": "6dbb2d05-2720-423f-8a2e-3bdb9b032e22",
-                    "lamBody": {
-                        "primBytes": "0101000000000000000700000000000010ffffffffffffffcc",
-                        "primId": "42493a666c6f61740000000000000000",
-                        "id": "4d078a85-cd3f-4985-a57f-cd49d156e9a8"
-                    }
-                },
-                "applyArg": {
-                    "hole": {},
-                    "id": "cbe81d47-a019-4c37-81fe-d41379cb6804"
-                },
-                "id": "80e1338f-043a-4914-ac24-358916dde215"
-            }
-        }
+        "openDefPane": "7265706c7265706c7265706c7265706c"
     }
 ]

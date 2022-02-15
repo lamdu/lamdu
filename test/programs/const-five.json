@@ -1,36 +1,55 @@
 [
     {
-        "schemaVersion": 15
+        "schemaVersion": 16
     },
     {
-        "tagOrder": 0,
-        "tag": "1a325e9af1de76dc492589ba2d0c8ce6",
         "names": {
             "english": "num"
-        }
-    },
-    {
+        },
         "tag": "1a325e9af1de76dc492589ba2d0c8ce6",
-        "nom": "42493a666c6f61740000000000000000"
+        "tagOrder": 0
     },
     {
+        "nom": "42493a666c6f61740000000000000000",
+        "tag": "1a325e9af1de76dc492589ba2d0c8ce6"
+    },
+    {
+        "lamVar": "03cdd0bdacfe112ea7dfcf333ae0c1c4",
+        "tag": null
+    },
+    {
+        "def": "7265706c7265706c7265706c7265706c",
+        "defPresentationMode": "Verbose",
         "tag": null,
-        "lamVar": "03cdd0bdacfe112ea7dfcf333ae0c1c4"
-    },
-    {
-        "repl": {
-            "val": {
+        "typ": {
+            "schemeType": {
+                "typeVar": "61"
+            },
+            "typeVars": [
+                "61"
+            ]
+        },
+        "val": {
+            "applyArg": {
+                "id": "2210ad98-83ef-5ca8-859e-adbd59f50931",
+                "lamBody": {
+                    "id": "ff1b1f1e-9316-ac4d-fa9b-a4a0d6966b48",
+                    "primBytes": "0101000000000000000700000000000014ffffffffffffffce",
+                    "primId": "42493a666c6f61740000000000000000"
+                },
                 "lamParamType": {
                     "id": "4f143bda-2dfc-52df-8788-9a68683613d0"
                 },
-                "lamVar": "03cdd0bdacfe112ea7dfcf333ae0c1c4",
-                "id": "2210ad98-83ef-5ca8-859e-adbd59f50931",
-                "lamBody": {
-                    "primBytes": "0101000000000000000700000000000014ffffffffffffffce",
-                    "primId": "42493a666c6f61740000000000000000",
-                    "id": "ff1b1f1e-9316-ac4d-fa9b-a4a0d6966b48"
-                }
-            }
+                "lamVar": "03cdd0bdacfe112ea7dfcf333ae0c1c4"
+            },
+            "applyFunc": {
+                "hole": {},
+                "id": "7265706c-686f-6c65-7265-706c686f6c65"
+            },
+            "id": "7265706c-686f-6c65-6672-61676170706c"
         }
+    },
+    {
+        "openDefPane": "7265706c7265706c7265706c7265706c"
     }
 ]

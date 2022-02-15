@@ -1,20 +1,39 @@
 [
     {
-        "schemaVersion": 15
+        "schemaVersion": 16
     },
     {
-        "repl": {
-            "val": {
-                "applyFunc": {
-                    "id": "8e169998-cefc-bf69-520f-34184d948c4c",
-                    "absurd": {}
-                },
+        "def": "7265706c7265706c7265706c7265706c",
+        "defPresentationMode": "Verbose",
+        "tag": null,
+        "typ": {
+            "schemeType": {
+                "typeVar": "61"
+            },
+            "typeVars": [
+                "61"
+            ]
+        },
+        "val": {
+            "applyArg": {
                 "applyArg": {
                     "hole": {},
                     "id": "2a7190d2-5fa8-da40-b313-6d7eb0a3c4c8"
                 },
+                "applyFunc": {
+                    "absurd": {},
+                    "id": "8e169998-cefc-bf69-520f-34184d948c4c"
+                },
                 "id": "42c1ab3b-b52c-bbc2-57f6-3a4e74b14b98"
-            }
+            },
+            "applyFunc": {
+                "hole": {},
+                "id": "7265706c-686f-6c65-7265-706c686f6c65"
+            },
+            "id": "7265706c-686f-6c65-6672-61676170706c"
         }
+    },
+    {
+        "openDefPane": "7265706c7265706c7265706c7265706c"
     }
 ]

@@ -2,6 +2,7 @@ module Lamdu.GUI.Expr.AssignmentEdit
     ( make
     , Parts(..), makeFunctionParts
     , makeJumpToRhs
+    , layout, makePlainLhs
     ) where
 
 import           Control.Applicative (liftA2)
@@ -247,6 +248,19 @@ layout lhsParts body =
         lhs <- Options.boxSpaced ?? Options.disambiguationNone ?? lhsParts
         Responsive.vboxSpaced ?? [lhs, indent indentId body] <&> Options.tryWideLayout hbox [lhs, space, body]
 
+makePlainLhs ::
+    _ => Responsive o -> o Sugar.EntityId -> M.WidgetId -> GuiM env i o [Responsive o]
+makePlainLhs nameEdit addFirstParam rhsId =
+    do
+        env <- Lens.view id
+        let addParam =
+                E.keysEventMapMovesCursor (env ^. has . Config.addNextParamKeys)
+                (E.toDoc env [has . MomentuTexts.edit, has . Texts.parameter, has . Texts.add])
+                (addFirstParam <&> WidgetIds.tagHoleId . WidgetIds.fromEntityId)
+        rhsJumperEquals <- makeJumpToRhs rhsId
+        equals <- grammar (label Texts.assign) <&> Responsive.fromTextView
+        pure [Widget.weakerEvents (rhsJumperEquals <> addParam) nameEdit, equals]
+
 make ::
     _ =>
     Widget.Id ->
@@ -255,29 +269,23 @@ make ::
     GuiM env i o (Responsive o)
 make delParamDest assignment nameEdit =
     do
-        rhsJumperEquals <- WidgetIds.fromExprPayload pl & makeJumpToRhs
-        let makeNameEdit events = Widget.weakerEvents (rhsJumperEquals <> events) nameEdit
-        equals <- grammar (label Texts.assign) <&> Responsive.fromTextView
         case assignmentBody of
             Sugar.BodyPlain x ->
                 do
-                    bodyEdit <- x ^. Sugar.apBody & Ann (Const (assignment ^. annotation)) & GuiM.makeBinder
-                    env <- Lens.view id
-                    let addParam =
-                            E.keysEventMapMovesCursor (env ^. has . Config.addNextParamKeys)
-                            (E.toDoc env [has . MomentuTexts.edit, has . Texts.parameter, has . Texts.add])
-                            (x ^. Sugar.apAddFirstParam <&> WidgetIds.tagHoleId . WidgetIds.fromEntityId)
-                    layout [makeNameEdit addParam, equals] bodyEdit
+                    lhs <- makePlainLhs nameEdit (x ^. Sugar.apAddFirstParam) (WidgetIds.fromExprPayload pl)
+                    x ^. Sugar.apBody & Ann (Const (assignment ^. annotation)) & GuiM.makeBinder >>= layout lhs
             Sugar.BodyFunction x ->
                 do
                     Parts lhsEventMap paramsEdit mScopeEdit eventMap scopeId <-
                         makeFunctionParts Sugar.UnlimitedFuncApply (Ann (Const pl) x) delParamDest
                     bodyEdit <- x ^. Sugar.fBody & GuiM.makeBinder & GuiM.withLocalMScopeId scopeId
+                    rhsJumperEquals <- x ^. Sugar.fBody . annotation & WidgetIds.fromExprPayload & makeJumpToRhs
+                    equals <- grammar (label Texts.assign) <&> Responsive.fromTextView
                     paramScopeEdit <-
                         Responsive.vboxSpaced
                         ?? (paramsEdit : fmap Responsive.fromWidget mScopeEdit ^.. Lens._Just)
                         <&> Widget.strongerEvents rhsJumperEquals
-                    layout [makeNameEdit lhsEventMap, paramScopeEdit, equals] bodyEdit
+                    layout [Widget.weakerEvents (rhsJumperEquals <> lhsEventMap) nameEdit, paramScopeEdit, equals] bodyEdit
                         & stdWrap pl
                         <&> Widget.weakerEvents eventMap
     & local (M.animIdPrefix .~ Widget.toAnimId myId)

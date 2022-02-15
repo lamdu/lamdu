@@ -23,10 +23,9 @@ import           GUI.Momentu.State (GUIState)
 import qualified GUI.Momentu.Widget.Id as WidgetId
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
-import qualified Lamdu.Data.Definition as Definition
 import           Lamdu.Data.Meta (DefinitionState(..), SpecialArgs(..), PresentationMode)
 import           Lamdu.Eval.Results (ScopeId)
-import           Lamdu.Expr.IRef (DefI, ValI)
+import           Lamdu.Expr.IRef (DefI)
 import qualified Lamdu.Expr.UniqueId as UniqueId
 import           Revision.Deltum.Rev.Branch (Branch)
 import           Revision.Deltum.Rev.Version (Version)
@@ -54,14 +53,13 @@ onGui :: (forall a. Binary a => f a -> g a) -> Gui f -> Gui g
 onGui f (Gui x0 x1 x2) = Gui (f x0) (f x1) (f x2)
 
 data Code f m = Code
-    { repl :: f (Definition.Expr (ValI m))
-    , panes :: f [Pane m]
+    { panes :: f [Pane m]
     , globals :: f (Set (DefI m))
     , tags :: f (Set T.Tag)
     , tids :: f (Set T.NominalId)
     }
 onCode :: (forall a. Binary a => f a -> g a) -> Code f m -> Code g m
-onCode f (Code x0 x1 x2 x3 x4) = Code (f x0) (f x1) (f x2) (f x3) (f x4)
+onCode f (Code x0 x1 x2 x3) = Code (f x0) (f x1) (f x2) (f x3)
 
 data Revision f m = Revision
     { branches :: f [Branch m]

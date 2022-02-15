@@ -23,11 +23,7 @@ addToWorkArea ::
     HasPrecedence name =>
     WorkArea v name i o a ->
     WorkArea v name i o (ParenInfo, a)
-addToWorkArea w =
-    w
-    { _waRepl = w ^. waRepl & replExpr %~ addToTopLevel 0
-    , _waPanes = w ^. waPanes <&> SugarLens.paneBinder %~ addToTopLevel 0
-    }
+addToWorkArea = waPanes . traverse . SugarLens.paneBinder %~ addToTopLevel 0
 
 unambiguousChild :: h # expr -> (Const (MinOpPrec, Precedence Prec) :*: h) # expr
 unambiguousChild = (Const (0, Precedence 0 0) :*:)

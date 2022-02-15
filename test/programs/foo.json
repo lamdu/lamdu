@@ -1,39 +1,58 @@
 [
     {
-        "schemaVersion": 15
+        "schemaVersion": 16
     },
     {
-        "tagOrder": 0,
-        "tag": "07a6723b0c8d3ff5cb4b182062852a3c",
         "names": {
             "english": "foo"
-        }
-    },
-    {
+        },
         "tag": "07a6723b0c8d3ff5cb4b182062852a3c",
-        "lamVar": "33247876e47743abb2f2161324581d60"
+        "tagOrder": 0
     },
     {
-        "repl": {
-            "val": {
+        "lamVar": "33247876e47743abb2f2161324581d60",
+        "tag": "07a6723b0c8d3ff5cb4b182062852a3c"
+    },
+    {
+        "def": "7265706c7265706c7265706c7265706c",
+        "defPresentationMode": "Verbose",
+        "tag": null,
+        "typ": {
+            "schemeType": {
+                "typeVar": "61"
+            },
+            "typeVars": [
+                "61"
+            ]
+        },
+        "val": {
+            "applyArg": {
+                "applyArg": {
+                    "id": "776f8c58-0b9f-4672-bd93-19e77967ff60",
+                    "primBytes": "0101000000000000000700000000000014ffffffffffffffce",
+                    "primId": "42493a666c6f61740000000000000000"
+                },
                 "applyFunc": {
+                    "id": "f6186aa4-928c-4f1a-9072-49baf6fa3357",
+                    "lamBody": {
+                        "id": "45a420e0-809b-c536-ea42-b75ee07ccd17",
+                        "var": "33247876e47743abb2f2161324581d60"
+                    },
                     "lamParamType": {
                         "id": "cc04c646-3c41-5e5f-b95f-709fedd11496"
                     },
-                    "lamVar": "33247876e47743abb2f2161324581d60",
-                    "id": "f6186aa4-928c-4f1a-9072-49baf6fa3357",
-                    "lamBody": {
-                        "var": "33247876e47743abb2f2161324581d60",
-                        "id": "45a420e0-809b-c536-ea42-b75ee07ccd17"
-                    }
-                },
-                "applyArg": {
-                    "primBytes": "0101000000000000000700000000000014ffffffffffffffce",
-                    "primId": "42493a666c6f61740000000000000000",
-                    "id": "776f8c58-0b9f-4672-bd93-19e77967ff60"
+                    "lamVar": "33247876e47743abb2f2161324581d60"
                 },
                 "id": "1bcb3052-c89b-4af9-b162-50b5608555b9"
-            }
+            },
+            "applyFunc": {
+                "hole": {},
+                "id": "7265706c-686f-6c65-7265-706c686f6c65"
+            },
+            "id": "7265706c-686f-6c65-6672-61676170706c"
         }
+    },
+    {
+        "openDefPane": "7265706c7265706c7265706c7265706c"
     }
 ]

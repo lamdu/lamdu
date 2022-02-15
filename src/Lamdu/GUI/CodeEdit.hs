@@ -4,7 +4,7 @@ module Lamdu.GUI.CodeEdit
     ( make
     , Model
     , EvalResults
-    , ReplEdit.ExportRepl(..), ExportActions(..)
+    , ExportActions(..)
 
     , -- exported for tests
       makePaneBodyEdit
@@ -46,7 +46,6 @@ import qualified Lamdu.GUI.IOTrans as IOTrans
 import qualified Lamdu.GUI.NominalPane as NominalPane
 import           Lamdu.GUI.Monad (GuiM)
 import qualified Lamdu.GUI.Monad as GuiM
-import qualified Lamdu.GUI.ReplEdit as ReplEdit
 import qualified Lamdu.GUI.StatusBar.Common as StatusBar
 import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.GUI.TagPane as TagPaneEdit
@@ -57,7 +56,6 @@ import qualified Lamdu.I18N.Collaboration as Texts
 import qualified Lamdu.I18N.Definitions as Texts
 import qualified Lamdu.I18N.Navigation as Texts
 import           Lamdu.Name (Name)
-import qualified Lamdu.Sugar.Lens as SugarLens
 import qualified Lamdu.Sugar.Types as Sugar
 import           Revision.Deltum.Transaction (Transaction)
 
@@ -67,8 +65,9 @@ type T = Transaction
 
 data ExportActions m = ExportActions
     { exportAll :: IOTrans m ()
-    , exportReplActions :: ReplEdit.ExportRepl m
     , exportDef :: V.Var -> IOTrans m ()
+    , exportDefToJS :: V.Var -> IOTrans m ()
+    , executeDef :: V.Var -> IO ()
     , exportTag :: T.Tag -> IOTrans m ()
     , exportNominal :: T.NominalId -> IOTrans m ()
     , importAll :: FilePath -> IOTrans m ()
@@ -99,25 +98,20 @@ make cp gp width mkWorkArea =
             <&> StatusBar.hoist IOTrans.liftTrans
         assocTagName <- DataOps.assocTagName
         do
-            replGui <-
-                ReplEdit.make (exportReplActions theExportActions)
-                (workArea ^. Sugar.waRepl)
+            newDefId <- Element.subAnimId ?? ["New definition"] <&> Widget.Id
             let dsts =
-                    workArea ^. Sugar.waRepl . Sugar.replExpr . SugarLens.binderResultExpr . Sugar.plEntityId :
-                    workArea ^.. Sugar.waPanes . traverse . Sugar.paneEntityId
-                    <&> WidgetIds.fromEntityId
+                    newDefId :
+                    (workArea ^.. Sugar.waPanes . traverse . Sugar.paneEntityId <&> WidgetIds.fromEntityId)
             panesEdits <-
                 workArea ^. Sugar.waPanes
                 & zipWithM (makePaneEdit theExportActions) dsts
             newDefinitionButton <-
-                makeNewDefinitionButton cp
+                makeNewDefinitionButton cp newDefId
                 <&> Widget.updates %~ IOTrans.liftTrans
                 <&> Responsive.fromWidget
-            eventMap <-
-                panesEventMap theExportActions cp gp
-                (workArea ^. Sugar.waRepl . Sugar.replVarInfo)
+            eventMap <- panesEventMap theExportActions cp gp
             Responsive.vboxSpaced
-                ?? (replGui : panesEdits ++ [newDefinitionButton])
+                ?? panesEdits <> [newDefinitionButton]
                 <&> Widget.widget . Widget.eventMapMaker . Lens.mapped %~ (<> eventMap)
             & GuiM.run assocTagName ExpressionEdit.make BinderEdit.make
                 (Anchors.onGui (Property.mkProperty %~ lift) gp) env
@@ -141,6 +135,15 @@ exportPaneEventMap env theExportActions paneBody =
     case paneBody of
     Sugar.PaneDefinition def ->
         exportEventMap exportDef (def ^. Sugar.drDefI) Texts.exportDefToJSON
+        <> execEventMap
+        where
+            execEventMap =
+                case def ^? Sugar.drBody . Sugar._DefinitionBodyExpression . Sugar.deVarInfo of
+                Just ( Sugar.VarNominal (Sugar.TId _ tid _)) | tid == Builtins.mutTid ->
+                    E.keysEventMap (env ^. has . Config.export . Config.executeKeys)
+                    (E.toDoc (env ^. has) [Texts.execRepl])
+                    (IOTrans.liftIO (executeDef theExportActions (def ^. Sugar.drDefI)))
+                _ -> mempty
     Sugar.PaneTag tag ->
         exportEventMap exportTag (tag ^. Sugar.tpTag) Texts.exportTagToJSON
     Sugar.PaneNominal nom ->
@@ -264,10 +267,9 @@ newDefinitionDoc =
     Lens.view id
     <&> (`E.toDoc` [has . MomentuTexts.edit, has . Texts.new])
 
-makeNewDefinitionButton :: _ => Anchors.CodeAnchors m -> GuiM env (OnceT (T m)) (T m) (Widget (T m))
-makeNewDefinitionButton cp =
+makeNewDefinitionButton :: _ => Anchors.CodeAnchors m -> Widget.Id -> GuiM env (OnceT (T m)) (T m) (Widget (T m))
+makeNewDefinitionButton cp newDefId =
     do
-        newDefId <- Element.subAnimId ?? ["New definition"] <&> Widget.Id
         newDefDoc <- newDefinitionDoc
         makeNewDefinition cp
             >>= Styled.actionable newDefId Texts.newDefinitionButton newDefDoc
@@ -283,8 +285,8 @@ jumpBack gp =
 panesEventMap ::
     _ =>
     ExportActions m -> Anchors.CodeAnchors m -> Anchors.GuiAnchors (T m) (T m) ->
-    Sugar.VarInfo -> GuiM env (OnceT (T m)) (T m) (EventMap (IOTrans m GuiState.Update))
-panesEventMap theExportActions cp gp replVarInfo =
+    GuiM env (OnceT (T m)) (T m) (EventMap (IOTrans m GuiState.Update))
+panesEventMap theExportActions cp gp =
     do
         env <- Lens.view id
         let exportConfig = env ^. has . Config.export
@@ -311,13 +313,6 @@ panesEventMap theExportActions cp gp replVarInfo =
             , importAll (exportConfig ^. Config.exportPath)
               & E.keysEventMap (exportConfig ^. Config.importKeys)
                 (collaborationDoc [Texts.collaboration, Texts.importReplFromJSON])
-            , case replVarInfo of
-                Sugar.VarNominal (Sugar.TId _ tid _) | tid == Builtins.mutTid ->
-                    E.keysEventMap (exportConfig ^. Config.executeKeys)
-                    (E.toDoc (env ^. has) [Texts.execRepl])
-                    (IOTrans.liftIO executeRepl)
-                _ -> mempty
             ] & pure
     where
-        executeRepl = exportReplActions theExportActions & ReplEdit.executeIOProcess
         ExportActions{importAll,exportAll} = theExportActions

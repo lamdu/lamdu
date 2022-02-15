@@ -1,42 +1,61 @@
 [
     {
-        "schemaVersion": 15
+        "schemaVersion": 16
     },
     {
+        "lamVar": "7624c3483f77ee52311755d6c87aadcf",
+        "tag": null
+    },
+    {
+        "lamVar": "d9bdb2c795e74a648b0fb394eeee4fe5",
+        "tag": null
+    },
+    {
+        "def": "7265706c7265706c7265706c7265706c",
+        "defPresentationMode": "Verbose",
         "tag": null,
-        "lamVar": "7624c3483f77ee52311755d6c87aadcf"
-    },
-    {
-        "tag": null,
-        "lamVar": "d9bdb2c795e74a648b0fb394eeee4fe5"
-    },
-    {
-        "repl": {
-            "val": {
-                "lamParamType": {
-                    "id": "80489c13-2faf-58b3-8c0a-227ea92ee9d4"
-                },
-                "lamVar": "7624c3483f77ee52311755d6c87aadcf",
+        "typ": {
+            "schemeType": {
+                "typeVar": "61"
+            },
+            "typeVars": [
+                "61"
+            ]
+        },
+        "val": {
+            "applyArg": {
                 "id": "8f3e9696-8b91-44d4-7642-13a47157f294",
                 "lamBody": {
+                    "applyArg": {
+                        "id": "4ff174ba-6409-47d3-965d-aa66856e5e60",
+                        "lamBody": {
+                            "id": "8092bdea-6dc9-1c98-9536-199621753705",
+                            "var": "7624c3483f77ee52311755d6c87aadcf"
+                        },
+                        "lamParamType": {
+                            "id": "bd3e436d-344b-5746-afe0-e689432a2ae6"
+                        },
+                        "lamVar": "d9bdb2c795e74a648b0fb394eeee4fe5"
+                    },
                     "applyFunc": {
                         "hole": {},
                         "id": "5fdf6ef8-6cfc-4d96-b48a-b17b3751921e"
                     },
-                    "applyArg": {
-                        "lamParamType": {
-                            "id": "bd3e436d-344b-5746-afe0-e689432a2ae6"
-                        },
-                        "lamVar": "d9bdb2c795e74a648b0fb394eeee4fe5",
-                        "id": "4ff174ba-6409-47d3-965d-aa66856e5e60",
-                        "lamBody": {
-                            "var": "7624c3483f77ee52311755d6c87aadcf",
-                            "id": "8092bdea-6dc9-1c98-9536-199621753705"
-                        }
-                    },
                     "id": "4c48891f-f53e-433f-97f7-bbd3f74b4f9b"
-                }
-            }
+                },
+                "lamParamType": {
+                    "id": "80489c13-2faf-58b3-8c0a-227ea92ee9d4"
+                },
+                "lamVar": "7624c3483f77ee52311755d6c87aadcf"
+            },
+            "applyFunc": {
+                "hole": {},
+                "id": "7265706c-686f-6c65-7265-706c686f6c65"
+            },
+            "id": "7265706c-686f-6c65-6672-61676170706c"
         }
+    },
+    {
+        "openDefPane": "7265706c7265706c7265706c7265706c"
     }
 ]

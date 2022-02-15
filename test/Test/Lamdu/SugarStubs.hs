@@ -154,16 +154,6 @@ def typ var tag body =
     where
         emptyForalls = T.Types (QVars mempty) (QVars mempty)
 
-repl ::
-    Annotated a # Sugar.Term v name i Unit ->
-    Sugar.Repl v name i Unit a
-repl (Ann (Const pl) x) =
-    Sugar.Repl
-    { Sugar._replExpr = Ann (Const pl) (Sugar.Binder Unit (Sugar.BinderTerm x))
-    , Sugar._replVarInfo = Sugar.VarGeneric
-    , Sugar._replResult = CurAndPrev Nothing Nothing
-    }
-
 funcExpr ::
     UUID -> T.Tag -> Expr ->
     Sugar.Body Sugar.Function (Sugar.Annotation (Sugar.EvaluationScopes InternalName Identity) InternalName) InternalName Identity Unit

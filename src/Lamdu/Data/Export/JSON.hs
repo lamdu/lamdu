@@ -1,8 +1,7 @@
 -- | JSON Export support
 {-# LANGUAGE TemplateHaskell, TypeApplications, FlexibleInstances #-}
 module Lamdu.Data.Export.JSON
-    ( fileExportRepl, jsonExportRepl
-    , fileExportAll, fileExportDef, fileExportTag, fileExportNominal
+    ( fileExportAll, fileExportDef, fileExportTag, fileExportNominal, jsonExportDef
     , Version(..)
     ) where
 
@@ -60,8 +59,7 @@ entityOrdering (Codec.EntityTag (T.Tag ident)_ )                      = (1, iden
 entityOrdering (Codec.EntityNominal _ (T.NominalId nomId) _)          = (2, nomId)
 entityOrdering (Codec.EntityLamVar _ (V.Var ident))                   = (3, ident)
 entityOrdering (Codec.EntityDef (Definition _ _ (_, _, V.Var ident))) = (4, ident)
-entityOrdering (Codec.EntityRepl _)                                   = (5, "")
-entityOrdering (Codec.EntityOpenDefPane (V.Var ident))                = (6, ident)
+entityOrdering (Codec.EntityOpenDefPane (V.Var ident))                = (5, ident)
 
 entityVersion :: Codec.Entity
 entityVersion = Codec.EntitySchemaVersion Migration.currentVersion
@@ -140,6 +138,12 @@ exportVal x =
         x ^.. ExprLens.valNominals & traverse_ exportNominal
         unwrapM (Proxy @ExportSubexpr ##>> \n -> n ^. hVal <$ exportSubexpr n) x & void
 
+exportTopDef :: Monad m => V.Var -> Export m ()
+exportTopDef globalId =
+    do
+        exportDef globalId
+        Codec.EntityOpenDefPane globalId & tell
+
 exportDef :: Monad m => V.Var -> Export m ()
 exportDef globalId =
     do
@@ -157,25 +161,11 @@ exportDef globalId =
     where
         defI = ExprIRef.defI globalId
 
-exportRepl :: Export ViewM ()
-exportRepl =
-    do
-        repl <- Load.defExpr (DbLayout.repl DbLayout.codeAnchors) & trans
-        traverse_ exportVal repl
-        repl
-            <&> hflipped %~ hmap (const (Const . toUUID . (^. ExprIRef.iref)))
-            & Codec.EntityRepl & tell
-
-jsonExportRepl :: T ViewM Aeson.Value
-jsonExportRepl = runExport exportRepl <&> snd
-
-fileExportRepl :: FilePath -> T ViewM (IO ())
-fileExportRepl = export "repl" exportRepl
+jsonExportDef :: V.Var -> T ViewM Aeson.Value
+jsonExportDef = fmap snd . runExport . exportTopDef
 
 fileExportDef :: Monad m => V.Var -> FilePath -> T m (IO ())
-fileExportDef globalId =
-    export ("def: " ++ show globalId)
-    (exportDef globalId >> tell (Codec.EntityOpenDefPane globalId))
+fileExportDef globalId = export ("def: " ++ show globalId) (exportTopDef globalId)
 
 fileExportTag :: Monad m => T.Tag -> FilePath -> T m (IO ())
 fileExportTag tag =
@@ -192,7 +182,6 @@ exportAll =
         exportSet DbLayout.tags exportTag
         exportSet DbLayout.tids exportNominal
         exportSet DbLayout.panes exportOpenPane
-        exportRepl
     where
         exportSet indexIRef exportFunc =
             indexIRef DbLayout.codeIRefs & Transaction.readIRef & trans

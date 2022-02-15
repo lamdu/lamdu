@@ -1,5 +1,5 @@
 -- | Sugared evaluation results
-{-# LANGUAGE TemplateHaskell, GADTs, TypeFamilies, MultiParamTypeClasses #-}
+{-# LANGUAGE TemplateHaskell, GADTs, TypeFamilies, MultiParamTypeClasses, StandaloneDeriving, UndecidableInstances #-}
 module Lamdu.Sugar.Types.Eval
     ( EvalScopes
     , ParamScopes, EvaluationScopes
@@ -79,11 +79,13 @@ data EvalException o = EvalException
     { _evalExceptionType :: ER.Error
     , _evalExceptionJumpTo :: Maybe (o EntityId)
     } deriving Generic
+deriving instance Show (o EntityId) => Show (EvalException o)
 
 data EvalCompletionResult o
     = EvalSuccess
     | EvalError (EvalException o)
     deriving Generic
+deriving instance Show (o EntityId) => Show (EvalCompletionResult o)
 
 type EvalCompletion o = CurAndPrev (Maybe (EvalCompletionResult o))
 

@@ -5,26 +5,21 @@ module Lamdu.Eval.Results
     , Val
     , ScopeId(..), topLevelScopeId
     , EvalTypeError(..)
-    , WhichGlobal(..), encodeWhichGlobal, decodeWhichGlobal
     , CompiledErrorType(..), encodeCompiledError, decodeJsErrorException
         , _DependencyTypeOutOfDate, _ReachedHole, _UnhandledCase
     , Error(..), _CompiledError, _RuntimeError
     , EvalException(..), error, errorPosition
-    , EvalResults(..), erExprValues, erAppliesOfLam, erCache, erCompleted
+    , EvalResults(..), erExprValues, erAppliesOfLam, erCache, erErrors
     , empty
     , extractField
     ) where
 
 import qualified Control.Lens as Lens
 import           Data.IntMap (IntMap)
-import qualified Data.IntMap as IntMap
-import           Data.List.Lens (prefixed)
-import qualified Data.Map as Map
 import qualified Data.Text as Text
 import           Data.UUID (UUID)
 import qualified Hyper
 import           Hyper.Syntax.Row (RowExtend(..))
-import           Lamdu.Calc.Identifier (identHex, identFromHex)
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
 import           Text.Read (readMaybe)
@@ -78,7 +73,7 @@ encodeCompiledError = show
 data Error
     = CompiledError CompiledErrorType
     | RuntimeError Text -- ^ JS exception
-    deriving (Eq, Generic)
+    deriving (Eq, Generic, Show)
 Lens.makePrisms ''Error
 
 -- | JS errors are either a "RuntimeError" with an exception string,
@@ -95,23 +90,9 @@ decodeJsErrorException other Nothing =
     Nothing -> "Invalid error type: " ++ show other & Left
     Just err -> Right (CompiledError err)
 
-data WhichGlobal = GlobalRepl | GlobalDef V.Var
-    deriving Eq
-Lens.makePrisms ''WhichGlobal
-
-encodeWhichGlobal :: WhichGlobal -> String
-encodeWhichGlobal GlobalRepl = "REPL"
-encodeWhichGlobal (GlobalDef (V.Var var)) = "DEF_" ++ identHex var
-
-decodeWhichGlobal :: String -> Either String WhichGlobal
-decodeWhichGlobal "REPL" = Right GlobalRepl
-decodeWhichGlobal x =
-    x ^? prefixed "DEF_" & maybe (Left "Not REPL or DEF_*") Right
-    >>= identFromHex <&> V.Var <&> GlobalDef
-
 data EvalException srcId = EvalException
     { _error :: Error
-    , _errorPosition :: Maybe (WhichGlobal, srcId)
+    , _errorPosition :: Maybe (V.Var, srcId)
     } deriving Eq
 Lens.makeLenses ''EvalException
 
@@ -129,16 +110,16 @@ data EvalResults =
     { _erExprValues :: Map UUID (Map ScopeId (Val ()))
     , _erAppliesOfLam :: Map UUID (Map ScopeId [(ScopeId, Val ())])
     , _erCache :: IntMap (Val ())
-    , _erCompleted :: Maybe (Either (EvalException UUID) (Val ()))
+    , _erErrors :: Map V.Var (EvalException UUID)
     }
 
 empty :: EvalResults
 empty =
     EvalResults
-    { _erExprValues = Map.empty
-    , _erAppliesOfLam = Map.empty
-    , _erCache = IntMap.empty
-    , _erCompleted = Nothing
+    { _erExprValues = mempty
+    , _erAppliesOfLam = mempty
+    , _erCache = mempty
+    , _erErrors = mempty
     }
 
 Lens.makeLenses ''EvalResults

@@ -1,7 +1,6 @@
 module Lamdu.GUI.Main
     ( make
     , CodeEdit.Model
-    , CodeEdit.ExportRepl(..)
     , CodeEdit.ExportActions(..)
     , CodeEdit.EvalResults
     , TitledSelection(..), title, selection

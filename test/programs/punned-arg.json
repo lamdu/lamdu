@@ -1,36 +1,36 @@
 [
     {
-        "schemaVersion": 15
+        "schemaVersion": 16
     },
     {
-        "tagOrder": 0,
-        "tag": "252f10c83610ebca1a059c0bae8255eb",
         "names": {
             "english": "f"
-        }
+        },
+        "tag": "252f10c83610ebca1a059c0bae8255eb",
+        "tagOrder": 0
     },
     {
-        "tagOrder": 0,
-        "tag": "64077ff41e0a8ee59e103f93023ad302",
         "names": {
             "english": "a"
-        }
+        },
+        "tag": "64077ff41e0a8ee59e103f93023ad302",
+        "tagOrder": 0
     },
     {
-        "tagOrder": 1,
-        "tag": "fa4970527c82ac935af48b0693d96cd9",
         "names": {
             "english": "b"
-        }
+        },
+        "tag": "fa4970527c82ac935af48b0693d96cd9",
+        "tagOrder": 1
     },
     {
-        "tag": null,
-        "lamVar": "94496880b6034251a4b0ad86d0fd3fb1"
+        "lamVar": "94496880b6034251a4b0ad86d0fd3fb1",
+        "tag": null
     },
     {
-        "tag": "64077ff41e0a8ee59e103f93023ad302",
-        "defPresentationMode": "Verbose",
         "def": "012bd2d33d774206bc3c2ca8f2f6a4ca",
+        "defPresentationMode": "Verbose",
+        "tag": "64077ff41e0a8ee59e103f93023ad302",
         "typ": {
             "schemeType": {
                 "typeVar": "61"
@@ -45,20 +45,20 @@
         }
     },
     {
-        "tag": "252f10c83610ebca1a059c0bae8255eb",
-        "defPresentationMode": "Verbose",
         "def": "141b93fe48c04af6922313328bbc8ca9",
+        "defPresentationMode": "Verbose",
+        "tag": "252f10c83610ebca1a059c0bae8255eb",
         "typ": {
             "schemeType": {
                 "funcParam": {
                     "record": [
                         {
-                            "typeVar": "7434",
-                            "rowTag": "fa4970527c82ac935af48b0693d96cd9"
+                            "rowTag": "fa4970527c82ac935af48b0693d96cd9",
+                            "typeVar": "7434"
                         },
                         {
-                            "typeVar": "7433",
-                            "rowTag": "64077ff41e0a8ee59e103f93023ad302"
+                            "rowTag": "64077ff41e0a8ee59e103f93023ad302",
+                            "typeVar": "7433"
                         }
                     ]
                 },
@@ -73,97 +73,109 @@
             ]
         },
         "val": {
+            "id": "3ab69508-9e90-46f2-a57a-d3ae062e9f76",
+            "lamBody": {
+                "hole": {},
+                "id": "9015ebe0-5220-49b1-8440-1b80d4281ab9"
+            },
             "lamParamType": {
+                "id": "77141bd6-4481-545b-ae14-9440bdb3cb70",
                 "record": [
                     {
-                        "rowId": "2e4804ae-c14f-5724-be45-0cb4c9327110",
                         "id": "6d0a51d1-9437-5a04-b48e-ed9bfbb5f81c",
+                        "rowId": "2e4804ae-c14f-5724-be45-0cb4c9327110",
                         "rowTag": "64077ff41e0a8ee59e103f93023ad302"
                     },
                     {
-                        "rowId": "07876c27-2ade-5f5d-942c-d4827f8f5e3b",
                         "id": "8e324334-6775-5555-a2b4-bab48eb89e6f",
+                        "rowId": "07876c27-2ade-5f5d-942c-d4827f8f5e3b",
                         "rowTag": "fa4970527c82ac935af48b0693d96cd9"
                     },
                     {
                         "rowId": "b67cbebc-bd83-5f11-b57b-59ccaed8b71a"
                     }
-                ],
-                "id": "77141bd6-4481-545b-ae14-9440bdb3cb70"
+                ]
             },
-            "lamVar": "94496880b6034251a4b0ad86d0fd3fb1",
-            "id": "3ab69508-9e90-46f2-a57a-d3ae062e9f76",
-            "lamBody": {
-                "hole": {},
-                "id": "9015ebe0-5220-49b1-8440-1b80d4281ab9"
-            }
+            "lamVar": "94496880b6034251a4b0ad86d0fd3fb1"
         }
     },
     {
-        "repl": {
-            "frozenDeps": {
-                "defTypes": {
-                    "012bd2d33d774206bc3c2ca8f2f6a4ca": {
-                        "schemeType": {
-                            "typeVar": "61"
-                        },
-                        "typeVars": [
-                            "61"
-                        ]
+        "def": "7265706c7265706c7265706c7265706c",
+        "defPresentationMode": "Verbose",
+        "frozenDeps": {
+            "defTypes": {
+                "012bd2d33d774206bc3c2ca8f2f6a4ca": {
+                    "schemeType": {
+                        "typeVar": "61"
                     },
-                    "141b93fe48c04af6922313328bbc8ca9": {
-                        "schemeType": {
-                            "funcParam": {
-                                "record": [
-                                    {
-                                        "typeVar": "7434",
-                                        "rowTag": "fa4970527c82ac935af48b0693d96cd9"
-                                    },
-                                    {
-                                        "typeVar": "7433",
-                                        "rowTag": "64077ff41e0a8ee59e103f93023ad302"
-                                    }
-                                ]
-                            },
-                            "funcResult": {
-                                "typeVar": "6c35"
-                            }
-                        },
-                        "typeVars": [
-                            "6c35",
-                            "7433",
-                            "7434"
-                        ]
-                    }
-                }
-            },
-            "val": {
-                "applyFunc": {
-                    "var": "141b93fe48c04af6922313328bbc8ca9",
-                    "id": "970f38f9-45b5-2bf6-99da-8ea6f3083d2a"
+                    "typeVars": [
+                        "61"
+                    ]
                 },
-                "applyArg": {
-                    "extendVal": {
-                        "var": "012bd2d33d774206bc3c2ca8f2f6a4ca",
-                        "id": "8a57a2b6-f1e2-bfe6-de3e-c57705238516"
-                    },
-                    "extendTag": "64077ff41e0a8ee59e103f93023ad302",
-                    "id": "fbca3f4c-e729-2bd2-82dc-b8ea00404f6f",
-                    "extendRest": {
-                        "extendVal": {
-                            "hole": {},
-                            "id": "98e37776-8ac8-2a3a-a5a5-718e9c8d4256"
+                "141b93fe48c04af6922313328bbc8ca9": {
+                    "schemeType": {
+                        "funcParam": {
+                            "record": [
+                                {
+                                    "rowTag": "fa4970527c82ac935af48b0693d96cd9",
+                                    "typeVar": "7434"
+                                },
+                                {
+                                    "rowTag": "64077ff41e0a8ee59e103f93023ad302",
+                                    "typeVar": "7433"
+                                }
+                            ]
                         },
-                        "extendTag": "fa4970527c82ac935af48b0693d96cd9",
-                        "id": "10fb88b2-9020-27cf-a247-04cd7ea5ef75",
-                        "extendRest": {
-                            "recEmpty": {},
-                            "id": "fb2ca26a-11d6-2e6a-85cb-c9f70e079534"
+                        "funcResult": {
+                            "typeVar": "6c35"
                         }
-                    }
-                },
-                "id": "33164582-bc53-22a2-9663-8fed77062c2f"
+                    },
+                    "typeVars": [
+                        "6c35",
+                        "7433",
+                        "7434"
+                    ]
+                }
             }
+        },
+        "tag": null,
+        "typ": {
+            "schemeType": {
+                "typeVar": "7430"
+            },
+            "typeVars": [
+                "7430"
+            ]
+        },
+        "val": {
+            "applyArg": {
+                "extendRest": {
+                    "extendRest": {
+                        "id": "fb2ca26a-11d6-2e6a-85cb-c9f70e079534",
+                        "recEmpty": {}
+                    },
+                    "extendTag": "fa4970527c82ac935af48b0693d96cd9",
+                    "extendVal": {
+                        "hole": {},
+                        "id": "98e37776-8ac8-2a3a-a5a5-718e9c8d4256"
+                    },
+                    "id": "10fb88b2-9020-27cf-a247-04cd7ea5ef75"
+                },
+                "extendTag": "64077ff41e0a8ee59e103f93023ad302",
+                "extendVal": {
+                    "id": "8a57a2b6-f1e2-bfe6-de3e-c57705238516",
+                    "var": "012bd2d33d774206bc3c2ca8f2f6a4ca"
+                },
+                "id": "fbca3f4c-e729-2bd2-82dc-b8ea00404f6f"
+            },
+            "applyFunc": {
+                "id": "970f38f9-45b5-2bf6-99da-8ea6f3083d2a",
+                "var": "141b93fe48c04af6922313328bbc8ca9"
+            },
+            "id": "33164582-bc53-22a2-9663-8fed77062c2f"
         }
+    },
+    {
+        "openDefPane": "7265706c7265706c7265706c7265706c"
     }
 ]

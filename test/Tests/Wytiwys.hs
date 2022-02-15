@@ -8,10 +8,11 @@ import           GUI.Momentu.ModKey (noMods, shift)
 import qualified Graphics.UI.GLFW as GLFW
 import           Lamdu.Data.Db.Layout (ViewM, runDbTransaction)
 import qualified Lamdu.Data.Db.Layout as DbLayout
+import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Data.Export.JS as ExportJS
+import           Lamdu.Expr.IRef (globalId)
 import           Lamdu.VersionControl (runAction)
 import qualified Revision.Deltum.Transaction as Transaction
-import           Test.Lamdu.Code (readRepl)
 import           Test.Lamdu.Db (ramDB)
 import qualified Test.Lamdu.Env as Env
 import           Test.Lamdu.Exec (runJS)
@@ -41,8 +42,9 @@ wytiwysDb mkDb src result =
         env <- Env.make
         db <- mkDb
         do
+            repl <- DataOps.newEmptyPublicDefinitionWithPane DbLayout.codeAnchors & lift
             _ <- applyActions env src
-            lift (readRepl >>= ExportJS.compile)
+            globalId repl & ExportJS.compile & lift
             & evalOnceT
             & runAction
             & runDbTransaction db

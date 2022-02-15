@@ -5,6 +5,7 @@ module Lamdu.Sugar.Eval
     ( addEvaluationResults
     ) where
 
+import           Control.Applicative (Alternative(..))
 import qualified Control.Lens as Lens
 import           Data.CurAndPrev (CurAndPrev)
 import           Data.Kind (Type)
@@ -15,9 +16,12 @@ import           Hyper.Syntax.Nominal (NominalDecl)
 import           Lamdu.Calc.Lens (tIds)
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Data.Anchors as Anchors
+import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Eval.Results as R
 import           Lamdu.Eval.Results (EvalResults)
 import           Lamdu.Eval.Results.Process (addTypes)
+import           Lamdu.Expr.IRef (defI)
+import           Lamdu.Expr.UniqueId (ToUUID(toUUID))
 import qualified Lamdu.Sugar.Convert.Eval as ConvertEval
 import           Lamdu.Sugar.Convert.Load (makeNominalsMap)
 import           Lamdu.Sugar.Internal
@@ -26,6 +30,7 @@ import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import qualified Lamdu.Sugar.Lens as SugarLens
 import qualified Lamdu.Sugar.Lens.Annotations as SugarLens
 import           Lamdu.Sugar.Types hiding (Type)
+import qualified Revision.Deltum.IRef as IRef
 import           Revision.Deltum.Transaction (Transaction)
 
 import           Lamdu.Prelude
@@ -231,7 +236,7 @@ addEvaluationResults ::
     T m (
         WorkArea (Annotation (EvaluationScopes InternalName i) n) n i (T m)
         (Annotation (EvaluationScopes InternalName i) n, a, ConvertPayload m))
-addEvaluationResults cp r wa@(WorkArea panes repl globals) =
+addEvaluationResults cp r wa@(WorkArea panes globals) =
     makeNominalsMap
     ( wa ^..
         SugarLens.annotations @(Annotation EvalPrep n)
@@ -240,10 +245,25 @@ addEvaluationResults cp r wa@(WorkArea panes repl globals) =
     <&> AddEvalCtx r
     <&>
     \ctx ->
-    WorkArea
-    ( panes <&> SugarLens.paneBinder %~ addToNode ctx)
-    ( repl
-        & replExpr %~ addToNode ctx
-        & replResult .~ (r <&> (^. R.erCompleted) & ConvertEval.completion cp)
-        )
-    globals
+    let fixDef def =
+            def &
+            drBody . _DefinitionBodyExpression %~ go
+            where
+                go expr =
+                    expr
+                    & deResult .~ (r <&> mkRes (expr ^. deContent . annotation . _3 . pEntityId))
+                    & deContent %~ addToNode ctx
+                mkRes exprId res =
+                    EvalSuccess <$ res ^? R.erExprValues . Lens.ix (toUUID exprId) . traverse
+                    <|> (res ^. R.erErrors . Lens.at (def ^. drDefI) <&> mkError)
+                mkError err =
+                    EvalException
+                    { _evalExceptionType = err ^. R.error
+                    , _evalExceptionJumpTo =
+                        err ^. R.errorPosition <&>
+                        \(v, pos) ->
+                        EntityId.ofIRef (IRef.unsafeFromUUID pos) <$ DataOps.newPane cp (Anchors.PaneDefinition (defI v))
+                    }
+                    & EvalError
+    in
+    WorkArea (panes <&> paneBody . _PaneDefinition %~ fixDef) globals

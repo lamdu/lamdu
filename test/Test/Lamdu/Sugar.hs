@@ -64,18 +64,15 @@ data PaneLowLevel
 
 Lens.makePrisms ''PaneLowLevel
 
-data WorkAreaLowLevel = WorkAreaLowLevel
-    { wallRepl :: Def.Expr (Ann (HRef ViewM) # V.Term)
-    , wallPanes :: [PaneLowLevel]
-    }
+type WorkAreaLowLevel = [PaneLowLevel]
 
 workAreaLowLevelEntityIds :: WorkAreaLowLevel -> Set EntityId
-workAreaLowLevelEntityIds (WorkAreaLowLevel r p) =
+workAreaLowLevelEntityIds p =
     defExprs ^.. Lens.folded . Def.expr . hflipped
     >>= hfoldMap (\_ x -> [EntityId.EntityId (uuid (x ^. iref . _F))])
     & Set.fromList
     where
-        defExprs = r : p ^.. Lens.folded . _PaneDefLowLevel . Def.defBody . Def._BodyExpr
+        defExprs = p ^.. Lens.folded . _PaneDefLowLevel . Def.defBody . Def._BodyExpr
 
 loadPane :: Anchors.Pane ViewM -> T ViewM PaneLowLevel
 loadPane (Anchors.PaneDefinition def) = ExprLoad.def def <&> PaneDefLowLevel
@@ -83,10 +80,7 @@ loadPane (Anchors.PaneTag tag) = PaneTagLowLevel tag & pure
 loadPane (Anchors.PaneNominal nom) = PaneNominalLowLevel nom & pure
 
 workAreaLowLevelLoad :: T ViewM WorkAreaLowLevel
-workAreaLowLevelLoad =
-    WorkAreaLowLevel
-    <$> ExprLoad.defExpr (repl codeAnchors)
-    <*> (getP (panes codeAnchors) >>= traverse loadPane)
+workAreaLowLevelLoad = getP (panes codeAnchors) >>= traverse loadPane
 
 validate ::
     (HasCallStack, NFData v, NFData name) =>

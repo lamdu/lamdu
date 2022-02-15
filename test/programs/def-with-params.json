@@ -1,33 +1,111 @@
 [
     {
-        "schemaVersion": 15
+        "schemaVersion": 16
     },
     {
-        "tagOrder": 0,
-        "tag": "252f10c83610ebca1a059c0bae8255eb",
         "names": {
             "english": "f"
-        }
-    },
-    {
-        "tag": null,
-        "lamVar": "1506ac396f874c16b1f3dbb7bdd1a50e"
-    },
-    {
+        },
         "tag": "252f10c83610ebca1a059c0bae8255eb",
+        "tagOrder": 0
+    },
+    {
+        "names": {
+            "english": "a",
+            "hebrew": "א",
+            "italian": "a",
+            "spanish": "a"
+        },
+        "tag": "64077ff41e0a8ee59e103f93023ad302",
+        "tagOrder": 0
+    },
+    {
+        "names": {
+            "english": "b"
+        },
+        "tag": "fa4970527c82ac935af48b0693d96cd9",
+        "tagOrder": 1
+    },
+    {
+        "lamVar": "1506ac396f874c16b1f3dbb7bdd1a50e",
+        "tag": null
+    },
+    {
+        "def": "7265706c7265706c7265706c7265706c",
         "defPresentationMode": "Verbose",
-        "def": "75ff45b312a54c00a66c3db656f240db",
+        "frozenDeps": {
+            "defTypes": {
+                "75ff45b312a54c00a66c3db656f240db": {
+                    "schemeType": {
+                        "funcParam": {
+                            "record": [
+                                {
+                                    "rowTag": "fa4970527c82ac935af48b0693d96cd9",
+                                    "typeVar": "7434"
+                                },
+                                {
+                                    "rowTag": "64077ff41e0a8ee59e103f93023ad302",
+                                    "typeVar": "7433"
+                                }
+                            ]
+                        },
+                        "funcResult": {
+                            "typeVar": "6c35"
+                        }
+                    },
+                    "typeVars": [
+                        "6c35",
+                        "7433",
+                        "7434"
+                    ]
+                }
+            }
+        },
+        "tag": null,
         "typ": {
             "schemeType": {
                 "funcParam": {
                     "record": [
                         {
-                            "typeVar": "7434",
-                            "rowTag": "fa4970527c82ac935af48b0693d96cd9"
+                            "rowTag": "fa4970527c82ac935af48b0693d96cd9",
+                            "typeVar": "7430"
                         },
                         {
-                            "typeVar": "7433",
-                            "rowTag": "64077ff41e0a8ee59e103f93023ad302"
+                            "rowTag": "64077ff41e0a8ee59e103f93023ad302",
+                            "typeVar": "7431"
+                        }
+                    ]
+                },
+                "funcResult": {
+                    "typeVar": "7432"
+                }
+            },
+            "typeVars": [
+                "7430",
+                "7431",
+                "7432"
+            ]
+        },
+        "val": {
+            "id": "61b380ce-75d4-78b2-9633-b5c5eb2bd1c1",
+            "var": "75ff45b312a54c00a66c3db656f240db"
+        }
+    },
+    {
+        "def": "75ff45b312a54c00a66c3db656f240db",
+        "defPresentationMode": "Verbose",
+        "tag": "252f10c83610ebca1a059c0bae8255eb",
+        "typ": {
+            "schemeType": {
+                "funcParam": {
+                    "record": [
+                        {
+                            "rowTag": "fa4970527c82ac935af48b0693d96cd9",
+                            "typeVar": "7434"
+                        },
+                        {
+                            "rowTag": "64077ff41e0a8ee59e103f93023ad302",
+                            "typeVar": "7433"
                         }
                     ]
                 },
@@ -42,66 +120,33 @@
             ]
         },
         "val": {
+            "id": "72f8bbe7-12ff-4fa7-9a2e-c82ca8fe908a",
+            "lamBody": {
+                "hole": {},
+                "id": "e0e3b617-1a54-494c-ae2b-e66fc7e8eeda"
+            },
             "lamParamType": {
+                "id": "d338915d-2896-5bed-8324-0072650b9209",
                 "record": [
                     {
-                        "rowId": "a281dce4-5855-564f-8a4d-913dc8e08c0d",
                         "id": "518287b2-34cb-5c61-857b-996ee93c5c7d",
+                        "rowId": "a281dce4-5855-564f-8a4d-913dc8e08c0d",
                         "rowTag": "64077ff41e0a8ee59e103f93023ad302"
                     },
                     {
-                        "rowId": "b9c534bc-fce0-561b-b597-82b55cdd71b2",
                         "id": "4ef76896-6a35-5754-821a-940318a55e17",
+                        "rowId": "b9c534bc-fce0-561b-b597-82b55cdd71b2",
                         "rowTag": "fa4970527c82ac935af48b0693d96cd9"
                     },
                     {
                         "rowId": "0218b3f9-b729-546f-a941-420f5f92142e"
                     }
-                ],
-                "id": "d338915d-2896-5bed-8324-0072650b9209"
+                ]
             },
-            "lamVar": "1506ac396f874c16b1f3dbb7bdd1a50e",
-            "id": "72f8bbe7-12ff-4fa7-9a2e-c82ca8fe908a",
-            "lamBody": {
-                "hole": {},
-                "id": "e0e3b617-1a54-494c-ae2b-e66fc7e8eeda"
-            }
+            "lamVar": "1506ac396f874c16b1f3dbb7bdd1a50e"
         }
     },
     {
-        "repl": {
-            "frozenDeps": {
-                "defTypes": {
-                    "75ff45b312a54c00a66c3db656f240db": {
-                        "schemeType": {
-                            "funcParam": {
-                                "record": [
-                                    {
-                                        "typeVar": "7434",
-                                        "rowTag": "fa4970527c82ac935af48b0693d96cd9"
-                                    },
-                                    {
-                                        "typeVar": "7433",
-                                        "rowTag": "64077ff41e0a8ee59e103f93023ad302"
-                                    }
-                                ]
-                            },
-                            "funcResult": {
-                                "typeVar": "6c35"
-                            }
-                        },
-                        "typeVars": [
-                            "6c35",
-                            "7433",
-                            "7434"
-                        ]
-                    }
-                }
-            },
-            "val": {
-                "var": "75ff45b312a54c00a66c3db656f240db",
-                "id": "61b380ce-75d4-78b2-9633-b5c5eb2bd1c1"
-            }
-        }
+        "openDefPane": "7265706c7265706c7265706c7265706c"
     }
 ]

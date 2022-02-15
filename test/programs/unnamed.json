@@ -1,37 +1,31 @@
 [
     {
-        "schemaVersion": 15
+        "schemaVersion": 16
     },
     {
-        "tagOrder": 0,
-        "tag": "42493a696e6669786c00000000000000",
         "names": {
-            "hebrew": "תוכית_שמאל",
-            "english": "infixl"
-        }
-    },
-    {
-        "tagOrder": 1,
-        "tag": "42493a696e6669787200000000000000",
-        "names": {
-            "hebrew": "תוכית_ימין",
-            "english": "infixr"
-        }
-    },
-    {
-        "tagOrder": 0,
-        "op": "+",
-        "tag": "a318c24216defe206feeb73ef5be0003"
-    },
-    {
-        "tag": null,
-        "defPresentationMode": "Verbose",
-        "def": "3325f23993014e5e97e8e14f2f391cf7",
-        "typ": {
-            "schemeType": {
-                "nomId": "42493a666c6f61740000000000000000"
-            }
+            "english": "infixl",
+            "hebrew": "תוכית_שמאל"
         },
+        "tag": "42493a696e6669786c00000000000000",
+        "tagOrder": 0
+    },
+    {
+        "names": {
+            "english": "infixr",
+            "hebrew": "תוכית_ימין"
+        },
+        "tag": "42493a696e6669787200000000000000",
+        "tagOrder": 1
+    },
+    {
+        "op": "+",
+        "tag": "a318c24216defe206feeb73ef5be0003",
+        "tagOrder": 0
+    },
+    {
+        "def": "3325f23993014e5e97e8e14f2f391cf7",
+        "defPresentationMode": "Verbose",
         "frozenDeps": {
             "defTypes": {
                 "acb176a8b8764d2f8092176df7895169": {
@@ -55,49 +49,78 @@
                 }
             }
         },
+        "tag": null,
+        "typ": {
+            "schemeType": {
+                "nomId": "42493a666c6f61740000000000000000"
+            }
+        },
         "val": {
-            "applyFunc": {
-                "var": "acb176a8b8764d2f8092176df7895169",
-                "id": "45fbbfcd-5221-75ea-958a-3a9227183ada"
-            },
             "applyArg": {
-                "extendVal": {
-                    "primBytes": "0101000000000000000700000000000010ffffffffffffffcc",
-                    "primId": "42493a666c6f61740000000000000000",
-                    "id": "91f1ac84-45ef-4709-b8d5-1292c80db892"
-                },
-                "extendTag": "42493a696e6669786c00000000000000",
-                "id": "211f14a8-98e9-742d-8ae9-28147b6b435e",
                 "extendRest": {
-                    "extendVal": {
-                        "primBytes": "0101000000000000000700000000000010ffffffffffffffcd",
-                        "primId": "42493a666c6f61740000000000000000",
-                        "id": "5bd0b420-bb21-4f34-828c-2cad820943de"
+                    "extendRest": {
+                        "id": "73b99762-c328-70d8-a038-7df1ef0cfc6b",
+                        "recEmpty": {}
                     },
                     "extendTag": "42493a696e6669787200000000000000",
-                    "id": "e9baa284-99be-7c53-8c8c-d39606ef518a",
-                    "extendRest": {
-                        "recEmpty": {},
-                        "id": "73b99762-c328-70d8-a038-7df1ef0cfc6b"
-                    }
-                }
+                    "extendVal": {
+                        "id": "5bd0b420-bb21-4f34-828c-2cad820943de",
+                        "primBytes": "0101000000000000000700000000000010ffffffffffffffcd",
+                        "primId": "42493a666c6f61740000000000000000"
+                    },
+                    "id": "e9baa284-99be-7c53-8c8c-d39606ef518a"
+                },
+                "extendTag": "42493a696e6669786c00000000000000",
+                "extendVal": {
+                    "id": "91f1ac84-45ef-4709-b8d5-1292c80db892",
+                    "primBytes": "0101000000000000000700000000000010ffffffffffffffcc",
+                    "primId": "42493a666c6f61740000000000000000"
+                },
+                "id": "211f14a8-98e9-742d-8ae9-28147b6b435e"
+            },
+            "applyFunc": {
+                "id": "45fbbfcd-5221-75ea-958a-3a9227183ada",
+                "var": "acb176a8b8764d2f8092176df7895169"
             },
             "id": "86e5fb73-fb7b-763b-878e-437fde508cb9"
         }
     },
     {
-        "tag": "a318c24216defe206feeb73ef5be0003",
+        "def": "7265706c7265706c7265706c7265706c",
+        "defPresentationMode": "Verbose",
+        "frozenDeps": {
+            "defTypes": {
+                "3325f23993014e5e97e8e14f2f391cf7": {
+                    "schemeType": {
+                        "nomId": "42493a666c6f61740000000000000000"
+                    }
+                }
+            }
+        },
+        "tag": null,
+        "typ": {
+            "schemeType": {
+                "nomId": "42493a666c6f61740000000000000000"
+            }
+        },
+        "val": {
+            "id": "ac90035d-5541-417e-923e-9cd1997c9850",
+            "var": "3325f23993014e5e97e8e14f2f391cf7"
+        }
+    },
+    {
+        "builtin": [
+            "Prelude",
+            "+"
+        ],
+        "def": "acb176a8b8764d2f8092176df7895169",
         "defPresentationMode": {
             "Operator": [
                 "42493a696e6669786c00000000000000",
                 "42493a696e6669787200000000000000"
             ]
         },
-        "builtin": [
-            "Prelude",
-            "+"
-        ],
-        "def": "acb176a8b8764d2f8092176df7895169",
+        "tag": "a318c24216defe206feeb73ef5be0003",
         "typ": {
             "schemeType": {
                 "funcParam": {
@@ -119,20 +142,6 @@
         }
     },
     {
-        "repl": {
-            "frozenDeps": {
-                "defTypes": {
-                    "3325f23993014e5e97e8e14f2f391cf7": {
-                        "schemeType": {
-                            "nomId": "42493a666c6f61740000000000000000"
-                        }
-                    }
-                }
-            },
-            "val": {
-                "var": "3325f23993014e5e97e8e14f2f391cf7",
-                "id": "ac90035d-5541-417e-923e-9cd1997c9850"
-            }
-        }
+        "openDefPane": "7265706c7265706c7265706c7265706c"
     }
 ]

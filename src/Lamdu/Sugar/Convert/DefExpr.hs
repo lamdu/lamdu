@@ -5,6 +5,7 @@ module Lamdu.Sugar.Convert.DefExpr
 
 import qualified Control.Lens as Lens
 import           Control.Monad.Once (OnceT)
+import           Data.CurAndPrev (CurAndPrev(..))
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Data.Property as Property
 import           Hyper.Syntax.Scheme (saveScheme)
@@ -17,6 +18,7 @@ import qualified Lamdu.Data.Definition as Definition
 import           Lamdu.Expr.IRef (DefI)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import           Lamdu.Sugar.Convert.Binder (convertDefinitionBinder)
+import           Lamdu.Sugar.Convert.Binder.Params (mkVarInfo)
 import qualified Lamdu.Sugar.Convert.Input as Input
 import           Lamdu.Sugar.Convert.Monad (ConvertM)
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
@@ -49,12 +51,15 @@ convert defType defExpr defI =
         unless (alphaEq defType inferredType) $
             error $ "Def type mismatches its inferred type! " <> show (pPrint (defType, inferredType))
         defTypeS <- ConvertType.convertScheme (EntityId.currentTypeOf entityId) defType
+        varInfo <- mkVarInfo (defExpr ^. Definition.expr . hAnn . Input.inferredType)
         DefinitionBodyExpression DefinitionExpression
             { _deType = defTypeS
             , _dePresentationMode =
                 lift (presMode ^. Property.mkProperty) <$
                 content ^? hVal . _BodyFunction . fParams . _LhsRecord . tlItems . Lens._Just . tlTail . traverse
             , _deContent = content
+            , _deVarInfo = varInfo
+            , _deResult = CurAndPrev Nothing Nothing
             } & pure
     where
         entityId = ExprIRef.globalId defI & EntityId.ofBinder

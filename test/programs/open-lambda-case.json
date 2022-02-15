@@ -1,39 +1,68 @@
 [
     {
-        "schemaVersion": 15
+        "schemaVersion": 16
     },
     {
-        "tagOrder": 0,
-        "tag": "64077ff41e0a8ee59e103f93023ad302",
         "names": {
             "english": "a"
-        }
+        },
+        "tag": "64077ff41e0a8ee59e103f93023ad302",
+        "tagOrder": 0
     },
     {
+        "lamVar": "1f7250cc437d3448706cd675c6670701",
+        "tag": null
+    },
+    {
+        "def": "7265706c7265706c7265706c7265706c",
+        "defPresentationMode": "Verbose",
         "tag": null,
-        "lamVar": "1f7250cc437d3448706cd675c6670701"
+        "typ": {
+            "rowVars": {
+                "7230": []
+            },
+            "schemeType": {
+                "funcParam": {
+                    "variant": [
+                        {
+                            "rowTag": "64077ff41e0a8ee59e103f93023ad302",
+                            "typeVar": "7430"
+                        },
+                        {
+                            "rowVar": "7230"
+                        }
+                    ]
+                },
+                "funcResult": {
+                    "typeVar": "7431"
+                }
+            },
+            "typeVars": [
+                "7430",
+                "7431"
+            ]
+        },
+        "val": {
+            "caseHandler": {
+                "id": "ef76f6b3-8470-9f8c-065c-68c8296ac9d8",
+                "lamBody": {
+                    "hole": {},
+                    "id": "b8f6485d-73e0-7ee1-8976-429ce9f3281a"
+                },
+                "lamParamType": {
+                    "id": "b1239ab8-5a4c-5023-8069-4c6be526a440"
+                },
+                "lamVar": "1f7250cc437d3448706cd675c6670701"
+            },
+            "caseRest": {
+                "hole": {},
+                "id": "2bbef6d5-ac6a-44f9-abff-2b23dc1a6d77"
+            },
+            "caseTag": "64077ff41e0a8ee59e103f93023ad302",
+            "id": "19a58cf0-3c53-4de7-839b-3107104eb056"
+        }
     },
     {
-        "repl": {
-            "val": {
-                "caseRest": {
-                    "hole": {},
-                    "id": "2bbef6d5-ac6a-44f9-abff-2b23dc1a6d77"
-                },
-                "caseHandler": {
-                    "lamParamType": {
-                        "id": "b1239ab8-5a4c-5023-8069-4c6be526a440"
-                    },
-                    "lamVar": "1f7250cc437d3448706cd675c6670701",
-                    "id": "ef76f6b3-8470-9f8c-065c-68c8296ac9d8",
-                    "lamBody": {
-                        "hole": {},
-                        "id": "b8f6485d-73e0-7ee1-8976-429ce9f3281a"
-                    }
-                },
-                "caseTag": "64077ff41e0a8ee59e103f93023ad302",
-                "id": "19a58cf0-3c53-4de7-839b-3107104eb056"
-            }
-        }
+        "openDefPane": "7265706c7265706c7265706c7265706c"
     }
 ]

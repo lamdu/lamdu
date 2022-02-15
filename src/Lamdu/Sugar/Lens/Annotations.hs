@@ -44,11 +44,7 @@ instance Annotations a b (Payload a o) (Payload b o) where
 instance
     (HAnnotations a b (Ann (Const s)) (Ann (Const t)), r ~ WorkArea b n i o t) =>
     Annotations a b (WorkArea a n i o s) r where
-    annotations f (WorkArea panes repl globals) =
-        WorkArea
-        <$> (traverse . paneBinder . hAnnotations) f panes
-        <*> (replExpr . hAnnotations) f repl
-        ?? globals
+    annotations = waPanes . traverse . paneBinder . hAnnotations
 
 instance r ~ Ann (Const (b, x, y)) => HAnnotations a b (Ann (Const (a, x, y))) r where
     hAnnotations f (Ann p x) =

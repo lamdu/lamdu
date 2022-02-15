@@ -1,63 +1,61 @@
 [
     {
-        "schemaVersion": 15
+        "schemaVersion": 16
     },
     {
-        "tagOrder": 0,
-        "tag": "1a325e9af1de76dc492589ba2d0c8ce6",
-        "names": {
-            "english": "num"
-        }
+        "lamVar": "b024b232e8894d43a9af780630694016",
+        "tag": null
     },
     {
-        "tag": "1a325e9af1de76dc492589ba2d0c8ce6",
-        "nom": "42493a666c6f61740000000000000000"
+        "lamVar": "bf41533af3aa4f9390a12ce0e0b1f5d4",
+        "tag": null
     },
     {
+        "def": "7265706c7265706c7265706c7265706c",
+        "defPresentationMode": "Verbose",
         "tag": null,
-        "lamVar": "b024b232e8894d43a9af780630694016"
-    },
-    {
-        "tag": null,
-        "lamVar": "bf41533af3aa4f9390a12ce0e0b1f5d4"
-    },
-    {
-        "repl": {
-            "val": {
-                "applyFunc": {
-                    "lamParamType": {
-                        "id": "cf31bb5d-6549-58f5-9c3f-a565b9884974"
-                    },
-                    "lamVar": "bf41533af3aa4f9390a12ce0e0b1f5d4",
-                    "id": "d9dd9029-cf1f-4a72-b5b5-bddd1bcb5c66",
-                    "lamBody": {
-                        "applyFunc": {
-                            "lamParamType": {
-                                "id": "6bbb092b-cee5-5fd2-8be5-96c6e382ae38"
-                            },
-                            "lamVar": "b024b232e8894d43a9af780630694016",
-                            "id": "583ac12a-8d86-4f9c-bddc-66d6a0752b95",
-                            "lamBody": {
-                                "primBytes": "0101000000000000000700000000000010ffffffffffffffcc",
-                                "primId": "42493a666c6f61740000000000000000",
-                                "id": "1293d14b-eb7c-099c-cccb-dca21ce544fe"
-                            }
-                        },
-                        "applyArg": {
-                            "primBytes": "0101000000000000000700000000000010ffffffffffffffcd",
-                            "primId": "42493a666c6f61740000000000000000",
-                            "id": "20c95546-92cb-7cd5-0e2f-f8aa8d4bae6d"
-                        },
-                        "id": "80846fbe-cf94-4925-8e9a-aff2b86055cf"
-                    }
-                },
-                "applyArg": {
-                    "primBytes": "0101000000000000000700000000000010ffffffffffffffcc",
-                    "primId": "42493a666c6f61740000000000000000",
-                    "id": "31de0ac3-4cb5-3074-3c53-bfc4fcf6b5d7"
-                },
-                "id": "e13be0b7-74a9-426b-a361-1236ea261c7e"
+        "typ": {
+            "schemeType": {
+                "nomId": "42493a666c6f61740000000000000000"
             }
+        },
+        "val": {
+            "applyArg": {
+                "id": "31de0ac3-4cb5-3074-3c53-bfc4fcf6b5d7",
+                "primBytes": "0101000000000000000700000000000010ffffffffffffffcc",
+                "primId": "42493a666c6f61740000000000000000"
+            },
+            "applyFunc": {
+                "id": "d9dd9029-cf1f-4a72-b5b5-bddd1bcb5c66",
+                "lamBody": {
+                    "applyArg": {
+                        "id": "20c95546-92cb-7cd5-0e2f-f8aa8d4bae6d",
+                        "primBytes": "0101000000000000000700000000000010ffffffffffffffcd",
+                        "primId": "42493a666c6f61740000000000000000"
+                    },
+                    "applyFunc": {
+                        "id": "583ac12a-8d86-4f9c-bddc-66d6a0752b95",
+                        "lamBody": {
+                            "id": "1293d14b-eb7c-099c-cccb-dca21ce544fe",
+                            "primBytes": "0101000000000000000700000000000010ffffffffffffffcc",
+                            "primId": "42493a666c6f61740000000000000000"
+                        },
+                        "lamParamType": {
+                            "id": "6bbb092b-cee5-5fd2-8be5-96c6e382ae38"
+                        },
+                        "lamVar": "b024b232e8894d43a9af780630694016"
+                    },
+                    "id": "80846fbe-cf94-4925-8e9a-aff2b86055cf"
+                },
+                "lamParamType": {
+                    "id": "cf31bb5d-6549-58f5-9c3f-a565b9884974"
+                },
+                "lamVar": "bf41533af3aa4f9390a12ce0e0b1f5d4"
+            },
+            "id": "e13be0b7-74a9-426b-a361-1236ea261c7e"
         }
+    },
+    {
+        "openDefPane": "7265706c7265706c7265706c7265706c"
     }
 ]

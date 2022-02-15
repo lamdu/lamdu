@@ -1,13 +1,10 @@
 {-# LANGUAGE TypeApplications #-}
 
 module Lamdu.Sugar.Convert.PostProcess
-    ( Result(..), def, expr
-    , makeScheme
+    ( Result(..), def, makeScheme
     ) where
 
 import qualified Control.Lens as Lens
-import           Data.Property (MkProperty')
-import qualified Data.Property as Property
 import           Hyper
 import           Hyper.Syntax.Scheme (saveScheme)
 import           Hyper.Unify (UVar)
@@ -17,7 +14,7 @@ import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Debug as Debug
-import           Lamdu.Expr.IRef (DefI, ValI, HRef)
+import           Lamdu.Expr.IRef (DefI, HRef)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Load as ExprLoad
 import qualified Lamdu.Sugar.Convert.Input as Input
@@ -64,22 +61,3 @@ def infer monitors defI =
                         (^. hAnn . ExprIRef.iref)
                     & Transaction.writeIRef defI
                     )
-
-expr ::
-    Monad m =>
-    Load.InferFunc (HRef m) -> Debug.Monitors ->
-    MkProperty' (T m) (Definition.Expr (ValI m)) ->
-    T m Result
-expr infer monitors prop =
-    do
-        defExprLoaded <- ExprLoad.defExpr prop
-        -- TODO: This is code duplication with the above Load.inferCheckDef
-        -- & functions inside Load itself
-        let inferred = Load.inferDefExpr infer monitors defExprLoaded
-        case inferred of
-            Left err -> BadExpr err & pure
-            Right _ ->
-                GoodExpr <$
-                Property.modP prop
-                (Definition.exprFrozenDeps .~ Definition.pruneDefExprDeps defExprLoaded)
-

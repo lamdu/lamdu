@@ -14,7 +14,7 @@ import qualified Lamdu.Sugar.Types as Sugar
 import           Lamdu.Prelude
 
 defaultCursor :: Id
-defaultCursor = replId
+defaultCursor = gotoDefId
 
 fromBS :: ByteString -> Id
 fromBS = Id . (: [])
@@ -40,11 +40,11 @@ branchSelection = Id ["selected branch"]
 statusBarHamburger :: Id
 statusBarHamburger = Id ["hamburger"]
 
-replId :: Id
-replId = Id ["repl"]
-
 tagHoleId :: Id -> Id
 tagHoleId = (`WidgetId.joinId` ["hole"])
 
 fragmentHoleId :: Id -> Id
 fragmentHoleId = (`WidgetId.joinId` ["hole"])
+
+gotoDefId :: Id
+gotoDefId = Id ["goto-def"]

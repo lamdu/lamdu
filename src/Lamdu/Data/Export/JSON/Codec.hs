@@ -3,7 +3,7 @@
 module Lamdu.Data.Export.JSON.Codec
     ( TagOrder
     , Version(..)
-    , Entity(..), _EntitySchemaVersion, _EntityRepl, _EntityDef, _EntityTag, _EntityNominal, _EntityLamVar
+    , Entity(..), _EntitySchemaVersion, _EntityDef, _EntityTag, _EntityNominal, _EntityLamVar
     ) where
 
 import qualified Control.Lens as Lens
@@ -52,7 +52,6 @@ newtype Version = Version Int
 
 data Entity
     = EntitySchemaVersion Version
-    | EntityRepl (Definition.Expr (Val UUID))
     | EntityDef (Definition (Val UUID) (Meta.PresentationMode, T.Tag, V.Var))
     | EntityTag T.Tag Tag
     | EntityNominal T.Tag T.NominalId (Either (T.Types # QVars) (Pure # NominalDecl T.Type))
@@ -62,7 +61,6 @@ Lens.makePrisms ''Entity
 
 instance Aeson.ToJSON Entity where
     toJSON (EntitySchemaVersion ver) = encodeSchemaVersion ver
-    toJSON (EntityRepl x) = encodeRepl x
     toJSON (EntityDef def) = encodeDef def
     toJSON (EntityTag tid tdata) = encodeNamedTag (tid, tdata)
     toJSON (EntityNominal tag nomId nom) = encodeTaggedNominal ((tag, nomId), nom)
@@ -72,8 +70,7 @@ instance Aeson.ToJSON Entity where
 instance Aeson.FromJSON Entity where
     parseJSON =
         decodeVariant "entity"
-        [ ("repl", fmap EntityRepl . decodeRepl)
-        , ("def", fmap EntityDef  . decodeDef)
+        [ ("def", fmap EntityDef  . decodeDef)
         , ("tagOrder", fmap (uncurry EntityTag) . decodeNamedTag)
         , ("nom", fmap (\((tag, nomId), nom) -> EntityNominal tag nomId nom) . decodeTaggedNominal)
         , ("lamVar", fmap (uncurry EntityLamVar) . decodeTaggedLamVar)
@@ -523,13 +520,6 @@ decodeDefBody obj =
     [ obj .: "builtin" >>= decodeFFIName <&> Definition.BodyBuiltin
     , decodeDefExpr obj <&> Definition.BodyExpr
     ]
-
-encodeRepl :: Encoder (Definition.Expr (Val UUID))
-encodeRepl defExpr = Aeson.object [("repl", Aeson.Object (encodeDefExpr defExpr))]
-
-decodeRepl :: Aeson.Object -> AesonTypes.Parser (Definition.Expr (Val UUID))
-decodeRepl obj =
-    obj .: "repl" >>= Aeson.withObject "defExpr" decodeDefExpr
 
 insertField :: Aeson.ToJSON a => Key -> a -> Aeson.Object -> Aeson.Object
 insertField k v = Lens.at k ?~ Aeson.toJSON v

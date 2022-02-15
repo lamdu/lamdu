@@ -1,9 +1,8 @@
 {-# LANGUAGE TypeFamilies #-}
 module Lamdu.Expr.Load
-    ( def, defExpr, expr, nominal, writeNominal
+    ( def, expr, nominal, writeNominal
     ) where
 
-import qualified Data.Property as Property
 import           Hyper
 import           Hyper.Syntax.Nominal (NominalDecl)
 import           Hyper.Syntax.Scheme (QVars)
@@ -31,18 +30,7 @@ defExprH ::
     Monad m =>
     (ValI m -> T m ()) -> Definition.Expr (ValI m) ->
     T m (Definition.Expr (Ann (HRef m) # Term))
-defExprH setExpr loaded = loaded & Definition.expr %%~ expr . (`HRef` setExpr)
-
-defExpr ::
-    Monad m =>
-    Property.MkProperty' (T m) (Definition.Expr (ValI m)) ->
-    T m (Definition.Expr (Ann (HRef m) # Term))
-defExpr mkProp =
-    do
-        loaded <- mkProp ^. Property.mkProperty <&> Property.value
-        defExprH (Property.modP mkProp . setExpr) loaded
-    where
-        setExpr e val = val & Definition.expr .~ e
+defExprH setExpr = Definition.expr (expr . (`HRef` setExpr))
 
 def :: Monad m => DefI m -> T m (Definition (Ann (HRef m) # Term) (DefI m))
 def defI =

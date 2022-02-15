@@ -1,32 +1,129 @@
+{-# LANGUAGE RankNTypes #-}
+
 module Lamdu.GUI.DefinitionEdit
     ( make
     ) where
 
 import qualified Control.Lens as Lens
-import           Control.Monad.Unit (Unit)
+import           Control.Lens.Extended (OneOf)
+import           Data.CurAndPrev (CurPrevTag(..), fallbackToPrev, curPrevTag)
+import           Hyper (annValue)
 import qualified GUI.Momentu as M
+import           GUI.Momentu.Element (subAnimId)
+import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.Glue as Glue
+import qualified GUI.Momentu.Hover as Hover
+import qualified GUI.Momentu.I18N as MomentuTexts
 import           GUI.Momentu.Responsive (Responsive)
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.State as GuiState
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Label as Label
+import qualified GUI.Momentu.Widgets.Spacer as Spacer
+import qualified GUI.Momentu.Widgets.TextView as TextView
+import qualified Lamdu.Builtins.Anchors as Builtins
 import qualified Lamdu.Config as Config
+import           Lamdu.Config.Theme (Theme)
+import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.Config.Theme.TextColors as TextColors
 import qualified Lamdu.GUI.Expr.AssignmentEdit as AssignmentEdit
 import qualified Lamdu.GUI.Expr.BuiltinEdit as BuiltinEdit
 import qualified Lamdu.GUI.Expr.TagEdit as TagEdit
-import           Lamdu.GUI.Monad (GuiM, im)
+import           Lamdu.GUI.Monad (GuiM)
+import qualified Lamdu.GUI.Monad as GuiM
 import qualified Lamdu.GUI.PresentationModeEdit as PresentationModeEdit
+import           Lamdu.GUI.Styled (label)
 import qualified Lamdu.GUI.TypeView as TypeView
 import qualified Lamdu.GUI.Types as ExprGui
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
+import qualified Lamdu.I18N.Code as Texts
 import qualified Lamdu.I18N.CodeUI as Texts
+import qualified Lamdu.I18N.Navigation as Texts
 import           Lamdu.Name (Name(..))
 import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
+
+resultWidget ::
+    _ =>
+    M.WidgetId -> Sugar.VarInfo -> CurPrevTag -> Sugar.EvalCompletionResult o ->
+    m (M.TextWidget o)
+resultWidget myId varInfo tag res =
+    case res of
+    Sugar.EvalSuccess{} ->
+        do
+            view <- makeIndicator tag Theme.successColor "✔"
+            case varInfo of
+                Sugar.VarNominal (Sugar.TId _ tid _) | tid == Builtins.mutTid ->
+                    Widget.makeFocusableView ?? myId <&> (M.tValue %~) ?? view
+                _ -> view & M.tValue %~ Widget.fromView & pure
+    Sugar.EvalError err ->
+        errorIndicator myId tag err
+
+indicatorColor :: _ => CurPrevTag -> Lens.ALens' Theme M.Color -> m M.Color
+indicatorColor Current color = Lens.view (has . Lens.cloneLens color)
+indicatorColor Prev _ = Lens.view (has . Theme.disabledColor)
+
+makeIndicator :: _ => CurPrevTag -> Lens.ALens' Theme M.Color -> Text -> m (M.WithTextPos M.View)
+makeIndicator tag enabledColor text =
+    do
+        color <- indicatorColor tag enabledColor
+        Label.make text & local (TextView.color .~ color)
+
+compiledErrorDesc :: Sugar.CompiledErrorType -> OneOf Texts.CodeUI
+compiledErrorDesc Sugar.ReachedHole = Texts.jsReachedAHole
+compiledErrorDesc Sugar.DependencyTypeOutOfDate = Texts.jsStaleDep
+compiledErrorDesc Sugar.UnhandledCase = Texts.jsUnhandledCase
+
+errorDesc :: _ => Sugar.Error -> m (M.WithTextPos M.View)
+errorDesc err =
+    do
+        errorColor <- Lens.view (has . Theme.errorColor)
+        case err of
+            Sugar.CompiledError cErr ->
+                label (compiledErrorDesc cErr)
+            Sugar.RuntimeError exc ->
+                label Texts.jsException
+                M./|/ ((TextView.make ?? exc)
+                        <*> (Element.subAnimId ?? ["exception text"]))
+            & local (TextView.color .~ errorColor)
+
+errorIndicator :: _ => Widget.Id -> CurPrevTag -> Sugar.EvalException o -> m (M.TextWidget o)
+errorIndicator myId tag (Sugar.EvalException errorType jumpToErr) =
+    do
+        actionKeys <- Lens.view (has . Config.actionKeys)
+        env <- Lens.view id
+        let jumpDoc =
+                E.toDoc env
+                [has . MomentuTexts.navigation, has . Texts.jumpToError]
+        let jumpEventMap j =
+                j <&> WidgetIds.fromEntityId
+                & E.keysEventMapMovesCursor actionKeys jumpDoc
+        indicator <-
+            (Widget.makeFocusableView ?? myId <&> (M.tValue %~))
+            <*> makeIndicator tag Theme.errorColor  "⚠"
+            <&> Lens.mapped %~ Widget.weakerEvents (foldMap jumpEventMap jumpToErr)
+        if Widget.isFocused (indicator ^. M.tValue)
+            then
+            do
+                descLabel <- errorDesc errorType
+                hspace <- Spacer.stdHSpace
+                vspace <- Spacer.stdVSpace
+                hover <- Hover.hover
+                Glue.Poly (|||) <- Glue.mkPoly ?? Glue.Horizontal
+                Glue.Poly (|---|) <- Glue.mkPoly ?? Glue.Vertical
+                anchor <- Hover.anchor <&> fmap
+                let hDescLabel f = hover (f descLabel) & Hover.sequenceHover
+                let hoverOptions =
+                        [ anchor indicator ||| hDescLabel (hspace |||)
+                        , anchor indicator |---| hDescLabel (vspace |---|)
+                        ] <&> (^. M.tValue)
+                anchor indicator
+                    <&> Hover.hoverInPlaceOf hoverOptions
+                    & pure
+            else
+                pure indicator
 
 makeExprDefinition ::
     _ =>
@@ -35,20 +132,53 @@ makeExprDefinition ::
     M.WidgetId ->
     GuiM env i o (Responsive o)
 makeExprDefinition defName bodyExpr myId =
-    do
-        mPresentationEdit <-
-            do
-                presModeProp <- bodyExpr ^. Sugar.dePresentationMode
-                params <- bodyExpr ^? Sugar.deContent . hVal . Sugar._BodyFunction . Sugar.fParams
-                im presModeProp >>= PresentationModeEdit.make presentationChoiceId params & Just
-            & sequenceA
-        (|---|) <- Glue.mkGlue ?? Glue.Vertical
-        TagEdit.makeBinderTagEdit TextColors.definitionColor defName
-            <&> (|---| fromMaybe M.empty mPresentationEdit)
-            <&> Responsive.fromWithTextPos
-            >>= AssignmentEdit.make nameEditId (bodyExpr ^. Sugar.deContent)
-    & GuiState.assignCursor myId nameEditId
+    case bodyExpr ^. Sugar.deContent . hVal of
+    Sugar.BodyPlain x | Lens.has (Sugar.oTag . Sugar.tagRefJumpTo . Lens._Nothing) defName ->
+        do
+            isPickingName <- GuiState.isSubCursor ?? pickNameId
+            lhs <-
+                if isPickingName
+                then
+                    do
+                        nameEdit <- makeNameEdit <&> Responsive.fromWithTextPos
+                        AssignmentEdit.makePlainLhs nameEdit (x ^. Sugar.apAddFirstParam)
+                            (WidgetIds.fromExprPayload (bodyExpr ^. Sugar.deContent . annotation))
+                else
+                    do
+                        nameEventMap <- TagEdit.makeChooseEventMap pickNameId
+                        ((Widget.makeFocusableView <*> (subAnimId ?? ["repl"] <&> M.WidgetId) <&> (M.tValue %~)) <*> label Texts.repl)
+                            Glue./-/
+                            ( (resultWidget indicatorId (bodyExpr ^. Sugar.deVarInfo) <$> curPrevTag <&> fmap) <*> bodyExpr ^. Sugar.deResult
+                                & fallbackToPrev
+                                & fromMaybe (Widget.respondToCursorPrefix ?? indicatorId ?? M.empty <&> M.WithTextPos 0)
+                                & local (M.animIdPrefix <>~ ["result widget"])
+                            )
+                            <&> Responsive.fromWithTextPos
+                            <&> M.weakerEvents nameEventMap
+                            <&> (:[])
+            bodyExpr ^. Sugar.deContent & annValue .~ x ^. Sugar.apBody & GuiM.makeBinder
+                & GuiState.assignCursor myId
+                    (WidgetIds.fromExprPayload (bodyExpr ^. Sugar.deContent . annotation))
+                >>= AssignmentEdit.layout lhs
+        where
+            indicatorId = Widget.joinId myId ["result indicator"]
+            pickNameId =
+                defName ^. Sugar.oTag . Sugar.tagRefTag . Sugar.tagInstance
+                & WidgetIds.fromEntityId & WidgetIds.tagHoleId
+    _ ->
+        do
+            mPresentationEdit <-
+                do
+                    presModeProp <- bodyExpr ^. Sugar.dePresentationMode
+                    params <- bodyExpr ^? Sugar.deContent . hVal . Sugar._BodyFunction . Sugar.fParams
+                    GuiM.im presModeProp >>= PresentationModeEdit.make presentationChoiceId params & Just
+                & sequenceA
+            (|---|) <- Glue.mkGlue ?? Glue.Vertical
+            makeNameEdit <&> (|---| fromMaybe M.empty mPresentationEdit) <&> Responsive.fromWithTextPos
+                >>= AssignmentEdit.make nameEditId (bodyExpr ^. Sugar.deContent)
+        & GuiState.assignCursor myId nameEditId
     where
+        makeNameEdit = TagEdit.makeBinderTagEdit TextColors.definitionColor defName
         nameEditId = defName ^. Sugar.oTag . Sugar.tagRefTag . Sugar.tagInstance & WidgetIds.fromEntityId
         presentationChoiceId = Widget.joinId myId ["presentation"]
 
@@ -91,7 +221,7 @@ make def myId =
             <&> M.weakerEvents nextOutdated
     & local (M.animIdPrefix .~ Widget.toAnimId myId)
 
-topLevelSchemeTypeView :: _ => Sugar.Scheme Name Unit -> GuiM env i o (M.WithTextPos M.View)
+topLevelSchemeTypeView :: _ => Sugar.Scheme Name m -> GuiM env i o (M.WithTextPos M.View)
 topLevelSchemeTypeView scheme =
     -- At the definition-level, Schemes can be shown as ordinary
     -- types to avoid confusing forall's:

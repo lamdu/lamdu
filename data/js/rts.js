@@ -102,7 +102,6 @@ var rerun = function (result) {
 class UnicodeError extends Error {}
 
 module.exports = {
-    logRepl: conf.logRepl,
     logReplErr: conf.logReplErr,
     logResult: conf.logResult,
     logNewScope: conf.logNewScope,

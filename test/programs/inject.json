@@ -1,31 +1,53 @@
 [
     {
-        "schemaVersion": 15
+        "schemaVersion": 16
     },
     {
-        "tagOrder": 0,
-        "tag": "64077ff41e0a8ee59e103f93023ad302",
         "names": {
-            "hebrew": "א",
             "english": "a",
+            "hebrew": "א",
             "italian": "a",
             "spanish": "a"
+        },
+        "tag": "64077ff41e0a8ee59e103f93023ad302",
+        "tagOrder": 0
+    },
+    {
+        "def": "7265706c7265706c7265706c7265706c",
+        "defPresentationMode": "Verbose",
+        "tag": null,
+        "typ": {
+            "rowVars": {
+                "7230": [
+                    "64077ff41e0a8ee59e103f93023ad302"
+                ]
+            },
+            "schemeType": {
+                "variant": [
+                    {
+                        "nomId": "42493a666c6f61740000000000000000",
+                        "rowTag": "64077ff41e0a8ee59e103f93023ad302"
+                    },
+                    {
+                        "rowVar": "7230"
+                    }
+                ]
+            }
+        },
+        "val": {
+            "applyArg": {
+                "id": "a75b9e75-7577-4248-a524-3208f17c9f9b",
+                "primBytes": "0101000000000000000700000000000010ffffffffffffffcc",
+                "primId": "42493a666c6f61740000000000000000"
+            },
+            "applyFunc": {
+                "id": "79ae99ac-7741-4fb4-878d-37da272a2589",
+                "inject": "64077ff41e0a8ee59e103f93023ad302"
+            },
+            "id": "a3ac20cb-4145-4019-8157-4a06e504949e"
         }
     },
     {
-        "repl": {
-            "val": {
-                "applyFunc": {
-                    "inject": "64077ff41e0a8ee59e103f93023ad302",
-                    "id": "79ae99ac-7741-4fb4-878d-37da272a2589"
-                },
-                "applyArg": {
-                    "primBytes": "0101000000000000000700000000000010ffffffffffffffcc",
-                    "primId": "42493a666c6f61740000000000000000",
-                    "id": "a75b9e75-7577-4248-a524-3208f17c9f9b"
-                },
-                "id": "a3ac20cb-4145-4019-8157-4a06e504949e"
-            }
-        }
+        "openDefPane": "7265706c7265706c7265706c7265706c"
     }
 ]

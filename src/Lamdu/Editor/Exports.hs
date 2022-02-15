@@ -1,6 +1,7 @@
 module Lamdu.Editor.Exports (exportActions) where
 
 import           GUI.Momentu.ModKey (ModKey)
+import qualified Lamdu.Calc.Term as V
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
 import           Lamdu.Data.Db.Layout (ViewM)
@@ -13,17 +14,13 @@ import qualified Lamdu.GUI.Main as GUIMain
 
 import           Lamdu.Prelude
 
-exportActions :: Config ModKey -> EvalResults -> IO () -> GUIMain.ExportActions ViewM
+exportActions :: Config ModKey -> EvalResults -> (V.Var -> IO ()) -> GUIMain.ExportActions ViewM
 exportActions config evalResults executeIOProcess =
     GUIMain.ExportActions
-    { GUIMain.exportReplActions =
-        GUIMain.ExportRepl
-        { GUIMain.exportRepl = fileExport Export.fileExportRepl
-        , GUIMain.exportFancy = exportFancy evalResults & IOTrans.liftTIO
-        , GUIMain.executeIOProcess = executeIOProcess
-        }
-    , GUIMain.exportAll = fileExport Export.fileExportAll
+    { GUIMain.exportAll = fileExport Export.fileExportAll
     , GUIMain.exportDef = fileExport . Export.fileExportDef
+    , GUIMain.exportDefToJS = IOTrans.liftTIO . (`exportFancy` evalResults)
+    , GUIMain.executeDef = executeIOProcess
     , GUIMain.exportTag = fileExport . Export.fileExportTag
     , GUIMain.exportNominal = fileExport . Export.fileExportNominal
     , GUIMain.importAll = importAll

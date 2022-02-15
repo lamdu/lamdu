@@ -19,12 +19,11 @@ import qualified GUI.Momentu.Direction as Dir
 import           Hyper
 import           Hyper.Type.Functor (_F)
 import qualified Lamdu.Builtins.PrimVal as PrimVal
-import           Lamdu.Calc.Term (Term)
+import           Lamdu.Calc.Term (Var)
 import qualified Lamdu.Data.Anchors as Anchors
 import           Lamdu.Data.Db.Layout (ViewM)
-import qualified Lamdu.Data.Db.Layout as DbLayout
+import           Lamdu.Data.Export.JSON (jsonExportDef)
 import qualified Lamdu.Data.Definition as Def
-import           Lamdu.Data.Export.JSON (jsonExportRepl)
 import           Lamdu.Data.Tag (getTagName, name)
 import qualified Lamdu.Eval.JS.Compiler as Compiler
 import           Lamdu.Eval.Results (EvalResults)
@@ -59,10 +58,9 @@ instance Has Dir.Layout CompileNameEnv where has = ceLayout
 compileNameEnv :: CompileNameEnv
 compileNameEnv = CompileNameEnv (LangId "english") Dir.LeftToRight
 
-compile :: Monad m => Def.Expr (Ann (HRef m) # Term) -> T m String
+compile :: Monad m => Var -> T m String
 compile repl =
-    repl <&> hflipped %~ hmap (const valId)
-    & Compiler.compileRepl actions
+    Compiler.compileRepl actions [repl]
     & execWriterT
     <&> unlines
     where
@@ -99,14 +97,11 @@ formatResult (Ann _ b) =
     EV.RInject inj -> inj ^. EV.injectVal & formatResult
     _ -> "<TODO: Format result>"
 
-readRepl :: T ViewM (Def.Expr (Ann (HRef ViewM) # Term))
-readRepl = ExprLoad.defExpr (DbLayout.repl DbLayout.codeAnchors)
-
-exportFancy :: EvalResults -> T ViewM (IO ())
-exportFancy evalResults =
+exportFancy :: Var -> EvalResults -> T ViewM (IO ())
+exportFancy def evalResults =
     do
-        exportedCode <- jsonExportRepl <&> AesonPretty.encodePretty
-        repl <- readRepl
+        exportedCode <- jsonExportDef def <&> AesonPretty.encodePretty
+        repl <- ExprLoad.def (ExprIRef.defI def) <&> (^?! Def.defBody . Def._BodyExpr)
         let replResult =
                 evalResults
                 ^? EV.erExprValues
@@ -114,7 +109,7 @@ exportFancy evalResults =
                 . Lens.ix EV.topLevelScopeId
                 <&> formatResult
                 & fromMaybe "<NO RESULT>"
-        replJs <- compile repl <&> fromString
+        replJs <- compile def <&> fromString
         pure $
             do
                 now <- getPOSIXTime <&> round

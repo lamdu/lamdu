@@ -56,10 +56,23 @@ test =
     , testChooseTagAndAddNext
     ]
 
-replExpr ::
-    Lens.Traversal' (Sugar.WorkArea v name i o a)
-    (Sugar.Term v name i o # Annotated a)
-replExpr = Sugar.waRepl . Sugar.replExpr . hVal . Sugar.bBody . Sugar._BinderTerm
+defExprs :: Lens.Traversal' (Sugar.WorkArea v name i o a) (Annotated a # Sugar.Assignment v name i o)
+defExprs =
+    Sugar.waPanes . traverse . Sugar.paneBody . Sugar._PaneDefinition .
+    Sugar.drBody . Sugar._DefinitionBodyExpression . Sugar.deContent
+
+defExprPlainBodies :: Lens.Traversal' (Sugar.WorkArea v name i o a) (Sugar.BinderBody v name i o # Annotated a)
+defExprPlainBodies = defExprs . hVal . Sugar._BodyPlain . Sugar.apBody . Sugar.bBody
+
+repl :: Lens.Traversal' (Sugar.WorkArea v name i o a) (Annotated a # Sugar.Term v name i o)
+repl =
+    defExprPlainBodies . Sugar._BinderTerm .
+    -- When migrating to multirepl, repl exprs were placed in fragments
+    -- (to avoid need to infer their type for the simple migration)
+    Sugar._BodyFragment . Sugar.fExpr
+
+replExpr :: Lens.Traversal' (Sugar.WorkArea v name i o a) (Sugar.Term v name i o # Annotated a)
+replExpr = repl . hVal
 
 convertAndMakeGui :: HasCallStack => String -> Env -> OnceT (T ViewM) (Responsive (T ViewM))
 convertAndMakeGui afterDoc env = convertWorkArea afterDoc env >>= makeGui afterDoc env
@@ -137,9 +150,7 @@ testFragmentSize =
     \baseEnv ->
     testProgram "simple-fragment.json" $
     do
-        frag <-
-            fromWorkArea baseEnv
-            (Sugar.waRepl . Sugar.replExpr . annotation)
+        frag <- fromWorkArea baseEnv (repl . annotation)
         let env0 =
                 baseEnv
                 & cursor .~ WidgetIds.fromExprPayload frag
@@ -168,8 +179,8 @@ testOpPrec =
         workArea' <- convertWorkArea "" baseEnv
         unless (workAreaEq workArea workArea') (error "bad operator precedence")
 
-letBody :: Lens.Traversal' (Ann a # Sugar.Binder v n i o) (Ann a # Sugar.Binder v n i o)
-letBody = hVal . Sugar.bBody . Sugar._BinderLet . Sugar.lBody
+letBody :: Lens.Traversal' (Sugar.Binder v n i o # h) (h # Sugar.Binder v n i o)
+letBody = Sugar.bBody . Sugar._BinderLet . Sugar.lBody
 
 binderRec :: Lens.Traversal' (Ann a # Sugar.Binder v n i o) (Sugar.Composite v n i o # Ann a)
 binderRec = hVal . Sugar.bBody . Sugar._BinderTerm . Sugar._BodyRecord
@@ -182,9 +193,8 @@ testPunnedRecordAddField =
     do
         punnedId <-
             fromWorkArea baseEnv
-            ( Sugar.waRepl . Sugar.replExpr . letBody . letBody . binderRec
-            . Sugar.cPunnedItems . traverse . Sugar.pvVar
-            . annotation . Sugar.plEntityId
+            ( defExprs . hVal . Sugar._BodyPlain . Sugar.apBody . letBody . hVal . letBody
+            . binderRec . Sugar.cPunnedItems . traverse . Sugar.pvVar . annotation . Sugar.plEntityId
             )
         baseEnv & cursor .~ WidgetIds.tagHoleId (WidgetIds.fromEntityId punnedId)
             & applyEvent dummyVirt (simpleKeyEvent (noMods GLFW.Key'Comma))
@@ -199,7 +209,7 @@ testRecordPunAndAdd =
     do
         holeId <-
             fromWorkArea baseEnv
-            ( Sugar.waRepl . Sugar.replExpr . letBody . binderRec
+            ( defExprs . hVal . Sugar._BodyPlain . Sugar.apBody . letBody . binderRec
             . Sugar.cList . SugarLens.taggedListItems . Sugar.tiValue
             . annotation . Sugar.plEntityId
             )
@@ -218,7 +228,7 @@ testChooseTagAndAddNext =
     do
         tagId <-
             fromWorkArea baseEnv
-            ( Sugar.waRepl . Sugar.replExpr . binderRec
+            ( defExprs . hVal . Sugar._BodyPlain . Sugar.apBody . Sugar.bBody . Sugar._BinderTerm . Sugar._BodyRecord
             . Sugar.cList . SugarLens.taggedListItems . Sugar.tiTag . Sugar.tagRefTag . Sugar.tagInstance
             )
         baseEnv & cursor .~ WidgetIds.tagHoleId (WidgetIds.fromEntityId tagId)
@@ -250,7 +260,7 @@ testPunCursor =
     & testProgram "rec-with-let.json"
     >>= assertEqual "Item should be punned" (Just 1)
     where
-        waRec = Sugar.waRepl . Sugar.replExpr . letBody . binderRec
+        waRec = defExprPlainBodies . Sugar._BinderLet . Sugar.lBody . binderRec
 
 workAreaEq ::
     Sugar.WorkArea v Name (OnceT (T m)) (T m) (Sugar.Payload v (T m)) ->

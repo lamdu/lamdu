@@ -245,8 +245,4 @@ orderPaneBody (Sugar.PaneNominal x) =
 orderPaneBody x@Sugar.PaneTag{} = pure x
 
 orderWorkArea :: (MonadTransaction m o, MonadTransaction m i) => OrderT i (Sugar.WorkArea v name i o a)
-orderWorkArea (Sugar.WorkArea panes repl globs) =
-    Sugar.WorkArea
-    <$> (traverse . Sugar.paneBody) orderPaneBody panes
-    <*> Sugar.replExpr orderNode repl
-    ?? globs
+orderWorkArea = (Sugar.waPanes . traverse . Sugar.paneBody) orderPaneBody

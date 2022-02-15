@@ -1,33 +1,34 @@
 [
     {
-        "schemaVersion": 15
+        "schemaVersion": 16
     },
     {
-        "tagOrder": 0,
-        "tag": "61000000000000000000000000000000",
         "names": {
             "english": "element"
-        }
+        },
+        "tag": "61000000000000000000000000000000",
+        "tagOrder": 0
     },
     {
-        "tagOrder": 0,
-        "tag": "7187f0675eb3827939741acf7342ba78",
         "names": {
             "english": "return"
-        }
+        },
+        "tag": "7187f0675eb3827939741acf7342ba78",
+        "tagOrder": 0
     },
     {
+        "nom": "42493a506f6c79535400000000000000",
         "nomType": {
             "schemeType": {
+                "nomId": "42493a53540000000000000000000000",
                 "nomTypeArgs": {
-                    "73000000000000000000000000000000": {
-                        "typeVar": "73"
-                    },
                     "42493a76616c00000000000000000000": {
                         "typeVar": "61000000000000000000000000000000"
+                    },
+                    "73000000000000000000000000000000": {
+                        "typeVar": "73"
                     }
-                },
-                "nomId": "42493a53540000000000000000000000"
+                }
             },
             "typeVars": [
                 "73"
@@ -36,36 +37,35 @@
         "tag": "68c199f2c5277d43bc23530b429526cd",
         "typeVars": [
             "61000000000000000000000000000000"
-        ],
-        "nom": "42493a506f6c79535400000000000000"
+        ]
     },
     {
-        "tag": null,
-        "lamVar": "0c9ae796b4aa475f80a98ca0327c7b52"
+        "lamVar": "0c9ae796b4aa475f80a98ca0327c7b52",
+        "tag": null
     },
     {
-        "tag": "7187f0675eb3827939741acf7342ba78",
-        "defPresentationMode": "Verbose",
         "builtin": [
             "Mut",
             "return"
         ],
         "def": "39ef52561170446083b20ac9472847fb",
+        "defPresentationMode": "Verbose",
+        "tag": "7187f0675eb3827939741acf7342ba78",
         "typ": {
             "schemeType": {
                 "funcParam": {
                     "typeVar": "61"
                 },
                 "funcResult": {
+                    "nomId": "42493a53540000000000000000000000",
                     "nomTypeArgs": {
-                        "73000000000000000000000000000000": {
-                            "typeVar": "73"
-                        },
                         "42493a76616c00000000000000000000": {
                             "typeVar": "61"
+                        },
+                        "73000000000000000000000000000000": {
+                            "typeVar": "73"
                         }
-                    },
-                    "nomId": "42493a53540000000000000000000000"
+                    }
                 }
             },
             "typeVars": [
@@ -75,86 +75,105 @@
         }
     },
     {
-        "repl": {
-            "frozenDeps": {
-                "defTypes": {
-                    "39ef52561170446083b20ac9472847fb": {
-                        "schemeType": {
-                            "funcParam": {
-                                "typeVar": "61"
-                            },
-                            "funcResult": {
-                                "nomTypeArgs": {
-                                    "73000000000000000000000000000000": {
-                                        "typeVar": "73"
-                                    },
-                                    "42493a76616c00000000000000000000": {
-                                        "typeVar": "61"
-                                    }
+        "def": "7265706c7265706c7265706c7265706c",
+        "defPresentationMode": "Verbose",
+        "frozenDeps": {
+            "defTypes": {
+                "39ef52561170446083b20ac9472847fb": {
+                    "schemeType": {
+                        "funcParam": {
+                            "typeVar": "61"
+                        },
+                        "funcResult": {
+                            "nomId": "42493a53540000000000000000000000",
+                            "nomTypeArgs": {
+                                "42493a76616c00000000000000000000": {
+                                    "typeVar": "61"
                                 },
-                                "nomId": "42493a53540000000000000000000000"
+                                "73000000000000000000000000000000": {
+                                    "typeVar": "73"
+                                }
+                            }
+                        }
+                    },
+                    "typeVars": [
+                        "61",
+                        "73"
+                    ]
+                }
+            },
+            "nominals": {
+                "42493a506f6c79535400000000000000": {
+                    "nomType": {
+                        "schemeType": {
+                            "nomId": "42493a53540000000000000000000000",
+                            "nomTypeArgs": {
+                                "42493a76616c00000000000000000000": {
+                                    "typeVar": "61000000000000000000000000000000"
+                                },
+                                "73000000000000000000000000000000": {
+                                    "typeVar": "73"
+                                }
                             }
                         },
                         "typeVars": [
-                            "61",
                             "73"
                         ]
-                    }
-                },
-                "nominals": {
-                    "42493a506f6c79535400000000000000": {
-                        "nomType": {
-                            "schemeType": {
-                                "nomTypeArgs": {
-                                    "73000000000000000000000000000000": {
-                                        "typeVar": "73"
-                                    },
-                                    "42493a76616c00000000000000000000": {
-                                        "typeVar": "61000000000000000000000000000000"
-                                    }
-                                },
-                                "nomId": "42493a53540000000000000000000000"
-                            },
-                            "typeVars": [
-                                "73"
-                            ]
-                        },
-                        "typeVars": [
-                            "61000000000000000000000000000000"
-                        ]
-                    }
-                }
-            },
-            "val": {
-                "toNomVal": {
-                    "applyFunc": {
-                        "lamParamType": {
-                            "id": "a4c884fe-edbb-5acd-a62d-3517ae1203a6"
-                        },
-                        "lamVar": "0c9ae796b4aa475f80a98ca0327c7b52",
-                        "id": "d9caaabc-b396-4568-bb18-7cd6503dda95",
-                        "lamBody": {
-                            "var": "0c9ae796b4aa475f80a98ca0327c7b52",
-                            "id": "2aac1ec4-2d85-42b8-ae76-0f13b6379166"
-                        }
                     },
+                    "typeVars": [
+                        "61000000000000000000000000000000"
+                    ]
+                }
+            }
+        },
+        "tag": null,
+        "typ": {
+            "schemeType": {
+                "typeVar": "61"
+            },
+            "typeVars": [
+                "61"
+            ]
+        },
+        "val": {
+            "applyArg": {
+                "id": "1887baa3-563b-9699-7a49-c93fccf1a4b9",
+                "toNomId": "42493a506f6c79535400000000000000",
+                "toNomVal": {
                     "applyArg": {
-                        "applyFunc": {
-                            "var": "39ef52561170446083b20ac9472847fb",
-                            "id": "90417e12-bd3a-9110-f638-a1c34137ceb4"
-                        },
                         "applyArg": {
+                            "id": "84f89c81-515a-4111-a9ad-8e6c681eb7a7",
                             "primBytes": "0101000000000000000700000000000010ffffffffffffffcc",
-                            "primId": "42493a666c6f61740000000000000000",
-                            "id": "84f89c81-515a-4111-a9ad-8e6c681eb7a7"
+                            "primId": "42493a666c6f61740000000000000000"
+                        },
+                        "applyFunc": {
+                            "id": "90417e12-bd3a-9110-f638-a1c34137ceb4",
+                            "var": "39ef52561170446083b20ac9472847fb"
                         },
                         "id": "ba8bd57e-73f4-9cfa-d3f4-f8de180dc4c4"
                     },
+                    "applyFunc": {
+                        "id": "d9caaabc-b396-4568-bb18-7cd6503dda95",
+                        "lamBody": {
+                            "id": "2aac1ec4-2d85-42b8-ae76-0f13b6379166",
+                            "var": "0c9ae796b4aa475f80a98ca0327c7b52"
+                        },
+                        "lamParamType": {
+                            "id": "a4c884fe-edbb-5acd-a62d-3517ae1203a6"
+                        },
+                        "lamVar": "0c9ae796b4aa475f80a98ca0327c7b52"
+                    },
                     "id": "3011df57-7782-4d95-a218-cd67bb3b6bc1"
-                },
-                "toNomId": "42493a506f6c79535400000000000000",
-                "id": "1887baa3-563b-9699-7a49-c93fccf1a4b9"
-            }
+                }
+            },
+            "applyFunc": {
+                "hole": {},
+                "id": "7265706c-686f-6c65-7265-706c686f6c65"
+            },
+            "id": "7265706c-686f-6c65-6672-61676170706c"
         }
+    },
+    {
+        "openDefPane": "7265706c7265706c7265706c7265706c"
     }
 ]

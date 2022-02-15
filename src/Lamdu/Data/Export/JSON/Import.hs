@@ -24,7 +24,6 @@ import qualified Lamdu.Data.Anchors as Anchors
 import           Lamdu.Data.Db.Layout (ViewM)
 import qualified Lamdu.Data.Db.Layout as DbLayout
 import           Lamdu.Data.Definition (Definition(..))
-import qualified Lamdu.Data.Definition as Definition
 import           Lamdu.Data.Export.JSON.Codec (Version(..))
 import qualified Lamdu.Data.Export.JSON.Codec as Codec
 import qualified Lamdu.Data.Export.JSON.Migration as Migration
@@ -71,11 +70,6 @@ importDef (Definition defBody defScheme (presentationMode, tag, globalId)) =
     where
         defI = ExprIRef.defI globalId
 
-importRepl :: Definition.Expr (Val UUID) -> T ViewM ()
-importRepl defExpr =
-    traverse writeValAtUUID defExpr >>=
-    Transaction.writeIRef (DbLayout.repl DbLayout.codeIRefs)
-
 importTag :: T.Tag -> Tag -> T ViewM ()
 importTag tagId tagData =
     do
@@ -95,7 +89,6 @@ importNominal tag nomId nominal =
 
 importOne :: Codec.Entity -> T ViewM ()
 importOne (Codec.EntityDef def) = importDef def
-importOne (Codec.EntityRepl x) = importRepl x
 importOne (Codec.EntityTag tagId tagData) = importTag tagId tagData
 importOne (Codec.EntityNominal mName nomId nom) = importNominal mName nomId nom
 importOne (Codec.EntityLamVar tag var) = importLamVar tag var

@@ -1,6 +1,6 @@
 [
     {
-        "schemaVersion": 15
+        "schemaVersion": 16
     },
     {
         "names": {
@@ -426,33 +426,42 @@
         }
     },
     {
-        "repl": {
-            "frozenDeps": {
-                "defTypes": {
-                    "18aeb87738af443b81d472ddb6daa792": {
-                        "schemeType": {
-                            "funcParam": {
-                                "nomId": "42493a666c6f61740000000000000000"
-                            },
-                            "funcResult": {
-                                "nomId": "42493a666c6f61740000000000000000"
-                            }
+        "def": "7265706c7265706c7265706c7265706c",
+        "defPresentationMode": "Verbose",
+        "frozenDeps": {
+            "defTypes": {
+                "18aeb87738af443b81d472ddb6daa792": {
+                    "schemeType": {
+                        "funcParam": {
+                            "nomId": "42493a666c6f61740000000000000000"
+                        },
+                        "funcResult": {
+                            "nomId": "42493a666c6f61740000000000000000"
                         }
                     }
                 }
-            },
-            "val": {
-                "applyArg": {
-                    "id": "d9325838-7839-4365-9b12-f10fb2a046b3",
-                    "primBytes": "01ff000000000000000700000000000018ffffffffffffffcd",
-                    "primId": "42493a666c6f61740000000000000000"
-                },
-                "applyFunc": {
-                    "id": "177c3556-a04b-40cc-8771-4db91e8c7c45",
-                    "var": "18aeb87738af443b81d472ddb6daa792"
-                },
-                "id": "d747a401-9913-4686-8884-d514aad37669"
             }
+        },
+        "tag": null,
+        "typ": {
+            "schemeType": {
+                "nomId": "42493a666c6f61740000000000000000"
+            }
+        },
+        "val": {
+            "applyArg": {
+                "id": "d9325838-7839-4365-9b12-f10fb2a046b3",
+                "primBytes": "01ff000000000000000700000000000018ffffffffffffffcd",
+                "primId": "42493a666c6f61740000000000000000"
+            },
+            "applyFunc": {
+                "id": "177c3556-a04b-40cc-8771-4db91e8c7c45",
+                "var": "18aeb87738af443b81d472ddb6daa792"
+            },
+            "id": "d747a401-9913-4686-8884-d514aad37669"
         }
+    },
+    {
+        "openDefPane": "7265706c7265706c7265706c7265706c"
     }
 ]

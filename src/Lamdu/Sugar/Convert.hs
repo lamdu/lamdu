@@ -121,7 +121,7 @@ globals cp =
             Property.getP (globs cp) & lift <&> (^.. Lens.folded) >>= traverse (makeNameRef cp)
 
 loadWorkArea ::
-    ( HasCallStack, Monad m, Typeable m
+    ( Monad m, Typeable m
     , Has Debug.Monitors env
     , Has Config env, Has Cache.Functions env
     , Anchors.HasCodeAnchors env m
@@ -129,10 +129,7 @@ loadWorkArea ::
     env ->
     OnceT (T m) (WorkArea EvalPrep InternalName (OnceT (T m)) (T m) ([EntityId], ConvertPayload m))
 loadWorkArea env =
-    WorkArea
-    <$> loadPanes env
-    <*> ConvertDefinition.repl env
-    ?? globals cp
+    loadPanes env <&> (`WorkArea` globals cp)
     >>= orderWorkArea
     where
         cp = env ^. Anchors.codeAnchors

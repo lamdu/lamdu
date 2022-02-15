@@ -86,16 +86,15 @@ testSugarActions :: HasCallStack => FilePath -> [TestWorkArea -> OnceT (T ViewM)
 testSugarActions program actions =
     Env.make >>= testSugarActionsWith program actions
 
-replBinder ::
-    Lens.Traversal' (WorkArea v name i o a)
-    ( BinderBody v name i o #
-        Annotated a
-    )
-replBinder = waRepl . replExpr . hVal . bBody
+replBinder :: Lens.Traversal' (WorkArea v name i o a) (BinderBody v name i o # Annotated a)
+replBinder = defExprs . hVal . Sugar._BodyPlain . Sugar.apBody . Sugar.bBody
 
-replBody ::
-    Lens.Traversal' (WorkArea v name i o a)
-    (Term v name i o # Annotated a)
+defExprs :: Lens.Traversal' (Sugar.WorkArea v name i o a) (Annotated a # Sugar.Assignment v name i o)
+defExprs =
+    Sugar.waPanes . traverse . Sugar.paneBody . Sugar._PaneDefinition .
+    Sugar.drBody . Sugar._DefinitionBodyExpression . Sugar.deContent
+
+replBody :: Lens.Traversal' (WorkArea v name i o a) (Term v name i o # Annotated a)
 replBody = replBinder . _BinderTerm
 
 replLet :: Lens.Traversal' (WorkArea v name i o a) (Let v name i o # Annotated a)
@@ -107,7 +106,7 @@ testNoInjectValAnn =
     & testCase "no-inject-val-ann"
     where
         verify workArea
-            | Lens.has (waRepl . replExpr . annotation . plAnnotation . _AnnotationVal) workArea =
+            | Lens.has (defExprs . annotation . plAnnotation . _AnnotationVal) workArea =
                 error "redundant value annotation"
             | otherwise = pure ()
 
@@ -163,7 +162,7 @@ testReorderLets =
             testSugarActions program [lift . (^?! extractSecondLetItemInLambda)]
             & testCase (takeWhile (/= '.') program)
         extractSecondLetItemInLambda =
-            replBody . _BodyLam . lamFunc . fBody .
+            defExprs . hVal . _BodyFunction . fBody .
             hVal . bBody . _BinderLet . lBody .
             hVal . bBody . _BinderLet . lValue .
             annotation . plActions . extract
@@ -175,9 +174,7 @@ testExtract =
     testSugarActions "extract-lambda-with-let.json" [lift . (^?! action)]
     & testCase "extract"
     where
-        action =
-            replBody . _BodyLam . lamFunc . fBody . annotation . plActions .
-            extract
+        action = defExprs . hVal . _BodyFunction . fBody . annotation . plActions . extract
 
 addParamToLet :: Test
 addParamToLet =
@@ -215,7 +212,7 @@ testInline =
                 do
                     result <-
                         workArea ^?!
-                        replBody . _BodyLam . lamFunc . fBody .
+                        defExprs . hVal . _BodyFunction . fBody .
                         hVal . bBody . _BinderLet . lBody . hVal . bBody . _BinderTerm . _BodyLeaf . _LeafHole
                         . holeOptions
                         >>= (Query queryLangInfo mempty "num" &)
@@ -231,7 +228,7 @@ testInline =
             | Lens.has afterInline workArea = pure ()
             | otherwise = error "Expected inline result"
         afterInline =
-            replBody . _BodyLam . lamFunc . fBody .
+            defExprs . hVal . _BodyFunction . fBody .
             hVal . bBody . _BinderTerm . _BodyLeaf . _LeafLiteral . _LiteralNum
 
 testSkolemScope :: Test
@@ -255,7 +252,7 @@ lightConst =
     & testCase "param-annotations"
     where
         verify workArea
-            | Lens.has (replBody . _BodyLam . lamLightweight . Lens.only True) workArea = pure ()
+            | Lens.has (replBody . _BodyFragment . fExpr . hVal . _BodyLam . lamLightweight . Lens.only True) workArea = pure ()
             | otherwise = error "Expected light lambda"
 
 paramAnnotations :: Test
@@ -267,7 +264,7 @@ paramAnnotations =
         verify workArea =
             unless
             (Lens.allOf
-                (replBody . _BodyLam . lamFunc . fParams . _LhsVar . vParam . fpAnnotation)
+                (replBody . _BodyFragment . fExpr . hVal . _BodyLam . lamFunc . fParams . _LhsVar . vParam . fpAnnotation)
                 (Lens.has _AnnotationNone) workArea)
             (error "parameter should not have type annotation")
 
@@ -276,11 +273,11 @@ delParam =
     testSugarActions "const-five.json" [lift . (^?! action), verify]
     & testCase "del-param"
     where
-        action = replBody . _BodyLam . lamFunc . fParams . _LhsVar . vDelete
+        action = replBody . _BodyFragment . fExpr . hVal . _BodyLam . lamFunc . fParams . _LhsVar . vDelete
         verify workArea
             | Lens.has afterDel workArea = pure ()
             | otherwise = error "Expected 5"
-        afterDel = replBody . _BodyLeaf . _LeafLiteral . _LiteralNum
+        afterDel = replBody . _BodyFragment . fExpr . hVal . _BodyLeaf . _LeafLiteral . _LiteralNum
 
 delInfixArg :: Test
 delInfixArg =
@@ -440,7 +437,7 @@ testNotALightLambda =
         verify workArea
             | Lens.has expected workArea = pure ()
             | otherwise = error "Expected light lambda sugar!"
-        expected = replBody . _BodyLam . lamLightweight . Lens.only False
+        expected = replBody . _BodyFragment . fExpr . hVal . _BodyLam . lamLightweight . Lens.only False
 
 openTopLevelDef :: WorkArea v name i (T ViewM) a -> OnceT (T ViewM) ()
 openTopLevelDef =
@@ -475,7 +472,7 @@ testReplaceParent =
     & testCase "replace-parent"
     where
         action =
-            replBody . _BodyLam . lamFunc . fBody .
+            defExprs . hVal . _BodyFunction . fBody .
             annotation . plActions . mReplaceParent . Lens._Just
 
 testReplaceParentFragment :: Test
@@ -512,7 +509,7 @@ setHoleToHole =
             | otherwise = pure ()
         setToHole :: Lens.Traversal' (WorkArea v name i o (Payload v o)) (o EntityId)
         setToHole =
-            replBody . _BodyLam . lamFunc . fBody .
+            defExprs . hVal . _BodyFunction . fBody .
             hVal . bBody . _BinderLet . lValue .
             annotation . plActions . delete . _SetToHole
 
@@ -573,7 +570,7 @@ testCreateLetInLetVal =
             (WorkArea v name i o a)
             (Binder v name i o # Annotated a)
         theLetVal =
-            replBody . _BodyLam . lamFunc . fBody .
+            defExprs . hVal . _BodyFunction . fBody .
             hVal . bBody . _BinderLet . lValue . hVal . _BodyPlain . apBody
 
 testHoleTypeShown :: Test
@@ -616,7 +613,7 @@ testPunnedLightParam =
     testCase "punned-light-param" $
     Env.make >>= testProgram "punned-light-param.json" . convertWorkArea ""
     <&> Lens.has
-        ( replBinder . _BinderTerm . _BodyLam . lamFunc . fBody . hVal .
+        ( replBinder . _BinderTerm . _BodyFragment . fExpr . hVal . _BodyLam . lamFunc . fBody . hVal .
             bBody . _BinderTerm . _BodyRecord . cPunnedItems . traverse . pvVar . hVal .
             Lens._Wrapped . vForm . _GetLightParam
         )
@@ -773,5 +770,5 @@ testSuspendedHoleResult =
             & assertBool "First opt is not a null param lambda"
     where
         replHole =
-            replBinder . _BinderTerm . _BodyLam . lamFunc . fBody .
+            defExprs . hVal . _BodyFunction . fBody .
             hVal . bBody . _BinderTerm . _BodyIfElse . iThen . hVal

@@ -13,24 +13,25 @@ import qualified Control.Lens as Lens
 import           Data.CurAndPrev (CurAndPrev(..))
 import           Data.IORef.Extended
 import qualified Data.Monoid as Monoid
+import           Data.Property (getP)
 import qualified Data.Set as Set
 import           Data.UUID.Types (UUID)
 import           Hyper
 import           Hyper.Type.Functor (_F)
-import           Lamdu.Calc.Term (Term)
+import           Lamdu.Calc.Term (Term, Var)
+import qualified Lamdu.Data.Anchors as Anchors
 import           Lamdu.Data.Db.Layout (DbM, ViewM)
 import qualified Lamdu.Data.Db.Layout as DbLayout
 import qualified Lamdu.Data.Definition as Def
 import qualified Lamdu.Eval.JS as Eval
 import           Lamdu.Eval.Results (EvalResults)
 import qualified Lamdu.Eval.Results as EvalResults
-import           Lamdu.Expr.IRef (DefI, ValI)
+import           Lamdu.Expr.IRef (DefI)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Load as Load
 import           Lamdu.Expr.UniqueId (toUUID)
 import           Lamdu.VersionControl (getVersion)
 import qualified Lamdu.VersionControl as VersionControl
-import           Revision.Deltum.IRef (IRef)
 import qualified Revision.Deltum.IRef as IRef
 import qualified Revision.Deltum.Rev.Change as Change
 import qualified Revision.Deltum.Rev.Version as Version
@@ -106,17 +107,9 @@ evalActions evaluator =
         & loadDef evaluator
         <&> Def.defBody . Lens.mapped . hflipped %~ hmap (const (Const . IRef.uuid . (^. ExprIRef.iref . _F)))
         <&> Lens.mapped .~ ()
-    , Eval._aReportUpdatesAvailable =
-      do
-          res <- getLatestResults evaluator
-          when (Lens.has (EvalResults.erCompleted . Lens._Just) res) $
-              writeIORef (ePrevResultsRef evaluator) EvalResults.empty
-          resultsUpdated (eParams evaluator)
+    , Eval._aReportUpdatesAvailable = resultsUpdated (eParams evaluator)
     , Eval._aJSDebugPaths = jsDebugPaths (eParams evaluator)
     }
-
-replIRef :: IRef ViewM (Def.Expr (ValI ViewM))
-replIRef = DbLayout.repl DbLayout.codeIRefs
 
 start :: Evaluator -> IO ()
 start evaluator =
@@ -124,10 +117,10 @@ start evaluator =
     >>= \case
     Started {} -> pure () -- already started
     NotStarted ->
-        DbLayout.repl DbLayout.codeAnchors
-        & Load.defExpr
+        DbLayout.panes DbLayout.codeAnchors & getP
+        <&> (^.. traverse . Anchors._PaneDefinition)
+        <&> Lens.mapped %~ ExprIRef.globalId
         & runViewTransactionInIO (eDb evaluator)
-        <&> Lens.mapped . hflipped %~ hmap (const (Const . IRef.uuid . (^. ExprIRef.iref . _F)))
         >>= Eval.start (evalActions evaluator) <&> Started
         >>= writeIORef (eEvaluatorRef evaluator)
 
@@ -144,15 +137,11 @@ stop evaluator =
         writeIORef (eEvaluatorRef evaluator) NotStarted
         writeIORef (ePrevResultsRef evaluator) EvalResults.empty
 
-executeReplIOProcess :: Evaluator -> IO ()
-executeReplIOProcess = onEvaluator Eval.executeReplIOProcess
+executeReplIOProcess :: Evaluator -> Var -> IO ()
+executeReplIOProcess eval v = onEvaluator (`Eval.executeReplIOProcess` v) eval
 
 sumDependency :: Eval.Dependencies -> Set UUID
-sumDependency (Eval.Dependencies subexprs globals) =
-    mconcat
-    [ subexprs
-    , Set.map (toUUID . ExprIRef.defI) globals
-    ]
+sumDependency (Eval.Dependencies subexprs globals) = subexprs <> Set.map (toUUID . ExprIRef.defI) globals
 
 runTransactionAndMaybeRestartEvaluator :: Evaluator -> T DbM a -> IO a
 runTransactionAndMaybeRestartEvaluator evaluator transaction =
@@ -163,10 +152,13 @@ runTransactionAndMaybeRestartEvaluator evaluator transaction =
         Eval.whilePaused eval $
         \rawDependencies ->
         do
-            let dependencies =
-                    sumDependency rawDependencies & Set.insert (toUUID replIRef)
             (dependencyChanged, result) <-
                 do
+                    panes <- Transaction.readIRef panesRef & VersionControl.runAction
+                    let dependencies =
+                            sumDependency rawDependencies
+                            <> Set.singleton (toUUID panesRef)
+                            <> panes ^. traverse . Anchors._PaneDefinition . Lens.to (Set.singleton . toUUID)
                     (oldVersion, result, newVersion) <-
                         (,,) <$> getVersion <*> transaction <*> getVersion
                     let checkDependencyChange versionData =
@@ -186,6 +178,7 @@ runTransactionAndMaybeRestartEvaluator evaluator transaction =
                     start evaluator
             pure result
     where
+        panesRef = DbLayout.panes DbLayout.codeIRefs
         runTrans trans =
             withDb (eDb evaluator) $ \db -> DbLayout.runDbTransaction db trans
 

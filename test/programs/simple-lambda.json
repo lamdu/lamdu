@@ -1,24 +1,43 @@
 [
     {
-        "schemaVersion": 15
+        "schemaVersion": 16
     },
     {
+        "lamVar": "eada442322bdc44ddd0fe77a08a9dff0",
+        "tag": null
+    },
+    {
+        "def": "7265706c7265706c7265706c7265706c",
+        "defPresentationMode": "Verbose",
         "tag": null,
-        "lamVar": "eada442322bdc44ddd0fe77a08a9dff0"
-    },
-    {
-        "repl": {
-            "val": {
-                "lamParamType": {
-                    "id": "4bca2c45-e733-5cad-bf56-a00eda69a20e"
-                },
-                "lamVar": "eada442322bdc44ddd0fe77a08a9dff0",
+        "typ": {
+            "schemeType": {
+                "typeVar": "61"
+            },
+            "typeVars": [
+                "61"
+            ]
+        },
+        "val": {
+            "applyArg": {
                 "id": "22457b0f-d0eb-56c0-3f28-fcd27375ee4f",
                 "lamBody": {
                     "hole": {},
                     "id": "e80e3426-e15f-5613-0909-864400d9cf28"
-                }
-            }
+                },
+                "lamParamType": {
+                    "id": "4bca2c45-e733-5cad-bf56-a00eda69a20e"
+                },
+                "lamVar": "eada442322bdc44ddd0fe77a08a9dff0"
+            },
+            "applyFunc": {
+                "hole": {},
+                "id": "7265706c-686f-6c65-7265-706c686f6c65"
+            },
+            "id": "7265706c-686f-6c65-6672-61676170706c"
         }
+    },
+    {
+        "openDefPane": "7265706c7265706c7265706c7265706c"
     }
 ]

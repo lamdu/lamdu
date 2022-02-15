@@ -1,14 +1,13 @@
 {-# LANGUAGE TypeApplications, ScopedTypeVariables #-}
 
 module Lamdu.Sugar.Convert.Definition
-    ( pane, repl
+    ( pane
     ) where
 
 import qualified Control.Lens as Lens
 import           Control.Monad.Once (OnceT, Typeable)
 import           Control.Monad.Reader (ReaderT(..))
 import           Control.Monad.Transaction (MonadTransaction)
-import           Data.CurAndPrev (CurAndPrev(..))
 import qualified Data.Map as Map
 import           Data.Property (Property(Property))
 import qualified Data.Property as Property
@@ -27,13 +26,10 @@ import           Lamdu.Expr.IRef (DefI, HRef)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Load as ExprLoad
 import           Lamdu.Sugar.Config (Config)
-import           Lamdu.Sugar.Convert.Binder (convertBinder)
-import           Lamdu.Sugar.Convert.Binder.Params (mkVarInfo)
 import qualified Lamdu.Sugar.Convert.DefExpr as ConvertDefExpr
 import qualified Lamdu.Sugar.Convert.DefExpr.OutdatedDefs as OutdatedDefs
 import qualified Lamdu.Sugar.Convert.Expression as ConvertExpr
 import qualified Lamdu.Sugar.Convert.Input as Input
-import           Lamdu.Sugar.Convert.LightLam (addLightLambdas)
 import qualified Lamdu.Sugar.Convert.Load as Load
 import           Lamdu.Sugar.Convert.Monad (Context(..), ScopeInfo(..), RecursiveRef(..))
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
@@ -165,54 +161,6 @@ convertDefBody env (Definition.Definition bod defType defI) =
         & lift
     Definition.BodyExpr defExpr ->
         convertInferDefExpr env defType defExpr defI
-
-repl ::
-    ( HasCallStack, Monad m, Typeable m
-    , Has Debug.Monitors env
-    , Has Config env, Has Cache.Functions env
-    , Anchors.HasCodeAnchors env m
-    ) =>
-    env ->
-    OnceT (T m)
-    (Repl EvalPrep InternalName (OnceT (T m)) (T m) ([EntityId], ConvertPayload m))
-repl env =
-    do
-        defExpr <- ExprLoad.defExpr prop & lift
-        entityId <- Property.getP prop & lift <&> (^. Definition.expr) <&> EntityId.ofValI
-        let Load.InferOut valInferred newInferContext =
-                Load.inferDefExpr cachedInfer (env ^. has) defExpr
-                & assertInferSuccess
-        outdatedDefinitions <-
-            OutdatedDefs.scan entityId defExpr (Property.setP prop) postProcess
-            & (`runReaderT` env)
-            & lift
-        let context =
-                Context
-                { _scInferContext = newInferContext
-                , _scConfig = env ^. has
-                , _scCodeAnchors = env ^. Anchors.codeAnchors
-                , _scScopeInfo = emptyScopeInfo Nothing
-                , _scDebugMonitors = env ^. has
-                , _scCacheFunctions = env ^. has
-                , _scTopLevelExpr = valInferred
-                , _scPostProcessRoot = postProcess
-                , _scOutdatedDefinitions = outdatedDefinitions
-                , _scFrozenDeps =
-                    Property (defExpr ^. Definition.exprFrozenDeps) setFrozenDeps
-                , scConvertSubexpression = ConvertExpr.convert
-                }
-        Repl
-            <$> ConvertM.run context
-                (addLightLambdas <*> convertBinder ConvertM.BinderPos valInferred <&> collectHiddenEntityIds valInferred)
-            <*> runReaderT (mkVarInfo (valInferred ^. hAnn . Input.inferredType)) env
-            ?? CurAndPrev Nothing Nothing
-    where
-        cachedInfer = Cache.infer (env ^. has)
-        postProcess = PostProcess.expr cachedInfer (env ^. has) prop
-        prop = Anchors.repl (env ^. Anchors.codeAnchors)
-        setFrozenDeps deps =
-            prop ^. Property.mkProperty
-            >>= (`Property.pureModify` (Definition.exprFrozenDeps .~ deps))
 
 collectHiddenEntityIds ::
     forall h m.

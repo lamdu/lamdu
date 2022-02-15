@@ -1,40 +1,63 @@
 [
     {
-        "schemaVersion": 15
+        "schemaVersion": 16
     },
     {
-        "tagOrder": 0,
-        "tag": "42493a6e6f7468696e67000000000000",
         "names": {
-            "hebrew": "כלום",
-            "english": "nothing"
-        }
+            "english": "nothing",
+            "hebrew": "כלום"
+        },
+        "tag": "42493a6e6f7468696e67000000000000",
+        "tagOrder": 0
     },
     {
+        "lamVar": "654cd74d27d2439f804bc789ad032c3e",
+        "tag": null
+    },
+    {
+        "def": "7265706c7265706c7265706c7265706c",
+        "defPresentationMode": "Verbose",
         "tag": null,
-        "lamVar": "654cd74d27d2439f804bc789ad032c3e"
+        "typ": {
+            "schemeType": {
+                "funcParam": {
+                    "variant": [
+                        {
+                            "rowTag": "42493a6e6f7468696e67000000000000",
+                            "typeVar": "7430"
+                        }
+                    ]
+                },
+                "funcResult": {
+                    "typeVar": "7431"
+                }
+            },
+            "typeVars": [
+                "7430",
+                "7431"
+            ]
+        },
+        "val": {
+            "caseHandler": {
+                "id": "63d0182f-7eae-42c5-92ea-37632162256c",
+                "lamBody": {
+                    "hole": {},
+                    "id": "6deaf8a5-f518-43c9-a8d0-5fe79ec570ff"
+                },
+                "lamParamType": {
+                    "id": "8405330e-f9c9-4fd2-9f1c-f49efb906b93"
+                },
+                "lamVar": "654cd74d27d2439f804bc789ad032c3e"
+            },
+            "caseRest": {
+                "absurd": {},
+                "id": "badfd5b4-e453-4e2d-b9d2-ade7e52c37be"
+            },
+            "caseTag": "42493a6e6f7468696e67000000000000",
+            "id": "ab1739c5-31f6-4920-9173-efe90df446be"
+        }
     },
     {
-        "repl": {
-            "val": {
-                "caseRest": {
-                    "id": "badfd5b4-e453-4e2d-b9d2-ade7e52c37be",
-                    "absurd": {}
-                },
-                "caseHandler": {
-                    "lamParamType": {
-                        "id": "8405330e-f9c9-4fd2-9f1c-f49efb906b93"
-                    },
-                    "lamVar": "654cd74d27d2439f804bc789ad032c3e",
-                    "id": "63d0182f-7eae-42c5-92ea-37632162256c",
-                    "lamBody": {
-                        "hole": {},
-                        "id": "6deaf8a5-f518-43c9-a8d0-5fe79ec570ff"
-                    }
-                },
-                "caseTag": "42493a6e6f7468696e67000000000000",
-                "id": "ab1739c5-31f6-4920-9173-efe90df446be"
-            }
-        }
+        "openDefPane": "7265706c7265706c7265706c7265706c"
     }
 ]

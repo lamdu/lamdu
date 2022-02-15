@@ -486,11 +486,13 @@ instance
     (a ~ OldName m, b ~ NewName m, i ~ IM m, Walk m pa pb) =>
     Walk m (Top DefinitionExpression a i o pa) (Top DefinitionExpression b i o pb)
      where
-    walk (DefinitionExpression typ presMode content) =
+    walk (DefinitionExpression typ presMode content varInfo res) =
         DefinitionExpression
         <$> walk typ
         <*> pure presMode
         <*> toExpression content
+        ?? varInfo
+        ?? res
 
 instance
     (a ~ OldName m, b ~ NewName m, i ~ IM m, Walk m pa pb) =>
@@ -539,10 +541,9 @@ instance
 instance
     (a ~ OldName m, b ~ NewName m, i ~ IM m, Walk m pa pb) =>
     Walk m (Top WorkArea a i o pa) (Top WorkArea b i o pb) where
-    walk WorkArea { _waPanes, _waRepl, _waGlobals } =
+    walk WorkArea { _waPanes, _waGlobals } =
         WorkArea
         <$> (traverse . paneBody) walk _waPanes
-        <*> replExpr (toNode toBody) _waRepl
         <*> walk _waGlobals
 
 toWorkArea ::

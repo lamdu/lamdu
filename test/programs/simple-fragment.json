@@ -1,26 +1,26 @@
 [
     {
-        "schemaVersion": 15
-    },
-    {
-        "tagOrder": 0,
-        "tag": "a386d980d96f732451f7b7b7ebab441c"
-    },
-    {
-        "tagOrder": 2,
-        "tag": "a56145270ce6b3bebd1dd012b7394867",
-        "names": {
-            "english": "id"
-        }
+        "schemaVersion": 16
     },
     {
         "tag": "a386d980d96f732451f7b7b7ebab441c",
-        "lamVar": "d852a0789d16442590005ba054341671"
+        "tagOrder": 0
     },
     {
+        "names": {
+            "english": "id"
+        },
         "tag": "a56145270ce6b3bebd1dd012b7394867",
-        "defPresentationMode": "Verbose",
+        "tagOrder": 2
+    },
+    {
+        "lamVar": "d852a0789d16442590005ba054341671",
+        "tag": "a386d980d96f732451f7b7b7ebab441c"
+    },
+    {
         "def": "2dc884effd4c41b1b24e4c83fd81ede6",
+        "defPresentationMode": "Verbose",
+        "tag": "a56145270ce6b3bebd1dd012b7394867",
         "typ": {
             "schemeType": {
                 "funcParam": {
@@ -35,47 +35,66 @@
             ]
         },
         "val": {
+            "id": "6b0dae3b-248b-459d-b5be-132b853c77e9",
+            "lamBody": {
+                "id": "5312c144-b799-4d4b-96fd-13e92a89fba0",
+                "var": "d852a0789d16442590005ba054341671"
+            },
             "lamParamType": {
                 "id": "623d1ddb-f0ac-5123-a86d-7dfdbb42422b"
             },
-            "lamVar": "d852a0789d16442590005ba054341671",
-            "id": "6b0dae3b-248b-459d-b5be-132b853c77e9",
-            "lamBody": {
-                "var": "d852a0789d16442590005ba054341671",
-                "id": "5312c144-b799-4d4b-96fd-13e92a89fba0"
-            }
+            "lamVar": "d852a0789d16442590005ba054341671"
         }
     },
     {
-        "repl": {
-            "frozenDeps": {
-                "defTypes": {
-                    "2dc884effd4c41b1b24e4c83fd81ede6": {
-                        "schemeType": {
-                            "funcParam": {
-                                "typeVar": "6131"
-                            },
-                            "funcResult": {
-                                "typeVar": "6131"
-                            }
+        "def": "7265706c7265706c7265706c7265706c",
+        "defPresentationMode": "Verbose",
+        "frozenDeps": {
+            "defTypes": {
+                "2dc884effd4c41b1b24e4c83fd81ede6": {
+                    "schemeType": {
+                        "funcParam": {
+                            "typeVar": "6131"
                         },
-                        "typeVars": [
-                            "6131"
-                        ]
-                    }
+                        "funcResult": {
+                            "typeVar": "6131"
+                        }
+                    },
+                    "typeVars": [
+                        "6131"
+                    ]
                 }
+            }
+        },
+        "tag": null,
+        "typ": {
+            "schemeType": {
+                "typeVar": "61"
             },
-            "val": {
+            "typeVars": [
+                "61"
+            ]
+        },
+        "val": {
+            "applyArg": {
+                "applyArg": {
+                    "id": "46724f0a-6bcf-6606-6da7-a5262682496a",
+                    "var": "2dc884effd4c41b1b24e4c83fd81ede6"
+                },
                 "applyFunc": {
                     "hole": {},
                     "id": "e3f6452f-62a5-43dc-a78a-a4f5640cb898"
                 },
-                "applyArg": {
-                    "var": "2dc884effd4c41b1b24e4c83fd81ede6",
-                    "id": "46724f0a-6bcf-6606-6da7-a5262682496a"
-                },
                 "id": "0ca47240-1a43-4091-adcf-68a6c57fe5d7"
-            }
+            },
+            "applyFunc": {
+                "hole": {},
+                "id": "7265706c-686f-6c65-7265-706c686f6c65"
+            },
+            "id": "7265706c-686f-6c65-6672-61676170706c"
         }
+    },
+    {
+        "openDefPane": "7265706c7265706c7265706c7265706c"
     }
 ]

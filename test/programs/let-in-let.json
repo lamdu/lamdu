@@ -1,63 +1,82 @@
 [
     {
-        "schemaVersion": 15
+        "schemaVersion": 16
     },
     {
-        "tagOrder": 0,
-        "tag": "1a325e9af1de76dc492589ba2d0c8ce6",
         "names": {
             "english": "num"
-        }
-    },
-    {
+        },
         "tag": "1a325e9af1de76dc492589ba2d0c8ce6",
-        "nom": "42493a666c6f61740000000000000000"
+        "tagOrder": 0
     },
     {
+        "nom": "42493a666c6f61740000000000000000",
+        "tag": "1a325e9af1de76dc492589ba2d0c8ce6"
+    },
+    {
+        "lamVar": "d9bdb2c795e74a648b0fb394eeee4fe5",
+        "tag": null
+    },
+    {
+        "lamVar": "f9ead515c703431e83fc1feb25a9985b",
+        "tag": null
+    },
+    {
+        "def": "7265706c7265706c7265706c7265706c",
+        "defPresentationMode": "Verbose",
         "tag": null,
-        "lamVar": "d9bdb2c795e74a648b0fb394eeee4fe5"
-    },
-    {
-        "tag": null,
-        "lamVar": "f9ead515c703431e83fc1feb25a9985b"
-    },
-    {
-        "repl": {
-            "val": {
-                "applyFunc": {
-                    "lamParamType": {
-                        "id": "689d427f-535a-55ca-b464-f7e56bed07ab"
-                    },
-                    "lamVar": "f9ead515c703431e83fc1feb25a9985b",
-                    "id": "1874e690-ec36-445f-978f-d379bd197d4a",
-                    "lamBody": {
-                        "primBytes": "0101000000000000000700000000000018ffffffffffffffcd",
-                        "primId": "42493a666c6f61740000000000000000",
-                        "id": "74d7fd1e-da5d-9f22-2993-b757c124a37e"
-                    }
-                },
+        "typ": {
+            "schemeType": {
+                "typeVar": "61"
+            },
+            "typeVars": [
+                "61"
+            ]
+        },
+        "val": {
+            "applyArg": {
                 "applyArg": {
+                    "applyArg": {
+                        "id": "f785a66f-f703-550e-64b9-eedab7205b1f",
+                        "primBytes": "0101000000000000000700000000000010ffffffffffffffcc",
+                        "primId": "42493a666c6f61740000000000000000"
+                    },
                     "applyFunc": {
+                        "id": "4ff174ba-6409-47d3-965d-aa66856e5e60",
+                        "lamBody": {
+                            "id": "cf2a5fcf-bc25-de66-80c2-fb2741096c3d",
+                            "primBytes": "0101000000000000000700000000000010ffffffffffffffcd",
+                            "primId": "42493a666c6f61740000000000000000"
+                        },
                         "lamParamType": {
                             "id": "bd3e436d-344b-5746-afe0-e689432a2ae6"
                         },
-                        "lamVar": "d9bdb2c795e74a648b0fb394eeee4fe5",
-                        "id": "4ff174ba-6409-47d3-965d-aa66856e5e60",
-                        "lamBody": {
-                            "primBytes": "0101000000000000000700000000000010ffffffffffffffcd",
-                            "primId": "42493a666c6f61740000000000000000",
-                            "id": "cf2a5fcf-bc25-de66-80c2-fb2741096c3d"
-                        }
-                    },
-                    "applyArg": {
-                        "primBytes": "0101000000000000000700000000000010ffffffffffffffcc",
-                        "primId": "42493a666c6f61740000000000000000",
-                        "id": "f785a66f-f703-550e-64b9-eedab7205b1f"
+                        "lamVar": "d9bdb2c795e74a648b0fb394eeee4fe5"
                     },
                     "id": "6e332b34-c2ee-4730-a49d-52e6c72c0a56"
                 },
+                "applyFunc": {
+                    "id": "1874e690-ec36-445f-978f-d379bd197d4a",
+                    "lamBody": {
+                        "id": "74d7fd1e-da5d-9f22-2993-b757c124a37e",
+                        "primBytes": "0101000000000000000700000000000018ffffffffffffffcd",
+                        "primId": "42493a666c6f61740000000000000000"
+                    },
+                    "lamParamType": {
+                        "id": "689d427f-535a-55ca-b464-f7e56bed07ab"
+                    },
+                    "lamVar": "f9ead515c703431e83fc1feb25a9985b"
+                },
                 "id": "1a7f69d2-03bd-4437-8910-090f513585f7"
-            }
+            },
+            "applyFunc": {
+                "hole": {},
+                "id": "7265706c-686f-6c65-7265-706c686f6c65"
+            },
+            "id": "7265706c-686f-6c65-6672-61676170706c"
         }
+    },
+    {
+        "openDefPane": "7265706c7265706c7265706c7265706c"
     }
 ]

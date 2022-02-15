@@ -1,43 +1,65 @@
 [
     {
-        "schemaVersion": 15
+        "schemaVersion": 16
     },
     {
-        "tagOrder": 0,
-        "tag": "64077ff41e0a8ee59e103f93023ad302",
         "names": {
             "english": "a"
-        }
+        },
+        "tag": "64077ff41e0a8ee59e103f93023ad302",
+        "tagOrder": 0
     },
     {
-        "tagOrder": 1,
-        "tag": "fa4970527c82ac935af48b0693d96cd9",
         "names": {
             "english": "b"
+        },
+        "tag": "fa4970527c82ac935af48b0693d96cd9",
+        "tagOrder": 1
+    },
+    {
+        "def": "7265706c7265706c7265706c7265706c",
+        "defPresentationMode": "Verbose",
+        "tag": null,
+        "typ": {
+            "schemeType": {
+                "record": [
+                    {
+                        "rowTag": "64077ff41e0a8ee59e103f93023ad302",
+                        "typeVar": "7430"
+                    },
+                    {
+                        "rowTag": "fa4970527c82ac935af48b0693d96cd9",
+                        "typeVar": "7431"
+                    }
+                ]
+            },
+            "typeVars": [
+                "7430",
+                "7431"
+            ]
+        },
+        "val": {
+            "extendRest": {
+                "extendRest": {
+                    "id": "edc80462-9216-1d0b-b6f6-41273ed6c341",
+                    "recEmpty": {}
+                },
+                "extendTag": "fa4970527c82ac935af48b0693d96cd9",
+                "extendVal": {
+                    "hole": {},
+                    "id": "1fee8332-456b-1d61-baac-02a98056f636"
+                },
+                "id": "aa21cbd4-5a22-1d14-9832-c8c9a882ebed"
+            },
+            "extendTag": "64077ff41e0a8ee59e103f93023ad302",
+            "extendVal": {
+                "hole": {},
+                "id": "bcad742b-b24a-1c2d-896c-ea3fecf2a8e9"
+            },
+            "id": "5c9253c3-43c9-1e19-a500-8140c711d10f"
         }
     },
     {
-        "repl": {
-            "val": {
-                "extendVal": {
-                    "hole": {},
-                    "id": "bcad742b-b24a-1c2d-896c-ea3fecf2a8e9"
-                },
-                "extendTag": "64077ff41e0a8ee59e103f93023ad302",
-                "id": "5c9253c3-43c9-1e19-a500-8140c711d10f",
-                "extendRest": {
-                    "extendVal": {
-                        "hole": {},
-                        "id": "1fee8332-456b-1d61-baac-02a98056f636"
-                    },
-                    "extendTag": "fa4970527c82ac935af48b0693d96cd9",
-                    "id": "aa21cbd4-5a22-1d14-9832-c8c9a882ebed",
-                    "extendRest": {
-                        "recEmpty": {},
-                        "id": "edc80462-9216-1d0b-b6f6-41273ed6c341"
-                    }
-                }
-            }
-        }
+        "openDefPane": "7265706c7265706c7265706c7265706c"
     }
 ]

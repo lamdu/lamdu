@@ -4,6 +4,7 @@ module Lamdu.GUI.Expr.TagEdit
     , makeArgTag
     , makeTagHoleEdit
     , makeBinderTagEdit
+    , makeChooseEventMap
     ) where
 
 import qualified Control.Lens as Lens
@@ -342,6 +343,19 @@ makeVariantTag onPickNext = makeTagRefEdit onPickNext <&> Styled.withColor TextC
 addItemId :: Widget.Id -> Widget.Id
 addItemId = (`Widget.joinId` ["add item"])
 
+makeChooseEventMap :: _ => Widget.Id -> m (EventMap (o GuiState.Update))
+makeChooseEventMap tagEditId =
+    Lens.view id <&>
+    \env ->
+    E.charEventMap "Letter"
+    (E.toDoc env [has . MomentuTexts.edit, has . Texts.tag, has . MomentuTexts.choose])
+    chooseWithChar
+    where
+        chooseWithChar c =
+            SearchMenu.enterWithSearchTerm (Text.singleton c) tagEditId
+            <$ guard (Char.isAlpha c)
+            <&> pure
+
 makeLHSTag ::
     _ =>
     (Sugar.EntityId -> Maybe Widget.Id) ->
@@ -350,28 +364,17 @@ makeLHSTag ::
     GuiM env i o (M.TextWidget o)
 makeLHSTag onPickNext color mSetToAnon tag =
     do
-        env <- Lens.view id
         (tagEditType, tagEdit) <-
             makeTagRefEditWith onView onPickNext mSetToAnon tag
             & Styled.withColor color
-            & local (has .~ env ^. has . Style.nameAtBinder)
-        let chooseEventMap =
-                E.charEventMap "Letter"
-                (E.toDoc env
-                    [has . MomentuTexts.edit, has . Texts.tag, has . MomentuTexts.choose])
-                chooseWithChar
-
+            & local (\env -> env & has .~ env ^. has . Style.nameAtBinder)
+        chooseEventMap <- makeChooseEventMap (WidgetIds.tagHoleId myId)
         let eventMap =
                 case tagEditType of
                 SimpleView -> chooseEventMap
                 _ -> mempty
         tagEdit <&> Widget.weakerEvents eventMap & pure
     where
-        chooseWithChar c =
-            SearchMenu.enterWithSearchTerm (Text.singleton c)
-            (WidgetIds.tagHoleId myId)
-            <$ guard (Char.isAlpha c)
-            <&> pure
         myId = tag ^. Sugar.tagRefTag . Sugar.tagInstance & WidgetIds.fromEntityId
         -- Apply the name style only when the tag is a view. If it is
         -- a tag hole, the name style (indicating auto-name) makes no sense

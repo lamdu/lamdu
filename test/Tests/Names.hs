@@ -88,8 +88,7 @@ getNames workArea =
 workArea396 :: IO ()
 workArea396 =
     Sugar.WorkArea
-    { Sugar._waRepl = Stub.repl lamExpr
-    , Sugar._waPanes =
+    { Sugar._waPanes =
         [ Stub.funcExpr "paneVar" "num" Stub.hole & Sugar.BodyFunction & Stub.node
             & Stub.def lamType "def" "def"
             & Stub.pane
@@ -108,8 +107,7 @@ workArea396 =
 workAreaGlobals :: IO ()
 workAreaGlobals =
     Sugar.WorkArea
-    { Sugar._waRepl = Stub.repl Stub.hole
-    , Sugar._waPanes =
+    { Sugar._waPanes =
         -- 2 defs sharing the same tag with different Vars/UUIDs,
         -- should collide with ordinary suffixes
         [ Stub.def Stub.numType "def1" "def" trivialBinder & Stub.pane
@@ -142,8 +140,7 @@ trivialBinder =
 anonGlobals :: IO ()
 anonGlobals =
     Sugar.WorkArea
-    { Sugar._waRepl = Stub.repl Stub.hole
-    , Sugar._waPanes =
+    { Sugar._waPanes =
         -- 2 defs sharing the same tag with different Vars/UUIDs,
         -- should collide with ordinary suffixes
         [ Stub.def Stub.numType "def1" anonTag trivialBinder & Stub.pane

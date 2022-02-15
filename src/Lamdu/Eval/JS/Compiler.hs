@@ -82,7 +82,7 @@ data Env m = Env
     , _envLocals :: Map V.Var LocalVarName
     , _envMode :: Mode
     , _envExpectedTypes :: Map V.Var (Pure # T.Scheme)
-    , _envCurrentGlobal :: ER.WhichGlobal
+    , _envCurrentGlobal :: V.Var
     }
 Lens.makeLenses ''Env
 
@@ -214,31 +214,25 @@ topLevelDecls mode =
 loggingEnabled :: Mode
 loggingEnabled = SlowLogging LoggingInfo { _liScopeDepth = 0 }
 
-compileRepl :: Monad m => Actions m -> Definition.Expr (Val ValId) -> m ()
-compileRepl actions defExpr =
-    runRWST
-    ( traverse_ ppOut (topLevelDecls (loggingMode actions))
-        >> compileDefExpr defExpr
-        <&> codeGenExpression <&> scaffold >>= traverse_ ppOut & unM
-    ) (initialEnv actions) initialState <&> (^. _1)
-
--- | Top-level wrapepr for the code (catch exceptions in repl
--- execution, log it, and export the module symbols)
-scaffold :: JSS.Expression () -> [JSS.Statement ()]
-scaffold replExpr =
-    [ JS.trycatch
-        ( JS.block
-            [ varinit "repl" replExpr
-            , void [jsstmt|rts.logRepl(repl);|]
-            ]
-        )
-        ( JS.catch "err"
-            (JS.block [ void [jsstmt|rts.logReplErr(err);|] ])
-        )
-        Nothing
-    , -- This form avoids outputing repl's value in interactive mode
-        void [jsstmt|(function() { module.exports = repl; })();|]
-    ]
+compileRepl :: Monad m => Actions m -> [V.Var] -> m ()
+compileRepl actions defs =
+    do
+        traverse_ out (topLevelDecls (loggingMode actions))
+        runRWST (traverse repl defs & unM) (initialEnv actions) initialState
+            <&> (^. _1)
+            <&> varinit "repl" . JS.array
+            >>= out
+        -- This form avoids outputing repl's value in interactive mode
+        out (void [jsstmt|(function() { module.exports = repl; })();|])
+    where
+        repl v = compileGlobal v <&> catchExcepts v
+        out = output actions . pp
+        -- Wrap a repl's execution in a try/catch clause
+        catchExcepts v x =
+            JS.call (JS.lambda [] [JS.trycatch (JS.block (codeGenLamStmts x)) (catchErr v) Nothing]) []
+        catchErr (V.Var v) =
+            JS.call (JS.var "rts" $. "logReplErr") [JS.string (identHex v), JS.var "err"]
+            & JS.expr & JS.catch "err"
 
 initialEnv :: Actions m -> Env m
 initialEnv actions =
@@ -247,7 +241,7 @@ initialEnv actions =
     , _envLocals = mempty
     , _envMode = loggingMode actions
     , _envExpectedTypes = mempty
-    , _envCurrentGlobal = ER.GlobalRepl
+    , _envCurrentGlobal = "NO-GLOBAL?"
     }
 
 initialState :: State
@@ -260,7 +254,7 @@ initialState =
     }
 
 -- | Reset reader/writer components of RWS for a new global compilation context
-withGlobal :: Monad m => ER.WhichGlobal -> M m a -> M m a
+withGlobal :: Monad m => V.Var -> M m a -> M m a
 withGlobal whichGlobal act =
     act
     & censor (const LogUnused)
@@ -378,15 +372,15 @@ compileGlobal var =
                 case def ^. Definition.defBody of
                     Definition.BodyBuiltin ffiName -> ffiCompile ffiName & codeGenFromExpr & pure
                     Definition.BodyExpr defExpr -> compileDefExpr defExpr
-            & withGlobal (ER.GlobalDef var)
+            & withGlobal var
 
 throwErr :: Monad m => ValId -> ER.CompiledErrorType -> M m CodeGen
 throwErr valId err =
-    Lens.view envCurrentGlobal
-    <&> \curGlobal ->
+    Lens.view envCurrentGlobal <&>
+    \(V.Var curGlobal) ->
     [ (rts "exceptions" $. JS.ident (ER.encodeCompiledError err))
         `JS.call`
-        [ JS.string (ER.encodeWhichGlobal curGlobal)
+        [ JS.string (identHex curGlobal)
         , jsValId valId
         ] & JS.throw
     ] & codeGenFromLamStmts

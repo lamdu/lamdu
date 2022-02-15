@@ -18,7 +18,6 @@ module.exports = {
         }
         return encoded;
     },
-    logRepl: protocol.sendCompletionSuccess,
     logReplErr: protocol.sendCompletionError,
     logResult: function (scope, exprId, result) {
         protocol.sendResult(scope, exprId, result);

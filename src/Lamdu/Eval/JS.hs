@@ -29,6 +29,7 @@ import qualified Data.ByteString.Extended as BS
 import           Data.Either (fromRight)
 import           Data.IORef
 import           Data.IntMap (IntMap)
+import           Data.List (elemIndex)
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import           Data.String (IsString(..))
@@ -40,8 +41,7 @@ import           Data.Word (Word8)
 import           Hyper
 import           Hyper.Syntax.Row (RowExtend(..))
 import qualified Lamdu.Builtins.PrimVal as PrimVal
-import           Lamdu.Calc.Identifier (Identifier(..), identHex)
-import           Lamdu.Calc.Term (Val)
+import           Lamdu.Calc.Identifier (Identifier(..), identHex, identFromHex)
 import qualified Lamdu.Calc.Term as V
 import           Lamdu.Calc.Type (Tag(..))
 import           Lamdu.Data.Anchors (anonTag)
@@ -78,7 +78,7 @@ data Dependencies = Dependencies
 
 data Evaluator = Evaluator
     { stop :: IO ()
-    , executeReplIOProcess :: IO ()
+    , executeReplIOProcess :: V.Var -> IO ()
     , eDeps :: MVar Dependencies
     , eResultsRef :: IORef EvalResults
     }
@@ -233,28 +233,24 @@ newScope obj =
         Right scope = obj .: "scope"
         Right lamId = obj .: "lamId"
 
-completionSuccess :: Json.Object -> Parse (ER.Val ())
-completionSuccess obj =
-    case obj .: "result" of
-    Left{} -> error "Completion success report missing result"
-    Right x -> parseResult x
-
 completionError ::
-    Monad m => Json.Object -> m (ER.EvalException UUID)
+    Monad m => Json.Object -> m (V.Var, ER.EvalException UUID)
 completionError obj =
     case obj .: "err" of
     Left{} -> "Completion error report missing valid err: " ++ show obj & error
     Right x ->
-        ER.EvalException
-        <$> do
-                errTypeStr <- x .: "error"
-                exceptionMStr <- x .:? "exception"
-                ER.decodeJsErrorException errTypeStr exceptionMStr
-        <*> (
-            ((,) <$> (x .: "globalId") <*> (x .: "exprId")) ^? Lens._Right
-            & Lens._Just (bitraverse ER.decodeWhichGlobal (pure . parseUUID))
-        )
-        & either error pure
+        (,)
+        <$> (obj .: "repl" >>= identFromHex <&> V.Var)
+        <*> ( ER.EvalException
+            <$> do
+                    errTypeStr <- x .: "error"
+                    exceptionMStr <- x .:? "exception"
+                    ER.decodeJsErrorException errTypeStr exceptionMStr
+            <*> (
+                ((,) <$> (x .: "globalId") <*> (x .: "exprId")) ^? Lens._Right
+                & Lens._Just (bitraverse (fmap V.Var . identFromHex) (pure . parseUUID))
+            )
+        ) & either error pure
 
 processEvent ::
     IORef EvalResults -> Actions ->
@@ -265,10 +261,8 @@ processEvent resultsRef actions obj =
         runParse (addVal obj) (ER.erExprValues %~)
     "NewScope" ->
         runParse (newScope obj) (ER.erAppliesOfLam %~)
-    "CompletionSuccess" ->
-        runParse (completionSuccess obj) (\res -> ER.erCompleted ?~ Right res)
     "CompletionError" ->
-        runParse (completionError obj) (\exc -> ER.erCompleted ?~ Left exc)
+        runParse (completionError obj) (\(v, exc) -> ER.erErrors . Lens.at v ?~ exc)
     _ -> "Unknown event " ++ event & putStrLn
     where
         runParse act postProcess =
@@ -356,10 +350,10 @@ processNodeOutput copyNodeOutput handleEvent stdout =
                 hFlush handle
 
 asyncStart ::
-    MVar Dependencies -> MVar () -> IORef EvalResults ->
-    Def.Expr (Val UUID) -> Actions ->
+    MVar Dependencies -> MVar V.Var -> IORef EvalResults ->
+    [V.Var] -> Actions ->
     IO ()
-asyncStart depsMVar executeReplMVar resultsRef replVal actions =
+asyncStart depsMVar executeReplMVar resultsRef repls actions =
     withSystemTempFile "lamdu-output.js" $
     \lamduOutputPath lamduOutputHandle ->
     do
@@ -376,9 +370,7 @@ asyncStart depsMVar executeReplMVar resultsRef replVal actions =
                 let processOutput = processNodeOutput nodeOutputHandle handleEvent stdout
                 withForkedIO processOutput $
                     do
-                        replVal
-                            <&> hflipped %~ hmap (const (Lens._Wrapped %~ Compiler.ValId))
-                            & Compiler.compileRepl (compilerActions depsMVar actions outputJS)
+                        Compiler.compileRepl (compilerActions depsMVar actions outputJS) repls
                         flushJS
                         let flushedOutput handle msg =
                                 do
@@ -392,10 +384,12 @@ asyncStart depsMVar executeReplMVar resultsRef replVal actions =
                         "'use strict';\n" ++
                             "var repl = require(" ++ show lamduOutputPath ++ ");"
                             & outputInteractive
-                        do
-                            takeMVar executeReplMVar
-                            outputInteractive "repl(x => undefined);"
+                        takeMVar executeReplMVar
+                            <&> (`elemIndex` repls)
+                            >>= Lens._Just (outputInteractive . runRepl)
                             & forever
+    where
+        runRepl idx = "repl[" <> show idx <> "](x => undefined);"
 
 -- | Pause the evaluator, yielding all dependencies of evaluation so
 -- far. If any dependency changed, this evaluation is stale.
@@ -405,24 +399,20 @@ asyncStart depsMVar executeReplMVar resultsRef replVal actions =
 whilePaused :: Evaluator -> (Dependencies -> IO a) -> IO a
 whilePaused = withMVar . eDeps
 
-start ::
-    Actions -> Def.Expr (Val UUID) -> IO Evaluator
-start actions replExpr =
+start :: Actions -> [V.Var] -> IO Evaluator
+start actions repls =
     do
         depsMVar <-
             newMVar Dependencies
-            { globalDeps = Set.empty
-            , subExprDeps =
-                replExpr ^.. Lens.folded . hflipped
-                >>= hfoldMap (const (^.. Lens._Wrapped))
-                & Set.fromList
+            { globalDeps = Set.fromList repls
+            , subExprDeps = mempty
             }
         resultsRef <- newIORef ER.empty
         executeReplMVar <- newEmptyMVar
-        tid <- asyncStart depsMVar executeReplMVar resultsRef replExpr actions & forkIO
+        tid <- asyncStart depsMVar executeReplMVar resultsRef repls actions & forkIO
         pure Evaluator
             { stop = killThread tid
-            , executeReplIOProcess = putMVar executeReplMVar ()
+            , executeReplIOProcess = putMVar executeReplMVar
             , eDeps = depsMVar
             , eResultsRef = resultsRef
             }
