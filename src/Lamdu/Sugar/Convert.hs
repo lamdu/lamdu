@@ -2,7 +2,6 @@ module Lamdu.Sugar.Convert
     ( loadWorkArea, InternalName
     ) where
 
-import           Control.Applicative ((<|>))
 import qualified Control.Lens as Lens
 import           Control.Monad.Once (OnceT, Typeable)
 import           Data.List.Extended (insertAt, removeAt)
@@ -19,7 +18,6 @@ import qualified Lamdu.Sugar.Convert.NameRef as ConvertNameRef
 import qualified Lamdu.Sugar.Convert.Nominal as ConvertNominal
 import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
-import qualified Lamdu.Sugar.Lens as SugarLens
 import           Lamdu.Sugar.OrderTags (orderWorkArea)
 import           Lamdu.Sugar.Types
 import           Revision.Deltum.Transaction (Transaction)
@@ -65,12 +63,12 @@ convertPane ::
     , Has Config env, Has Cache.Functions env
     , Anchors.HasCodeAnchors env m
     ) =>
-    env -> EntityId ->
+    env ->
     Property (T m) [Anchors.Pane dummy] ->
     Int -> Anchors.Pane m ->
     OnceT (T m)
     (Pane EvalPrep InternalName (OnceT (T m)) (T m) ([EntityId], ConvertPayload m))
-convertPane env replEntityId (Property panes setPanes) i pane =
+convertPane env (Property panes setPanes) i pane =
     do
         body <- convertPaneBody env pane
         defState <- Anchors.assocDefinitionState myEntityId ^. Property.mkProperty & lift
@@ -78,21 +76,12 @@ convertPane env replEntityId (Property panes setPanes) i pane =
             { _paneBody = body
             , _paneEntityId = myEntityId
             , _paneDefinitionState = defState
-            , _paneClose = mkDelPane
+            , _paneClose = setPanes (removeAt i panes)
             , _paneMoveDown = mkMMovePaneDown
             , _paneMoveUp = mkMMovePaneUp
             }
     where
         myEntityId = mkPaneEntityId pane
-        mkDelPane =
-            entityId <$ setPanes newPanes
-            where
-                entityId =
-                    newPanes ^? Lens.ix i
-                    <|> newPanes ^? Lens.ix (i-1)
-                    <&> mkPaneEntityId
-                    & fromMaybe replEntityId
-                newPanes = removeAt i panes
         movePane oldIndex newIndex =
             insertAt newIndex item (before ++ after)
             & setPanes
@@ -111,13 +100,12 @@ loadPanes ::
     , Has Config env, Has Cache.Functions env
     , Anchors.HasCodeAnchors env m
     ) =>
-    env -> EntityId ->
+    env ->
     OnceT (T m) [Pane EvalPrep InternalName (OnceT (T m)) (T m) ([EntityId], ConvertPayload m)]
-loadPanes env replEntityId =
+loadPanes env =
     do
         prop <- Anchors.panes (env ^. Anchors.codeAnchors) ^. Property.mkProperty & lift
-        Property.value prop
-            & Lens.itraversed %%@~ convertPane env replEntityId prop
+        Property.value prop & Lens.itraversed %%@~ convertPane env prop
 
 globals ::
     Monad m =>
@@ -141,15 +129,10 @@ loadWorkArea ::
     env ->
     OnceT (T m) (WorkArea EvalPrep InternalName (OnceT (T m)) (T m) ([EntityId], ConvertPayload m))
 loadWorkArea env =
-    do
-        repl <- ConvertDefinition.repl env
-        panes <-
-            repl ^. replExpr . SugarLens.binderResultExpr . _2 . pEntityId
-            & loadPanes env
-        orderWorkArea WorkArea
-            { _waRepl = repl
-            , _waPanes = panes
-            , _waGlobals = globals cp
-            }
+    WorkArea
+    <$> loadPanes env
+    <*> ConvertDefinition.repl env
+    ?? globals cp
+    >>= orderWorkArea
     where
         cp = env ^. Anchors.codeAnchors

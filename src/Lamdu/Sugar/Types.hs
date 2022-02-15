@@ -104,7 +104,7 @@ data Pane v name i o a = Pane
     { _paneBody :: PaneBody v name i o a
     , _paneEntityId :: EntityId
     , _paneDefinitionState :: Property o Meta.DefinitionState
-    , _paneClose :: o EntityId
+    , _paneClose :: o ()
     , _paneMoveDown :: Maybe (o ())
     , _paneMoveUp :: Maybe (o ())
     } deriving (Functor, Foldable, Traversable, Generic)

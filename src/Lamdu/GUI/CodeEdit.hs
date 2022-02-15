@@ -12,6 +12,7 @@ module Lamdu.GUI.CodeEdit
 
 import qualified Control.Lens as Lens
 import           Control.Lens.Extended ((~~>))
+import           Control.Monad (zipWithM)
 import           Control.Monad.Once (OnceT)
 import           Control.Monad.Trans.Reader (ReaderT)
 import           Control.Monad.Transaction (MonadTransaction(..))
@@ -60,6 +61,7 @@ import qualified Lamdu.I18N.Collaboration as Texts
 import qualified Lamdu.I18N.Definitions as Texts
 import qualified Lamdu.I18N.Navigation as Texts
 import           Lamdu.Name (Name)
+import qualified Lamdu.Sugar.Lens as SugarLens
 import qualified Lamdu.Sugar.Types as Sugar
 import           Revision.Deltum.Transaction (Transaction)
 
@@ -104,9 +106,13 @@ make cp gp width mkWorkArea =
             replGui <-
                 ReplEdit.make (exportReplActions theExportActions)
                 (workArea ^. Sugar.waRepl)
+            let dsts =
+                    workArea ^. Sugar.waRepl . Sugar.replExpr . SugarLens.binderResultExpr . Sugar.plEntityId :
+                    workArea ^.. Sugar.waPanes . traverse . Sugar.paneEntityId
+                    <&> WidgetIds.fromEntityId
             panesEdits <-
                 workArea ^. Sugar.waPanes
-                & traverse (makePaneEdit theExportActions)
+                & zipWithM (makePaneEdit theExportActions) dsts
             newDefinitionButton <-
                 makeNewDefinitionButton cp
                 <&> Widget.updates %~ IOTrans.liftTrans
@@ -152,15 +158,15 @@ exportPaneEventMap env theExportActions paneBody =
 
 deleteAndClosePaneEventMap ::
     _ =>
+    Widget.Id ->
     Sugar.Pane v name i0 o a -> _ ->
     GuiM env i1 o (EventMap _)
-deleteAndClosePaneEventMap pane defState =
+deleteAndClosePaneEventMap prevId pane defState =
     Lens.view id
     <&> \env ->
     do
         (defState ^. Property.pSet) Sugar.DeletedDefinition
-        pane ^. Sugar.paneClose
-    <&> WidgetIds.fromEntityId
+        prevId <$ pane ^. Sugar.paneClose
     & E.keysEventMapMovesCursor (Config.delKeys env)
     (E.toDoc env
         [ has . MomentuTexts.edit
@@ -204,9 +210,10 @@ wholeFocused size f =
 makePaneEdit ::
     _ =>
     ExportActions m ->
+    Widget.Id ->
     ExprGui.Top Sugar.Pane (OnceT (T m)) (T m) ->
     GuiM env (OnceT (T m)) (T m) (Responsive (IOTrans m))
-makePaneEdit theExportActions pane =
+makePaneEdit theExportActions prevId pane =
     do
         env <- Lens.view id
         let titledCodeDoc titleLenses texts =
@@ -214,8 +221,7 @@ makePaneEdit theExportActions pane =
                 (titleLenses ++ map (has .) texts)
         let viewDoc = titledCodeDoc [has . MomentuTexts.view]
         let paneEventMap =
-                [ pane ^. Sugar.paneClose & IOTrans.liftTrans
-                  <&> WidgetIds.fromEntityId
+                [ prevId <$ IOTrans.liftTrans (pane ^. Sugar.paneClose)
                   & E.keysEventMapMovesCursor
                     (paneConfig ^. Config.paneCloseKeys <> Config.delKeys env)
                     (viewDoc [Texts.pane, Texts.close])
@@ -233,7 +239,7 @@ makePaneEdit theExportActions pane =
         bodyGui <- makePaneBodyEdit pane
         case pane ^. Sugar.paneDefinitionState . Property.pVal of
             Sugar.LiveDefinition ->
-                deleteAndClosePaneEventMap pane (pane ^. Sugar.paneDefinitionState)
+                deleteAndClosePaneEventMap prevId pane (pane ^. Sugar.paneDefinitionState)
                 <&> (`Widget.weakerEvents` bodyGui)
             Sugar.DeletedDefinition ->
                 do
