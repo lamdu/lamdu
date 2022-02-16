@@ -13,7 +13,7 @@ module Lamdu.Opts
 import           Control.Applicative (optional)
 import qualified Control.Lens as Lens
 import           Data.List.Split (splitOn)
-import           Data.Vector.Vector2 (Vector2)
+import           Data.Vector.Vector2 (Vector2(..))
 import           Data.Word (Word16)
 import           GUI.Momentu (WindowMode(..))
 import qualified Lamdu.Annotations as Annotations
@@ -155,7 +155,13 @@ windowMode =
       <> P.short 'f'
       <> P.help "Run Lamdu in a fullscreen window"
     )
+    <|> P.option (P.maybeReader parseWindowSize) (P.long "window-size" <> P.metavar "WxH")
     <|> pure Windowed
+    where
+        parseWindowSize s =
+            case splitOn "x" s <&> (^? Lens._Show) of
+            [Just w, Just h] -> Vector2 w h & Windowed & const & Just
+            _ -> Nothing
 
 commandWithDb :: P.Parser CommandWithDb
 commandWithDb =
