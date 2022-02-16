@@ -79,10 +79,17 @@ convert app@(V.App funcI argI) exprPl =
                             EntityId.ofValI dst <$ protectedSetToVal (exprPl ^. Input.stored) dst
                             & SetToHole
                         | otherwise = d
+                let singleApply =  hVal . _BodyLam . lamApplyLimit .~ AtMostOneFuncApply
+                let onEachAppliedAlt x =
+                        x
+                        & cList . Lens.mapped %~ singleApply
+                        & cTail . _OpenComposite %~ singleApply
                 funcS <-
                     ConvertM.convertSubexpression funcI & lift
                     & local (ConvertM.scScopeInfo %~ scopeUpdates)
                     <&> annotation . pActions . delete %~ fixDel
+                    <&> hVal . _BodyLam . lamApplyLimit .~ AtMostOneFuncApply
+                    <&> hVal . _BodyPostfixFunc . _PfCase %~ onEachAppliedAlt
                 App funcS argS & pure
         convertEmptyInject appS >>= lift . addAct & justToLeft
         convertPostfix appS exprPl >>= lift . addAct & justToLeft
