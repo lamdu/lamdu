@@ -1,0 +1,31 @@
+[
+    {
+        "schemaVersion": 15
+    },
+    {
+        "tagOrder": 0,
+        "tag": "64077ff41e0a8ee59e103f93023ad302",
+        "names": {
+            "hebrew": "א",
+            "english": "a",
+            "italian": "a",
+            "spanish": "a"
+        }
+    },
+    {
+        "repl": {
+            "val": {
+                "applyFunc": {
+                    "inject": "64077ff41e0a8ee59e103f93023ad302",
+                    "id": "79ae99ac-7741-4fb4-878d-37da272a2589"
+                },
+                "applyArg": {
+                    "primBytes": "0101000000000000000700000000000010ffffffffffffffcc",
+                    "primId": "42493a666c6f61740000000000000000",
+                    "id": "a75b9e75-7577-4248-a524-3208f17c9f9b"
+                },
+                "id": "a3ac20cb-4145-4019-8157-4a06e504949e"
+            }
+        }
+    }
+]

@@ -58,6 +58,7 @@ test =
     , testDisambig
     , testSuspendedHoleResultSimple
     , testSuspendedHoleResult
+    , testNoInjectValAnn
     , testGroup "insist-tests"
         [ testInsistFactorial
         , testInsistEq
@@ -95,6 +96,16 @@ replBody = replBinder . _BinderTerm
 
 replLet :: Lens.Traversal' (WorkArea v name i o a) (Let v name i o # Annotated a)
 replLet = replBinder . _BinderLet
+
+testNoInjectValAnn :: Test
+testNoInjectValAnn =
+    testSugarActions "inject.json" [verify]
+    & testCase "no-inject-val-ann"
+    where
+        verify workArea
+            | Lens.has (waRepl . replExpr . annotation . plAnnotation . _AnnotationVal) workArea =
+                error "redundant value annotation"
+            | otherwise = pure ()
 
 testUnnamed :: Test
 testUnnamed =
