@@ -156,12 +156,15 @@ windowMode =
       <> P.help "Run Lamdu in a fullscreen window"
     )
     <|> P.option (P.maybeReader parseWindowSize) (P.long "window-size" <> P.metavar "WxH")
-    <|> pure Windowed
+    <|> pure defaultSize
     where
         parseWindowSize s =
             case splitOn "x" s <&> (^? Lens._Show) of
             [Just w, Just h] -> Vector2 w h & Windowed & const & Just
             _ -> Nothing
+        defaultSize (Vector2 w h)
+            | w < 2000 = Vector2 w h & Windowed
+            | otherwise = Vector2 1000 1200 & Windowed
 
 commandWithDb :: P.Parser CommandWithDb
 commandWithDb =
