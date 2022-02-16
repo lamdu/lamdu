@@ -13,6 +13,7 @@ module Lamdu.Opts
 import           Control.Applicative (optional)
 import qualified Control.Lens as Lens
 import           Data.List.Split (splitOn)
+import           Data.Vector.Vector2 (Vector2)
 import           Data.Word (Word16)
 import           GUI.Momentu (WindowMode(..))
 import qualified Lamdu.Annotations as Annotations
@@ -23,7 +24,7 @@ import qualified Options.Applicative as P
 import           Lamdu.Prelude
 
 data EditorOpts = EditorOpts
-    { _eoWindowMode :: WindowMode
+    { _eoWindowMode :: Vector2 Int -> WindowMode
     , _eoJSDebugPaths :: JSDebugPaths FilePath
     , _eoWindowTitle :: String
     , _eoSubpixelEnabled :: Bool
@@ -147,14 +148,14 @@ editorOpts =
 command :: P.Parser Command
 command = Editor <$> editorOpts <|> subcommands
 
-windowMode :: P.Parser WindowMode
+windowMode :: P.Parser (Vector2 Int -> WindowMode)
 windowMode =
-    P.flag' FullScreen
+    P.flag' (const FullScreen)
     ( P.long "fullscreen"
       <> P.short 'f'
       <> P.help "Run Lamdu in a fullscreen window"
     )
-    <|> pure Maximized
+    <|> pure Windowed
 
 commandWithDb :: P.Parser CommandWithDb
 commandWithDb =

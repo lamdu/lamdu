@@ -11,7 +11,7 @@ extra-deps:
 - github: lamdu/lamdu-calculus
   commit: 75da23ca591204a1531c0b4539fef963bee1a5d7
 - github: lamdu/momentu
-  commit: 999c87cc5d288ddee460fe1d4313353609710e37
+  commit: 6c343b5b02fbb328ce52b6094951d2eea07ef735
 - github: lamdu/hypertypes
   commit: 9d1f54b4c5a60c39f08b5559e2f5bdd3efdfe975
 - github: lamdu/graphics-drawingcombinators
