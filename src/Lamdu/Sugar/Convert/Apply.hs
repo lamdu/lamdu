@@ -72,9 +72,6 @@ convert app@(V.App funcI argI) exprPl =
                         case mFloat of
                         Nothing -> id
                         Just{} -> (ConvertM.siExtractPos ?~ pos) . (ConvertM.siFloatPos ?~ pos)
-                funcS <-
-                    ConvertM.convertSubexpression funcI & lift
-                    & local (ConvertM.scScopeInfo %~ scopeUpdates)
                 protectedSetToVal <- lift ConvertM.typeProtectedSetToVal
                 let dst = argI ^. hAnn . Input.stored . ExprIRef.iref
                 let fixDel d
@@ -82,7 +79,11 @@ convert app@(V.App funcI argI) exprPl =
                             EntityId.ofValI dst <$ protectedSetToVal (exprPl ^. Input.stored) dst
                             & SetToHole
                         | otherwise = d
-                App (funcS & annotation . pActions . delete %~ fixDel) argS & pure
+                funcS <-
+                    ConvertM.convertSubexpression funcI & lift
+                    & local (ConvertM.scScopeInfo %~ scopeUpdates)
+                    <&> annotation . pActions . delete %~ fixDel
+                App funcS argS & pure
         convertEmptyInject appS >>= lift . addAct & justToLeft
         convertPostfix appS exprPl >>= lift . addAct & justToLeft
         convertLabeled appS exprPl >>= lift . addAct & justToLeft
