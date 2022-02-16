@@ -184,7 +184,9 @@ instance MarkBodyAnnotations v Term where
             & BodyNullaryInject
         )
     markBodyAnnotations (BodySimpleApply x) =
-        ( showAnnotationWhenVerbose
+        ( if Lens.has (appFunc . hVal . _BodyLeaf . _LeafInject) x
+            then dontShowEval
+            else showAnnotationWhenVerbose
         , morphMap (Proxy @MarkAnnotations #?> markNodeAnnotations) x
             & appFunc . nonHoleAnn .~ neverShowAnnotations
             & BodySimpleApply
