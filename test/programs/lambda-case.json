@@ -11,6 +11,10 @@
         }
     },
     {
+        "tag": null,
+        "lamVar": "654cd74d27d2439f804bc789ad032c3e"
+    },
+    {
         "repl": {
             "val": {
                 "caseRest": {
@@ -18,8 +22,15 @@
                     "absurd": {}
                 },
                 "caseHandler": {
-                    "hole": {},
-                    "id": "7fb6c12a-ac35-4b45-802d-84791c2382fd"
+                    "lamParamType": {
+                        "id": "8405330e-f9c9-4fd2-9f1c-f49efb906b93"
+                    },
+                    "lamVar": "654cd74d27d2439f804bc789ad032c3e",
+                    "id": "63d0182f-7eae-42c5-92ea-37632162256c",
+                    "lamBody": {
+                        "hole": {},
+                        "id": "6deaf8a5-f518-43c9-a8d0-5fe79ec570ff"
+                    }
                 },
                 "caseTag": "42493a6e6f7468696e67000000000000",
                 "id": "ab1739c5-31f6-4920-9173-efe90df446be"

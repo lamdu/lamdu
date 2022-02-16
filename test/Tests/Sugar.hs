@@ -59,6 +59,7 @@ test =
     , testSuspendedHoleResultSimple
     , testSuspendedHoleResult
     , testNoInjectValAnn
+    , testCaseNav
     , testGroup "insist-tests"
         [ testInsistFactorial
         , testInsistEq
@@ -106,6 +107,19 @@ testNoInjectValAnn =
             | Lens.has (waRepl . replExpr . annotation . plAnnotation . _AnnotationVal) workArea =
                 error "redundant value annotation"
             | otherwise = pure ()
+
+testCaseNav :: Test
+testCaseNav =
+    testSugarActions "lambda-case.json" [verify]
+    & testCase "case-scope-nav"
+    where
+        verify workArea
+            | Lens.has (lamApplyLimit . _UnlimitedFuncApply) lam = pure ()
+            | otherwise = error "expected case lambda to be UnlimitedFuncApply"
+            where
+                lam =
+                    workArea ^? replBody . _BodyPostfixFunc . _PfCase . cList . SugarLens.taggedListItems . tiValue .
+                    hVal . _BodyLam & fromMaybe (error "Expected a case lambda")
 
 testUnnamed :: Test
 testUnnamed =
