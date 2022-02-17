@@ -22,7 +22,7 @@ jobs:
     steps:
     - uses: actions/checkout@v2
 
-    - name: Install dependencies
+    - name: Install system dependencies
       run: |
         sudo apt-get install nodejs zlib1g-dev libglew-dev libleveldb-dev
         sudo apt-get install libxxf86vm-dev libxrandr-dev libxi-dev libxcursor-dev libxinerama-dev
@@ -39,7 +39,7 @@ jobs:
         path: ~/.stack
         key: ${{ runner.os }}-${{ matrix.ghc }}-stack
 
-    - name: Install dependencies
+    - name: Install Haskell dependencies
       run: |
         stack build --system-ghc --test --bench --no-run-tests --no-run-benchmarks --only-dependencies
 
