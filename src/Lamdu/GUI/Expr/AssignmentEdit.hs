@@ -23,10 +23,12 @@ import           GUI.Momentu.Rect (Rect(..))
 import qualified GUI.Momentu.Rect as Rect
 import           GUI.Momentu.Responsive (Responsive)
 import qualified GUI.Momentu.Responsive as Responsive
+import qualified GUI.Momentu.Responsive.Expression as ResponsiveExpr
 import qualified GUI.Momentu.Responsive.Options as Options
 import qualified GUI.Momentu.State as GuiState
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Label as Label
+import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified GUI.Momentu.Widgets.TextView as TextView
 import qualified Lamdu.Annotations as Annotations
 import qualified Lamdu.Config as Config
@@ -297,14 +299,17 @@ make pMode delParamDest assignment nameEdit =
                 <&> Widget.strongerEvents rhsJumperEquals
                 <&> Just
         equals <- grammar (label Texts.assign)
-        hbox <- Options.boxSpaced ?? Options.disambiguationNone
-        hbox [ defNameEdit :
-                mParamEdit ^.. Lens._Just ++
-                [Responsive.fromTextView equals]
-                & hbox
-            , bodyEdit
-            ]
-            & pure
+        lhs <-
+            Options.boxSpaced ?? Options.disambiguationNone ??
+            defNameEdit : mParamEdit ^.. Lens._Just <> [Responsive.fromTextView equals]
+        indent <- ResponsiveExpr.indent
+        hbox <-
+            Options.hbox
+            <*> maybe (pure id) (ResponsiveExpr.addParens ??) (ExprGui.mParensId pl)
+            ?? id
+        hSpace <- Spacer.stdHSpace <&> Responsive.fromView
+        Responsive.vboxSpaced ?? [lhs, indent (Widget.toAnimId myId <> ["rhs"]) bodyEdit]
+            <&> Options.tryWideLayout hbox [lhs, hSpace, bodyEdit]
         & local (M.animIdPrefix .~ Widget.toAnimId myId)
         & maybe id stdWrap mLamPl
         <&> Widget.weakerEvents eventMap

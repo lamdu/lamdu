@@ -52,12 +52,10 @@ makeLetEdit item myId =
                     . fmap (const bodyId)
                 ) (item ^? Sugar.lNames . Sugar._LhsVar . Sugar.vDelete)
         (_, paramsEdit) <- ParamsEdit.make True (pure Nothing) ParamsEdit.ScopeNavNotFocused myId myId bodyId (item ^. Sugar.lNames)
-        grammar (label Texts.let_)
-            M./|/ Spacer.stdHSpace
-            M./|/ (
-                AssignmentEdit.make Nothing myId binder paramsEdit
-                <&> M.weakerEvents eventMap
-                <&> M.padAround (env ^. has . Theme.letItemPadding))
+        grammar (label Texts.let_) M./|/ Spacer.stdHSpace M./|/ pure paramsEdit
+            >>= AssignmentEdit.make Nothing myId binder
+            <&> M.weakerEvents eventMap
+            <&> M.padAround (env ^. has . Theme.letItemPadding)
     where
         bodyId = item ^. Sugar.lBody . annotation & WidgetIds.fromExprPayload
         binder = item ^. Sugar.lValue
