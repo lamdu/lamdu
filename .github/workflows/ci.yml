@@ -50,3 +50,18 @@ jobs:
     - name: Test
       run: |
         stack test --system-ghc
+
+  hlint:
+    name: hlint
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Run HLint
+      env:
+         HLINT_VERSION: "3.3.6"
+      run: |
+        curl -L https://github.com/ndmitchell/hlint/releases/download/v${HLINT_VERSION}/hlint-${HLINT_VERSION}-x86_64-linux.tar.gz --output hlint.tar.gz
+        tar -xvf hlint.tar.gz
+        ./hlint-${HLINT_VERSION}/hlint src/ test/
