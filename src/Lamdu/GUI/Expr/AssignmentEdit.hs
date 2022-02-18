@@ -308,7 +308,7 @@ make pMode delParamDest assignment nameEdit =
             <*> maybe (pure id) (ResponsiveExpr.addParens ??) (ExprGui.mParensId pl)
             ?? id
         hSpace <- Spacer.stdHSpace <&> Responsive.fromView
-        Responsive.vboxSpaced ?? [lhs, indent (Widget.toAnimId myId <> ["rhs"]) bodyEdit]
+        Responsive.vboxSpaced ?? [lhs, indent (Widget.toAnimId myId <> ["assignment-body"]) bodyEdit]
             <&> Options.tryWideLayout hbox [lhs, hSpace, bodyEdit]
         & local (M.animIdPrefix .~ Widget.toAnimId myId)
         & maybe id stdWrap mLamPl
