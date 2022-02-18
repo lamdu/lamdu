@@ -13,7 +13,7 @@ import qualified GUI.Momentu.Glue as Glue
 import qualified GUI.Momentu.I18N as MomentuTexts
 import           GUI.Momentu.Responsive (Responsive)
 import qualified GUI.Momentu.Responsive as Responsive
-import           GUI.Momentu.Responsive.TaggedList (TaggedItem(..), taggedListTable, tagPre, tagPost)
+import           GUI.Momentu.Responsive.TaggedList (TaggedItem(..), taggedListIndent, tagPre, tagPost)
 import qualified GUI.Momentu.State as GuiState
 import qualified GUI.Momentu.View as View
 import qualified GUI.Momentu.Widget as Widget
@@ -159,9 +159,7 @@ makeRecord _ [] = error "makeRecord with no fields"
 makeRecord postProcess fieldGuis =
     Styled.addValFrame <*>
     ( grammar (label Texts.recordOpener)
-        M./|/ (taggedListTable
-                <*> addPostTags fieldGuis
-                >>= postProcess)
+        M./|/ (taggedListIndent <*> addPostTags fieldGuis >>= postProcess)
     )
 
 addPostTags :: _ => [TaggedItem o] -> m [TaggedItem o]

@@ -4,7 +4,6 @@ module Lamdu.GUI.Expr.ApplyEdit
 
 import qualified Control.Lens as Lens
 import qualified GUI.Momentu as M
-import           GUI.Momentu ((/|/))
 import           GUI.Momentu.Direction (Orientation(..), Order(..))
 import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.I18N as MomentuTexts
@@ -12,11 +11,10 @@ import           GUI.Momentu.Responsive (Responsive)
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.Responsive.Expression as ResponsiveExpr
 import qualified GUI.Momentu.Responsive.Options as Options
-import           GUI.Momentu.Responsive.TaggedList (TaggedItem(..), taggedListTable)
+import           GUI.Momentu.Responsive.TaggedList (TaggedItem(..), taggedListIndent)
 import qualified GUI.Momentu.State as GuiState
 import qualified GUI.Momentu.Widget as Widget
 import           GUI.Momentu.Widgets.StdKeys (dirKey)
-import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified Lamdu.Config as Config
 import qualified Lamdu.GUI.Expr.CaseEdit as CaseEdit
 import qualified Lamdu.GUI.Expr.EventMap as ExprEventMap
@@ -95,7 +93,7 @@ makeArgRow :: _ => ExprGui.Body Sugar.AnnotatedArg i o -> GuiM env i o (TaggedIt
 makeArgRow arg =
     do
         expr <- GuiM.makeSubexpression (arg ^. Sugar.aaExpr)
-        pre <- TagEdit.makeArgTag (arg ^. Sugar.aaTag) /|/ Spacer.stdHSpace
+        pre <- TagEdit.makeArgTag (arg ^. Sugar.aaTag)
         pure TaggedItem
             { _tagPre = pre <&> Widget.fromView & Just
             , _taggedItem = expr
@@ -108,7 +106,7 @@ addArgs apply funcRow =
         argRows <-
             case apply ^. Sugar.aAnnotatedArgs of
             [] -> pure []
-            xs -> taggedListTable <*> traverse makeArgRow xs <&> (:[])
+            xs -> taggedListIndent <*> traverse makeArgRow xs <&> (:[])
         punnedArgs <-
             case apply ^. Sugar.aPunnedArgs of
             [] -> pure []
