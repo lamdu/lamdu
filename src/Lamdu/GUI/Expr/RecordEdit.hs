@@ -212,9 +212,8 @@ makeFieldRow item =
             & M.assignCursor (WidgetIds.ofTagValue fieldId)
                 (item ^. TaggedList.iValue . annotation & WidgetIds.fromExprPayload)
         pre <-
-            ( TagEdit.makeRecordTag (Just . TagEdit.addItemId . WidgetIds.fromEntityId) (item ^. TaggedList.iTag)
-                <&> M.tValue %~ Widget.weakerEvents (item ^. TaggedList.iEventMap)
-            ) M./|/ Spacer.stdHSpace
+            TagEdit.makeRecordTag (Just . TagEdit.addItemId . WidgetIds.fromEntityId) (item ^. TaggedList.iTag)
+            <&> M.tValue %~ Widget.weakerEvents (item ^. TaggedList.iEventMap)
             & local (\env -> env & has . Menu.configKeysPickOptionAndGotoNext .~ env ^. has . Config.recordAddFieldKeys)
         let row =
                 TaggedItem
