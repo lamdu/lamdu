@@ -11,7 +11,7 @@ import qualified GUI.Momentu.I18N as MomentuTexts
 import           GUI.Momentu.Responsive (Responsive)
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.Responsive.Options as Options
-import           GUI.Momentu.Responsive.TaggedList (TaggedItem(..), taggedList)
+import           GUI.Momentu.Responsive.TaggedList (TaggedItem(..), taggedListIndent)
 import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.View (View)
 import qualified GUI.Momentu.View as View
@@ -120,7 +120,7 @@ makeAltsWidget altsId alts punned =
                 (Widget.makeFocusableView ?? Widget.joinId altsId ["Ø"] <&> (M.tValue %~))
                 <*> grammar (label Texts.absurd)
                 <&> Responsive.fromWithTextPos
-            altWidgets -> taggedList ?? altWidgets
+            altWidgets -> taggedListIndent ?? altWidgets
             <&> (,) addAltEventMap
 
 makeAddAlt ::

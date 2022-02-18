@@ -12,7 +12,7 @@ import           GUI.Momentu.Responsive (Responsive)
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.Responsive.Expression as ResponsiveExpr
 import qualified GUI.Momentu.Responsive.Options as Options
-import           GUI.Momentu.Responsive.TaggedList (TaggedItem(..), taggedList)
+import           GUI.Momentu.Responsive.TaggedList (TaggedItem(..), taggedListTable)
 import qualified GUI.Momentu.State as GuiState
 import qualified GUI.Momentu.Widget as Widget
 import           GUI.Momentu.Widgets.StdKeys (dirKey)
@@ -108,7 +108,7 @@ addArgs apply funcRow =
         argRows <-
             case apply ^. Sugar.aAnnotatedArgs of
             [] -> pure []
-            xs -> taggedList <*> traverse makeArgRow xs <&> (:[])
+            xs -> taggedListTable <*> traverse makeArgRow xs <&> (:[])
         punnedArgs <-
             case apply ^. Sugar.aPunnedArgs of
             [] -> pure []
