@@ -39,64 +39,74 @@ import           Revision.Deltum.Transaction (Transaction)
 
 import           Lamdu.Prelude
 
+type T = Transaction
+
 convert ::
     (Monad m, Typeable m) =>
     V.App V.Term # Ann (Input.Payload m) ->
     Input.Payload m # V.Term ->
     ConvertM m (ExpressionU EvalPrep m)
-convert app@(V.App funcI argI) exprPl =
+convert app exprPl =
     runMatcherT $
     do
         convertGetFieldParam app >>= Lens._Just addAct & MaybeT & justToLeft
-        appS <-
-            do
-                mFloat <-
-                    case funcI ^. hVal of
-                    V.BLam lam ->
-                        makeFloatLetToOuterScope (exprPl ^. Input.stored . ExprIRef.setIref)
-                        (lam & hmap (Proxy @(Recursively HFunctor) #> hflipped %~ hmap (const (^. Input.stored))))
-                        argI & lift
-                        <&> Just
-                    _ -> pure Nothing
-                argS <-
-                    ConvertM.convertSubexpression argI & lift <&>
-                    case mFloat of
-                    Nothing -> id
-                    Just float -> annotation . pActions . extract .~ float
-                convertAppliedHole funcI exprPl argS & justToLeft
-                let scopeUpdates =
-                        ( case inlineVar expr of
-                            Nothing -> id
-                            Just (v, mkInline) -> ConvertM.siLetItems . Lens.at v ?~ mkInline
-                        ) .
-                        case mFloat of
-                        Nothing -> id
-                        Just{} -> (ConvertM.siExtractPos ?~ pos) . (ConvertM.siFloatPos ?~ pos)
-                protectedSetToVal <- lift ConvertM.typeProtectedSetToVal
-                let dst = argI ^. hAnn . Input.stored . ExprIRef.iref
-                let fixDel d
-                        | Lens.has (hVal . _BodyLeaf . _LeafHole) argS =
-                            EntityId.ofValI dst <$ protectedSetToVal (exprPl ^. Input.stored) dst
-                            & SetToHole
-                        | otherwise = d
-                let singleApply =  hVal . _BodyLam . lamApplyLimit .~ AtMostOneFuncApply
-                let onEachAppliedAlt x =
-                        x
-                        & cList . Lens.mapped %~ singleApply
-                        & cTail . _OpenComposite %~ singleApply
-                funcS <-
-                    ConvertM.convertSubexpression funcI & lift
-                    & local (ConvertM.scScopeInfo %~ scopeUpdates)
-                    <&> annotation . pActions . delete %~ fixDel
-                    <&> hVal . _BodyLam . lamApplyLimit .~ AtMostOneFuncApply
-                    <&> hVal . _BodyPostfixFunc . _PfCase %~ onEachAppliedAlt
-                App funcS argS & pure
+        convertAppliedHole app exprPl & justToLeft
+        appS <- convertSimpleApply app exprPl & lift
         convertEmptyInject appS >>= lift . addAct & justToLeft
         convertPostfix appS exprPl >>= lift . addAct & justToLeft
         convertLabeled appS exprPl >>= lift . addAct & justToLeft
         convertPrefix appS exprPl >>= addAct & lift
     where
         addAct = addActions expr
+        expr = Ann exprPl (V.BApp app)
+
+convertSimpleApply ::
+    Monad m =>
+    App V.Term # (Ann (Input.Payload m)) -> Input.Payload m # V.Term ->
+    ConvertM m (AppS EvalPrep m)
+convertSimpleApply app@(V.App funcI argI) exprPl =
+    do
+        mFloat <-
+            case funcI ^. hVal of
+            V.BLam lam ->
+                makeFloatLetToOuterScope (exprPl ^. Input.stored . ExprIRef.setIref)
+                (lam & hmap (Proxy @(Recursively HFunctor) #> hflipped %~ hmap (const (^. Input.stored))))
+                argI
+                <&> Just
+            _ -> pure Nothing
+        argS <-
+            ConvertM.convertSubexpression argI <&>
+            case mFloat of
+            Nothing -> id
+            Just float -> annotation . pActions . extract .~ float
+        let scopeUpdates =
+                ( case inlineVar expr of
+                    Nothing -> id
+                    Just (v, mkInline) -> ConvertM.siLetItems . Lens.at v ?~ mkInline
+                ) .
+                case mFloat of
+                Nothing -> id
+                Just{} -> (ConvertM.siExtractPos ?~ pos) . (ConvertM.siFloatPos ?~ pos)
+        protectedSetToVal <- ConvertM.typeProtectedSetToVal
+        let dst = argI ^. hAnn . Input.stored . ExprIRef.iref
+        let fixDel d
+                | Lens.has (hVal . _BodyLeaf . _LeafHole) argS =
+                    EntityId.ofValI dst <$ protectedSetToVal (exprPl ^. Input.stored) dst
+                    & SetToHole
+                | otherwise = d
+        let singleApply =  hVal . _BodyLam . lamApplyLimit .~ AtMostOneFuncApply
+        let onEachAppliedAlt x =
+                x
+                & cList . Lens.mapped %~ singleApply
+                & cTail . _OpenComposite %~ singleApply
+        funcS <-
+            ConvertM.convertSubexpression funcI
+            & local (ConvertM.scScopeInfo %~ scopeUpdates)
+            <&> annotation . pActions . delete %~ fixDel
+            <&> hVal . _BodyLam . lamApplyLimit .~ AtMostOneFuncApply
+            <&> hVal . _BodyPostfixFunc . _PfCase %~ onEachAppliedAlt
+        App funcS argS & pure
+    where
         expr = Ann exprPl (V.BApp app)
         pos =
             ConvertM.OuterScopeInfo
@@ -126,7 +136,7 @@ defParamsMatchArgs var record frozenDeps =
     & Lens.has Lens._Just
 
 type AppS v m =
-    App (Term v InternalName (OnceT (Transaction m)) (Transaction m)) #
+    App (Term v InternalName (OnceT (T m)) (T m)) #
     Annotated (ConvertPayload m)
 
 convertEmptyInject :: Monad m => AppS v m -> MaybeT (ConvertM m) (BodyU v m)
@@ -223,7 +233,7 @@ convertPrefix (App funcS argS) applyPl =
 makeDel ::
     Monad m =>
     Input.Payload m # V.Term ->
-    ConvertM m ((Annotated (ConvertPayload m) # h) -> Delete (Transaction m))
+    ConvertM m ((Annotated (ConvertPayload m) # h) -> Delete (T m))
 makeDel applyPl =
     ConvertM.typeProtectedSetToVal <&>
     \protectedSetToVal remain ->

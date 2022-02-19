@@ -61,22 +61,22 @@ checkTypeMatch x y =
 
 convertAppliedHole ::
     (Monad m, Typeable m) =>
-    Ann (Input.Payload m) # V.Term ->
+    Sugar.App V.Term # (Ann (Input.Payload m)) ->
     Input.Payload m # V.Term ->
-    ExpressionU EvalPrep m ->
     MaybeT (ConvertM m) (ExpressionU EvalPrep m)
-convertAppliedHole funcI exprPl argS =
+convertAppliedHole app exprPl =
     do
         Lens.view (ConvertM.scConfig . Config.sugarsEnabled . Config.fragment) >>= guard
-        guard (Lens.has ExprLens.valHole funcI)
-        convert funcI exprPl argS & lift
+        Lens.has (Sugar.appFunc . ExprLens.valHole) app & guard
+        convert app exprPl & lift
 
 convert ::
     (Typeable m, Monad m) =>
-    Ann (Input.Payload m) # V.Term -> (Input.Payload m # V.Term) -> ExpressionU v m ->
-    ConvertM m (ExpressionU v m)
-convert funcI exprPl argS =
+    Sugar.App V.Term # (Ann (Input.Payload m)) -> (Input.Payload m # V.Term) ->
+    ConvertM m (ExpressionU EvalPrep m)
+convert (V.App funcI argI) exprPl =
     do
+        argS <- ConvertM.convertSubexpression argI
         isTypeMatch <-
             checkTypeMatch (argI ^. hAnn . Input.inferredTypeUVar)
             (exprPl ^. Input.inferredTypeUVar)
@@ -180,13 +180,12 @@ convert funcI exprPl argS =
         >>= Actions.addActions (Ann exprPl (V.BApp (V.App funcI argI)))
         <&> annotation . pActions . Sugar.detach .~ fragmentedAlready
     where
-        argI = argS ^. annotation . pUnsugared
+        makeFuncOpts opt = emplaceArg argI <&> _2 %~ Ann (ExistingRef topRef) . V.BApp . V.App (writeNew opt)
+        argIRef = argI ^. hAnn . Input.stored . iref
         toArg = Sugar.optionExpr . annValue %~ Sugar.FragArgument
         topRef = exprPl ^. Input.stored . ExprIRef.iref
-        argIRef = argI ^. hAnn . Input.stored . iref
         fragmentedAlready = stored ^. iref & EntityId.ofValI & Sugar.FragmentedAlready
         stored = exprPl ^. Input.stored
-        makeFuncOpts opt = emplaceArg argI <&> _2 %~ Ann (ExistingRef topRef) . V.BApp . V.App (writeNew opt)
 
 applyArg :: Ann (Input.Payload m) # V.Term -> Pure # V.Term -> [(TypeMatch, Ann (Write m) # V.Term)]
 applyArg argI x =
