@@ -42,6 +42,7 @@ import qualified Lamdu.Sugar.Convert.Input as Input
 import           Lamdu.Sugar.Convert.Monad (ConvertM)
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
 import           Lamdu.Sugar.Convert.Option
+import qualified Lamdu.Sugar.Convert.PostProcess as PostProcess
 import           Lamdu.Sugar.Convert.Suggest
 import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
@@ -70,16 +71,28 @@ convertAppliedHole app exprPl =
         Lens.has (Sugar.appFunc . ExprLens.valHole) app & guard
         convert app exprPl & lift
 
+unfragmentIfTypesAllow :: Monad m => T m (ExprIRef.ValI m) -> T m PostProcess.Result -> T m PostProcess.Result
+unfragmentIfTypesAllow unfragment postProcess =
+    do
+        (postProcessResult, changes) <- unfragment *> postProcess & Transaction.fork
+        case postProcessResult of
+            PostProcess.GoodExpr -> PostProcess.GoodExpr <$ Transaction.merge changes
+            PostProcess.BadExpr{} -> postProcess
+
 convert ::
     (Typeable m, Monad m) =>
     Sugar.App V.Term # (Ann (Input.Payload m)) -> (Input.Payload m # V.Term) ->
     ConvertM m (ExpressionU EvalPrep m)
 convert (V.App funcI argI) exprPl =
     do
-        argS <- ConvertM.convertSubexpression argI
         isTypeMatch <-
             checkTypeMatch (argI ^. hAnn . Input.inferredTypeUVar)
             (exprPl ^. Input.inferredTypeUVar)
+        argS <-
+            ConvertM.convertSubexpression argI
+            & if isTypeMatch
+              then id
+              else local (ConvertM.scPostProcessRoot %~ unfragmentIfTypesAllow unfragment)
         postProcess <- ConvertM.postProcessAssert
         healMis <- healMismatch
         typeMismatch <-
@@ -132,7 +145,7 @@ convert (V.App funcI argI) exprPl =
                     } <&> (>>= traverse (makeOption exprPl))
                     <&> Lens.mapped . traverse . rExpr . _2 . Sugar.optionExpr %~ toFragOpt
                     & traverse ConvertM.convertOnce
-            & ConvertM.convertOnce
+                & ConvertM.convertOnce
         argOpts <-
             case argI ^? hAnn . Input.inferredType . _Pure . T._TFun . funcIn of
             Just t | Lens.nullOf (hVal . V._BLam) argI ->
@@ -168,7 +181,7 @@ convert (V.App funcI argI) exprPl =
                 & annotation . pActions . Sugar.mApply ?~ apply
             , Sugar._fHeal =
                 ( if isTypeMatch
-                    then DataOps.replace stored argIRef <* postProcess
+                    then unfragment <* postProcess
                     else argIRef <$ healMis (stored ^. iref)
                 )
                 <&> EntityId.ofValI
@@ -186,6 +199,7 @@ convert (V.App funcI argI) exprPl =
         topRef = exprPl ^. Input.stored . ExprIRef.iref
         fragmentedAlready = stored ^. iref & EntityId.ofValI & Sugar.FragmentedAlready
         stored = exprPl ^. Input.stored
+        unfragment = DataOps.replace stored argIRef
 
 applyArg :: Ann (Input.Payload m) # V.Term -> Pure # V.Term -> [(TypeMatch, Ann (Write m) # V.Term)]
 applyArg argI x =
