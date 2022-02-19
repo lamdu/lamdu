@@ -46,7 +46,7 @@ import           Lamdu.Sugar.Convert.Suggest
 import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import qualified Lamdu.Sugar.Types as Sugar
-import           Revision.Deltum.Hyper (Write(..))
+import           Revision.Deltum.Hyper (Write(..), _ExistingRef)
 import qualified Revision.Deltum.Transaction as Transaction
 
 import           Lamdu.Prelude
@@ -86,6 +86,15 @@ convertAppliedHole funcI exprPl argS =
             opts <-
                 do
                     forType <- transformArg exprPl argI & transaction
+                    let forTypeFuncOpts =
+                            forType ^..
+                            traverse . _2 . rExpr .
+                            traverse . _2 .
+                            hVal . V._BApp . Lens.filteredBy (V.appArg . hAnn . _ExistingRef) . V.appFunc
+                            <&> unwrap (const (^. hVal))
+                    let funcOpt =
+                            (<&> rExpr %~ makeFuncOpts) .
+                            filter (\x -> x ^. rExpr `notElem` forTypeFuncOpts)
                     newTag <- DataOps.genNewTag & transaction
                     ResultGroups
                         { gDefs =
@@ -168,7 +177,6 @@ convertAppliedHole funcI exprPl argS =
         argI = argS ^. annotation . pUnsugared
         toArg = Sugar.optionExpr . annValue %~ Sugar.FragArgument
         topRef = exprPl ^. Input.stored . ExprIRef.iref
-        funcOpt = traverse . rExpr %~ makeFuncOpts
         argIRef = argI ^. hAnn . Input.stored . iref
         stored = exprPl ^. Input.stored
         storedEntityId = stored ^. iref & EntityId.ofValI
