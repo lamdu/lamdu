@@ -8,8 +8,8 @@ import qualified Control.Lens as Lens
 import           Control.Monad.Trans.Maybe (MaybeT(..))
 import           Control.Monad.Transaction (MonadTransaction(..))
 import qualified Data.Char as Char
-import           Data.Property (getP)
 import qualified Data.Map as Map
+import           Data.Property (getP)
 import           Data.Typeable (Typeable)
 import           Generic.Data (gconIndex)
 import           Hyper
@@ -21,12 +21,12 @@ import           Hyper.Syntax.Row (FlatRowExtends, freExtends)
 import           Hyper.Syntax.Scheme (sTyp)
 import           Hyper.Type.Prune (Prune(..))
 import           Hyper.Unify (UVar, applyBindings, unify)
+import qualified Lamdu.Builtins.Anchors as Builtins
 import           Lamdu.Calc.Definition (depsNominals)
 import qualified Lamdu.Calc.Infer as Infer
 import qualified Lamdu.Calc.Lens as ExprLens
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
-import qualified Lamdu.Builtins.Anchors as Builtins
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Ops as DataOps
 import           Lamdu.Data.Tag (tagOrder)
@@ -36,8 +36,8 @@ import qualified Lamdu.Expr.Load as Load
 import qualified Lamdu.Sugar.Config as Config
 import           Lamdu.Sugar.Convert.Annotation (makeTypeAnnotation)
 import qualified Lamdu.Sugar.Convert.Expression.Actions as Actions
-import qualified Lamdu.Sugar.Convert.Hole as Hole
 import           Lamdu.Sugar.Convert.Fragment.Heal (healMismatch)
+import qualified Lamdu.Sugar.Convert.Hole as Hole
 import qualified Lamdu.Sugar.Convert.Input as Input
 import           Lamdu.Sugar.Convert.Monad (ConvertM)
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
@@ -69,117 +69,123 @@ convertAppliedHole funcI exprPl argS =
     do
         Lens.view (ConvertM.scConfig . Config.sugarsEnabled . Config.fragment) >>= guard
         guard (Lens.has ExprLens.valHole funcI)
-        do
-            isTypeMatch <-
-                checkTypeMatch (argI ^. hAnn . Input.inferredTypeUVar)
-                (exprPl ^. Input.inferredTypeUVar)
-            postProcess <- ConvertM.postProcessAssert
-            healMis <- healMismatch
-            typeMismatch <-
-                if isTypeMatch
-                then pure Nothing
-                else
-                    makeTypeAnnotation
-                        (EntityId.ofFragmentArg (argS ^. annotation . pEntityId))
-                        (argS ^. annotation . pUnsugared . hAnn . Input.inferredType) <&> Just
-            tagsProp <- Lens.view Anchors.codeAnchors <&> Anchors.tags
-            opts <-
-                do
-                    forType <- transformArg exprPl argI & transaction
-                    let forTypeFuncOpts =
-                            forType ^..
-                            traverse . _2 . rExpr .
-                            traverse . _2 .
-                            hVal . V._BApp . Lens.filteredBy (V.appArg . hAnn . _ExistingRef) . V.appFunc
-                            <&> unwrap (const (^. hVal))
-                    let funcOpt =
-                            (<&> rExpr %~ makeFuncOpts) .
-                            filter (\x -> x ^. rExpr `notElem` forTypeFuncOpts)
-                    newTag <- DataOps.genNewTag & transaction
-                    ResultGroups
-                        { gDefs =
-                            makeGlobals (makeGetDef topRef argI)
-                            <&> traverse . rTexts . _QueryTexts . Lens.mapped . Lens.mapped . traverse %~ toOpName
-                        , gLocals =
-                            makeLocals (makeLocal topRef argI) (exprPl ^. Input.inferScope)
-                            <&> traverse %~ sequenceA <&> (^.. traverse . Lens._Just)
-                        , gInjects = makeTagRes newTag "'" (Pure . V.BLeaf . V.LInject) <&> funcOpt
-                        , gToNoms = makeNoms [] "" (makeToNom argI <&> Lens.mapped . Lens.mapped %~ (:[]) . (simpleResult ?? mempty))
-                        , gFromNoms =
-                            makeNoms (forType ^.. Lens.folded . _1 . Lens._Just)
-                            "." (makeFromNom exprPl argI <&> Lens.mapped . Lens.mapped %~ (:[]))
-                        , gForType = forType ^.. Lens.folded . _2 & pure
-                        , gGetFields = makeTagRes newTag "." (Pure . V.BLeaf . V.LGetField) <&> funcOpt
-                        , gSyntax = makeResultsSyntax exprPl argI & transaction
-                        , gWrapInRecs =
-                            makeTagRes newTag "{"
-                            (\t ->
-                                [ (TypeMatches
-                                    , V.RowExtend t
-                                        (argI & hflipped %~ hmap (const (ExistingRef . (^. Input.stored . ExprIRef.iref))))
-                                        (Ann WriteNew (V.BLeaf V.LRecEmpty))
-                                        & V.BRecExtend & Ann WriteNew
-                                    )
-                                ]
-                            )
-                        } <&> (>>= traverse (makeOption exprPl))
-                        <&> Lens.mapped . traverse . rExpr . _2 . Sugar.optionExpr %~ toFragOpt
-                        & traverse ConvertM.convertOnce
+        convert funcI exprPl argS & lift
+
+convert ::
+    (Typeable m, Monad m) =>
+    Ann (Input.Payload m) # V.Term -> (Input.Payload m # V.Term) -> ExpressionU v m ->
+    ConvertM m (ExpressionU v m)
+convert funcI exprPl argS =
+    do
+        isTypeMatch <-
+            checkTypeMatch (argI ^. hAnn . Input.inferredTypeUVar)
+            (exprPl ^. Input.inferredTypeUVar)
+        postProcess <- ConvertM.postProcessAssert
+        healMis <- healMismatch
+        typeMismatch <-
+            if isTypeMatch
+            then pure Nothing
+            else
+                makeTypeAnnotation
+                    (EntityId.ofFragmentArg (argS ^. annotation . pEntityId))
+                    (argS ^. annotation . pUnsugared . hAnn . Input.inferredType) <&> Just
+        tagsProp <- Lens.view Anchors.codeAnchors <&> Anchors.tags
+        opts <-
+            do
+                forType <- transformArg exprPl argI & transaction
+                let forTypeFuncOpts =
+                        forType ^..
+                        traverse . _2 . rExpr .
+                        traverse . _2 .
+                        hVal . V._BApp . Lens.filteredBy (V.appArg . hAnn . _ExistingRef) . V.appFunc
+                        <&> unwrap (const (^. hVal))
+                let funcOpt =
+                        (<&> rExpr %~ makeFuncOpts) .
+                        filter (\x -> x ^. rExpr `notElem` forTypeFuncOpts)
+                newTag <- DataOps.genNewTag & transaction
+                ResultGroups
+                    { gDefs =
+                        makeGlobals (makeGetDef topRef argI)
+                        <&> traverse . rTexts . _QueryTexts . Lens.mapped . Lens.mapped . traverse %~ toOpName
+                    , gLocals =
+                        makeLocals (makeLocal topRef argI) (exprPl ^. Input.inferScope)
+                        <&> traverse %~ sequenceA <&> (^.. traverse . Lens._Just)
+                    , gInjects = makeTagRes newTag "'" (Pure . V.BLeaf . V.LInject) <&> funcOpt
+                    , gToNoms = makeNoms [] "" (makeToNom argI <&> Lens.mapped . Lens.mapped %~ (:[]) . (simpleResult ?? mempty))
+                    , gFromNoms =
+                        makeNoms (forType ^.. Lens.folded . _1 . Lens._Just)
+                        "." (makeFromNom exprPl argI <&> Lens.mapped . Lens.mapped %~ (:[]))
+                    , gForType = forType ^.. Lens.folded . _2 & pure
+                    , gGetFields = makeTagRes newTag "." (Pure . V.BLeaf . V.LGetField) <&> funcOpt
+                    , gSyntax = makeResultsSyntax exprPl argI & transaction
+                    , gWrapInRecs =
+                        makeTagRes newTag "{"
+                        (\t ->
+                            [ (TypeMatches
+                                , V.RowExtend t
+                                    (argI & hflipped %~ hmap (const (ExistingRef . (^. Input.stored . ExprIRef.iref))))
+                                    (Ann WriteNew (V.BLeaf V.LRecEmpty))
+                                    & V.BRecExtend & Ann WriteNew
+                                )
+                            ]
+                        )
+                    } <&> (>>= traverse (makeOption exprPl))
+                    <&> Lens.mapped . traverse . rExpr . _2 . Sugar.optionExpr %~ toFragOpt
+                    & traverse ConvertM.convertOnce
+            & ConvertM.convertOnce
+        argOpts <-
+            case argI ^? hAnn . Input.inferredType . _Pure . T._TFun . funcIn of
+            Just t | Lens.nullOf (hVal . V._BLam) argI ->
+                Hole.results ConvertM.ExpressionPos t (exprPl ^. Input.inferScope)
+                <&> Lens.mapped %~
+                    (Lens.mapped . traverse . rExpr . _2 %~ toArg) .
+                    (>>= traverse (makeOption exprPl . fmap (applyArg argI)))
+                >>= traverse ConvertM.convertOnce
                 & ConvertM.convertOnce
-            argOpts <-
-                case argI ^? hAnn . Input.inferredType . _Pure . T._TFun . funcIn of
-                Just t | Lens.nullOf (hVal . V._BLam) argI ->
-                    Hole.results ConvertM.ExpressionPos t (exprPl ^. Input.inferScope)
-                    <&> Lens.mapped %~
-                        (Lens.mapped . traverse . rExpr . _2 %~ toArg) .
-                        (>>= traverse (makeOption exprPl . fmap (applyArg argI)))
-                    >>= traverse ConvertM.convertOnce
-                    & ConvertM.convertOnce
-                _ -> pure mempty
-            apply <-
-                argI ^. hAnn . Input.stored
-                & ExprIRef.setIref .~ exprPl ^. Input.stored . ExprIRef.setIref
-                & Actions.makeApply
-            optApply <-
-                makeOption exprPl
-                Result
-                { _rExpr = _Pure # V.BLeaf V.LHole & applyArg argI
-                , _rDeps = mempty
-                , _rTexts = QueryTexts mempty
-                , _rWithTypeAnnotations = False
-                , _rAllowEmptyQuery = True
-                }
-                <&> toArg . (^. rExpr . _2)
-                & ConvertM.convertOnce
-            Sugar.BodyFragment Sugar.Fragment
-                { Sugar._fExpr =
-                    argS
-                    & annotation . pActions . Sugar.detach .~ Sugar.FragmentedAlready storedEntityId
-                    & annotation . pActions . Sugar.delete .~
-                        Sugar.SetToHole
-                        (DataOps.setToHole stored <* postProcess <&> EntityId.ofValI)
-                    & annotation . pActions . Sugar.mApply ?~ apply
-                , Sugar._fHeal =
-                    ( if isTypeMatch
-                        then DataOps.replace stored argIRef <* postProcess
-                        else argIRef <$ healMis (stored ^. iref)
-                    )
-                    <&> EntityId.ofValI
-                , Sugar._fTypeMismatch = typeMismatch
-                , Sugar._fOptions = opts <> argOpts <&> filterResults tagsProp (\outerMatch innerMatch -> (innerMatch, outerMatch))
-                , Sugar._fOptApply = optApply
-                , Sugar._fTagSuffixes = mempty
-                } & pure
-            >>= Actions.addActions (Ann exprPl (V.BApp (V.App funcI argI)))
-            & lift
-        <&> annotation . pActions . Sugar.detach .~ Sugar.FragmentedAlready storedEntityId
+            _ -> pure mempty
+        apply <-
+            argI ^. hAnn . Input.stored
+            & ExprIRef.setIref .~ exprPl ^. Input.stored . ExprIRef.setIref
+            & Actions.makeApply
+        optApply <-
+            makeOption exprPl
+            Result
+            { _rExpr = _Pure # V.BLeaf V.LHole & applyArg argI
+            , _rDeps = mempty
+            , _rTexts = QueryTexts mempty
+            , _rWithTypeAnnotations = False
+            , _rAllowEmptyQuery = True
+            }
+            <&> toArg . (^. rExpr . _2)
+            & ConvertM.convertOnce
+        Sugar.BodyFragment Sugar.Fragment
+            { Sugar._fExpr =
+                argS
+                & annotation . pActions . Sugar.detach .~ fragmentedAlready
+                & annotation . pActions . Sugar.delete .~
+                    Sugar.SetToHole
+                    (DataOps.setToHole stored <* postProcess <&> EntityId.ofValI)
+                & annotation . pActions . Sugar.mApply ?~ apply
+            , Sugar._fHeal =
+                ( if isTypeMatch
+                    then DataOps.replace stored argIRef <* postProcess
+                    else argIRef <$ healMis (stored ^. iref)
+                )
+                <&> EntityId.ofValI
+            , Sugar._fTypeMismatch = typeMismatch
+            , Sugar._fOptions = opts <> argOpts <&> filterResults tagsProp (\outerMatch innerMatch -> (innerMatch, outerMatch))
+            , Sugar._fOptApply = optApply
+            , Sugar._fTagSuffixes = mempty
+            } & pure
+        >>= Actions.addActions (Ann exprPl (V.BApp (V.App funcI argI)))
+        <&> annotation . pActions . Sugar.detach .~ fragmentedAlready
     where
         argI = argS ^. annotation . pUnsugared
         toArg = Sugar.optionExpr . annValue %~ Sugar.FragArgument
         topRef = exprPl ^. Input.stored . ExprIRef.iref
         argIRef = argI ^. hAnn . Input.stored . iref
+        fragmentedAlready = stored ^. iref & EntityId.ofValI & Sugar.FragmentedAlready
         stored = exprPl ^. Input.stored
-        storedEntityId = stored ^. iref & EntityId.ofValI
         makeFuncOpts opt = emplaceArg argI <&> _2 %~ Ann (ExistingRef topRef) . V.BApp . V.App (writeNew opt)
 
 applyArg :: Ann (Input.Payload m) # V.Term -> Pure # V.Term -> [(TypeMatch, Ann (Write m) # V.Term)]
