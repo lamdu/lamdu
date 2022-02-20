@@ -40,6 +40,7 @@ module Lamdu.Sugar.Types.Expression
     -- Record & Cases
     , Composite(..), cList, cPunnedItems, cTail
     , CompositeTail(..), _OpenCompositeTail, _ClosedCompositeTail
+    , OpenComposite(..), openCompositeTail
     , PunnedVar(..), pvVar, pvTagEntityId
 
     , MorphWitness(..)
@@ -164,8 +165,12 @@ data IfElse v name i o k = IfElse
     , _iElse :: k :# Else v name i o
     } deriving Generic
 
+newtype OpenComposite v name i o k = OpenComposite
+    { _openCompositeTail :: k :# Term v name i o
+    } deriving Generic
+
 data CompositeTail v name i o k
-    = OpenCompositeTail (k :# Term v name i o)
+    = OpenCompositeTail (OpenComposite v name i o k)
     | ClosedCompositeTail (ClosedCompositeActions o)
     deriving Generic
 
@@ -250,7 +255,7 @@ data Assignment v name i o f
 
 traverse Lens.makeLenses
     [ ''AnnotatedArg, ''AssignPlain, ''Binder
-    , ''Composite, ''Fragment, ''FragOperator
+    , ''OpenComposite, ''Composite, ''Fragment, ''FragOperator
     , ''Function, ''Hole
     , ''IfElse, ''ElseIfBody, ''LabeledApply, ''Lambda, ''Let
     , ''Nominal, ''OperatorArgs, ''PostfixApply
@@ -262,7 +267,7 @@ traverse Lens.makePrisms
 
 traverse makeHTraversableAndBases
     [ ''AnnotatedArg, ''Assignment, ''AssignPlain, ''Binder, ''BinderBody
-    , ''Composite, ''CompositeTail, ''Else, ''ElseIfBody
+    , ''OpenComposite, ''Composite, ''CompositeTail, ''Else, ''ElseIfBody
     , ''Fragment, ''FragOperator, ''FragOpt, ''Function, ''HoleOpt, ''IfElse
     , ''LabeledApply, ''Lambda, ''Let, ''Nominal
     , ''OperatorArgs, ''PostfixApply, ''PostfixFunc, ''Term

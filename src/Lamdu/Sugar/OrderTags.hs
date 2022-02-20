@@ -81,7 +81,7 @@ instance (MonadTransaction m o, MonadTransaction m i) => Order i (Sugar.Composit
         Sugar.Composite
         <$> orderTaggedList [] orderNode items
         <*> pure punned
-        <*> Sugar._OpenCompositeTail orderNode tail_
+        <*> (Sugar._OpenCompositeTail . Sugar.openCompositeTail) orderNode tail_
 
 instance (MonadTransaction m o, MonadTransaction m i) => Order i (Sugar.LabeledApply v name i o) where
     order (Sugar.LabeledApply func specialArgs annotated punned) =

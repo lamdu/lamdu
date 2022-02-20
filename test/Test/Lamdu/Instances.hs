@@ -103,7 +103,7 @@ instance Eq (Sugar.TagPane f) where
     , ''Sugar.DefinitionOutdatedType, ''Sugar.FuncParam, ''Sugar.Type
     , ''Sugar.ResInject, ''Sugar.ResTable, ''Sugar.ResTree, ''Sugar.Result
     , ''Sugar.AnnotatedArg, ''Sugar.AssignPlain, ''Sugar.Assignment, ''Sugar.Binder, ''Sugar.BinderBody
-    , ''Sugar.Composite, ''Sugar.CompositeTail, ''Sugar.OptionalTag
+    , ''Sugar.Composite, ''Sugar.CompositeTail, ''Sugar.OpenComposite, ''Sugar.OptionalTag
     , ''Sugar.TaggedItem, ''Sugar.TaggedSwappableItem, ''Sugar.TaggedList, ''Sugar.TaggedListBody
     , ''Sugar.Definition , ''Sugar.DefinitionBody, ''Sugar.DefinitionExpression
     , ''Sugar.Else, ''Sugar.ElseIfBody, ''Sugar.Fragment, ''Sugar.Function, ''Sugar.IfElse

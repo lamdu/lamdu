@@ -151,7 +151,7 @@ make (Ann (Const pl) (Sugar.Composite (Sugar.TaggedList addField mTlBody) punned
             & maybe myId TaggedList.itemId
         postProcess =
             case recordTail of
-            Sugar.OpenCompositeTail restExpr -> makeOpenRecord restExpr
+            Sugar.OpenCompositeTail (Sugar.OpenComposite restExpr) -> makeOpenRecord restExpr
             _ -> pure
 
 makeRecord :: _ => (Responsive o -> m (Responsive o)) -> [TaggedItem o] -> m (Responsive o)
