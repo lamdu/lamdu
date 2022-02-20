@@ -67,6 +67,16 @@ make (Ann (Const pl) (Sugar.Composite alts punned caseTail)) =
             <*> grammar (label Texts.case_)
             <&> Responsive.fromWithTextPos
 
+setPickAndAddNextKeys :: _ => GuiM env i o a -> GuiM env i o a
+setPickAndAddNextKeys =
+    local
+    (\env ->
+        env
+        & has . Menu.configKeysPickOptionAndGotoNext .~ env ^. has . Config.caseAddAltKeys
+        & has . Menu.configKeysPickOption <>~
+            env ^. has . Menu.configKeysPickOptionAndGotoNext <> [M.noMods M.Key'Space]
+    )
+
 makeAltRow :: _ => TaggedList.Item Name i o (ExprGui.Expr Sugar.Term i o) -> GuiM env i o [TaggedItem o]
 makeAltRow item =
     do
@@ -79,14 +89,14 @@ makeAltRow item =
             TagEdit.makeVariantTag (Just . TagEdit.addItemId . WidgetIds.fromEntityId) (item ^. TaggedList.iTag)
             <&> M.tValue %~ Widget.weakerEvents (item ^. TaggedList.iEventMap)
             & local (M.animIdPrefix .~ Widget.toAnimId myId)
-            & local (\env -> env & has . Menu.configKeysPickOptionAndGotoNext .~ env ^. has . Config.caseAddAltKeys)
+            & setPickAndAddNextKeys
         let row =
                 TaggedItem
                 { _tagPre = Just pre
                 , _taggedItem = M.weakerEvents (item ^. TaggedList.iEventMap) altExprGui
                 , _tagPost = Nothing
                 }
-        makeAddAlt (item ^. TaggedList.iAddAfter) myId <&> (^.. traverse) <&> (row:)
+        makeAddAlt (item ^. TaggedList.iAddAfter) myId <&> (^.. Lens._Just) <&> (row:)
     where
         altId = item ^. TaggedList.iTag . Sugar.tagRefTag . Sugar.tagInstance
         myId = WidgetIds.fromEntityId altId
@@ -136,19 +146,19 @@ makeAddAltRow ::
 makeAddAltRow myId addAlt =
     TagEdit.makeTagHoleEdit mkPickResult myId addAlt
     & Styled.withColor TextColors.caseTagColor
-    & local (has . Menu.configKeysPickOptionAndGotoNext <>~ [M.noMods M.Key'Space])
+    & setPickAndAddNextKeys
     <&>
     \tagHole ->
     TaggedItem
-    { _tagPre = Just tagHole
-    , _taggedItem = M.empty
+    { _tagPre = Nothing
+    , _taggedItem = Responsive.fromWithTextPos tagHole
     , _tagPost = Nothing
     }
     where
         mkPickResult dst =
             Menu.PickResult
             { Menu._pickDest = WidgetIds.ofTagValue dst
-            , Menu._pickMNextEntry = WidgetIds.ofTagValue dst & Just
+            , Menu._pickMNextEntry = WidgetIds.fromEntityId dst & TagEdit.addItemId & Just
             }
 
 separationBar :: TextColors -> M.AnimId -> Widget.R -> View

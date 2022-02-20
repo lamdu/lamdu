@@ -184,20 +184,30 @@ makeAddFieldRow ::
 makeAddFieldRow tagHoleId addField =
     TagEdit.makeTagHoleEdit mkPickResult tagHoleId addField
     & Styled.withColor TextColors.recordTagColor
-    & local (has . Menu.configKeysPickOptionAndGotoNext <>~ [M.noMods M.Key'Space])
+    & setPickAndAddNextKeys
     <&>
     \tagHole ->
     TaggedItem
-    { _tagPre = Just tagHole
-    , _taggedItem = M.empty
+    { _tagPre = Nothing
+    , _taggedItem = Responsive.fromWithTextPos tagHole
     , _tagPost = Just M.empty
     }
     where
         mkPickResult dst =
             Menu.PickResult
             { Menu._pickDest = WidgetIds.ofTagValue dst
-            , Menu._pickMNextEntry = WidgetIds.ofTagValue dst & Just
+            , Menu._pickMNextEntry = WidgetIds.fromEntityId dst & TagEdit.addItemId & Just
             }
+
+setPickAndAddNextKeys :: _ => GuiM env i o a -> GuiM env i o a
+setPickAndAddNextKeys =
+    local
+    (\env ->
+        env
+        & has . Menu.configKeysPickOptionAndGotoNext .~ env ^. has . Config.recordAddFieldKeys
+        & has . Menu.configKeysPickOption <>~
+            env ^. has . Menu.configKeysPickOptionAndGotoNext <> [M.noMods M.Key'Space]
+    )
 
 makeFieldRow ::
     _ =>
@@ -212,7 +222,7 @@ makeFieldRow item =
         pre <-
             TagEdit.makeRecordTag (Just . TagEdit.addItemId . WidgetIds.fromEntityId) (item ^. TaggedList.iTag)
             <&> M.tValue %~ Widget.weakerEvents (item ^. TaggedList.iEventMap)
-            & local (\env -> env & has . Menu.configKeysPickOptionAndGotoNext .~ env ^. has . Config.recordAddFieldKeys)
+            & setPickAndAddNextKeys
         let row =
                 TaggedItem
                 { _tagPre = Just pre
