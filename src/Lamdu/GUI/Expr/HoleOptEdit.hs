@@ -12,6 +12,7 @@ import qualified GUI.Momentu.Responsive.Options as Options
 import qualified GUI.Momentu.Widget as Widget
 import qualified Lamdu.Config.Theme.TextColors as TextColors
 import           Lamdu.GUI.Styled (grammar, label)
+import           Lamdu.GUI.Wrap (stdWrapParentExpr)
 import qualified Lamdu.I18N.Code as Texts
 import qualified Lamdu.GUI.Expr.GetVarEdit as GetVarEdit
 import           Lamdu.GUI.Monad (GuiM)
@@ -29,7 +30,6 @@ make (Ann (Const pl) b) =
     Sugar.HoleBinder x -> GuiM.makeBinder (Ann (Const pl) x)
     Sugar.HoleVarsRecord fieldNames ->
         do
-            respondToCursor <- Widget.respondToCursorPrefix ?? myId
             (Options.box ?? Options.disambiguationNone)
                 <*> sequence
                 [ grammar (label Texts.recordOpener) <&> Responsive.fromTextView
@@ -47,7 +47,7 @@ make (Ann (Const pl) b) =
                     )
                 )
                 , grammar (label Texts.recordCloser) <&> Responsive.fromTextView
-                ] <&> respondToCursor
+                ] & stdWrapParentExpr pl
         & local (M.animIdPrefix .~ Widget.toAnimId myId)
     where
         myId = WidgetIds.fromExprPayload pl
