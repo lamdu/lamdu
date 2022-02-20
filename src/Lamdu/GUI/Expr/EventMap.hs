@@ -242,14 +242,14 @@ replaceEventMap x =
     Lens.view id
     <&>
     \env ->
-    let mk action =
+    let mk action docLens =
             action <&> WidgetIds.fromEntityId
             & E.keysEventMapMovesCursor (Config.delKeys env)
-                (E.toDoc env [has . MomentuTexts.edit, has . Texts.setToHole])
+                (E.toDoc env [has . MomentuTexts.edit, has . docLens])
     in
     case x of
-    Sugar.SetToHole action -> mk action
-    Sugar.Delete action -> mk action
+    Sugar.SetToHole action -> mk action Texts.setToHole
+    Sugar.Delete action -> mk action MomentuTexts.delete
     Sugar.CannotDelete -> mempty
 
 goToLiteral :: Widget.Id -> GuiState.Update
