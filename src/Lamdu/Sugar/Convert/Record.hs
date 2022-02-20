@@ -38,5 +38,5 @@ convertExtend r@(RowExtend tag val rest) exprPl =
                 , Composite._extendValI = val ^. hAnn . Input.stored . ExprIRef.iref
                 , Composite._extendRest = rest ^. hAnn
                 }
-        Composite.convert V.BRecExtend _BodyRecord valS restS (Ann exprPl (V.BRecExtend r)) recP
+        Composite.convert V.LRecEmpty V.BRecExtend _BodyRecord valS restS (Ann exprPl (V.BRecExtend r)) recP
     <&> annotation . pActions . mApply .~ Nothing

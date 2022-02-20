@@ -111,25 +111,34 @@ convertExtend cons valS exprPl extendV restC =
 
 convertOneItemOpenComposite ::
     Monad m =>
+    V.Leaf ->
     (V.RowExtend T.Tag V.Term V.Term # F (IRef m) -> ExprIRef.ValBody m) ->
-    k # Term v InternalName (OnceT (T m)) (T m) ->
-    k # Term v InternalName (OnceT (T m)) (T m) ->
+    ExpressionU v m ->
+    ExpressionU v m ->
     Input.Payload m # V.Term ->
     ExtendVal m (Input.Payload m # V.Term) ->
-    ConvertM m (Composite v InternalName (OnceT (T m)) (T m) # k)
-convertOneItemOpenComposite cons valS restS exprPl extendV =
+    ConvertM m (Composite v InternalName (OnceT (T m)) (T m) # Annotated (ConvertPayload m))
+convertOneItemOpenComposite closed cons valS restS exprPl extendV =
     do
         addItem <- convertAddItem cons (Set.singleton (extendV ^. extendTag)) (exprPl ^. Input.stored)
         item <-
             convertItem addItem cons exprPl mempty valS
             (extendV & extendRest %~ (^. Input.stored . ExprIRef.iref))
+        protectedSetToVal <- ConvertM.typeProtectedSetToVal
+        let close =
+                V.BLeaf closed & ExprIRef.newValI >>=
+                protectedSetToVal (restS ^. annotation . pUnsugared . hAnn . Input.stored)
+                <&> EntityId.ofValI
         pure Composite
             { _cList = TaggedList
                 { _tlAddFirst = addItem
                 , _tlItems = Just (TaggedListBody item [])
                 }
             , _cPunnedItems = []
-            , _cTail = OpenCompositeTail restS
+            , _cTail =
+                restS
+                & annotation . pActions . delete .~ Delete close
+                & OpenCompositeTail
             }
 
 convertEmpty ::
@@ -197,13 +206,14 @@ type BodyPrism m v =
 
 convert ::
     Monad m =>
+    V.Leaf ->
     (V.RowExtend T.Tag V.Term V.Term # F (IRef m) -> ExprIRef.ValBody m) ->
     BodyPrism m v ->
     ExpressionU v m ->
     ExpressionU v m -> Ann (Input.Payload m) # V.Term ->
     ExtendVal m (Input.Payload m # V.Term) ->
     ConvertM m (ExpressionU v m)
-convert cons prism valS restS expr extendV =
+convert closed cons prism valS restS expr extendV =
     Lens.view (ConvertM.scConfig . Config.sugarsEnabled . Config.composite) >>=
     \case
     False -> convertOneItem
@@ -218,6 +228,6 @@ convert cons prism valS restS expr extendV =
             <&> annotation . pEntityId .~ restS ^. annotation . pEntityId
     where
         convertOneItem =
-            convertOneItemOpenComposite cons valS restS (expr ^. hAnn) extendV
+            convertOneItemOpenComposite closed cons valS restS (expr ^. hAnn) extendV
             <&> (prism #)
             >>= addActions expr
