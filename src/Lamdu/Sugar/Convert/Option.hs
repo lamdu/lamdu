@@ -58,6 +58,7 @@ import qualified Lamdu.Sugar.Convert.Monad as ConvertM
 import           Lamdu.Sugar.Convert.Suggest (suggestTopLevelVal)
 import           Lamdu.Sugar.Internal
 import           Lamdu.Sugar.Internal.EntityId (EntityId(..))
+import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import           Lamdu.Sugar.Lens.Annotations (HAnnotations(..))
 import qualified Lamdu.Sugar.Types as Sugar
 import           Revision.Deltum.Hyper (Write(..), writeRecursively)
@@ -465,8 +466,9 @@ makeLocals f scope =
         mkGetField ctx (var, tags) =
             simpleResult
             <$> f typ (foldr V.BAppP (V.BLeafP (V.LVar var)) (reverse tags <&> V.BLeafP . V.LGetField) ^. hPlain)
-            <*> taggedVar var (last tags)
+            <*> taggedVar (foldl EntityId.ofTaggedEntity (EntityId.ofBinder var) xs) x
             where
+                (xs, x) = tags ^?! Lens._Snoc
                 typ =
                     foldl (\ty t -> ty ^?! _Pure . T._TRecord . T.flatRow . freExtends . Lens.ix t)
                     (Infer.runPureInfer scope ctx

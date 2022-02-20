@@ -32,10 +32,11 @@ convertGetFieldParam (V.App (Ann _ (V.BLeaf (V.LGetField tag))) recExpr) =
         param <- tailExpr ^? ExprLens.valVar
         tags <- recParams ^. Lens.at param
         guard (tags ^. Lens.contains chain)
+        let base = foldl EntityId.ofTaggedEntity (EntityId.ofBinder param) (reverse restTags)
         LeafGetVar GetVar
             { _vNameRef = NameRef
-                { _nrName = nameWithContext Nothing param (last chain)
-                , _nrGotoDefinition = EntityId.ofTaggedEntity param tag & pure
+                { _nrName = nameWithContext Nothing base tag
+                , _nrGotoDefinition = EntityId.ofTaggedEntity base tag & pure
                 }
             , _vForm = GetNormalVar
             , _vVar = param

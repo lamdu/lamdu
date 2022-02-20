@@ -295,7 +295,7 @@ fieldParamInfo binderKind tags fp storedLam tag =
                 LhsField
                 { _fParam =
                     FuncParam
-                    { _fpAnnotation = EvalPrep (fpFieldType fp) (tag ^. tagRefTag . tagInstance)
+                    { _fpAnnotation = EvalPrep (fpFieldType fp) inst
                     , _fpUsages = []
                     , _fpVarInfo = vinfo
                     }
@@ -303,6 +303,7 @@ fieldParamInfo binderKind tags fp storedLam tag =
                 }
             }
     where
+        inst = tag ^. tagRefTag . tagInstance
         param = storedLam ^. slLam . V.tlIn
         subFields =
             fpFieldType fp
@@ -311,7 +312,7 @@ fieldParamInfo binderKind tags fp storedLam tag =
             <&> Lens.mapped %~ makeSubField
         makeSubField (subTag, subTyp) =
             ( Tag
-                { _tagName = nameWithContext Nothing param subTag
+                { _tagName = nameWithContext Nothing inst subTag
                 , _tagInstance = subId
                 , _tagVal = subTag
                 }
@@ -326,7 +327,7 @@ fieldParamInfo binderKind tags fp storedLam tag =
                 }
             )
             where
-                subId = EntityId.ofTaggedEntity param subTag
+                subId = EntityId.ofTaggedEntity inst subTag
 
 changeGetFieldTags ::
     Monad m =>
