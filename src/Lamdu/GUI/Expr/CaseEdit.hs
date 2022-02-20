@@ -52,7 +52,7 @@ make (Ann (Const pl) (Sugar.Composite alts punned caseTail)) =
             makeAltsWidget altsId alts punned
             >>= _2 %%~ case caseTail of
             Sugar.ClosedCompositeTail actions -> pure . Widget.weakerEvents (closedCaseEventMap env actions)
-            Sugar.OpenCompositeTail (Sugar.OpenComposite rest) -> makeOpenCase rest (Widget.toAnimId myId)
+            Sugar.OpenCompositeTail rest -> makeOpenCase rest (Widget.toAnimId myId)
         header <- grammar (Label.make ".") M./|/ makeCaseLabel
         Styled.addValFrame <*>
             (Options.boxSpaced ?? Options.disambiguationNone ?? [header, altsGui])
@@ -158,14 +158,21 @@ separationBar theme animId width =
     & M.scale (M.Vector2 width 10)
 
 makeOpenCase ::
-    _ => ExprGui.Expr Sugar.Term i o -> M.AnimId -> Responsive o -> GuiM env i o (Responsive o)
-makeOpenCase rest animId altsGui =
+    _ => ExprGui.Body Sugar.OpenComposite i o -> M.AnimId -> Responsive o -> GuiM env i o (Responsive o)
+makeOpenCase (Sugar.OpenComposite rest mClose) animId altsGui =
     do
         theme <- Lens.view has
         vspace <- Spacer.stdVSpace
+        env <- Lens.view id
+        let closeEventMap =
+                foldMap
+                ( E.keysEventMapMovesCursor (Config.delKeys env) (doc env [Texts.close])
+                . fmap WidgetIds.fromEntityId
+                ) mClose
         restExpr <-
             Styled.addValPadding
             <*> GuiM.makeSubexpression rest
+            <&> M.weakerEvents closeEventMap
         (|---|) <- Glue.mkGlue ?? Glue.Vertical
         vbox <- Responsive.vboxWithSeparator
         vbox False
