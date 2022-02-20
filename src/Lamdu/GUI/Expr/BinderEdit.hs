@@ -51,8 +51,8 @@ makeLetEdit item myId =
                     (E.toDoc env [has . MomentuTexts.edit, has . Texts.let_, has . MomentuTexts.delete])
                     . fmap (const bodyId)
                 ) (item ^? Sugar.lNames . Sugar._LhsVar . Sugar.vDelete)
-        (_, paramsEdit) <- ParamsEdit.make True (pure Nothing) ParamsEdit.ScopeNavNotFocused myId myId bodyId (item ^. Sugar.lNames)
-        grammar (label Texts.let_) M./|/ Spacer.stdHSpace M./|/ pure paramsEdit
+        (_, nameEdit) <- ParamsEdit.make True (pure Nothing) ParamsEdit.ScopeNavNotFocused myId myId bodyId (item ^. Sugar.lNames)
+        grammar (label Texts.let_) M./|/ Spacer.stdHSpace M./|/ pure nameEdit
             >>= AssignmentEdit.make Nothing myId binder
             <&> M.weakerEvents eventMap
             <&> M.padAround (env ^. has . Theme.letItemPadding)

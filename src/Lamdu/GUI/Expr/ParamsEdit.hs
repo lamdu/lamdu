@@ -226,7 +226,7 @@ makeBody isLet annotationOpts delVarBackwardsId lhsId rhsId params =
             (Options.boxSpaced ?? Options.disambiguationNone) <*>
                 mconcat
                 [ foldMap (`ParamEdit.mkAddParam` lhsId) (p ^? Sugar.vAddPrev . Sugar._AddNext)
-                , TagEdit.makeParamTag (Just (tag ^. Sugar.oPickAnon)) (tag ^. Sugar.oTag)
+                , TagEdit.makeLHSTag onPickNext TextColors.variableColor (Just (tag ^. Sugar.oPickAnon)) (tag ^. Sugar.oTag)
                     >>= ParamEdit.addAnnotationAndEvents annotationOpts (p ^. Sugar.vParam) widgetId
                     <&> M.weakerEvents eventMap <&> (:[])
                 , foldMap (`ParamEdit.mkAddParam` widgetId) (p ^? Sugar.vAddNext . Sugar._AddNext)
@@ -235,7 +235,12 @@ makeBody isLet annotationOpts delVarBackwardsId lhsId rhsId params =
         where
             tag = p ^. Sugar.vTag
             widgetId = tag ^. Sugar.oTag . Sugar.tagRefTag . Sugar.tagInstance & WidgetIds.fromEntityId
-    & local (has . Menu.configKeysPickOptionAndGotoNext <>~ [noMods M.Key'Space])
+            onPickNext pos
+                | isLet = Nothing
+                | otherwise = WidgetIds.fromEntityId pos & TagEdit.addItemId & Just
+    & local
+        (has . Menu.configKeysPickOptionAndGotoNext .~
+            [noMods M.Key'Space | not isLet || Lens.has Sugar._LhsRecord params])
 
 makeParams ::
     _ =>

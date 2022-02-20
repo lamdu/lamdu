@@ -1,6 +1,6 @@
 module Lamdu.GUI.Expr.TagEdit
     ( makeRecordTag, makeVariantTag
-    , makeParamTag, addItemId
+    , makeParamTag, addItemId, makeLHSTag
     , makeArgTag
     , makeTagHoleEdit
     , makeBinderTagEdit
