@@ -95,11 +95,17 @@ instance (MonadTransaction m o, MonadTransaction m i) => Order i (Sugar.Else v n
 instance (MonadTransaction m o, MonadTransaction m i) => Order i (Sugar.IfElse v name i o)
 instance (MonadTransaction m o, MonadTransaction m i) => Order i (Sugar.PostfixApply v name i o)
 
+orderLhsNames :: (MonadTransaction m i, MonadTransaction n o) => OrderT i (Sugar.LhsNames name i o v)
+orderLhsNames =
+    Sugar._LhsRecord (orderTaggedList [] sub)
+    where
+        sub = (Sugar.fSubFields . Lens._Just) (orderByTag [] (^. _1) (_2 sub))
+
 instance (MonadTransaction m o, MonadTransaction m i) => Order i (Sugar.Let v name i o) where
     order l =
         l
         & htraverse (Proxy @(Order i) #> orderNode)
-        >>= (Sugar.lNames . Sugar._LhsRecord) (orderTaggedList [] pure)
+        >>= Sugar.lNames orderLhsNames
 
 instance (MonadTransaction m o, MonadTransaction m i) => Order i (Sugar.Lambda v name i o) where
     order = Sugar.lamFunc order
@@ -107,7 +113,7 @@ instance (MonadTransaction m o, MonadTransaction m i) => Order i (Sugar.Lambda v
 instance (MonadTransaction m o, MonadTransaction m i) => Order i (Sugar.Function v name i o) where
     order (Sugar.Function chosenScope params body bodyScopes) =
         Sugar.Function chosenScope
-        <$> Sugar._LhsRecord (orderTaggedList [] pure) params
+        <$> orderLhsNames params
         <*> orderNode body
         ?? bodyScopes
 
