@@ -98,7 +98,7 @@ convertSimpleApply app@(V.App funcI argI) exprPl =
         let onEachAppliedAlt x =
                 x
                 & cList . Lens.mapped %~ singleApply
-                & cTail . _OpenCompositeTail . openCompositeTail %~ singleApply
+                & cTail . _OpenCompositeTail %~ singleApply
         funcS <-
             ConvertM.convertSubexpression funcI
             & local (ConvertM.scScopeInfo %~ scopeUpdates)

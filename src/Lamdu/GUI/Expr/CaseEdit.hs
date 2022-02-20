@@ -52,7 +52,7 @@ make (Ann (Const pl) (Sugar.Composite alts punned caseTail)) =
             makeAltsWidget altsId alts punned
             >>= _2 %%~ case caseTail of
             Sugar.ClosedCompositeTail actions -> pure . Widget.weakerEvents (closedCaseEventMap env actions)
-            Sugar.OpenCompositeTail (Sugar.OpenComposite rest) -> makeOpenCase rest (Widget.toAnimId myId)
+            Sugar.OpenCompositeTail rest -> makeOpenCase rest (Widget.toAnimId myId)
         header <- grammar (Label.make ".") M./|/ makeCaseLabel
         Styled.addValFrame <*>
             (Options.boxSpaced ?? Options.disambiguationNone ?? [header, altsGui])

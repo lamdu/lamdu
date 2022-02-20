@@ -129,7 +129,7 @@ convertOneItemOpenComposite cons valS restS exprPl extendV =
                 , _tlItems = Just (TaggedListBody item [])
                 }
             , _cPunnedItems = []
-            , _cTail = OpenCompositeTail (OpenComposite restS)
+            , _cTail = OpenCompositeTail restS
             }
 
 convertEmpty ::
