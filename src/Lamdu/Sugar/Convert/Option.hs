@@ -137,7 +137,7 @@ filterResults tagsProp order res query =
             | otherwise =
                 -- Within certain search-term matching level (exact/prefix/infix),
                 -- prefer locals over globals even for type mismatches
-                groups (gForType <> gLocals) <> groups (gSyntax <> gDefs <> gToNoms)
+                groups (gForType <> gLocals) <> groups (gSyntax <> gDefs <> gToNoms <> gFromNoms)
         groups f =
             f res
             <&> Lens.mapped . Lens.filteredBy (rTexts . _QueryNewTag) <. rExpr . _2 . Sugar.optionPick %@~
