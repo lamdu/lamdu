@@ -98,7 +98,7 @@ convertSimpleApply app@(V.App funcI argI) exprPl =
         let onEachAppliedAlt x =
                 x
                 & cList . Lens.mapped %~ singleApply
-                & cTail . _OpenComposite %~ singleApply
+                & cTail . _OpenCompositeTail %~ singleApply
         funcS <-
             ConvertM.convertSubexpression funcI
             & local (ConvertM.scScopeInfo %~ scopeUpdates)
@@ -146,7 +146,7 @@ convertEmptyInject (App funcS argS) =
         r <- annValue (^? _BodyRecord) argS & maybeToMPlus
         r ^. hVal . cList . tlItems & null & guard
         r ^. hVal . cPunnedItems & null & guard
-        Lens.has (hVal . cTail . _ClosedComposite) r & guard
+        Lens.has (hVal . cTail . _ClosedCompositeTail) r & guard
         r & annValue %~ (^. cList . tlAddFirst . Lens._Unwrapped)
             & NullaryInject inject & BodyNullaryInject
             & pure
@@ -186,7 +186,7 @@ convertLabeled (App funcS argS) exprPl =
         -- Make sure the argument is a record
         record <- argS ^? hVal . _BodyRecord & maybeToMPlus
         -- that is closed
-        Lens.has (cTail . _ClosedComposite) record & guard
+        Lens.has (cTail . _ClosedCompositeTail) record & guard
         -- with at least 2 fields
         length (record ^.. cList . taggedListItems) + length (record ^. cPunnedItems) >= 2 & guard
         frozenDeps <- Lens.view ConvertM.scFrozenDeps <&> Property.value

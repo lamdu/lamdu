@@ -359,7 +359,7 @@ instance ToBody Composite where
         Composite
         <$> walk items
         <*> (traverse . pvVar) (toNode (Lens._Wrapped walk)) punned
-        <*> _OpenComposite toExpression tail_
+        <*> _OpenCompositeTail toExpression tail_
 
 instance ToBody Nominal where
     toBody (Nominal t e) = Nominal <$> walk t <*> toExpression e

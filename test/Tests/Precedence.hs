@@ -76,7 +76,7 @@ testInjectInRec =
                     }
                 }
             , Sugar._cPunnedItems = []
-            , Sugar._cTail = Sugar.ClosedComposite (Sugar.ClosedCompositeActions Unit)
+            , Sugar._cTail = Sugar.ClosedCompositeTail (Sugar.ClosedCompositeActions Unit)
             } & Stub.node
             & Parens.addToTopLevel 0
 

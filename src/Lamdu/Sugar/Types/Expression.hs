@@ -39,7 +39,7 @@ module Lamdu.Sugar.Types.Expression
     , ElseIfBody(..), eAddLet, eIfElse
     -- Record & Cases
     , Composite(..), cList, cPunnedItems, cTail
-    , CompositeTail(..), _OpenComposite, _ClosedComposite
+    , CompositeTail(..), _OpenCompositeTail, _ClosedCompositeTail
     , PunnedVar(..), pvVar, pvTagEntityId
 
     , MorphWitness(..)
@@ -165,8 +165,8 @@ data IfElse v name i o k = IfElse
     } deriving Generic
 
 data CompositeTail v name i o k
-    = OpenComposite (k :# Term v name i o)
-    | ClosedComposite (ClosedCompositeActions o)
+    = OpenCompositeTail (k :# Term v name i o)
+    | ClosedCompositeTail (ClosedCompositeActions o)
     deriving Generic
 
 data Composite v name i o k = Composite

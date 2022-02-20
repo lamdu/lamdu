@@ -98,7 +98,7 @@ makeEmpty (Ann (Const pl) (Const addField)) =
     maybe (makeUnit pl) (stdWrapParentExpr pl . makeRecord pure . (:[]))
 
 make :: _ => ExprGui.Expr Sugar.Composite i o -> GuiM env i o (Responsive o)
-make (Ann (Const pl) (Sugar.Composite (Sugar.TaggedList addField Nothing) [] Sugar.ClosedComposite{})) =
+make (Ann (Const pl) (Sugar.Composite (Sugar.TaggedList addField Nothing) [] Sugar.ClosedCompositeTail{})) =
     -- Ignore the ClosedComposite actions - it only has the open
     -- action which is equivalent ot deletion on the unit record
     makeEmpty (Ann (Const pl) (Const addField))
@@ -106,8 +106,8 @@ make (Ann (Const pl) (Sugar.Composite (Sugar.TaggedList addField mTlBody) punned
     do
         tailEventMap <-
             case recordTail of
-            Sugar.ClosedComposite actions -> closedRecordEventMap actions
-            Sugar.OpenComposite{} -> pure mempty
+            Sugar.ClosedCompositeTail actions -> closedRecordEventMap actions
+            Sugar.OpenCompositeTail{} -> pure mempty
         env <- Lens.view id
         let goToRecordEventMap =
                 WidgetIds.fromExprPayload pl & GuiState.updateCursor & pure & const
@@ -151,7 +151,7 @@ make (Ann (Const pl) (Sugar.Composite (Sugar.TaggedList addField mTlBody) punned
             & maybe myId TaggedList.itemId
         postProcess =
             case recordTail of
-            Sugar.OpenComposite restExpr -> makeOpenRecord restExpr
+            Sugar.OpenCompositeTail restExpr -> makeOpenRecord restExpr
             _ -> pure
 
 makeRecord :: _ => (Responsive o -> m (Responsive o)) -> [TaggedItem o] -> m (Responsive o)
