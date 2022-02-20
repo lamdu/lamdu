@@ -151,7 +151,7 @@ make (Ann (Const pl) (Sugar.Composite (Sugar.TaggedList addField mTlBody) punned
             & maybe myId TaggedList.itemId
         postProcess =
             case recordTail of
-            Sugar.OpenCompositeTail openTail -> makeOpenRecord openTail
+            Sugar.OpenCompositeTail (Sugar.OpenComposite restExpr) -> makeOpenRecord restExpr
             _ -> pure
 
 makeRecord :: _ => (Responsive o -> m (Responsive o)) -> [TaggedItem o] -> m (Responsive o)
@@ -230,23 +230,13 @@ separationBar theme animId width =
     & M.tint (theme ^. TextColors.recordTailColor)
     & M.scale (M.Vector2 width 10)
 
-makeOpenRecord ::
-    _ =>
-    ExprGui.Body Sugar.OpenComposite i o ->
-    Responsive o -> GuiM env i o (Responsive o)
-makeOpenRecord (Sugar.OpenComposite rest mClose) fieldsGui =
+makeOpenRecord :: _ => ExprGui.Expr Sugar.Term i o -> Responsive o -> GuiM env i o (Responsive o)
+makeOpenRecord rest fieldsGui =
     do
         theme <- Lens.view has
         vspace <- Spacer.stdVSpace
-        env <- Lens.view id
-        let closeEventMap =
-                foldMap
-                ( E.keysEventMapMovesCursor (Config.delKeys env) (doc env [Texts.close])
-                . fmap WidgetIds.fromEntityId
-                ) mClose
         restExpr <-
             Styled.addValPadding <*> GuiM.makeSubexpression rest
-            <&> M.weakerEvents closeEventMap
         animId <- Lens.view M.animIdPrefix
         (|---|) <- Glue.mkGlue ?? Glue.Vertical
         Responsive.vboxWithSeparator ?? False

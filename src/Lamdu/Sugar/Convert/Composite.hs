@@ -111,38 +111,26 @@ convertExtend cons valS exprPl extendV restC =
 
 convertOneItemOpenComposite ::
     Monad m =>
-    V.Leaf -> (V.RowExtend T.Tag V.Term V.Term # F (IRef m) -> ExprIRef.ValBody m) ->
-    ExpressionU v m -> ExpressionU v m ->
+    (V.RowExtend T.Tag V.Term V.Term # F (IRef m) -> ExprIRef.ValBody m) ->
+    k # Term v InternalName (OnceT (T m)) (T m) ->
+    k # Term v InternalName (OnceT (T m)) (T m) ->
     Input.Payload m # V.Term ->
     ExtendVal m (Input.Payload m # V.Term) ->
-    ConvertM m (Composite v InternalName (OnceT (T m)) (T m) # Ann (Const (ConvertPayload m)))
-convertOneItemOpenComposite closedLeaf cons valS restS exprPl extendV =
+    ConvertM m (Composite v InternalName (OnceT (T m)) (T m) # k)
+convertOneItemOpenComposite cons valS restS exprPl extendV =
     do
         addItem <- convertAddItem cons (Set.singleton (extendV ^. extendTag)) (exprPl ^. Input.stored)
         item <-
             convertItem addItem cons exprPl mempty valS
             (extendV & extendRest %~ (^. Input.stored . ExprIRef.iref))
-        protectedSetToVal <- ConvertM.typeProtectedSetToVal
-        let closeComposite =
-                do
-                    closedLeafI <- ExprIRef.newValI (V.BLeaf closedLeaf)
-                    protectedSetToVal restStored closedLeafI <&> EntityId.ofValI
         pure Composite
             { _cList = TaggedList
                 { _tlAddFirst = addItem
                 , _tlItems = Just (TaggedListBody item [])
                 }
             , _cPunnedItems = []
-            , _cTail =
-                OpenCompositeTail OpenComposite
-                { _openCompositeTail = restS
-                , _openCompositeClose =
-                    closeComposite
-                    <$ guard (Lens.has (hVal . _BodyLeaf . _LeafHole) restS)
-                }
+            , _cTail = OpenCompositeTail (OpenComposite restS)
             }
-    where
-        restStored = restS ^. annotation . pUnsugared . hAnn . Input.stored
 
 convertEmpty ::
     Monad m =>
@@ -209,13 +197,13 @@ type BodyPrism m v =
 
 convert ::
     Monad m =>
-    V.Leaf -> (V.RowExtend T.Tag V.Term V.Term # F (IRef m) -> ExprIRef.ValBody m) ->
+    (V.RowExtend T.Tag V.Term V.Term # F (IRef m) -> ExprIRef.ValBody m) ->
     BodyPrism m v ->
     ExpressionU v m ->
     ExpressionU v m -> Ann (Input.Payload m) # V.Term ->
     ExtendVal m (Input.Payload m # V.Term) ->
     ConvertM m (ExpressionU v m)
-convert closedLeaf cons prism valS restS expr extendV =
+convert cons prism valS restS expr extendV =
     Lens.view (ConvertM.scConfig . Config.sugarsEnabled . Config.composite) >>=
     \case
     False -> convertOneItem
@@ -230,6 +218,6 @@ convert closedLeaf cons prism valS restS expr extendV =
             <&> annotation . pEntityId .~ restS ^. annotation . pEntityId
     where
         convertOneItem =
-            convertOneItemOpenComposite closedLeaf cons valS restS (expr ^. hAnn) extendV
+            convertOneItemOpenComposite cons valS restS (expr ^. hAnn) extendV
             <&> (prism #)
             >>= addActions expr

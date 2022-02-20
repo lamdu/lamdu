@@ -41,4 +41,4 @@ convert r@(RowExtend tag v rest) exprPl =
                 , Composite._extendValI = v ^. hAnn . Input.stored . ExprIRef.iref
                 , Composite._extendRest = rest ^. hAnn
                 }
-        Composite.convert V.LAbsurd V.BCase (_BodyPostfixFunc . _PfCase) valS restS (Ann exprPl (V.BCase r)) caseP
+        Composite.convert V.BCase (_BodyPostfixFunc . _PfCase) valS restS (Ann exprPl (V.BCase r)) caseP

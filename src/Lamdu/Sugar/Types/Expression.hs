@@ -40,7 +40,7 @@ module Lamdu.Sugar.Types.Expression
     -- Record & Cases
     , Composite(..), cList, cPunnedItems, cTail
     , CompositeTail(..), _OpenCompositeTail, _ClosedCompositeTail
-    , OpenComposite(..), openCompositeTail, openCompositeClose
+    , OpenComposite(..), openCompositeTail
     , PunnedVar(..), pvVar, pvTagEntityId
 
     , MorphWitness(..)
@@ -165,9 +165,8 @@ data IfElse v name i o k = IfElse
     , _iElse :: k :# Else v name i o
     } deriving Generic
 
-data OpenComposite v name i o k = OpenComposite
+newtype OpenComposite v name i o k = OpenComposite
     { _openCompositeTail :: k :# Term v name i o
-    , _openCompositeClose :: Maybe (o EntityId) -- only closable if it is a hole
     } deriving Generic
 
 data CompositeTail v name i o k
