@@ -330,6 +330,7 @@ makeOption dstPl res =
                     (res ^.. rExpr . traverse . _2 <&> (hPlain #) . unwrap (const (^. hVal)))
                     (inferResults0 <&> void . (^. _2))
                 , inferResults1 <&> void
+                , scope ^. V.scopeLevel
                 )
         let ((iExpr, ctx1, i), (inferred, _)) =
                 inferResults1 ^? traverse . Lens._Right
