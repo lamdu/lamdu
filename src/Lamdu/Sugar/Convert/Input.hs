@@ -13,7 +13,7 @@ import           Control.Lens.Extended ((~~>))
 import qualified Control.Lens as Lens
 import           Data.MMap (MMap)
 import           Hyper
-import           Hyper.Infer (InferResult, inferResult)
+import           Hyper.Infer (InferResult, inferResult, _ScopeLevel)
 import           Hyper.Syntax (funcIn)
 import           Hyper.Type.Prune (Prune)
 import           Hyper.Unify (UVar)
@@ -61,6 +61,9 @@ preprocess s l = snd . prep s l
 instance SugarInput V.Term where
     prep iScope locals (Ann pl body) =
         case body of
+        V.BToNom t ->
+            htraverse1 (prep (iScope & V.scopeLevel . _ScopeLevel %~ (+) 1) locals) t
+            <&> V.BToNom <&> Ann resPl
         V.BLam (V.TypedLam var t b) ->
             ( usesOfVar
             , V.TypedLam var t r & V.BLam & Ann (resPl & varRefsOfLambda .~ usesOfVar ^. Lens.ix var)

@@ -68,7 +68,7 @@ preparePayloads topLevelScope inferredVal =
             , Input._localsInScope = []
             , Input._stored = valIProp
             , Input._inferRes = inferRes
-            , Input._inferScope = V.emptyScope -- UGLY: This is initialized by initScopes
+            , Input._inferScope = V.emptyScope -- UGLY: This is initialized by SugarInput.prep
             }
             where
                 eId = valIProp ^. ExprIRef.iref . _F & IRef.uuid & EntityId.EntityId
