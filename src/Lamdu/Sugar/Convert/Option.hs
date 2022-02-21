@@ -319,13 +319,20 @@ makeOption dstPl res =
                 Infer.runPureInfer (dstPl ^. Input.inferScope) curCtx
                 (Infer.loadDeps (res ^. rDeps) ?? dstPl ^. Input.inferScope)
                 ^?! Lens._Right
-        let errInfo = res ^.. rExpr . traverse . _2 <&> (hPlain #) . unwrap (const (^. hVal)) & show
+        let inferResults0 = res ^. rExpr <&> _2 %~ Infer.runPureInfer scope ctx0 . infer
+        let inferResults1 =
+                inferResults0 ^@.. traverse . Lens.filteredBy _1 <. _2 . Lens._Right <&>
+                \(idx, (e, ctx)) ->
+                Infer.runPureInfer () ctx (inferUVarsApplyBindings e) <&> (,) (e, ctx, idx)
+        let errInfo =
+                show
+                ( zip
+                    (res ^.. rExpr . traverse . _2 <&> (hPlain #) . unwrap (const (^. hVal)))
+                    (inferResults0 <&> void . (^. _2))
+                , inferResults1 <&> void
+                )
         let ((iExpr, ctx1, i), (inferred, _)) =
-                ((res ^. rExpr <&> _2 %~ Infer.runPureInfer scope ctx0 . infer)
-                    ^@.. traverse . Lens.filteredBy _1 <. _2 . Lens._Right <&>
-                    \(idx, (e, ctx)) ->
-                    Infer.runPureInfer () ctx (inferUVarsApplyBindings e) <&> (,) (e, ctx, idx)
-                ) ^? traverse . Lens._Right
+                inferResults1 ^? traverse . Lens._Right
                 & fromMaybe (error ("inference of all options failed: " <> errInfo))
         let unifyResult =
                 Infer.runPureInfer () ctx1
