@@ -63,6 +63,8 @@ makeLabeledApply func args punnedArgs exprPl =
                         pure True
                         & lift
                 & runMatcherT
+                -- Work-around red-cursor in some cases when cursor is on record params.
+                <&> (if hasRecordParams then const True else id)
                 where
                     (c0, ru) = unwrap r
                     (c1, lu) = unwrap l
@@ -80,6 +82,8 @@ makeLabeledApply func args punnedArgs exprPl =
                         & _2 %~ (^. annotation . pStored . iref)
                     ls = l ^. annotation . pStored
                     rs = r ^. annotation . pStored
+                    hasRecordParams =
+                        Lens.has (hVal . Sugar._BodyLam . Sugar.lamFunc . Sugar.fParams . Sugar._LhsRecord) r
         let (specialArgs, removedKeys) =
                 case traverse argExpr presentationMode of
                 Just (Sugar.Operator (l, la) (r, ra)) ->
