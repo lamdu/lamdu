@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell, TypeApplications, ScopedTypeVariables, GADTs, DerivingVia #-}
+{-# LANGUAGE TemplateHaskell, TypeApplications, GADTs, DerivingVia #-}
 
 module Lamdu.Sugar.Convert.Option
     ( Result(..), rTexts, rExpr, rDeps, rAllowEmptyQuery, rWithTypeAnnotations
@@ -308,7 +308,6 @@ ifTexts :: Sugar.QueryLangInfo -> [Text]
 ifTexts = (^.. Sugar.qCodeTexts . Texts.if_)
 
 makeOption ::
-    forall a m.
     Monad m =>
     Input.Payload m # V.Term ->
     Result [(a, Ann (Write m) # V.Term)] ->
@@ -375,7 +374,7 @@ makeOption dstPl res =
             & local (ConvertM.scInferContext .~ ctx1)
             & -- Updated deps are required to sugar labeled apply
                 Lens.locally (ConvertM.scFrozenDeps . pVal) (<> res ^. rDeps)
-            <&> markNodeAnnotations @_ @(Sugar.HoleOpt (ShowAnnotation, EvalPrep) InternalName (OnceT (T m)) (T m))
+            <&> markNodeAnnotations @_ @(Sugar.HoleOpt (ShowAnnotation, EvalPrep) InternalName _ _)
             <&> hflipped %~ hmap (const (Lens._Wrapped %~
                     \(showAnn, x) -> convertPayload x & Sugar.plAnnotation %~ (,) showAnn
                 ))

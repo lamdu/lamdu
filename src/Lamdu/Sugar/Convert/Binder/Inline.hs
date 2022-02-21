@@ -46,7 +46,6 @@ wrapWithRedexes rs x =
             & Ann WriteNew
 
 inlineLetH ::
-    forall m.
     V.Var ->
     Ann (Write m) # V.Term ->
     Ann (Write m) # V.Term ->
@@ -72,9 +71,7 @@ inlineLetH var arg bod =
                 , hmap (const (^. _2)) r & Ann stored
                 )
                 where
-                    r :: V.Term # (Const [(V.Var, Ann (Write m) # V.Term)] :*: Ann (Write m))
-                    r =
-                        hmap
+                    r = hmap
                         ( \case
                             HWitness V.W_Term_Term ->
                                 go <&> \(res, body) -> Const res :*: body

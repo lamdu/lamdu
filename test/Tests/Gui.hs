@@ -359,15 +359,13 @@ testPunCursor =
         waRec = Sugar.waRepl . Sugar.replExpr . letBody . binderRec
 
 workAreaEq ::
-    forall m v.
     Sugar.WorkArea v Name (OnceT (T m)) (T m) (Sugar.Payload v (T m)) ->
     Sugar.WorkArea v Name (OnceT (T m)) (T m) (Sugar.Payload v (T m)) ->
     Bool
 workAreaEq x y =
     x' == unsafeCoerce y
     where
-        x' =
-            unsafeCoerce x :: Sugar.WorkArea () Name Unit Unit (Sugar.Payload () Unit)
+        x' = unsafeCoerce x :: Sugar.WorkArea () Name Unit Unit (Sugar.Payload () Unit)
 
 testKeyboardDirAndBack ::
     HasCallStack =>
