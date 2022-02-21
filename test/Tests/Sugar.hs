@@ -60,6 +60,7 @@ test =
     , testSuspendedHoleResult
     , testNoInjectValAnn
     , testCaseNav
+    , testSkolemScope
     , testGroup "insist-tests"
         [ testInsistFactorial
         , testInsistEq
@@ -230,6 +231,21 @@ testInline =
         afterInline =
             replBody . _BodyLam . lamFunc . fBody .
             hVal . bBody . _BinderTerm . _BodyLeaf . _LeafLiteral . _LiteralNum
+
+testSkolemScope :: Test
+testSkolemScope =
+    do
+        queryLangInfo <- Env.make <&> hasQueryLangInfo
+        let res workArea =
+                    workArea ^?!
+                    replBody . _BodyToNom . nVal .
+                    hVal . bBody . _BinderTerm . _BodyLabeledApply . aMOpArgs . Lens._Just . oaRhs .
+                    hVal . _BodyLam . lamFunc . fBody .
+                    hVal . bBody . _BinderTerm . _BodyLeaf . _LeafHole . holeOptions
+                    >>= (Query queryLangInfo mempty "cont" &)
+                    >>= lift . (^. optionPick) . fromMaybe (error "expected option") . (^? traverse)
+        testSugarActions "skolem.json" [res]
+    & testCase "skolem-scope"
 
 lightConst :: Test
 lightConst =
