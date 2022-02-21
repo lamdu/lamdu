@@ -62,7 +62,7 @@ checkTypeMatch x y =
 
 convertAppliedHole ::
     (Monad m, Typeable m) =>
-    Sugar.App V.Term # (Ann (Input.Payload m)) ->
+    Sugar.App V.Term # Ann (Input.Payload m) ->
     Input.Payload m # V.Term ->
     MaybeT (ConvertM m) (ExpressionU EvalPrep m)
 convertAppliedHole app exprPl =
@@ -81,7 +81,7 @@ unfragmentIfTypesAllow unfragment postProcess =
 
 convert ::
     (Typeable m, Monad m) =>
-    Sugar.App V.Term # (Ann (Input.Payload m)) -> (Input.Payload m # V.Term) ->
+    Sugar.App V.Term # Ann (Input.Payload m) -> (Input.Payload m # V.Term) ->
     ConvertM m (ExpressionU EvalPrep m)
 convert (V.App funcI argI) exprPl =
     do

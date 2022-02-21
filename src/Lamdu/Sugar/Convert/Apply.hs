@@ -62,7 +62,7 @@ convert app exprPl =
 
 convertSimpleApply ::
     Monad m =>
-    App V.Term # (Ann (Input.Payload m)) -> Input.Payload m # V.Term ->
+    App V.Term # Ann (Input.Payload m) -> Input.Payload m # V.Term ->
     ConvertM m (AppS EvalPrep m)
 convertSimpleApply app@(V.App funcI argI) exprPl =
     do
