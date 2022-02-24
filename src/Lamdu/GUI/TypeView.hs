@@ -102,16 +102,15 @@ makeTFun parentPrecedence a b =
 makeTInst ::
     (MonadReader env m, _) =>
     Prec -> Sugar.TId Name o ->
-    [(Name, Annotated Sugar.EntityId # Sugar.Type Name o)] ->
+    [(Sugar.Tag Name, Annotated Sugar.EntityId # Sugar.Type Name o)] ->
     m (WithTextPos View)
 makeTInst parentPrecedence tid typeParams =
     do
         hspace <- Spacer.stdHSpace
         let afterName paramsView = tconsName /|/ pure hspace /|/ paramsView
-        let makeTypeParam i (tParamId, arg) =
+        let makeTypeParam (tParamId, arg) =
                 do
-                    paramIdView <-
-                        NameView.make tParamId & disambAnimId ["param", show i]
+                    paramIdView <- TagView.make tParamId
                     typeView <- makeInternal (Prec 0) arg
                     pure
                         [ Align.fromWithTextPos 1 paramIdView
@@ -125,7 +124,7 @@ makeTInst parentPrecedence tid typeParams =
                 & afterName
                 >>= parens parentPrecedence (Prec 0)
             params ->
-                gridViewTopLeftAlign <*> Lens.itraverse makeTypeParam params
+                gridViewTopLeftAlign <*> traverse makeTypeParam params
                 <&> Align.toWithTextPos
                 >>= (Styled.addValPadding ??)
                 >>= addTypeBG

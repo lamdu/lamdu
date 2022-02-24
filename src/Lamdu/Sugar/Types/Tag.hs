@@ -17,7 +17,7 @@ data Tag name = Tag
     { _tagName :: name
     , _tagInstance :: EntityId -- Unique across different uses of a tag
     , _tagVal :: T.Tag
-    } deriving (Eq, Ord, Generic)
+    } deriving (Eq, Ord, Show, Generic)
 
 data TagOption name o = TagOption
     { _toInfo :: Tag name

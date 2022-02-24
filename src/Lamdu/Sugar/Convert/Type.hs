@@ -64,9 +64,11 @@ convertType entityId typ =
         where
             T.Types (S.QVarInstances tParams) (S.QVarInstances rParams) = args
             convertTypeParam (tv, val) =
-                (,)
-                <$> taggedName Nothing tv
-                <*> convertType (EntityId.ofTInstParam tv entityId) val
+                convertType (EntityId.ofTInstParam tv entityId) val
+                <&> (,) (ConvertTag.withoutContext (EntityId.ofTag entityId t) t)
+                where
+                    t = tv ^. T._Var & T.Tag
+
     T.TRecord composite -> TRecord <$> convertComposite entityId composite
     T.TVariant composite -> TVariant <$> convertComposite entityId composite
     <&> Ann (Const entityId)

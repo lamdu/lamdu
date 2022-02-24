@@ -37,7 +37,7 @@ data Type name o k
       -- ^ A type variable
     | TFun (FuncType (Type name o) k)
       -- ^ A (non-dependent) function of the given parameter and result types
-    | TInst (TId name o) [(name, k :# Type name o)]
+    | TInst (TId name o) [(Tag name, k :# Type name o)]
       -- ^ An instantiation of a nominal type of the given id with the
       -- given keyword type arguments
     | TRecord (CompositeFields name (k :# Type name o))

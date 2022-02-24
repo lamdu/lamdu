@@ -101,7 +101,7 @@ instance (a ~ OldName m, b ~ NewName m) => Walk m (Sugar.Type a o # Annotated p)
     walk (TInst tid params) =
         TInst
         <$> walk tid
-        <*> traverse (bitraverse (opGetName Nothing MayBeAmbiguous TypeVar) walk) params
+        <*> traverse (bitraverse (toTagOf Tag) walk) params
 
 instance (a ~ OldName m, b ~ NewName m) => Walk m (Annotated p # Sugar.Type a o) (Annotated p # Sugar.Type b o) where
     walk (Ann (Const pl) x) = walk x <&> Ann (Const pl)
