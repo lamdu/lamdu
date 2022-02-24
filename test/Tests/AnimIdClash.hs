@@ -24,7 +24,7 @@ testTypeView =
     do
         env <- Env.make
         TypeView.make typ env ^. Align.tValue . View.vAnimLayers
-            & verifyLayers & either fail pure
+            & verifyLayers "" & either fail pure
     & testCase "typeview"
     where
         typ =

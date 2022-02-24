@@ -120,23 +120,24 @@ convertAndMakeGui afterDoc env = convertWorkArea afterDoc env >>= makeGui afterD
 
 focusedWidget ::
     HasCallStack =>
-    Responsive f -> Either String (Widget.Focused (f GuiState.Update))
-focusedWidget gui =
-    widget <$ verifyLayers (widget ^. Widget.fLayers)
+    String -> Responsive f -> Either String (Widget.Focused (f GuiState.Update))
+focusedWidget msg gui =
+    widget <$ verifyLayers msg (widget ^. Widget.fLayers)
     where
         widget = (gui ^?! wideFocused) (Widget.Surrounding 0 0 0 0)
 
 makeFocusedWidget ::
     HasCallStack =>
     String -> Env -> WorkArea -> OnceT (T ViewM) (Widget.Focused (T ViewM GuiState.Update))
-makeFocusedWidget afterDoc env workArea =
-    makeGui afterDoc env workArea >>= either error pure . focusedWidget
+makeFocusedWidget msg env workArea =
+    makeGui msg env workArea >>= either error pure . focusedWidget msg
 
 mApplyEvent ::
-    Env -> VirtualCursor -> Event -> WorkArea -> OnceT (T ViewM) (Maybe GuiState.Update)
-mApplyEvent env virtCursor event workArea =
+    HasCallStack =>
+    String -> Env -> VirtualCursor -> Event -> WorkArea -> OnceT (T ViewM) (Maybe GuiState.Update)
+mApplyEvent msg env virtCursor event workArea =
     do
-        w <- makeFocusedWidget "mApplyEvent" env workArea
+        w <- makeFocusedWidget msg env workArea
         let eventMap =
                 (w ^. Widget.fEventMap)
                 Widget.EventContext
@@ -153,13 +154,13 @@ applyEventWith msg virtCursor event env =
     do
         r <-
             convertWorkArea msg env
-            >>= mApplyEvent env virtCursor event
+            >>= mApplyEvent msg env virtCursor event
             <&> fromMaybe (error msg)
             <&> (`GuiState.update` env)
         r `seq` pure r
 
 applyEvent :: HasCallStack => VirtualCursor -> Event -> Env -> OnceT (T ViewM) Env
-applyEvent v e = applyEventWith ("no event in applyEvent: " <> show e) v e
+applyEvent v e = applyEventWith ("applyEvent: " <> show e) v e
 
 fromWorkArea ::
     Env ->
@@ -373,12 +374,12 @@ testKeyboardDirAndBack ::
 testKeyboardDirAndBack posEnv posVirt way back =
     do
         wa <- convertWorkArea baseInfo posEnv
-        mApplyEvent posEnv posVirt (simpleKeyEvent way) wa
+        mApplyEvent "" posEnv posVirt (simpleKeyEvent way) wa
             >>=
             \case
             Nothing -> pure ()
             Just updThere ->
-                mApplyEvent
+                mApplyEvent ""
                 (GuiState.update updThere posEnv)
                 (updThere ^?! GuiState.uVirtualCursor . traverse)
                 (simpleKeyEvent back) wa
@@ -524,7 +525,7 @@ programTest baseEnv filename =
                 (baseGui ^. Responsive.rNarrow) (Responsive.NarrowLayoutParams 0 False)
                 ^. Align.tValue . Widget.wSize
         when (size ^. _1 < narrowSize ^. _1) (error "wide size is narrower than narrow!")
-        w <- focusedWidget baseGui & either error pure
+        w <- focusedWidget "" baseGui & either error pure
         case w ^. Widget.fMEnterPoint of
             Nothing ->
                 VirtualCursor (w ^?! Widget.fFocalAreas . Lens.ix 0)
@@ -565,9 +566,9 @@ charEvent '⇐' = shift GLFW.Key'Left & simpleKeyEvent
 charEvent x = EventChar x
 
 applyActions :: HasCallStack => Env.Env -> String -> OnceT (T ViewM) Env.Env
-applyActions =
-    flip (\x -> applyEventWith ("No char " <> show x) dummyVirt (charEvent x))
-    & foldM
+applyActions env xs =
+    zip [0..] xs
+    & foldM (flip (\(i, x) -> applyEventWith (take (i+1) xs) dummyVirt (charEvent x))) env
 
 wytiwysDb :: HasCallStack => IO (Transaction.Store DbLayout.DbM) -> String -> ByteString -> Test
 wytiwysDb mkDb src result =
