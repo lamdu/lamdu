@@ -161,4 +161,6 @@ make (Ann (Const pl) ifElse) =
     & stdWrapParentExpr pl
     where
         animId = WidgetIds.fromExprPayload pl & Widget.toAnimId
-        noLet = Sugar._BodyLam . Sugar.lamFunc . Sugar.fBody . hVal . Sugar.bBody . Sugar._BinderTerm
+        noLet =
+            Sugar._BodyLeaf . Lens.united <>
+            Sugar._BodyLam . Sugar.lamFunc . Sugar.fBody . hVal . Sugar.bBody . Sugar._BinderTerm . Lens.united
