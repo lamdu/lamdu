@@ -44,7 +44,7 @@ verifyUsedTags =
         let unused =
                 Set.difference
                 (Set.fromList (db ^.. traverse . JsonCodec._EntityTag . _1))
-                (Set.fromList (db ^.. traverse . usedTags))
+                (Set.fromList (db ^.. traverse >>= usedTags))
                 ^.. Lens.folded
                 <&> identHex . T.tagName
                 & filter (`notElem` whitelist)
@@ -61,19 +61,23 @@ verifyUsedTags =
             , "f526d897cab5429fb66ebbe0b4b8f34e" -- "window"
             ]
 
-usedTags :: Lens.Traversal' JsonCodec.Entity T.Tag
-usedTags f (JsonCodec.EntityLamVar t v) = JsonCodec.EntityLamVar <$> f t ?? v
-usedTags f (JsonCodec.EntityDef (Def.Definition b s p)) =
-    Def.Definition
-    <$> (Def._BodyExpr . Def.expr . valTags) f b
-    <*> (_Pure . S.sTyp . typeTags) f s
-    <*> _2 f p
-    <&> JsonCodec.EntityDef
-usedTags f (JsonCodec.EntityNominal t n d) =
-    JsonCodec.EntityNominal
-    <$> f t <*> pure n
-    <*> (Lens._Right . _Pure . nScheme . S.sTyp . typeTags) f d
-usedTags _ x = pure x
+usedTags :: JsonCodec.Entity -> [T.Tag]
+usedTags (JsonCodec.EntityLamVar t _) = [t]
+usedTags (JsonCodec.EntityDef (Def.Definition b s p)) =
+    b ^.. Def._BodyExpr . Def.expr . valTags
+    <> s ^.. _Pure . S.sTyp . typeTags
+    <> p ^.. _2
+usedTags (JsonCodec.EntityNominal t _ d) =
+    t :
+    either
+    ( hfoldMap
+        ( \case
+            HWitness T.W_Types_Type -> map T.Tag . (^.. S._QVars . Lens.ifolded . Lens.asIndex . T._Var)
+            HWitness T.W_Types_Row -> map T.Tag . (^.. S._QVars . Lens.ifolded . Lens.asIndex . T._Var)
+        )
+    )
+    (^.. _Pure . nScheme . S.sTyp . typeTags) d
+usedTags _ = []
 
 typeTags :: Lens.Traversal' (Pure # T.Type) T.Tag
 typeTags f =

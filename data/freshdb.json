@@ -1386,6 +1386,19 @@
         }
     },
     {
+        "tagOrder": 1,
+        "tag": "73000000000000000000000000000000",
+        "names": {
+            "hebrew": "השפעות",
+            "english": {
+                "abbreviation": "eff",
+                "name": "effects"
+            },
+            "italian": "effeto",
+            "spanish": "efecto"
+        }
+    },
+    {
         "tagOrder": 0,
         "op": "&&",
         "tag": "73e7b6f86214bc78ee505fb5f7d4fb97"
@@ -2435,6 +2448,10 @@
     },
     {
         "tag": "50fd18e5c459d85ad1e66236feb7f37b",
+        "typeVars": [
+            "6eeb55f76600d4ad08be72ad3ac13d96",
+            "73000000000000000000000000000000"
+        ],
         "nom": "42493a53540000000000000000000000"
     },
     {
