@@ -1644,7 +1644,7 @@
             "hebrew": "קרא_משתנה",
             "english": {
                 "abbreviation": "readRef",
-                "name": "readRefeference"
+                "name": "readReference"
             },
             "italian": "leggiRif",
             "spanish": "leerRef"
