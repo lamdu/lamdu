@@ -59,8 +59,6 @@ verifyUsedTags =
             -- Useful words:
             , "f38fc647fb4b73e35d1ffec481a44dd8" -- "prev"
             , "f526d897cab5429fb66ebbe0b4b8f34e" -- "window"
-            -- TODO, remove from DB:
-            , "61000000000000000000000000000000"
             ]
 
 usedTags :: Lens.Traversal' JsonCodec.Entity T.Tag
