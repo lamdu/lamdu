@@ -1,5 +1,5 @@
 module Lamdu.GUI.Expr.ApplyEdit
-    ( makeSimple, makePostfix, makeLabeled, makePostfixFunc, makeOperatorRow
+    ( makeSimple, makePostfix, makeLabeled, makePostfixFunc
     ) where
 
 import qualified Control.Lens as Lens
@@ -44,53 +44,65 @@ wrapParentNoAnn pl act =
 
 makeLabeled :: _ => ExprGui.Expr Sugar.LabeledApply i o -> GuiM env i o (Responsive o)
 makeLabeled (Ann (Const pl) apply) =
-    case apply ^. Sugar.aMOpArgs of
-    Nothing -> GetVarEdit.make GetVarEdit.Normal func >>= wrap
-    Just (Sugar.OperatorArgs l r s) ->
-        do
-            env <- Lens.view id
-            let swapAction order =
-                    s <&> (\x -> if x then GuiState.updateCursor myId else mempty)
-                    & E.keyPresses
-                        (env ^. has . Config.orderDirKeys . Lens.cloneLens (dirKey (env ^. has) Horizontal order))
-                        (E.toDoc env [has . MomentuTexts.edit, has . Texts.swapOperatorArgs])
-                    & Widget.weakerEvents
-            navigateOut <-
-                ExprEventMap.closeParenEvent
-                [has . MomentuTexts.navigation, has . Texts.leaveSubexpression]
-                (pure myId)
-            disambRhs <-
-                if Lens.has extraArgs apply
-                then ResponsiveExpr.indent ?? Widget.toAnimId myId <> ["rhs"] <&> Responsive.vertLayoutMaybeDisambiguate
-                else pure id
-            (ResponsiveExpr.boxSpacedMDisamb ?? ExprGui.mParensId pl)
-                <*> sequenceA
-                [ GuiM.makeSubexpression l <&> swapAction Forward
-                , makeOperatorRow
-                    (Widget.weakerEvents navigateOut . swapAction Backward . disambRhs) func r
-                    >>= wrap
-                ]
+    do
+        argRows <-
+            case apply ^. Sugar.aAnnotatedArgs of
+            [] -> pure []
+            xs -> taggedListIndent <*> traverse makeArgRow xs <&> (:[])
+        punnedArgs <-
+            case apply ^. Sugar.aPunnedArgs of
+            [] -> pure []
+            args -> GetVarEdit.makePunnedVars args <&> (:[])
+        let extraRows = argRows <> punnedArgs
+        let addArgs funcRow
+                | null extraRows = pure funcRow
+                | otherwise =  Styled.addValFrame <*> (Responsive.vboxSpaced ?? (funcRow : extraRows))
+        let wrap x =
+                (maybeAddAnnotationPl pl <&> (Widget.widget %~)) <*>
+                addArgs x
+        case apply ^. Sugar.aMOpArgs of
+            Nothing -> GetVarEdit.make GetVarEdit.Normal func >>= wrap
+            Just (Sugar.OperatorArgs l r s) ->
+                do
+                    env <- Lens.view id
+                    let swapAction order =
+                            s <&> (\x -> if x then GuiState.updateCursor myId else mempty)
+                            & E.keyPresses
+                                (env ^. has . Config.orderDirKeys . Lens.cloneLens (dirKey (env ^. has) Horizontal order))
+                                (E.toDoc env [has . MomentuTexts.edit, has . Texts.swapOperatorArgs])
+                            & Widget.weakerEvents
+                    navigateOut <-
+                        ExprEventMap.closeParenEvent
+                        [has . MomentuTexts.navigation, has . Texts.leaveSubexpression]
+                        (pure myId)
+                    disambRhs <-
+                        if Lens.has extraArgs apply
+                        then ResponsiveExpr.indent ?? Widget.toAnimId myId <> ["rhs"] <&> Responsive.vertLayoutMaybeDisambiguate
+                        else pure id
+                    lhs <- GuiM.makeSubexpression l <&> swapAction Forward
+                    op <- GetVarEdit.make GetVarEdit.Operator func
+                    rhs <- GuiM.makeSubexpression r <&> Widget.weakerEvents navigateOut . swapAction Backward . disambRhs
+                    res <-
+                        (ResponsiveExpr.boxSpacedMDisamb ?? ExprGui.mParensId pl) <*>
+                        sequenceA
+                        [ pure lhs
+                        , Options.boxSpaced ?? Options.disambiguationNone ?? [op, rhs] >>= wrap
+                        ]
+                    if null extraRows
+                        then
+                            (ResponsiveExpr.boxSpacedMDisamb ?? ExprGui.mParensId pl) <*>
+                            sequenceA
+                            [ Options.boxSpaced ?? Options.disambiguationNone ?? [lhs, op]
+                            , pure rhs
+                            ]
+                            >>= wrap
+                            <&> Responsive.rWide .~ res ^. Responsive.rWide
+                        else pure res
     & wrapParentNoAnn pl
     where
         myId = WidgetIds.fromExprPayload pl
-        wrap x =
-            (maybeAddAnnotationPl pl <&> (Widget.widget %~)) <*>
-            addArgs apply x
         func = apply ^. Sugar.aFunc
         extraArgs = Sugar.aAnnotatedArgs . traverse . Lens.united <> Sugar.aPunnedArgs . traverse . Lens.united
-
-makeOperatorRow ::
-    _ =>
-    (Responsive o -> Responsive o) ->
-    (Annotated (ExprGui.Payload i o) # Const (Sugar.GetVar Name o)) ->
-    ExprGui.Expr Sugar.Term i o ->
-    GuiM env i o (Responsive o)
-makeOperatorRow onR func r =
-    (Options.boxSpaced ?? Options.disambiguationNone)
-    <*> sequenceA
-    [ GetVarEdit.make GetVarEdit.Operator func
-    , GuiM.makeSubexpression r <&> onR
-    ]
 
 makeArgRow :: _ => ExprGui.Body Sugar.AnnotatedArg i o -> GuiM env i o (TaggedItem o)
 makeArgRow arg =
@@ -102,24 +114,6 @@ makeArgRow arg =
             , _taggedItem = expr
             , _tagPost = Nothing
             }
-
-addArgs :: _ => ExprGui.Body Sugar.LabeledApply i o -> Responsive o -> GuiM env i o (Responsive o)
-addArgs apply funcRow =
-    do
-        argRows <-
-            case apply ^. Sugar.aAnnotatedArgs of
-            [] -> pure []
-            xs -> taggedListIndent <*> traverse makeArgRow xs <&> (:[])
-        punnedArgs <-
-            case apply ^. Sugar.aPunnedArgs of
-            [] -> pure []
-            args -> GetVarEdit.makePunnedVars args <&> (:[])
-        let extraRows = argRows ++ punnedArgs
-        if null extraRows
-            then pure funcRow
-            else
-                Styled.addValFrame
-                <*> (Responsive.vboxSpaced ?? (funcRow : extraRows))
 
 makeSimple ::
     _ =>

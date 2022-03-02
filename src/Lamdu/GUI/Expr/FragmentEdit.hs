@@ -177,5 +177,12 @@ makeFragOpt (Ann (Const a) b) =
 
 makeFragOperator :: _ => ExprGui.Body Sugar.FragOperator i o -> GuiM env i o (Responsive o)
 makeFragOperator (Sugar.FragOperator f rArg aArgs) =
-    (Options.boxSpaced ?? Options.disambiguationNone)
-    <*> sequenceA (ApplyEdit.makeOperatorRow id f rArg : (aArgs <&> fmap Responsive.fromTextView . TagEdit.makeArgTag))
+    (Options.boxSpaced ?? Options.disambiguationNone) <*>
+    sequenceA
+    ( ((Options.boxSpaced ?? Options.disambiguationNone) <*>
+        sequenceA
+        [ GetVarEdit.make GetVarEdit.Operator f
+        , GuiM.makeSubexpression rArg
+        ])
+        : (aArgs <&> fmap Responsive.fromTextView . TagEdit.makeArgTag)
+    )
