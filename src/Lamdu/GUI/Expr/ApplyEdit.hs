@@ -37,37 +37,40 @@ import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
 
+wrapParentNoAnn :: _ => Sugar.Payload v o -> GuiM env i o (Responsive o) -> GuiM env i o (Responsive o)
+wrapParentNoAnn pl act =
+    ExprEventMap.add ExprEventMap.defaultOptions pl <*>
+    (Wrap.parentDelegator (WidgetIds.fromExprPayload pl) <*> act)
+
 makeLabeled :: _ => ExprGui.Expr Sugar.LabeledApply i o -> GuiM env i o (Responsive o)
 makeLabeled (Ann (Const pl) apply) =
-    ExprEventMap.add ExprEventMap.defaultOptions pl <*>
-    ( Wrap.parentDelegator myId <*>
-        case apply ^. Sugar.aMOpArgs of
-        Nothing -> GetVarEdit.make GetVarEdit.Normal func >>= wrap
-        Just (Sugar.OperatorArgs l r s) ->
-            do
-                env <- Lens.view id
-                let swapAction order =
-                        s <&> (\x -> if x then GuiState.updateCursor myId else mempty)
-                        & E.keyPresses
-                            (env ^. has . Config.orderDirKeys . Lens.cloneLens (dirKey (env ^. has) Horizontal order))
-                            (E.toDoc env [has . MomentuTexts.edit, has . Texts.swapOperatorArgs])
-                        & Widget.weakerEvents
-                navigateOut <-
-                    ExprEventMap.closeParenEvent
-                    [has . MomentuTexts.navigation, has . Texts.leaveSubexpression]
-                    (pure myId)
-                disambRhs <-
-                    if Lens.has extraArgs apply
-                    then ResponsiveExpr.indent ?? Widget.toAnimId myId <> ["rhs"] <&> Responsive.vertLayoutMaybeDisambiguate
-                    else pure id
-                (ResponsiveExpr.boxSpacedMDisamb ?? ExprGui.mParensId pl)
-                    <*> sequenceA
-                    [ GuiM.makeSubexpression l <&> swapAction Forward
-                    , makeOperatorRow
-                        (Widget.weakerEvents navigateOut . swapAction Backward . disambRhs) func r
-                        >>= wrap
-                    ]
-    )
+    case apply ^. Sugar.aMOpArgs of
+    Nothing -> GetVarEdit.make GetVarEdit.Normal func >>= wrap
+    Just (Sugar.OperatorArgs l r s) ->
+        do
+            env <- Lens.view id
+            let swapAction order =
+                    s <&> (\x -> if x then GuiState.updateCursor myId else mempty)
+                    & E.keyPresses
+                        (env ^. has . Config.orderDirKeys . Lens.cloneLens (dirKey (env ^. has) Horizontal order))
+                        (E.toDoc env [has . MomentuTexts.edit, has . Texts.swapOperatorArgs])
+                    & Widget.weakerEvents
+            navigateOut <-
+                ExprEventMap.closeParenEvent
+                [has . MomentuTexts.navigation, has . Texts.leaveSubexpression]
+                (pure myId)
+            disambRhs <-
+                if Lens.has extraArgs apply
+                then ResponsiveExpr.indent ?? Widget.toAnimId myId <> ["rhs"] <&> Responsive.vertLayoutMaybeDisambiguate
+                else pure id
+            (ResponsiveExpr.boxSpacedMDisamb ?? ExprGui.mParensId pl)
+                <*> sequenceA
+                [ GuiM.makeSubexpression l <&> swapAction Forward
+                , makeOperatorRow
+                    (Widget.weakerEvents navigateOut . swapAction Backward . disambRhs) func r
+                    >>= wrap
+                ]
+    & wrapParentNoAnn pl
     where
         myId = WidgetIds.fromExprPayload pl
         wrap x =
@@ -132,11 +135,12 @@ makeSimple (Ann (Const pl) (Sugar.App func arg)) =
 
 makePostfix :: _ => ExprGui.Expr Sugar.PostfixApply i o -> GuiM env i o (Responsive o)
 makePostfix (Ann (Const pl) (Sugar.PostfixApply arg func)) =
-    (ResponsiveExpr.boxSpacedMDisamb ?? ExprGui.mParensId pl)
-    <*> sequenceA
+    (ResponsiveExpr.boxSpacedMDisamb ?? ExprGui.mParensId pl) <*>
+    sequenceA
     [ GuiM.makeSubexpression arg
-    , makePostfixFunc func
-    ] & stdWrapParentExpr pl
+    , (maybeAddAnnotationPl pl <&> (Widget.widget %~)) <*> makePostfixFunc func
+    ]
+    & wrapParentNoAnn pl
 
 makePostfixFunc :: _ => ExprGui.Expr Sugar.PostfixFunc i o -> GuiM env i o (Responsive o)
 makePostfixFunc (Ann (Const pl) b) =

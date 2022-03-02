@@ -192,8 +192,13 @@ instance MarkBodyAnnotations v Term where
             & BodySimpleApply
         )
     markBodyAnnotations (BodyPostfixApply x) =
-        ( neverShowAnnotations -- No need to see result of from-nom/get-field
-        , morphMap (Proxy @MarkAnnotations #?> markNodeAnnotations) x & BodyPostfixApply
+        ( case x ^. pFunc . hVal of
+            PfFromNom{} -> dontShowEval
+            _ -> neverShowAnnotations -- No need to see result of case/get-field
+        , morphMap (Proxy @MarkAnnotations #?> markNodeAnnotations) x
+            -- Don't show annotations for argument of pattern match
+            & Lens.filteredBy (pFunc . hVal . _PfCase) . pArg . annotation . _1 .~ neverShowAnnotations
+            & BodyPostfixApply
         )
     markBodyAnnotations (BodyLabeledApply x) =
         ( showAnnotationWhenVerbose
