@@ -2249,22 +2249,6 @@
     },
     {
         "tagOrder": 0,
-        "tag": "ee3dd1c9a98b2601b8b99733fd32e57f",
-        "names": {
-            "hebrew": "קלט_פלט",
-            "english": {
-                "abbreviation": "io",
-                "name": "inputOutput"
-            },
-            "italian": "io",
-            "spanish": {
-                "abbreviation": "io",
-                "name": "entradaSalida"
-            }
-        }
-    },
-    {
-        "tagOrder": 0,
         "op": "==",
         "tag": "f16474a9900a44186e87098f5fcb153a"
     },
@@ -2425,10 +2409,6 @@
     {
         "tag": "42493a64617461626173650000000000",
         "nom": "1e4c965cda78422a983b1b2bccecf5bd"
-    },
-    {
-        "tag": "ee3dd1c9a98b2601b8b99733fd32e57f",
-        "nom": "42493a494f0000000000000000000000"
     },
     {
         "nomType": {
