@@ -276,7 +276,9 @@ toSuffixMap tagTexts contexts top =
             where
                 addSuf :: Int -> Text
                 addSuf i = txt <> Text.pack (show i)
-                txt = tagTexts ^?! Lens.ix tag . ttText
+                txt =
+                    tagTexts ^? Lens.ix tag . ttText
+                    & fromMaybe (error ("No text for tag: " <> show tag))
                 item idx uuid =
                     (TaggedVarId uuid tag, idx) <$ (Lens.contains (addSuf idx) .= True)
         collisions =
