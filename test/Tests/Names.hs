@@ -7,6 +7,7 @@ module Tests.Names where
 import           Control.Monad.Trans.FastWriter (Writer, runWriter)
 import           Control.Monad.Unit (Unit(..))
 import           Control.Monad.Writer (MonadWriter(..))
+import           Lamdu.Data.Anchors (anonTag)
 import qualified Lamdu.I18N.Name as Texts
 import           Lamdu.Name (Name)
 import qualified Lamdu.Name as Name
@@ -37,6 +38,7 @@ test =
     testGroup "Disambiguation"
     [ testCase "disambiguation(#396)" workArea396
     , testCase "globals collide" workAreaGlobals
+    , testCase "anonymous globals" anonGlobals
     ]
 
 nameTexts :: Texts.Name Text
@@ -125,8 +127,27 @@ workAreaGlobals =
                 [ "Unexpected/bad collision for name", show text
                 , show textCollision, show tagCollision
                 ] & assertString
-        trivialBinder =
-            Sugar.Hole mempty mempty & Sugar.LeafHole & Sugar.BodyLeaf & Sugar.BinderTerm
-            & Sugar.Binder Unit & Sugar.AssignPlain Unit
-            & Sugar.BodyPlain
-            & Ann (Const Stub.payload)
+
+trivialBinder ::
+    Annotated (Sugar.Payload (Sugar.Annotation v InternalName) Unit) #
+    Sugar.Assignment
+        (Sugar.Annotation (Sugar.EvaluationScopes InternalName Identity) InternalName)
+        InternalName Identity Unit
+trivialBinder =
+    Sugar.Hole mempty mempty & Sugar.LeafHole & Sugar.BodyLeaf & Sugar.BinderTerm
+    & Sugar.Binder Unit & Sugar.AssignPlain Unit
+    & Sugar.BodyPlain
+    & Ann (Const Stub.payload)
+
+anonGlobals :: IO ()
+anonGlobals =
+    Sugar.WorkArea
+    { Sugar._waRepl = Stub.repl Stub.hole
+    , Sugar._waPanes =
+        -- 2 defs sharing the same tag with different Vars/UUIDs,
+        -- should collide with ordinary suffixes
+        [ Stub.def Stub.numType "def1" anonTag trivialBinder & Stub.pane
+        , Stub.def Stub.numType "def2" anonTag trivialBinder & Stub.pane
+        ]
+    , Sugar._waGlobals = Sugar.Globals (pure []) (pure []) (pure [])
+    } & testWorkArea (\x -> length (show x) `seq` pure ())
