@@ -260,11 +260,12 @@ isReserved env name =
 
 toSuffixMap ::
     HasCallStack =>
+    Texts.Name Text ->
     Map T.Tag TagText ->
     MMap T.Tag (Bias L (OSet UUID)) ->
     MMap T.Tag Clash.Collider ->
     TagSuffixes
-toSuffixMap tagTexts contexts top =
+toSuffixMap lang tagTexts contexts top =
     evalState (Lens.itraverse eachTag collisions) nonCollisionTexts ^. Lens.folded
     where
         eachTag tag ctx =
@@ -276,9 +277,10 @@ toSuffixMap tagTexts contexts top =
             where
                 addSuf :: Int -> Text
                 addSuf i = txt <> Text.pack (show i)
-                txt =
-                    tagTexts ^? Lens.ix tag . ttText
-                    & fromMaybe (error ("No text for tag: " <> show tag))
+                txt | tag == anonTag = lang ^. Texts.unnamed
+                    | otherwise =
+                        tagTexts ^? Lens.ix tag . ttText
+                        & fromMaybe (error ("No text for tag: " <> show tag))
                 item idx uuid =
                     (TaggedVarId uuid tag, idx) <$ (Lens.contains (addSuf idx) .= True)
         collisions =
@@ -311,7 +313,7 @@ initialP2Env env P1Out{_p1Globals, _p1Locals, _p1Contexts, _p1TypeVars, _p1Texts
         & Map.fromList
     , _p2TagTexts = tagTexts
     , _p2Texts = _p1Texts ^. traverse . Tag.name . Lens.to Set.singleton
-    , _p2TagSuffixes = (toSuffixMap tagTexts <$> _p1Contexts <*> top) ^. Lens.folded
+    , _p2TagSuffixes = (toSuffixMap (env ^. has) tagTexts <$> _p1Contexts <*> top) ^. Lens.folded
     , _p2TagsAbove = _p1Globals
         -- all globals are "above" everything, and locals add up as
         -- we descend
