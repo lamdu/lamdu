@@ -58,6 +58,7 @@ data Parts o = Parts
     , pMParamsEdit :: Maybe (Responsive o)
     , pMScopesEdit :: Maybe (M.Widget o)
     , pScopeEventMap :: EventMap (o M.Update)
+    , pMScopeId :: Maybe (CurAndPrev (Maybe Sugar.ScopeId))
     }
 
 readFunctionChosenScope ::
@@ -206,11 +207,10 @@ makeFunctionParts funcApplyLimit (Ann (Const pl) func) delVarBackwardsId =
             (lhsEventMap, paramsEdit) <-
                 ParamsEdit.make False mScopeCursor isScopeNavFocused delVarBackwardsId myId
                 bodyId (func ^. Sugar.fParams)
-            Parts lhsEventMap (Just paramsEdit) mScopeNavEdit scopeEventMap & pure
+            Parts lhsEventMap (Just paramsEdit) mScopeNavEdit scopeEventMap (Just binderScopeId) & pure
             & case mScopeNavEdit of
               Nothing -> GuiState.assignCursorPrefix scopesNavId (const destId)
               Just _ -> id
-            & GuiM.withLocalMScopeId binderScopeId
     where
         myId = WidgetIds.fromExprPayload pl
         destId =
@@ -235,7 +235,7 @@ makePlainParts assignPlain =
                 E.keysEventMapMovesCursor (env ^. has . Config.addNextParamKeys)
                 (E.toDoc env [has . MomentuTexts.edit, has . Texts.parameter, has . Texts.add])
                 (assignPlain ^. Sugar.apAddFirstParam <&> enterParam)
-        Parts addParam Nothing Nothing mempty & pure
+        Parts addParam Nothing Nothing mempty Nothing & pure
     where
         enterParam = WidgetIds.tagHoleId . WidgetIds.fromEntityId
 
@@ -270,9 +270,9 @@ make ::
     GuiM env i o (Responsive o)
 make pMode delParamDest assignment nameEdit =
     makeParts Sugar.UnlimitedFuncApply assignment delParamDest
-    >>= \(Parts lhsEventMap mParamsEdit mScopeEdit eventMap) ->
+    >>= \(Parts lhsEventMap mParamsEdit mScopeEdit eventMap mScopeId) ->
     do
-        bodyEdit <- GuiM.makeBinder body
+        bodyEdit <- GuiM.makeBinder body & maybe id GuiM.withLocalMScopeId mScopeId
         rhsJumperEquals <- body ^. annotation & WidgetIds.fromExprPayload & makeJumpToRhs
         mPresentationEdit <-
             case assignmentBody of
