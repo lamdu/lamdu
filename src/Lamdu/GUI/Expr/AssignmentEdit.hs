@@ -59,7 +59,6 @@ data Parts i o = Parts
     , pMScopesEdit :: Maybe (M.Widget o)
     , pScopeEventMap :: EventMap (o M.Update)
     , pMLamPayload :: Maybe (ExprGui.Payload i o)
-    , pRhsId :: Widget.Id
     }
 
 readFunctionChosenScope ::
@@ -208,7 +207,7 @@ makeFunctionParts funcApplyLimit (Ann (Const pl) func) delVarBackwardsId =
             (lhsEventMap, paramsEdit) <-
                 ParamsEdit.make False mScopeCursor isScopeNavFocused delVarBackwardsId myId
                 bodyId (func ^. Sugar.fParams)
-            Parts lhsEventMap (Just paramsEdit) mScopeNavEdit scopeEventMap (Just pl) bodyId & pure
+            Parts lhsEventMap (Just paramsEdit) mScopeNavEdit scopeEventMap (Just pl) & pure
             & case mScopeNavEdit of
               Nothing -> GuiState.assignCursorPrefix scopesNavId (const destId)
               Just _ -> id
@@ -229,17 +228,16 @@ makeFunctionParts funcApplyLimit (Ann (Const pl) func) delVarBackwardsId =
 
 makePlainParts ::
     _ =>
-    ExprGui.Expr Sugar.AssignPlain i o -> GuiM env i o (Parts i o)
-makePlainParts (Ann (Const pl) assignPlain) =
+    ExprGui.Body Sugar.AssignPlain i o -> GuiM env i o (Parts i o)
+makePlainParts assignPlain =
     do
         env <- Lens.view id
         let addParam =
                 E.keysEventMapMovesCursor (env ^. has . Config.addNextParamKeys)
                 (E.toDoc env [has . MomentuTexts.edit, has . Texts.parameter, has . Texts.add])
                 (assignPlain ^. Sugar.apAddFirstParam <&> enterParam)
-        Parts addParam Nothing Nothing mempty Nothing myId & pure
+        Parts addParam Nothing Nothing mempty Nothing & pure
     where
-        myId = WidgetIds.fromExprPayload pl
         enterParam = WidgetIds.tagHoleId . WidgetIds.fromEntityId
 
 makeParts ::
@@ -248,7 +246,7 @@ makeParts ::
 makeParts funcApplyLimit (Ann (Const pl) assignmentBody) myId =
     case assignmentBody of
     Sugar.BodyFunction x -> makeFunctionParts funcApplyLimit (Ann (Const pl) x) myId
-    Sugar.BodyPlain x -> makePlainParts (Ann (Const pl) x)
+    Sugar.BodyPlain x -> makePlainParts x
 
 makeJumpToRhs :: _ => Widget.Id -> GuiM env i o (EventMap (o M.Update))
 makeJumpToRhs rhsId =
@@ -273,14 +271,10 @@ make ::
     GuiM env i o (Responsive o)
 make pMode delParamDest assignment nameEdit =
     makeParts Sugar.UnlimitedFuncApply assignment delParamDest
-    >>= \(Parts lhsEventMap mParamsEdit mScopeEdit eventMap mLamPl rhsId) ->
+    >>= \(Parts lhsEventMap mParamsEdit mScopeEdit eventMap mLamPl) ->
     do
-        bodyEdit <-
-            case assignment ^. hVal of
-            Sugar.BodyFunction func -> func ^. Sugar.fBody
-            Sugar.BodyPlain x -> x ^. Sugar.apBody & Ann (Const (assignment ^. annotation))
-            & GuiM.makeBinder
-        rhsJumperEquals <- makeJumpToRhs rhsId
+        bodyEdit <- GuiM.makeBinder body
+        rhsJumperEquals <- body ^. annotation & WidgetIds.fromExprPayload & makeJumpToRhs
         mPresentationEdit <-
             case assignmentBody of
             Sugar.BodyPlain{} -> pure Nothing
@@ -319,3 +313,7 @@ make pMode delParamDest assignment nameEdit =
         myId = WidgetIds.fromExprPayload pl
         Ann (Const pl) assignmentBody = assignment
         presentationChoiceId = Widget.joinId myId ["presentation"]
+        body =
+            case assignment ^. hVal of
+            Sugar.BodyFunction func -> func ^. Sugar.fBody
+            Sugar.BodyPlain x -> x ^. Sugar.apBody & Ann (Const (assignment ^. annotation))
