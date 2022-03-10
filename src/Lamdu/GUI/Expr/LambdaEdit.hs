@@ -12,6 +12,7 @@ import qualified Lamdu.GUI.Expr.AssignmentEdit as AssignmentEdit
 import           Lamdu.GUI.Expr.EventMap (closeParenEvent)
 import qualified Lamdu.GUI.Expr.ParamsEdit as ParamsEdit
 import           Lamdu.GUI.Monad (GuiM)
+import qualified Lamdu.GUI.Monad as GuiM
 import qualified Lamdu.GUI.Types as ExprGui
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.GUI.Wrap (stdWrapParentExpr)
@@ -24,9 +25,10 @@ import           Lamdu.Prelude
 make :: _ => ExprGui.Expr Sugar.Lambda i o -> GuiM env i o (Responsive o)
 make (Ann (Const pl) lam) =
     do
-        AssignmentEdit.Parts lhsEventMap mParamsEdit mScopeEdit bodyEdit scopeEventMap _wrap rhsId <-
+        AssignmentEdit.Parts lhsEventMap mParamsEdit mScopeEdit scopeEventMap _wrap rhsId <-
             AssignmentEdit.makeFunctionParts (lam ^. Sugar.lamApplyLimit)
             (Ann (Const pl) func) (WidgetIds.fromEntityId bodyId)
+        bodyEdit <- func ^. Sugar.fBody & GuiM.makeBinder
         rhsJumperEquals <- AssignmentEdit.makeJumpToRhs rhsId
         paramsAndLabelEdits <- ParamsEdit.makeLhs (lam ^. Sugar.lamLightweight) params mParamsEdit mScopeEdit lhsEventMap myId
         navigateOut <-
