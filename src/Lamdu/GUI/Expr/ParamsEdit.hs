@@ -78,18 +78,18 @@ addScopeEdit =
     Glue.mkGlue ?? Glue.Vertical
     <&> (\(|---|) mScopeEdit -> (|---| maybe M.empty (M.WithTextPos 0) mScopeEdit))
 
-mkLhsEdits :: _ => m (Maybe (Responsive o) -> Maybe (M.Widget o) -> [Responsive o])
+mkLhsEdits :: _ => m (Responsive o -> Maybe (M.Widget o) -> [Responsive o])
 mkLhsEdits =
-    addScopeEdit <&> \add mParamsEdit mScopeEdit ->
-    mParamsEdit ^.. Lens._Just <&> add mScopeEdit
+    addScopeEdit <&>
+    \add paramsEdit mScopeEdit -> [add mScopeEdit paramsEdit]
 
-mkExpanded :: _ => f (Maybe (Responsive o) -> Maybe (M.Widget o) -> [Responsive o])
+mkExpanded :: _ => f (Responsive o -> Maybe (M.Widget o) -> [Responsive o])
 mkExpanded =
     do
         lam <- grammar (label Texts.lam) <&> Responsive.fromTextView
         lhsEdits <- mkLhsEdits
         arrow <- grammar (label Texts.arrow) <&> Responsive.fromTextView
-        pure (\mParamsEdit mScopeEdit -> lam : lhsEdits mParamsEdit mScopeEdit <> [arrow])
+        pure (\paramsEdit mScopeEdit -> lam : lhsEdits paramsEdit mScopeEdit <> [arrow])
 
 mkShrunk :: _ => [Sugar.EntityId] -> Widget.Id -> f (Maybe (M.Widget o) -> [Responsive o])
 mkShrunk paramIds myId =
@@ -123,7 +123,7 @@ lamId = (`Widget.joinId` ["lam"])
 mkLightLambda ::
     _ =>
     Sugar.LhsNames a i o v -> Widget.Id ->
-    f (Maybe (Responsive o) -> Maybe (M.Widget o) -> [Responsive o])
+    f (Responsive o -> Maybe (M.Widget o) -> [Responsive o])
 mkLightLambda params myId =
     do
         isSelected <-
@@ -154,12 +154,12 @@ mkLightLambda params myId =
 makeLhs ::
     _ =>
     Bool -> Sugar.LhsNames a i o v ->
-    Maybe (Responsive o) -> Maybe (Widget.Widget o) -> EventMap (o GuiState.Update) -> Widget.Id ->
+    Responsive o -> Maybe (Widget.Widget o) -> EventMap (o GuiState.Update) -> Widget.Id ->
     m [Responsive o]
-makeLhs _ (Sugar.LhsVar p) mParamsEdit mScopeEdit _ _
-    | p ^. Sugar.vIsNullParam = mkLhsEdits ?? mParamsEdit ?? mScopeEdit
-makeLhs True params mParamsEdit mScopeEdit _ myId = mkLightLambda params myId ?? mParamsEdit ?? mScopeEdit
-makeLhs _ _ mParamsEdit mScopeEdit lhsEventMap _ = mkExpanded ?? mParamsEdit ?? mScopeEdit <&> Lens.ix 0 %~ M.weakerEvents lhsEventMap
+makeLhs _ (Sugar.LhsVar p) paramsEdit mScopeEdit _ _
+    | p ^. Sugar.vIsNullParam = mkLhsEdits ?? paramsEdit ?? mScopeEdit
+makeLhs True params paramsEdit mScopeEdit _ myId = mkLightLambda params myId ?? paramsEdit ?? mScopeEdit
+makeLhs _ _ paramsEdit mScopeEdit lhsEventMap _ = mkExpanded ?? paramsEdit ?? mScopeEdit <&> Lens.ix 0 %~ M.weakerEvents lhsEventMap
 
 make ::
     _ =>

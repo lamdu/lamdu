@@ -55,10 +55,10 @@ import           Lamdu.Prelude
 
 data Parts o = Parts
     { pAddFirstEventMap :: EventMap (o M.Update)
-    , pMParamsEdit :: Maybe (Responsive o)
+    , pParamsEdit :: Responsive o
     , pMScopesEdit :: Maybe (M.Widget o)
     , pScopeEventMap :: EventMap (o M.Update)
-    , pMScopeId :: Maybe (CurAndPrev (Maybe Sugar.ScopeId))
+    , pScopeId :: CurAndPrev (Maybe Sugar.ScopeId)
     }
 
 readFunctionChosenScope ::
@@ -207,7 +207,7 @@ makeFunctionParts funcApplyLimit (Ann (Const pl) func) delVarBackwardsId =
             (lhsEventMap, paramsEdit) <-
                 ParamsEdit.make False mScopeCursor isScopeNavFocused delVarBackwardsId myId
                 bodyId (func ^. Sugar.fParams)
-            Parts lhsEventMap (Just paramsEdit) mScopeNavEdit scopeEventMap (Just binderScopeId) & pure
+            Parts lhsEventMap paramsEdit mScopeNavEdit scopeEventMap binderScopeId & pure
             & case mScopeNavEdit of
               Nothing -> GuiState.assignCursorPrefix scopesNavId (const destId)
               Just _ -> id
@@ -224,28 +224,6 @@ makeFunctionParts funcApplyLimit (Ann (Const pl) func) delVarBackwardsId =
                 & WidgetIds.fromEntityId
         scopesNavId = Widget.joinId myId ["scopesNav"]
         bodyId = func ^. Sugar.fBody . annotation & WidgetIds.fromExprPayload
-
-makePlainParts ::
-    _ =>
-    ExprGui.Body Sugar.AssignPlain i o -> GuiM env i o (Parts o)
-makePlainParts assignPlain =
-    do
-        env <- Lens.view id
-        let addParam =
-                E.keysEventMapMovesCursor (env ^. has . Config.addNextParamKeys)
-                (E.toDoc env [has . MomentuTexts.edit, has . Texts.parameter, has . Texts.add])
-                (assignPlain ^. Sugar.apAddFirstParam <&> enterParam)
-        Parts addParam Nothing Nothing mempty Nothing & pure
-    where
-        enterParam = WidgetIds.tagHoleId . WidgetIds.fromEntityId
-
-makeParts ::
-    _ =>
-    Sugar.FuncApplyLimit -> ExprGui.Expr Sugar.Assignment i o -> Widget.Id -> GuiM env i o (Parts o)
-makeParts funcApplyLimit (Ann (Const pl) assignmentBody) myId =
-    case assignmentBody of
-    Sugar.BodyFunction x -> makeFunctionParts funcApplyLimit (Ann (Const pl) x) myId
-    Sugar.BodyPlain x -> makePlainParts x
 
 makeJumpToRhs :: _ => Widget.Id -> GuiM env i o (EventMap (o M.Update))
 makeJumpToRhs rhsId =
@@ -269,50 +247,57 @@ make ::
     Responsive o ->
     GuiM env i o (Responsive o)
 make pMode delParamDest assignment nameEdit =
-    makeParts Sugar.UnlimitedFuncApply assignment delParamDest
-    >>= \(Parts lhsEventMap mParamsEdit mScopeEdit eventMap mScopeId) ->
     do
-        bodyEdit <- GuiM.makeBinder body & maybe id GuiM.withLocalMScopeId mScopeId
-        rhsJumperEquals <- body ^. annotation & WidgetIds.fromExprPayload & makeJumpToRhs
-        mPresentationEdit <-
-            case assignmentBody of
-            Sugar.BodyPlain{} -> pure Nothing
-            Sugar.BodyFunction x ->
-                pMode & sequenceA & GuiM.im
-                >>= traverse
-                    (PresentationModeEdit.make presentationChoiceId (x ^. Sugar.fParams))
-        (|---|) <- Glue.mkGlue ?? Glue.Vertical
-        let defNameEdit =
-                Widget.weakerEvents (rhsJumperEquals <> lhsEventMap) nameEdit
-                |---| fromMaybe M.empty mPresentationEdit
-        mParamEdit <-
-            case mParamsEdit of
-            Nothing -> pure Nothing
-            Just paramsEdit ->
-                Responsive.vboxSpaced
-                ?? (paramsEdit : fmap Responsive.fromWidget mScopeEdit ^.. Lens._Just)
-                <&> Widget.strongerEvents rhsJumperEquals
-                <&> Just
+        rhsJumperEquals <- WidgetIds.fromExprPayload pl & makeJumpToRhs
         equals <- grammar (label Texts.assign)
-        lhs <-
-            Options.boxSpaced ?? Options.disambiguationNone ??
-            defNameEdit : mParamEdit ^.. Lens._Just <> [Responsive.fromTextView equals]
         indent <- ResponsiveExpr.indent
         hbox <-
             Options.hbox
             <*> maybe (pure id) (ResponsiveExpr.addParens ??) (ExprGui.mParensId pl)
             ?? id
         hSpace <- Spacer.stdHSpace <&> Responsive.fromView
-        Responsive.vboxSpaced ?? [lhs, indent (Widget.toAnimId myId <> ["assignment-body"]) bodyEdit]
-            <&> Options.tryWideLayout hbox [lhs, hSpace, bodyEdit]
-        & local (M.animIdPrefix .~ Widget.toAnimId myId)
-        & (if Lens.has Sugar._BodyFunction assignmentBody then stdWrap pl else id)
-        <&> Widget.weakerEvents eventMap
+        case assignmentBody of
+            Sugar.BodyPlain x ->
+                do
+                    bodyEdit <- x ^. Sugar.apBody & Ann (Const (assignment ^. annotation)) & GuiM.makeBinder
+                    env <- Lens.view id
+                    let addParam =
+                            E.keysEventMapMovesCursor (env ^. has . Config.addNextParamKeys)
+                            (E.toDoc env [has . MomentuTexts.edit, has . Texts.parameter, has . Texts.add])
+                            (x ^. Sugar.apAddFirstParam <&> WidgetIds.tagHoleId . WidgetIds.fromEntityId)
+                    let defNameEdit =
+                            Widget.weakerEvents (rhsJumperEquals <> addParam) nameEdit
+                    lhs <-
+                        Options.boxSpaced ?? Options.disambiguationNone ??
+                        [defNameEdit, Responsive.fromTextView equals]
+                    Responsive.vboxSpaced ?? [lhs, indent (Widget.toAnimId myId <> ["assignment-body"]) bodyEdit]
+                        <&> Options.tryWideLayout hbox [lhs, hSpace, bodyEdit]
+            Sugar.BodyFunction x ->
+                do
+                    Parts lhsEventMap paramsEdit mScopeEdit eventMap scopeId <-
+                        makeFunctionParts Sugar.UnlimitedFuncApply (Ann (Const pl) x) delParamDest
+                    bodyEdit <- x ^. Sugar.fBody & GuiM.makeBinder & GuiM.withLocalMScopeId scopeId
+                    mPresentationEdit <-
+                        pMode & sequenceA & GuiM.im
+                        >>= traverse
+                            (PresentationModeEdit.make presentationChoiceId (x ^. Sugar.fParams))
+                    (|---|) <- Glue.mkGlue ?? Glue.Vertical
+                    let defNameEdit =
+                            Widget.weakerEvents (rhsJumperEquals <> lhsEventMap) nameEdit
+                            |---| fromMaybe M.empty mPresentationEdit
+                    paramScopeEdit <-
+                        Responsive.vboxSpaced
+                        ?? (paramsEdit : fmap Responsive.fromWidget mScopeEdit ^.. Lens._Just)
+                        <&> Widget.strongerEvents rhsJumperEquals
+                    lhs <-
+                        Options.boxSpaced ?? Options.disambiguationNone ??
+                        [defNameEdit, paramScopeEdit, Responsive.fromTextView equals]
+                    Responsive.vboxSpaced ?? [lhs, indent (Widget.toAnimId myId <> ["assignment-body"]) bodyEdit]
+                        <&> Options.tryWideLayout hbox [lhs, hSpace, bodyEdit]
+                        & local (M.animIdPrefix .~ Widget.toAnimId myId)
+                        & stdWrap pl
+                        <&> Widget.weakerEvents eventMap
     where
         myId = WidgetIds.fromExprPayload pl
         Ann (Const pl) assignmentBody = assignment
         presentationChoiceId = Widget.joinId myId ["presentation"]
-        body =
-            case assignment ^. hVal of
-            Sugar.BodyFunction func -> func ^. Sugar.fBody
-            Sugar.BodyPlain x -> x ^. Sugar.apBody & Ann (Const (assignment ^. annotation))

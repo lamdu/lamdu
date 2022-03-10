@@ -25,15 +25,12 @@ import           Lamdu.Prelude
 make :: _ => ExprGui.Expr Sugar.Lambda i o -> GuiM env i o (Responsive o)
 make (Ann (Const pl) lam) =
     do
-        AssignmentEdit.Parts lhsEventMap mParamsEdit mScopeEdit scopeEventMap mScopeId <-
+        AssignmentEdit.Parts lhsEventMap paramsEdit mScopeEdit scopeEventMap scopeId <-
             AssignmentEdit.makeFunctionParts (lam ^. Sugar.lamApplyLimit)
             (Ann (Const pl) func) (WidgetIds.fromEntityId bodyId)
-        bodyEdit <-
-            func ^. Sugar.fBody
-            & GuiM.makeBinder
-            & maybe id GuiM.withLocalMScopeId mScopeId
+        bodyEdit <- func ^. Sugar.fBody & GuiM.makeBinder & GuiM.withLocalMScopeId scopeId
         rhsJumperEquals <- func ^. Sugar.fBody . annotation & WidgetIds.fromExprPayload & AssignmentEdit.makeJumpToRhs
-        paramsAndLabelEdits <- ParamsEdit.makeLhs (lam ^. Sugar.lamLightweight) params mParamsEdit mScopeEdit lhsEventMap myId
+        paramsAndLabelEdits <- ParamsEdit.makeLhs (lam ^. Sugar.lamLightweight) params paramsEdit mScopeEdit lhsEventMap myId
         navigateOut <-
             closeParenEvent
             [has . MomentuTexts.navigation, has . Texts.lambda, has . Texts.leaveSubexpression]
