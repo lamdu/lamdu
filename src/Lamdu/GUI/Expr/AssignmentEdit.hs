@@ -251,10 +251,7 @@ make pMode delParamDest assignment nameEdit =
         rhsJumperEquals <- WidgetIds.fromExprPayload pl & makeJumpToRhs
         equals <- grammar (label Texts.assign)
         indent <- ResponsiveExpr.indent
-        hbox <-
-            Options.hbox
-            <*> maybe (pure id) (ResponsiveExpr.addParens ??) (ExprGui.mParensId pl)
-            ?? id
+        hbox <- Options.hbox ?? id ?? id
         hSpace <- Spacer.stdHSpace <&> Responsive.fromView
         case assignmentBody of
             Sugar.BodyPlain x ->
