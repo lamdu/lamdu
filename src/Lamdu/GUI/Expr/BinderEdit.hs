@@ -53,7 +53,7 @@ makeLetEdit item myId =
                 ) (item ^? Sugar.lNames . Sugar._LhsVar . Sugar.vDelete)
         (_, nameEdit) <- ParamsEdit.make True (pure Nothing) ParamsEdit.ScopeNavNotFocused myId myId bodyId (item ^. Sugar.lNames)
         grammar (label Texts.let_) M./|/ Spacer.stdHSpace M./|/ pure nameEdit
-            >>= AssignmentEdit.make Nothing myId binder
+            >>= AssignmentEdit.make myId binder
             <&> M.weakerEvents eventMap
             <&> M.padAround (env ^. has . Theme.letItemPadding)
     where

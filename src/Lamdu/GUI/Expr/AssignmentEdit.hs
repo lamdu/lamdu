@@ -8,7 +8,6 @@ import           Control.Applicative (liftA2)
 import qualified Control.Lens as Lens
 import           Data.CurAndPrev (CurAndPrev, fallbackToPrev)
 import qualified Data.Map as Map
-import           Data.Property (Property)
 import qualified Data.Property as Property
 import qualified GUI.Momentu as M
 import qualified GUI.Momentu.Direction as Dir
@@ -35,11 +34,9 @@ import qualified Lamdu.Annotations as Annotations
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.Config.Theme.TextColors as TextColors
-import qualified Lamdu.Data.Meta as Meta
 import qualified Lamdu.GUI.Expr.ParamsEdit as ParamsEdit
 import           Lamdu.GUI.Monad (GuiM)
 import qualified Lamdu.GUI.Monad as GuiM
-import qualified Lamdu.GUI.PresentationModeEdit as PresentationModeEdit
 import           Lamdu.GUI.Styled (grammar, label)
 import qualified Lamdu.GUI.Types as ExprGui
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
@@ -240,26 +237,26 @@ makeJumpToRhs rhsId =
                 ])
             "="
 
-layout :: _ => Responsive o -> Responsive o -> m (Responsive o)
-layout lhs body =
+layout :: _ => [Responsive o] -> Responsive o -> m (Responsive o)
+layout lhsParts body =
     do
         space <- Spacer.stdHSpace <&> Responsive.fromView
         indent <- ResponsiveExpr.indent
         indentId <- subAnimId ?? ["assignment-body"]
         hbox <- Options.hbox ?? id ?? id
-        Responsive.vboxSpaced ?? [lhs, indent indentId body]
-            <&> Options.tryWideLayout hbox [lhs, space, body]
+        lhs <- Options.boxSpaced ?? Options.disambiguationNone ?? lhsParts
+        Responsive.vboxSpaced ?? [lhs, indent indentId body] <&> Options.tryWideLayout hbox [lhs, space, body]
 
 make ::
     _ =>
-    Maybe (i (Property o Meta.PresentationMode)) ->
     Widget.Id ->
     ExprGui.Expr Sugar.Assignment i o ->
     Responsive o ->
     GuiM env i o (Responsive o)
-make pMode delParamDest assignment nameEdit =
+make delParamDest assignment nameEdit =
     do
         rhsJumperEquals <- WidgetIds.fromExprPayload pl & makeJumpToRhs
+        let makeNameEdit events = Widget.weakerEvents (rhsJumperEquals <> events) nameEdit
         equals <- grammar (label Texts.assign) <&> Responsive.fromTextView
         case assignmentBody of
             Sugar.BodyPlain x ->
@@ -270,32 +267,20 @@ make pMode delParamDest assignment nameEdit =
                             E.keysEventMapMovesCursor (env ^. has . Config.addNextParamKeys)
                             (E.toDoc env [has . MomentuTexts.edit, has . Texts.parameter, has . Texts.add])
                             (x ^. Sugar.apAddFirstParam <&> WidgetIds.tagHoleId . WidgetIds.fromEntityId)
-                    let defNameEdit = Widget.weakerEvents (rhsJumperEquals <> addParam) nameEdit
-                    Options.boxSpaced ?? Options.disambiguationNone ?? [defNameEdit, equals]
-                        >>= (`layout` bodyEdit)
+                    layout [makeNameEdit addParam, equals] bodyEdit
             Sugar.BodyFunction x ->
                 do
                     Parts lhsEventMap paramsEdit mScopeEdit eventMap scopeId <-
                         makeFunctionParts Sugar.UnlimitedFuncApply (Ann (Const pl) x) delParamDest
                     bodyEdit <- x ^. Sugar.fBody & GuiM.makeBinder & GuiM.withLocalMScopeId scopeId
-                    mPresentationEdit <-
-                        pMode & sequenceA & GuiM.im
-                        >>= traverse
-                            (PresentationModeEdit.make presentationChoiceId (x ^. Sugar.fParams))
-                    (|---|) <- Glue.mkGlue ?? Glue.Vertical
-                    let defNameEdit =
-                            Widget.weakerEvents (rhsJumperEquals <> lhsEventMap) nameEdit
-                            |---| fromMaybe M.empty mPresentationEdit
                     paramScopeEdit <-
                         Responsive.vboxSpaced
                         ?? (paramsEdit : fmap Responsive.fromWidget mScopeEdit ^.. Lens._Just)
                         <&> Widget.strongerEvents rhsJumperEquals
-                    Options.boxSpaced ?? Options.disambiguationNone ?? [defNameEdit, paramScopeEdit, equals]
-                        >>= (`layout` bodyEdit)
+                    layout [makeNameEdit lhsEventMap, paramScopeEdit, equals] bodyEdit
                         & stdWrap pl
                         <&> Widget.weakerEvents eventMap
     & local (M.animIdPrefix .~ Widget.toAnimId myId)
     where
         myId = WidgetIds.fromExprPayload pl
         Ann (Const pl) assignmentBody = assignment
-        presentationChoiceId = Widget.joinId myId ["presentation"]

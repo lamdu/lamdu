@@ -6,6 +6,7 @@ import qualified Control.Lens as Lens
 import           Control.Monad.Unit (Unit)
 import qualified GUI.Momentu as M
 import qualified GUI.Momentu.EventMap as E
+import qualified GUI.Momentu.Glue as Glue
 import           GUI.Momentu.Responsive (Responsive)
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.State as GuiState
@@ -16,7 +17,8 @@ import qualified Lamdu.Config.Theme.TextColors as TextColors
 import qualified Lamdu.GUI.Expr.AssignmentEdit as AssignmentEdit
 import qualified Lamdu.GUI.Expr.BuiltinEdit as BuiltinEdit
 import qualified Lamdu.GUI.Expr.TagEdit as TagEdit
-import           Lamdu.GUI.Monad (GuiM)
+import           Lamdu.GUI.Monad (GuiM, im)
+import qualified Lamdu.GUI.PresentationModeEdit as PresentationModeEdit
 import qualified Lamdu.GUI.TypeView as TypeView
 import qualified Lamdu.GUI.Types as ExprGui
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
@@ -33,13 +35,23 @@ makeExprDefinition ::
     M.WidgetId ->
     GuiM env i o (Responsive o)
 makeExprDefinition def bodyExpr myId =
-    TagEdit.makeBinderTagEdit TextColors.definitionColor (def ^. Sugar.drName)
-    <&> Responsive.fromWithTextPos
-    >>= AssignmentEdit.make (bodyExpr ^. Sugar.dePresentationMode) nameEditId (bodyExpr ^. Sugar.deContent)
+    do
+        mPresentationEdit <-
+            do
+                presModeProp <- bodyExpr ^. Sugar.dePresentationMode
+                params <- bodyExpr ^? Sugar.deContent . hVal . Sugar._BodyFunction . Sugar.fParams
+                im presModeProp >>= PresentationModeEdit.make presentationChoiceId params & Just
+            & sequenceA
+        (|---|) <- Glue.mkGlue ?? Glue.Vertical
+        TagEdit.makeBinderTagEdit TextColors.definitionColor (def ^. Sugar.drName)
+            <&> (|---| fromMaybe M.empty mPresentationEdit)
+            <&> Responsive.fromWithTextPos
+            >>= AssignmentEdit.make nameEditId (bodyExpr ^. Sugar.deContent)
     & GuiState.assignCursor myId nameEditId
     where
         nameEditId =
             def ^. Sugar.drName . Sugar.oTag . Sugar.tagRefTag . Sugar.tagInstance & WidgetIds.fromEntityId
+        presentationChoiceId = Widget.joinId myId ["presentation"]
 
 makeBuiltinDefinition ::
     _ =>
