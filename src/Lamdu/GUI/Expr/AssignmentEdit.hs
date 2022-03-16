@@ -12,6 +12,7 @@ import           Data.Property (Property)
 import qualified Data.Property as Property
 import qualified GUI.Momentu as M
 import qualified GUI.Momentu.Direction as Dir
+import           GUI.Momentu.Element (subAnimId)
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.FocusDirection as Direction
@@ -239,6 +240,16 @@ makeJumpToRhs rhsId =
                 ])
             "="
 
+layout :: _ => Responsive o -> Responsive o -> m (Responsive o)
+layout lhs body =
+    do
+        space <- Spacer.stdHSpace <&> Responsive.fromView
+        indent <- ResponsiveExpr.indent
+        indentId <- subAnimId ?? ["assignment-body"]
+        hbox <- Options.hbox ?? id ?? id
+        Responsive.vboxSpaced ?? [lhs, indent indentId body]
+            <&> Options.tryWideLayout hbox [lhs, space, body]
+
 make ::
     _ =>
     Maybe (i (Property o Meta.PresentationMode)) ->
@@ -249,10 +260,7 @@ make ::
 make pMode delParamDest assignment nameEdit =
     do
         rhsJumperEquals <- WidgetIds.fromExprPayload pl & makeJumpToRhs
-        equals <- grammar (label Texts.assign)
-        indent <- ResponsiveExpr.indent
-        hbox <- Options.hbox ?? id ?? id
-        hSpace <- Spacer.stdHSpace <&> Responsive.fromView
+        equals <- grammar (label Texts.assign) <&> Responsive.fromTextView
         case assignmentBody of
             Sugar.BodyPlain x ->
                 do
@@ -262,13 +270,9 @@ make pMode delParamDest assignment nameEdit =
                             E.keysEventMapMovesCursor (env ^. has . Config.addNextParamKeys)
                             (E.toDoc env [has . MomentuTexts.edit, has . Texts.parameter, has . Texts.add])
                             (x ^. Sugar.apAddFirstParam <&> WidgetIds.tagHoleId . WidgetIds.fromEntityId)
-                    let defNameEdit =
-                            Widget.weakerEvents (rhsJumperEquals <> addParam) nameEdit
-                    lhs <-
-                        Options.boxSpaced ?? Options.disambiguationNone ??
-                        [defNameEdit, Responsive.fromTextView equals]
-                    Responsive.vboxSpaced ?? [lhs, indent (Widget.toAnimId myId <> ["assignment-body"]) bodyEdit]
-                        <&> Options.tryWideLayout hbox [lhs, hSpace, bodyEdit]
+                    let defNameEdit = Widget.weakerEvents (rhsJumperEquals <> addParam) nameEdit
+                    Options.boxSpaced ?? Options.disambiguationNone ?? [defNameEdit, equals]
+                        >>= (`layout` bodyEdit)
             Sugar.BodyFunction x ->
                 do
                     Parts lhsEventMap paramsEdit mScopeEdit eventMap scopeId <-
@@ -286,14 +290,11 @@ make pMode delParamDest assignment nameEdit =
                         Responsive.vboxSpaced
                         ?? (paramsEdit : fmap Responsive.fromWidget mScopeEdit ^.. Lens._Just)
                         <&> Widget.strongerEvents rhsJumperEquals
-                    lhs <-
-                        Options.boxSpaced ?? Options.disambiguationNone ??
-                        [defNameEdit, paramScopeEdit, Responsive.fromTextView equals]
-                    Responsive.vboxSpaced ?? [lhs, indent (Widget.toAnimId myId <> ["assignment-body"]) bodyEdit]
-                        <&> Options.tryWideLayout hbox [lhs, hSpace, bodyEdit]
-                        & local (M.animIdPrefix .~ Widget.toAnimId myId)
+                    Options.boxSpaced ?? Options.disambiguationNone ?? [defNameEdit, paramScopeEdit, equals]
+                        >>= (`layout` bodyEdit)
                         & stdWrap pl
                         <&> Widget.weakerEvents eventMap
+    & local (M.animIdPrefix .~ Widget.toAnimId myId)
     where
         myId = WidgetIds.fromExprPayload pl
         Ann (Const pl) assignmentBody = assignment
