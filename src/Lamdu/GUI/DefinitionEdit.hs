@@ -30,11 +30,11 @@ import           Lamdu.Prelude
 
 makeExprDefinition ::
     _ =>
-    ExprGui.Top Sugar.Definition i o ->
+    Sugar.OptionalTag Name i o ->
     ExprGui.Top Sugar.DefinitionExpression i o ->
     M.WidgetId ->
     GuiM env i o (Responsive o)
-makeExprDefinition def bodyExpr myId =
+makeExprDefinition defName bodyExpr myId =
     do
         mPresentationEdit <-
             do
@@ -43,14 +43,13 @@ makeExprDefinition def bodyExpr myId =
                 im presModeProp >>= PresentationModeEdit.make presentationChoiceId params & Just
             & sequenceA
         (|---|) <- Glue.mkGlue ?? Glue.Vertical
-        TagEdit.makeBinderTagEdit TextColors.definitionColor (def ^. Sugar.drName)
+        TagEdit.makeBinderTagEdit TextColors.definitionColor defName
             <&> (|---| fromMaybe M.empty mPresentationEdit)
             <&> Responsive.fromWithTextPos
             >>= AssignmentEdit.make nameEditId (bodyExpr ^. Sugar.deContent)
     & GuiState.assignCursor myId nameEditId
     where
-        nameEditId =
-            def ^. Sugar.drName . Sugar.oTag . Sugar.tagRefTag . Sugar.tagInstance & WidgetIds.fromEntityId
+        nameEditId = defName ^. Sugar.oTag . Sugar.tagRefTag . Sugar.tagInstance & WidgetIds.fromEntityId
         presentationChoiceId = Widget.joinId myId ["presentation"]
 
 makeBuiltinDefinition ::
@@ -86,7 +85,7 @@ make def myId =
                     <&> foldMap (GuiState.updateCursor . WidgetIds.fromEntityId))
         case def ^. Sugar.drBody of
             Sugar.DefinitionBodyExpression bodyExpr ->
-                makeExprDefinition def bodyExpr myId
+                makeExprDefinition (def ^. Sugar.drName) bodyExpr myId
             Sugar.DefinitionBodyBuiltin builtin ->
                 makeBuiltinDefinition def builtin myId <&> Responsive.fromWithTextPos
             <&> M.weakerEvents nextOutdated
