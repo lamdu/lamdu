@@ -2,7 +2,7 @@
 
 {-# LANGUAGE GeneralizedNewtypeDeriving, TypeFamilies #-}
 
-module Tests.Names where
+module Tests.Names (test) where
 
 import           Control.Monad.Trans.FastWriter (Writer, runWriter)
 import           Control.Monad.Unit (Unit(..))

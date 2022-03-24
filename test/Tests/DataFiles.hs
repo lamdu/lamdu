@@ -1,4 +1,4 @@
-module Tests.DataFiles where
+module Tests.DataFiles (test) where
 
 import qualified Data.ByteString as BS
 import qualified Data.Set as Set

@@ -1,6 +1,6 @@
 -- | Test sugar convert results (including its actions)
 
-module Tests.Sugar where
+module Tests.Sugar (test) where
 
 import qualified Control.Lens as Lens
 import           Control.Monad.Once (OnceT)

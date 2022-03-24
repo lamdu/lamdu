@@ -1,6 +1,6 @@
 {-# LANGUAGE TypeFamilies #-}
 -- | Test precedences
-module Tests.Precedence where
+module Tests.Precedence (test) where
 
 import           Control.Monad.Unit (Unit(..))
 import qualified Control.Lens as Lens

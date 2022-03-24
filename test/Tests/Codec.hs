@@ -1,4 +1,4 @@
-module Tests.Codec where
+module Tests.Codec (test) where
 
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Diff as AesonDiff

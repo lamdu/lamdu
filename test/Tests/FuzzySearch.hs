@@ -1,4 +1,4 @@
-module Tests.FuzzySearch where
+module Tests.FuzzySearch (test) where
 
 import qualified Control.Lens as Lens
 import           Data.MRUMemo (memo)

@@ -1,4 +1,4 @@
-module Tests.EventMap where
+module Tests.EventMap (test) where
 
 import GUI.Momentu.EventMap
 
