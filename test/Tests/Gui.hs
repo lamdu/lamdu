@@ -1,24 +1,18 @@
-{-# LANGUAGE ScopedTypeVariables #-}
-
-module Tests.Gui where
+module Tests.Gui (test) where
 
 import qualified Control.Lens as Lens
-import           Control.Monad (foldM)
-import           Control.Monad.Once (OnceT, _OnceT, evalOnceT)
+import           Control.Monad.Once (OnceT, _OnceT)
 import           Control.Monad.State (mapStateT)
 import           Control.Monad.Unit (Unit(..))
-import           Data.Char (isAscii)
 import           Data.Containers.ListUtils (nubOrdOn)
-import qualified Data.Property as Property
 import qualified Data.Text as Text
 import           Data.Vector.Vector2 (Vector2(..))
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (Event(..))
 import qualified GUI.Momentu.EventMap as E
-import           GUI.Momentu.Main.Events (KeyEvent(..))
 import qualified GUI.Momentu.MetaKey as MetaKey
-import           GUI.Momentu.ModKey (ModKey(..), noMods, shift)
+import           GUI.Momentu.ModKey (ModKey(..), noMods)
 import           GUI.Momentu.Rect (Rect(..))
 import qualified GUI.Momentu.Rect as Rect
 import           GUI.Momentu.Responsive (Responsive)
@@ -28,30 +22,17 @@ import qualified GUI.Momentu.State as GuiState
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widget.Id as WidgetId
 import qualified Graphics.UI.GLFW as GLFW
-import qualified Lamdu.Data.Anchors as Anchors
-import           Lamdu.Data.Db.Layout (ViewM, runDbTransaction)
-import qualified Lamdu.Data.Db.Layout as DbLayout
-import qualified Lamdu.Data.Export.JS as ExportJS
-import qualified Lamdu.Data.Ops as DataOps
-import qualified Lamdu.GUI.CodeEdit as CodeEdit
-import qualified Lamdu.GUI.Expr as ExpressionEdit
-import qualified Lamdu.GUI.Expr.BinderEdit as BinderEdit
-import qualified Lamdu.GUI.Monad as GuiM
+import           Lamdu.Data.Db.Layout (ViewM)
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Name (Name)
 import qualified Lamdu.Sugar.Lens as SugarLens
 import qualified Lamdu.Sugar.Types as Sugar
-import           Lamdu.VersionControl (runAction)
-import           Revision.Deltum.Transaction (Transaction)
 import qualified Revision.Deltum.Transaction as Transaction
 import           System.Directory (listDirectory)
 import qualified System.Info as SysInfo
-import           Test.Lamdu.Code (readRepl)
-import           Test.Lamdu.Db (ramDB)
 import           Test.Lamdu.Env (Env)
 import qualified Test.Lamdu.Env as Env
-import           Test.Lamdu.Exec (runJS)
-import           Test.Lamdu.Gui (verifyLayers)
+import           Test.Lamdu.Gui
 import           Test.Lamdu.Instances ()
 import           Test.Lamdu.Sugar (convertWorkArea, testProgram)
 import           Text.PrettyPrint (($+$))
@@ -59,8 +40,6 @@ import qualified Text.PrettyPrint as Pretty
 import           Unsafe.Coerce (unsafeCoerce)
 
 import           Test.Lamdu.Prelude
-
-type T = Transaction
 
 test :: Test
 test =
@@ -72,7 +51,6 @@ test =
     , testPunCursor
     , testPrograms
     , testTagPanes
-    , testWYTIWYS
     , testPunnedRecordAddField
     , testRecordPunAndAdd
     , testChooseTagAndAddNext
@@ -83,81 +61,8 @@ replExpr ::
     (Sugar.Term v name i o # Annotated a)
 replExpr = Sugar.waRepl . Sugar.replExpr . hVal . Sugar.bBody . Sugar._BinderTerm
 
-wideFocused :: Lens.Traversal' (Responsive f) (Widget.Surrounding -> Widget.Focused (f GuiState.Update))
-wideFocused = Responsive.rWide . Responsive.lWide . Align.tValue . Widget.wState . Widget._StateFocused
-
-type SugarAnn = Sugar.Annotation (Sugar.EvaluationScopes Name (OnceT (T ViewM))) Name
-
-type WorkArea = Sugar.WorkArea SugarAnn Name (OnceT (T ViewM)) (T ViewM) (Sugar.Payload SugarAnn (T ViewM))
-
-makeGui ::
-    HasCallStack =>
-    String -> Env -> WorkArea -> OnceT (T ViewM) (Responsive (T ViewM))
-makeGui afterDoc env workArea =
-    do
-        let repl = workArea ^. Sugar.waRepl . Sugar.replExpr
-        let replExprId = repl ^. SugarLens.binderResultExpr & WidgetIds.fromExprPayload
-        let assocTagName = DataOps.assocTagName env
-        gui <-
-            do
-                replGui <-
-                    GuiM.makeBinder repl
-                    & GuiState.assignCursor WidgetIds.replId replExprId
-                paneGuis <-
-                    workArea ^..
-                    Sugar.waPanes . traverse
-                    & traverse CodeEdit.makePaneBodyEdit
-                Responsive.vbox ?? (replGui : paneGuis)
-            & GuiM.run assocTagName ExpressionEdit.make BinderEdit.make
-                (Anchors.onGui (Property.mkProperty %~ lift) DbLayout.guiAnchors)
-                env
-        if Lens.has wideFocused gui
-            then pure gui
-            else error ("Red cursor after " ++ afterDoc ++ ": " ++ show (env ^. cursor))
-
 convertAndMakeGui :: HasCallStack => String -> Env -> OnceT (T ViewM) (Responsive (T ViewM))
 convertAndMakeGui afterDoc env = convertWorkArea afterDoc env >>= makeGui afterDoc env
-
-focusedWidget ::
-    HasCallStack =>
-    String -> Responsive f -> Either String (Widget.Focused (f GuiState.Update))
-focusedWidget msg gui =
-    widget <$ verifyLayers msg (widget ^. Widget.fLayers)
-    where
-        widget = (gui ^?! wideFocused) (Widget.Surrounding 0 0 0 0)
-
-makeFocusedWidget ::
-    HasCallStack =>
-    String -> Env -> WorkArea -> OnceT (T ViewM) (Widget.Focused (T ViewM GuiState.Update))
-makeFocusedWidget msg env workArea =
-    makeGui msg env workArea >>= either error pure . focusedWidget msg
-
-mApplyEvent ::
-    HasCallStack =>
-    String -> Env -> VirtualCursor -> Event -> WorkArea -> OnceT (T ViewM) (Maybe GuiState.Update)
-mApplyEvent msg env virtCursor event workArea =
-    do
-        w <- makeFocusedWidget msg env workArea
-        let eventMap =
-                (w ^. Widget.fEventMap)
-                Widget.EventContext
-                { Widget._eVirtualCursor = virtCursor
-                , Widget._ePrevTextRemainder = ""
-                }
-        let r = E.lookup (Identity Nothing) event eventMap & runIdentity
-        -- When trying to figure out which event is selected,
-        -- this is a good place to "traceM (show (r ^? Lens._Just . E.dhDoc))"
-        r ^? Lens._Just . E.dhHandler & sequenceA & lift
-
-applyEventWith :: HasCallStack => String -> VirtualCursor -> Event -> Env -> OnceT (T ViewM) Env
-applyEventWith msg virtCursor event env =
-    do
-        r <-
-            convertWorkArea msg env
-            >>= mApplyEvent msg env virtCursor event
-            <&> fromMaybe (error msg)
-            <&> (`GuiState.update` env)
-        r `seq` pure r
 
 applyEvent :: HasCallStack => VirtualCursor -> Event -> Env -> OnceT (T ViewM) Env
 applyEvent v e = applyEventWith ("applyEvent: " <> show e) v e
@@ -173,9 +78,6 @@ fromWorkArea env path =
     convertWorkArea "" env
     <&> (^?! Lens.cloneTraversal path)
 
-dummyVirt :: VirtualCursor
-dummyVirt = VirtualCursor (Rect 0 0)
-
 testTagPanes :: Test
 testTagPanes =
     testCase "tag-panes" $
@@ -187,15 +89,6 @@ testTagPanes =
             >>= lift . sequence_ .
                 (^.. Lens._Just . Sugar.tlHead . Sugar.tiTag . Sugar.tagRefJumpTo . Lens._Just)
         convertWorkArea "" baseEnv >>= makeFocusedWidget "opened tag panes" baseEnv & void
-
-simpleKeyEvent :: ModKey -> E.Event
-simpleKeyEvent (ModKey mods key) =
-    EventKey KeyEvent
-    { keKey = key
-    , keScanCode = 0 -- dummy
-    , keModKeys = mods
-    , keState = GLFW.KeyState'Pressed
-    }
 
 -- | Test for issue #411
 -- https://trello.com/c/IF6kY9AZ/411-deleting-lambda-parameter-red-cursor
@@ -554,75 +447,3 @@ testPrograms =
               "old-codec-factorial.json"
             , "builtins.json"
             ]
-
-charEvent :: Char -> Event
-charEvent ' ' = noMods GLFW.Key'Space & simpleKeyEvent
-charEvent '\n' = noMods GLFW.Key'Enter & simpleKeyEvent
-charEvent '\t' = noMods GLFW.Key'Tab & simpleKeyEvent
-charEvent ',' = noMods GLFW.Key'Comma & simpleKeyEvent
-charEvent '⌫' = noMods GLFW.Key'Backspace & simpleKeyEvent
-charEvent '→' = noMods GLFW.Key'Right & simpleKeyEvent
-charEvent '⇐' = shift GLFW.Key'Left & simpleKeyEvent
-charEvent x = EventChar x
-
-applyActions :: HasCallStack => Env.Env -> String -> OnceT (T ViewM) Env.Env
-applyActions env xs =
-    zip [0..] xs
-    & foldM (flip (\(i, x) -> applyEventWith (take (i+1) xs) dummyVirt (charEvent x))) env
-
-wytiwysDb :: HasCallStack => IO (Transaction.Store DbLayout.DbM) -> String -> ByteString -> Test
-wytiwysDb mkDb src result =
-    do
-        env <- Env.make
-        db <- mkDb
-        do
-            _ <- applyActions env src
-            lift (readRepl >>= ExportJS.compile)
-            & evalOnceT
-            & runAction
-            & runDbTransaction db
-    >>= runJS
-    >>= assertEqual "Expected output" (result <> "\n")
-    & testCase (filter isAscii src)
-
-testWYTIWYS :: HasCallStack => Test
-testWYTIWYS =
-    do
-        mkDb <- ramDB ["data/freshdb.json"]
-        let wytiwys = wytiwysDb mkDb
-        testGroup "WYTIWYS"
-            [ wytiwys "1+1" "2"
-
-            , wytiwys "2*3+4" "10"
-            , wytiwys "2*(3+4)" "14"
-            , wytiwys "2*(3+4" "14" -- Don't have to close paren
-
-            , wytiwys "sum (1..10)" "45" -- Debatable issue: Space is necessary here!
-            , wytiwys "sum 1..10" "45" -- An Ergonomic WYTIWIS violation: types cause fragment
-            , wytiwys "sum 1..10.map n*2" "90"
-            , wytiwys "sum 1..10.map 2*num\n" "90" -- TODO: Would be better without requiring the enter at the end
-            , wytiwys "sum 1..10.map 2*(num+1)" "108"
-            , wytiwys "sum 1..10.map 2*(num+1" "108"
-
-            , wytiwys "if 1=2:3\t4" "4" -- Type if-expressions without "else:"
-
-            , wytiwys "sum 1..10.filter nu>5" "30"
-            , wytiwys "sum 1..10.filter n>5" "30"
-            , wytiwys "sum 1..10.filter 12<(num+1)*12" "45"
-
-            , wytiwys "if {={:1\t2" "1" -- "{" expands to "{}"
-            , wytiwys "let {val 1\trec.val\n" "1" -- "let " jumps straight to value of let
-
-            , wytiwys "1..10.sort lhs>rhs)).item 2" "7" -- Close parens get out of lambda
-
-            , wytiwys "{a 7,b 5}.a\n" "7"
-            , wytiwys "{a 7,b 5}.a+2" "9"
-
-            , wytiwys "if ⌫1+2" "3" -- Backspace after "if " deletes it
-
-            , wytiwys "7+negate\n→4" "3"
-            , wytiwys "1==2⇐⇐if 3\t4" "4"
-
-            , wytiwys "if 'a'=='b'\t1\t2" "2"
-            ] & pure
-        & buildTest

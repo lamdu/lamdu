@@ -17,6 +17,7 @@ import qualified Tests.Readme
 import qualified Tests.Stdlib
 import qualified Tests.Sugar
 import qualified Tests.Version
+import qualified Tests.Wytiwys
 
 import           Test.Lamdu.Prelude
 
@@ -42,4 +43,5 @@ main =
             , Tests.Stdlib.test
             , Tests.Sugar.test
             , Tests.Version.test
+            , Tests.Wytiwys.test
             ]
