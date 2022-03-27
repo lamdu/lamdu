@@ -12,6 +12,7 @@ module Lamdu.I18N.Fonts
 import qualified Control.Lens as Lens
 import qualified Data.Aeson.TH.Extended as JsonTH
 import qualified Data.Aeson.Types as Aeson
+import           Data.Kind (Type)
 import           Lamdu.Prelude
 
 data ProportionalAndMonospace a = ProportionalAndMonospace
@@ -40,7 +41,7 @@ traverse (\x -> (<>) <$> Lens.makeLenses x <*> JsonTH.derivePrefixed "_" x)
     <&> concat
 
 class Choice s where
-    type Options s :: * -> *
+    type Options s :: Type -> Type
     choice :: Functor f => s -> Lens.LensLike' f (Options s a) a
 
 data ProportionalOrMonospace = Proportional | Monospace deriving (Eq, Generic)

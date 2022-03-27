@@ -60,7 +60,7 @@ instance
         , _hVal = addToBody results (a ^. Lens._Wrapped . _3 . pEntityId) b
         }
 
-type AddToBodyType e n (i :: Type -> Type) (o :: Type -> Type) m a =
+type AddToBodyType e n i (o :: Type -> Type) m a =
     AddEvalCtx -> EntityId ->
     e (Annotation EvalPrep n) n i o #
         Annotated (Annotation EvalPrep n, a, ConvertPayload m) ->

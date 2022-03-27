@@ -59,7 +59,7 @@ data IsUnambiguous = Unambiguous | MayBeAmbiguous
 class (Monad m, Monad (IM m)) => MonadNaming m where
     type OldName m
     type NewName m
-    type IM m :: * -> *
+    type IM m :: Type -> Type
     opRun :: m (m a -> IM m a)
 
     opWithName :: IsUnambiguous -> NameType -> CPSNameConvertor m

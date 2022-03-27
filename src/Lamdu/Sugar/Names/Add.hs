@@ -20,6 +20,7 @@ import qualified Control.Monad.Writer as Writer
 import           Control.Monad.Trans.FastWriter (Writer, runWriter, MonadWriter)
 import qualified Data.Char as Char
 import           Data.Foldable (fold)
+import           Data.Kind (Type)
 import           Data.MMap (MMap(..))
 import qualified Data.MMap as MMap
 import qualified Data.Map as Map
@@ -41,7 +42,7 @@ import           Lamdu.Sugar.Names.CPS (CPS(..), runcps, liftCPS)
 import qualified Lamdu.Sugar.Names.Clash as Clash
 import           Lamdu.Sugar.Names.Walk (MonadNaming(..), Disambiguator)
 import qualified Lamdu.Sugar.Names.Walk as Walk
-import           Lamdu.Sugar.Types
+import           Lamdu.Sugar.Types hiding (Type)
 
 import           Lamdu.Prelude
 
@@ -113,7 +114,7 @@ data P1Name = P1Name
         -- actions.
     , p1IsAutoGen :: Bool
     }
-newtype Pass1PropagateUp (im :: * -> *) (am :: * -> *) a =
+newtype Pass1PropagateUp (im :: Type -> Type) (am :: Type -> Type) a =
     Pass1PropagateUp (Writer P1Out a)
     deriving newtype (Functor, Applicative, Monad, MonadWriter P1Out)
 runPass1PropagateUp :: Pass1PropagateUp i o a -> (a, P1Out)
@@ -355,7 +356,7 @@ Lens.makeLenses ''P2Env
 
 instance Has (Texts.Name Text) P2Env where has = p2NameTexts
 
-newtype Pass2MakeNames (im :: * -> *) (am :: * -> *) a = Pass2MakeNames { runPass2MakeNames :: Reader P2Env a }
+newtype Pass2MakeNames (im :: Type -> Type) (am :: Type -> Type) a = Pass2MakeNames { runPass2MakeNames :: Reader P2Env a }
     deriving newtype (Functor, Applicative, Monad, MonadReader P2Env)
 
 runPass2MakeNamesInitial ::
