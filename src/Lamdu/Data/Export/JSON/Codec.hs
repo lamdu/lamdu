@@ -15,7 +15,6 @@ import qualified Data.Aeson.Types as AesonTypes
 import           Data.Bitraversable (Bitraversable(..))
 import qualified Data.ByteString.Base16 as Hex
 import qualified Data.ByteString.Char8 as BS
-import qualified Data.HashMap.Strict as HashMap
 import qualified Data.Map as Map
 import qualified Data.Set as Set
 import           Data.UUID.Types (UUID)
@@ -528,7 +527,7 @@ decodeRepl obj =
     obj .: "repl" >>= Aeson.withObject "defExpr" decodeDefExpr
 
 insertField :: Aeson.ToJSON a => Text -> a -> Aeson.Object -> Aeson.Object
-insertField k v = HashMap.insert k (Aeson.toJSON v)
+insertField k v = Lens.at k ?~ Aeson.toJSON v
 
 encodeNominal :: Pure # NominalDecl T.Type -> Aeson.Object
 encodeNominal (Pure (NominalDecl params nominalType)) =

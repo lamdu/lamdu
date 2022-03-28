@@ -4,7 +4,6 @@ import qualified Control.Lens as Lens
 import           Control.Lens.Extended ((~~>))
 import qualified Data.Aeson as Aeson
 import           Data.Aeson.Lens (_Object)
-import qualified Data.HashMap.Strict as HashMap
 import qualified Data.Map as Map
 import           Data.String
 import           Lamdu.Data.Export.JSON.Migration.Common (migrateToVer)
@@ -49,15 +48,14 @@ migrateRowVars :: Maybe Aeson.Value -> Aeson.Value -> Either Text Aeson.Value
 migrateRowVars mConstraints (Aeson.Array arr) =
     arr ^.. traverse
     & traverse f
-    <&> HashMap.fromList
     >>= addConstraints
-    <&> Aeson.Object
+    <&> Aeson.object
     where
         f (Aeson.String x) = Right (x, Aeson.Array mempty)
         f _ = Left "malformed row var"
         addConstraints x =
             case mConstraints of
-            Just (Aeson.Object c) -> c <> x & Right
+            Just (Aeson.Object c) -> c ^@.. Lens.ifolded <> x & Right
             Just{} -> Left "malformed row constraints"
             Nothing -> Right x
 migrateRowVars _ _ = Left "malformed rowVars"

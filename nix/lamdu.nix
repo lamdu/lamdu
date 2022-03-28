@@ -9,7 +9,7 @@
 , random, split, stb-image, hypertypes
 , template-haskell, temporary, test-framework, test-framework-hunit
 , text, time, timeit, transformers, generic-constraints
-, unordered-containers, uuid, uuid-types, vector, yaml
+, uuid, uuid-types, vector, yaml
 , zip-archive, lib, gitMinimal
 }:
 mkDerivation {
@@ -48,7 +48,7 @@ mkDerivation {
     language-ecmascript lens lens-aeson leveldb-haskell List mtl
     inline-js-core optparse-applicative ordered-containers pretty process random
     split stb-image hypertypes temporary text time timeit
-    transformers unordered-containers uuid uuid-types vector
+    transformers uuid uuid-types vector
     zip-archive generic-constraints
   ];
   buildDepends = [ gitMinimal ];
