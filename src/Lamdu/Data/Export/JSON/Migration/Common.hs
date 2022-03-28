@@ -6,6 +6,7 @@ module Lamdu.Data.Export.JSON.Migration.Common
 import qualified Control.Lens as Lens
 import           Control.Lens.Extended ((~~>))
 import qualified Data.Aeson as Aeson
+import           Data.Aeson.Lens ()
 import qualified Data.Text as Text
 
 import           Lamdu.Prelude

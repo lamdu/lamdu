@@ -43,10 +43,10 @@ encodeParamList baseId (Just params) =
             & Lens.at "rowTag" ?~ Aeson.String tagId
             & Aeson.Object
             where
-                addId :: Text -> Aeson.Object -> Aeson.Object
+                addId :: _ -> _ -> _
                 addId t x = x & Lens.at t ?~ Aeson.toJSON (UUIDUtils.augment (encodeS (i, t)) baseId)
 
-migrateExpr :: LamParamsMap -> Aeson.Object -> Either Text Aeson.Object
+migrateExpr :: LamParamsMap -> _ -> Either Text _
 migrateExpr lamsMap obj =
     (traverse . _Object) (migrateExpr lamsMap) obj <&>
     case (obj ^? Lens.ix "lamVar", obj ^? Lens.ix "id" . _String, obj ^. Lens.at "id" <&> Aeson.fromJSON) of
@@ -66,7 +66,7 @@ migrateRowFields obj =
     where
         mkField key (Aeson.Object val) =
             val
-            & Lens.at "rowTag" ?~ Aeson.String key
+            & Lens.at "rowTag" ?~ Aeson.toJSON key
             & Aeson.Object & Right
         mkField _ _ = Left "Malformed row item"
 
@@ -82,7 +82,7 @@ migrateRow (Aeson.Array v) =
     _ -> Left "Malformed row"
 migrateRow _ = Left "Malformed row"
 
-migrateType :: Aeson.Object -> Either Text Aeson.Object
+migrateType :: _ -> Either Text _
 migrateType obj =
     (traverse . _Object) migrateType obj
     >>= (traverse . _Array . traverse . _Object) migrateType
@@ -93,7 +93,7 @@ migrateScheme :: Aeson.Value -> Either Text Aeson.Value
 migrateScheme (Aeson.Object obj) = obj & (Lens.ix "schemeType" . _Object) migrateType <&> Aeson.Object
 migrateScheme _ = Left "Malformed scheme"
 
-migrateFrozenDeps :: Aeson.Object -> Either Text Aeson.Object
+migrateFrozenDeps :: _ -> Either Text _
 migrateFrozenDeps obj =
     obj
     & (Lens.ix "defTypes" . _Object . traverse) migrateScheme

@@ -11,6 +11,7 @@ module Lamdu.Data.Export.JSON.Migration.ToVersion3 (migrate) where
 import qualified Control.Lens as Lens
 import           Control.Lens.Extended ((~~>))
 import qualified Data.Aeson as Aeson
+import           Data.Aeson.Lens (_Object)
 import           Data.List.Class (sortOn)
 import qualified Data.Vector as Vector
 import qualified Lamdu.Data.Export.JSON.Migration.Common as Migration
@@ -41,17 +42,9 @@ migrateEntity tagMap (Aeson.Object obj) =
         mTags = mRecordType <&> (^.. Lens.ifolded . Lens.asIndex) <&> sortOn tagOrder
         tagOrder t = tagMap ^. Lens.at t
         mRecordType =
-            obj ^. Lens.at "typ"
-            >>= mObject
-            >>= (^. Lens.at "schemeType")
-            >>= mObject
-            >>= (^. Lens.at "funcParam")
-            >>= mObject
-            >>= (^. Lens.at "record")
-            >>= mObject
-        -- TODO: something like this must exist
-        mObject (Aeson.Object x) = Just x
-        mObject _ = Nothing
+            obj ^?
+            Lens.ix "typ" . _Object . Lens.ix "schemeType" . _Object .
+            Lens.ix "funcParam" . _Object . Lens.ix "record" . _Object
 migrateEntity _ _ = Left "Expecting object"
 
 migrate :: Aeson.Value -> Either Text Aeson.Value

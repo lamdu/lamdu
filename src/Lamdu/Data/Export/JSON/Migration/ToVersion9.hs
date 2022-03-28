@@ -1,3 +1,5 @@
+{-# LANGUAGE TypeFamilies #-}
+
 module Lamdu.Data.Export.JSON.Migration.ToVersion9 (migrate) where
 
 import qualified Control.Lens as Lens
@@ -6,15 +8,12 @@ import qualified Data.Aeson as Aeson
 import           Data.Aeson.Lens (_Object)
 import qualified Data.Map as Map
 import           Data.String
+import           Data.Text (unpack)
 import           Lamdu.Data.Export.JSON.Migration.Common (migrateToVer)
 
 import           Lamdu.Prelude
 
-type NominalId = Text
-
-type NominalParams = Map Text Text
-
-collectNominals :: Aeson.Object -> Either Text (Map NominalId NominalParams)
+collectNominals :: _ -> Either Text (Map _ (Map _ _))
 collectNominals obj =
     case obj ^. Lens.at "nom" of
     Just (Aeson.String nomId) ->
@@ -27,21 +26,19 @@ collectNominals obj =
     Just _ -> Left "Malformed 'nom' id"
     Nothing -> Right mempty
 
-migrateNomParam ::
-    NominalParams ->
-    Text -> Either Text Text
-migrateNomParam nomParams t =
-    nomParams ^. Lens.at t
-    & maybe (Left ("unexpected nom param " <> t <> fromString ("\n" <> show nomParams))) Right
-
 migrateNomParams ::
-    Map NominalId NominalParams -> NominalParams ->
+    Map _ (Map _ _) -> Map _ _ ->
     Aeson.Value -> Either Text Aeson.Value
 migrateNomParams nomsMap nomParams (Aeson.Object obj) =
     obj ^@.. Lens.ifolded
-    & (traverse . _1) (migrateNomParam nomParams)
+    & (traverse . _1) migrateNomParam
     >>= (traverse . _2) (migrateVal nomsMap)
     <&> Aeson.object
+    where
+        migrateNomParam t =
+            nomParams ^. Lens.at t & maybe (Left err) Right
+            where
+                err = "unexpected nom param " <> fromString (show t <> "\n" <> show nomParams)
 migrateNomParams _ _ _ = Left "malformed nomParams"
 
 migrateRowVars :: Maybe Aeson.Value -> Aeson.Value -> Either Text Aeson.Value
@@ -51,7 +48,7 @@ migrateRowVars mConstraints (Aeson.Array arr) =
     >>= addConstraints
     <&> Aeson.object
     where
-        f (Aeson.String x) = Right (x, Aeson.Array mempty)
+        f (Aeson.String x) = Right (fromString (unpack x), Aeson.Array mempty)
         f _ = Left "malformed row var"
         addConstraints x =
             case mConstraints of
@@ -61,7 +58,7 @@ migrateRowVars mConstraints (Aeson.Array arr) =
 migrateRowVars _ _ = Left "malformed rowVars"
 
 migrateVal ::
-    Map NominalId NominalParams ->
+    Map _ (Map _ _) ->
     Aeson.Value -> Either Text Aeson.Value
 migrateVal nomsMap (Aeson.Object obj) =
     case (obj ^. Lens.at "nomId", obj ^. Lens.at "nomParams") of
@@ -94,7 +91,8 @@ migrateVal nomsMap (Aeson.Array vals) =
     traverse (migrateVal nomsMap) vals <&> Aeson.Array
 migrateVal _ x = pure x
 
-typeParamsToTypeVars :: Aeson.Object -> Aeson.Object
+typeParamsToTypeVars ::
+    (Lens.IxValue a ~ Aeson.Value, IsString (Lens.Index a), Lens.At a) => a -> a
 typeParamsToTypeVars x =
     case x ^. Lens.at "typeParams" of
     Just typeParams ->
@@ -103,22 +101,20 @@ typeParamsToTypeVars x =
         & Lens.at "typeVars" ?~ Aeson.toJSON (typeParams ^.. _Object . traverse)
     Nothing -> x
 
-migrateEntity ::
-    Map NominalId NominalParams ->
-    Aeson.Object -> Either Text Aeson.Object
+fixFrozenDeps ::
+    (Lens.IxValue a ~ Aeson.Value, IsString (Lens.Index a), Lens.At a) => a -> a
+fixFrozenDeps =
+    Lens.ix "frozenDeps" . _Object . Lens.ix "nominals" . _Object . traverse . _Object
+    %~ typeParamsToTypeVars
+
+migrateEntity :: Map _ (Map _ _) -> _ -> Either Text _
 migrateEntity nomsMap obj =
     case obj ^. Lens.at "nom" of
     Just{} -> typeParamsToTypeVars obj
-    _ ->
-        fixFrozenDeps obj
-        & Lens.ix "repl" . _Object %~ fixFrozenDeps
+    _ -> fixFrozenDeps obj & Lens.ix "repl" . _Object %~ fixFrozenDeps
     & traverse (migrateVal nomsMap)
-    where
-        fixFrozenDeps =
-            Lens.ix "frozenDeps" . _Object . Lens.ix "nominals" . _Object . traverse . _Object
-            %~ typeParamsToTypeVars
 
-extraNoms :: Map NominalId NominalParams
+extraNoms :: Map _ (Map _ _)
 extraNoms =
     [ -- Mut (ST)
         ("42493a53540000000000000000000000", [thread, value])
