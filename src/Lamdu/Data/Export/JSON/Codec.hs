@@ -353,7 +353,7 @@ decodeLeaf =
             , \obj ->
                 obj .: key >>=
                 \case
-                Aeson.Object x | HashMap.null x -> pure v
+                Aeson.Object x | x == mempty -> pure v
                 x -> fail ("bad val for leaf " ++ show x)
             )
         f key v = (key, \o -> o .: key >>= v)

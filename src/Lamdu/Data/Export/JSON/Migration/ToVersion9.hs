@@ -39,11 +39,10 @@ migrateNomParams ::
     Map NominalId NominalParams -> NominalParams ->
     Aeson.Value -> Either Text Aeson.Value
 migrateNomParams nomsMap nomParams (Aeson.Object obj) =
-    HashMap.toList obj
+    obj ^@.. Lens.ifolded
     & (traverse . _1) (migrateNomParam nomParams)
     >>= (traverse . _2) (migrateVal nomsMap)
-    <&> HashMap.fromList
-    <&> Aeson.Object
+    <&> Aeson.object
 migrateNomParams _ _ _ = Left "malformed nomParams"
 
 migrateRowVars :: Maybe Aeson.Value -> Aeson.Value -> Either Text Aeson.Value
