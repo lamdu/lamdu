@@ -5,6 +5,7 @@ module Lamdu.Data.Export.JSON.Migration.ToVersion15 (migrate) where
 import qualified Control.Lens as Lens
 import qualified Data.Aeson as Aeson
 import           Data.Aeson.Lens (_Object, _Array, _String, key, members, values)
+import           Data.Bifunctor (first)
 import qualified Data.Set as Set
 import           Data.String (IsString(..))
 import qualified Data.Text as Text
@@ -21,7 +22,7 @@ extend =
 rekey :: Aeson.Value -> Aeson.Value
 rekey x =
     x ^@.. _Object . Lens.ifolded
-    <&> (\(k, v) -> (extend k, v))
+    <&> first extend
     & Aeson.object
 
 -- When the scheme belongs to a nominal decl, each of the extended
