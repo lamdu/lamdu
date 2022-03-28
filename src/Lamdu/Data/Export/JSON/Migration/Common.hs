@@ -28,7 +28,7 @@ collectTags (Aeson.Object obj) =
 collectTags _ = Right mempty
 
 version :: Integer -> Aeson.Value
-version x = "schemaVersion" ~~> Aeson.toJSON x & Aeson.Object
+version x = Aeson.object [("schemaVersion", Aeson.toJSON x)]
 
 migrateToVer ::
     Integer ->

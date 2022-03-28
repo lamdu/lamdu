@@ -81,8 +81,7 @@ array = Aeson.Array . Vector.fromList
 encodePresentationMode :: Encoder Meta.PresentationMode
 encodePresentationMode Meta.Verbose = Aeson.String "Verbose"
 encodePresentationMode (Meta.Operator l r) =
-    "Operator" ~~> array [encodeTagId l, encodeTagId r]
-    & Aeson.Object
+    Aeson.object [("Operator", array [encodeTagId l, encodeTagId r])]
 
 decodePresentationMode :: Decoder Meta.PresentationMode
 decodePresentationMode (Aeson.String "Verbose") = pure Meta.Verbose
@@ -199,7 +198,7 @@ encodeComposite  =
     where
         go (Pure T.REmpty) = []
         go (Pure (T.RVar (T.Var name))) =
-            ["rowVar" ~~> encodeIdent name & Aeson.Object]
+            [Aeson.object [("rowVar", encodeIdent name)]]
         go (Pure (T.RExtend (RowExtend t v r))) =
             (encodeType v & _Object . Lens.at "rowTag" ?~ encodeTagId t) : go r
 
@@ -520,7 +519,7 @@ decodeDefBody obj =
     ]
 
 encodeRepl :: Encoder (Definition.Expr (Val UUID))
-encodeRepl defExpr = "repl" ~~> Aeson.Object (encodeDefExpr defExpr) & Aeson.Object
+encodeRepl defExpr = Aeson.object [("repl", Aeson.Object (encodeDefExpr defExpr))]
 
 decodeRepl :: Aeson.Object -> AesonTypes.Parser (Definition.Expr (Val UUID))
 decodeRepl obj =
