@@ -73,7 +73,6 @@ library:
   - bitmap
   - bytestring
   - containers >= 0.4
-  - constraints
   - data-default >= 0.5
   - deepseq
   - directory >= 1.0.1.1

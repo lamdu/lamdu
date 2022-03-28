@@ -1,6 +1,6 @@
 { mkDerivation, aeson, aeson-diff, aeson-pretty, ansi-wl-pprint, base
 , base-compat, base16-bytestring, binary, bitmap, bytestring
-, Cabal, constraints, containers, cryptohash-sha256, data-default, deepseq
+, Cabal, containers, cryptohash-sha256, data-default, deepseq
 , directory, edit-distance, ekg-core
 , executable-path, filepath, generic-data, GLFW-b
 , graphics-drawingcombinators, hashable, HUnit, lamdu-calculus, momentu
@@ -41,7 +41,7 @@ mkDerivation {
   enableSeparateDataOutput = true;
   libraryHaskellDepends = [
     aeson aeson-pretty ansi-wl-pprint base base-compat
-    base16-bytestring binary bitmap bytestring constraints containers cryptohash-sha256
+    base16-bytestring binary bitmap bytestring containers cryptohash-sha256
     data-default deepseq directory edit-distance generic-data
     ekg-core executable-path filepath GLFW-b
     graphics-drawingcombinators hashable lamdu-calculus momentu
