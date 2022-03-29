@@ -180,10 +180,7 @@ combineWidgets =
                     | otherwise = w ||| invisibleHamburger
                 go remainingWidth (w:ws)
                     | newRemaining < hamburger ^. M.width = hamburgerMenu (w:ws)
-                    | otherwise =
-                        case ws of
-                        [] -> w
-                        (_:_) -> wSpaced ||| go newRemaining ws
+                    | otherwise = wSpaced ||| go newRemaining ws
                     where
                         wSpaced = w ||| space
                         newRemaining = remainingWidth - wSpaced ^. M.width
