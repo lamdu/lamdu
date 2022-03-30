@@ -192,16 +192,13 @@ verifyDefs tagName defs =
 
 testValidTypeVars :: IO ()
 testValidTypeVars =
-    do
-        db <- readFreshDb
-        db ^.. Lens.folded . JsonCodec._EntityDef & traverse_ verifyDef
+    readFreshDb >>= Lens.traverseOf_ (Lens.folded . JsonCodec._EntityDef) verifyDef
     where
         verifyDef def =
             do
                 def ^. Def.defType & verifyScheme
                 Lens.traverseOf_ (Def.defBody . Def._BodyExpr) verifyDefExpr def
-        verifyDefExpr defExpr =
-            Lens.traverseOf_ (Def.exprFrozenDeps . depsGlobalTypes . traverse) verifyScheme defExpr
+        verifyDefExpr = Lens.traverseOf_ (Def.exprFrozenDeps . depsGlobalTypes . traverse) verifyScheme
         verifyScheme (Pure s) = verifyTypeInScheme (s ^. S.sForAlls) (s ^. S.sTyp)
 
 class VerifyTypeInScheme t where
