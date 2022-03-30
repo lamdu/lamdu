@@ -199,8 +199,9 @@ testValidTypeVars =
         verifyDef def =
             do
                 def ^. Def.defType & verifyScheme
-                def ^.. Def.defBody . Def._BodyExpr . Def.exprFrozenDeps . depsGlobalTypes . traverse
-                    & traverse_ verifyScheme
+                Lens.traverseOf_ (Def.defBody . Def._BodyExpr) verifyDefExpr def
+        verifyDefExpr defExpr =
+            Lens.traverseOf_ (Def.exprFrozenDeps . depsGlobalTypes . traverse) verifyScheme defExpr
         verifyScheme (Pure s) = verifyTypeInScheme (s ^. S.sForAlls) (s ^. S.sTyp)
 
 class VerifyTypeInScheme t where
