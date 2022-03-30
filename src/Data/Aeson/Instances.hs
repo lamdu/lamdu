@@ -1,4 +1,3 @@
-{-# LANGUAGE StandaloneDeriving #-}
 {-# OPTIONS -fno-warn-orphans #-}
 module Data.Aeson.Instances () where
 
