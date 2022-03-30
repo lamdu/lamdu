@@ -21,8 +21,6 @@ extra-deps:
   commit: 39500dd189b0676468848d1f452ac31c7f0ec461
 - github: lamdu/freetype2
   commit: 046328d92312d65638440132c016a3081d9c32a4
-- github: lamdu/leveldb-haskell
-  commit: 6f2f0b88fd7197e74cbff92bde94168adce3fb29
 - github: lamdu/FreetypeGL
   commit: 18ca298d8fd48ad18f75264553b57714bf070c77
 - github: tweag/inline-js
