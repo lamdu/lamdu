@@ -8,7 +8,7 @@ RUN pacman --sync --refresh
 RUN pacman --noconfirm --sync git
 RUN pacman --noconfirm --sync make
 RUN pacman --noconfirm --sync stack
-RUN pacman --noconfirm --sync leveldb
+RUN pacman --noconfirm --sync rocksdb
 
 # GHC dependency
 RUN pacman --noconfirm --sync numactl

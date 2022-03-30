@@ -16,7 +16,7 @@ import           Prelude
 
 interestingLibs :: [String]
 interestingLibs =
-    [ "libleveldb"
+    [ "librocksdb"
     , "libgmp"
     , "libelf"
     , "libdw"

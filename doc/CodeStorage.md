@@ -21,7 +21,7 @@ We won't go into very specific details about the vision, partly because we're st
 
 ### The database
 
-Currently Lamdu stores the code in a LevelDB database, with a versioning system built on top of it.
+Currently Lamdu stores the code in a RocksDB database, with a versioning system built on top of it.
 
 Lamdu's "undo" is implemented using the versioning system, and you can currently play with branching - that's what the "master" label at the bottom of the screen is for. See the toggle-able help for its shortcut keys.
 Merges are not yet implemented.
@@ -38,7 +38,7 @@ The format is not intended to be very human-readable, although currently that La
 
 #### Format migrations
 
-Unlike the LevelDB based database, when Lamdu's data model changes, even though the format of these `.json` files changes, Lamdu is still backwards compatible and is able to load files in its previous `.json` formats. So you can feel safe saving your code in these files and having future Lamdu version still support them.
+Unlike the RocksDB based database, when Lamdu's data model changes, even though the format of these `.json` files changes, Lamdu is still backwards compatible and is able to load files in its previous `.json` formats. So you can feel safe saving your code in these files and having future Lamdu version still support them.
 
 This process is implemented via migrations, in `Lamdu.Data.Export.JSON.Migration.migrateAsNeeded`.
 

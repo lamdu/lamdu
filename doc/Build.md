@@ -17,7 +17,7 @@ If you do not install NodeJS, Lamdu's installation will build it from source.
 requires an x86_64 [brew](http://brew.sh/) setup and [git](https://git-scm.com/):
 
 ```shell
-arch -arch x86_64 /usr/local/bin/brew install leveldb haskell-stack
+arch -arch x86_64 /usr/local/bin/brew install rocksdb haskell-stack
 git clone --recursive https://github.com/lamdu/lamdu
 cd lamdu
 stack setup
@@ -31,7 +31,7 @@ Then to install lamdu - requires [stack](https://github.com/commercialhaskell/st
 
 ```shell
 sudo apt-get update -qq
-sudo apt-get install git nodejs zlib1g-dev libglew-dev libleveldb-dev -yq
+sudo apt-get install git nodejs zlib1g-dev libglew-dev librocksdb-dev -yq
 sudo apt-get install libxxf86vm-dev libxrandr-dev libxi-dev libxcursor-dev libxinerama-dev -yq
 git clone --recursive https://github.com/lamdu/lamdu
 cd lamdu
@@ -59,7 +59,7 @@ requires [stack](https://github.com/commercialhaskell/stack/releases) (1.6.1 or 
 ```shell
 sudo dnf install -y gcc gcc-c++ gmp-devel libXrandr-devel libXi-devel
 sudo dnf install -y libXcursor-devel mesa-libGL-devel libGLU-devel
-sudo dnf install -y libXinerama-devel leveldb-devel glew-devel zlib-devel
+sudo dnf install -y libXinerama-devel rocksdb-devel glew-devel zlib-devel
 git clone --recursive https://github.com/lamdu/lamdu
 cd lamdu
 stack setup
@@ -79,7 +79,7 @@ NOTE: `~/.local/bin` should be in your `$PATH` for the upgraded `stack` to take 
 ### arch linux
 
 ```shell
-sudo pacman -Sy leveldb libxrandr libxi libxcursor libxinerama stack make tar gcc awk libxxf86vm mesa mesa-demos
+sudo pacman -Sy rocksdb libxrandr libxi libxcursor libxinerama stack make tar gcc awk libxxf86vm mesa mesa-demos
 git clone --recursive https://github.com/lamdu/lamdu
 cd lamdu
 LD_PRELOAD=/usr/lib/libtcmalloc.so stack build
@@ -108,19 +108,19 @@ Install:
 In the Windows `cmd.exe` shell:
 
     cd <WORK-DIR>
-    git clone https://github.com/fastogt/leveldb.git
+    git clone https://github.com/fastogt/rocksdb.git
     git clone https://github.com/lamdu/lamdu.git
 
 In the msys2 mingw64 shell:
 
     pacman -S mingw-w64-x86_64-{cmake,make,gcc}
 
-    cd <WORK-DIR>/leveldb
+    cd <WORK-DIR>/rocksdb
     cmake -G "MinGW Makefiles" .
     mingw32-make
 
 In the Windows `cmd.exe` shell:
 
     cd <WORK-DIR>/lamdu
-    stack build --extra-lib-dirs="%cd%"\..\leveldb --extra-include-dirs="%cd%"\..\leveldb\include
+    stack build --extra-lib-dirs="%cd%"\..\rocksdb --extra-include-dirs="%cd%"\..\rocksdb\include
     stack exec lamdu

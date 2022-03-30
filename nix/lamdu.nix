@@ -4,7 +4,7 @@
 , directory, edit-distance, ekg-core
 , executable-path, filepath, generic-data, GLFW-b
 , graphics-drawingcombinators, hashable, HUnit, lamdu-calculus, momentu
-, language-ecmascript, lens, lens-aeson, leveldb-haskell, List, mtl
+, language-ecmascript, lens, lens-aeson, rocksdb-haskell, List, mtl
 , inline-js-core, optparse-applicative, ordered-containers, pretty, process
 , random, split, stb-image, hypertypes
 , template-haskell, temporary, test-framework, test-framework-hunit
@@ -45,7 +45,7 @@ mkDerivation {
     data-default deepseq directory edit-distance generic-data
     ekg-core executable-path filepath GLFW-b
     graphics-drawingcombinators hashable lamdu-calculus momentu
-    language-ecmascript lens lens-aeson leveldb-haskell List mtl
+    language-ecmascript lens lens-aeson rocksdb-haskell List mtl
     inline-js-core optparse-applicative ordered-containers pretty process random
     split stb-image hypertypes temporary text time timeit
     transformers uuid uuid-types vector

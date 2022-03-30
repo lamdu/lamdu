@@ -87,7 +87,7 @@ library:
   - language-ecmascript >= 0.18
   - lens >= 4.18
   - lens-aeson
-  - leveldb-haskell >= 0.6
+  - rocksdb-haskell >= 0.6
   - List >= 0.5.1
   - momentu
   - mtl >= 2.2
