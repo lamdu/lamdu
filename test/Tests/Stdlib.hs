@@ -34,7 +34,7 @@ test =
     [ testCase "sensible-tags" verifyTagsTest
     , testCase "dead-tags" verifyUsedTags
     , testCase "no-broken-defs" verifyNoBrokenDefsTest
-    , testCase "schemes" verifySchemes
+    , testCase "valid-typevars" testValidTypeVars
     ]
 
 verifyUsedTags :: IO ()
@@ -190,8 +190,8 @@ verifyDefs tagName defs =
             where
                 inText = " in " <> identHex (V.vvName inDef)
 
-verifySchemes :: IO ()
-verifySchemes =
+testValidTypeVars :: IO ()
+testValidTypeVars =
     do
         db <- readFreshDb
         db ^.. Lens.folded . JsonCodec._EntityDef & traverse_ verifyDef
