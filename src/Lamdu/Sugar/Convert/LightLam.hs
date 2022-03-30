@@ -1,4 +1,5 @@
-{-# LANGUAGE TemplateHaskell, TypeApplications, FlexibleInstances, DefaultSignatures, ScopedTypeVariables, DerivingVia #-}
+{-# LANGUAGE TemplateHaskell, TypeApplications, FlexibleInstances, DefaultSignatures #-}
+{-# LANGUAGE ScopedTypeVariables, DerivingVia, TypeFamilies #-}
 
 module Lamdu.Sugar.Convert.LightLam
     ( AddLightLams, addLightLambdas

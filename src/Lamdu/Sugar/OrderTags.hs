@@ -72,9 +72,9 @@ orderTaggedListBody ::
     [T.Tag] -> (a -> f a) -> Sugar.TaggedListBody name i o a -> f (Sugar.TaggedListBody name i o a)
 orderTaggedListBody presMode orderItem tlb =
     orderByTag presMode (^. Sugar.tiTag . Sugar.tagRefTag) (Sugar.tiValue orderItem) (tlb ^.. SugarLens.taggedListBodyItems) <&>
-    \(newHd : newTl) ->
-    newTl <&> (`Sugar.TaggedSwappableItem` pure ())
-    & Sugar.TaggedListBody newHd
+    \n ->
+    tail n <&> (`Sugar.TaggedSwappableItem` pure ())
+    & Sugar.TaggedListBody (head n)
 
 instance (MonadTransaction m o, MonadTransaction m i) => Order i (Sugar.Composite v name i o) where
     order (Sugar.Composite items punned tail_) =

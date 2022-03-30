@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell, TupleSections #-}
+{-# LANGUAGE TemplateHaskell, TupleSections, TypeFamilies #-}
 module Lamdu.GUI.TypeView
     ( make, makeScheme, addTypeBG
     ) where

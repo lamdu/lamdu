@@ -117,8 +117,8 @@ makeResultsSyntax typ posInfo =
     do
         -- Suggest if-else only if bool is in the stdlib (otherwise tests fail)
         deps <-
-            Load.nominal Builtins.boolTid
-            <&> \(Right x) -> mempty & depsNominals . Lens.at Builtins.boolTid ?~ x
+            Load.nominal Builtins.boolTid <&>
+            \x -> mempty & depsNominals . Lens.at Builtins.boolTid ?~ (x ^?! Lens._Right)
         if Lens.has (depsNominals . Lens.ix Builtins.boolTid) deps then
             do
                 t <- genLamVar

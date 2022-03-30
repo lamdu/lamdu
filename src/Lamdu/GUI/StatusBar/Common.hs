@@ -151,11 +151,11 @@ makeHamburgerMenu =
         Glue.Poly (///) <- Glue.mkPoly ?? Glue.Vertical
         texts <- Lens.view has
         let doc = E.toDoc texts [Texts.sbStatusBar, Texts.sbExtraOptions]
-        pure $ \hamburger hiddenWidgets@(w:_) ->
+        pure $ \hamburger hiddenWidgets ->
             let menu = vbox hiddenWidgets
                 hoverMenu = hover menu & Hover.sequenceHover
                 hoverOptions = [M.Aligned 1 (anchor hamburger) /// M.Aligned 1 hoverMenu] <&> (^. M.value . M.tValue)
-                enterFirst = w ^. M.tValue & enter
+                enterFirst = head hiddenWidgets ^. M.tValue & enter
                 gotoFirstHiddenItem = foldMap (E.keyPresses actionKeys doc) enterFirst
             in  if Widget.isFocused (menu ^. M.tValue)
                 then anchor hamburger

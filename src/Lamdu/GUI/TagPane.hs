@@ -1,3 +1,5 @@
+{-# LANGUAGE TypeFamilies #-}
+
 module Lamdu.GUI.TagPane
     ( make
     ) where
@@ -297,8 +299,8 @@ makeOrderEdit tagPaneId prop =
 
 make :: _ => Sugar.TagPane o -> M.WidgetId -> m (Widget o)
 make tagPane myId =
-    Lens.view has
-    >>= \lang ->
+    Lens.view has >>=
+    \lang ->
     addValFrame <*>
     do
         (symbol, nextLine) <- makeSymbol myId symbolProp
@@ -312,12 +314,14 @@ make tagPane myId =
         pure langsTable
             /-/ (hbox ?? [symbol, hspaceOf gap, orderEdit] <&> (^. Align.tValue))
             /-/ pure (nextLine ^. Align.tValue)
-        & local (Element.animIdPrefix .~ Widget.toAnimId myId)
-        & GuiState.assignCursor myId (nameId (langWidgetId myId lang))
+    & local (Element.animIdPrefix .~ Widget.toAnimId myId)
+    & GuiState.assignCursor myId (nameId (langWidgetId myId lang))
     where
-        prop lens setterLens =
+        orderProp =
             Property
-            (tagPane ^. Sugar.tpTagData . lens)
-            (tagPane ^. setterLens)
-        orderProp  = prop Tag.tagOrder  Sugar.tpSetOrder
-        symbolProp = prop Tag.tagSymbol Sugar.tpSetSymbol
+            (tagPane ^. Sugar.tpTagData . Tag.tagOrder)
+            (tagPane ^. Sugar.tpSetOrder)
+        symbolProp =
+            Property
+            (tagPane ^. Sugar.tpTagData . Tag.tagSymbol)
+            (tagPane ^. Sugar.tpSetSymbol)
