@@ -194,12 +194,13 @@ testValidTypeVars :: IO ()
 testValidTypeVars =
     readFreshDb >>= Lens.traverseOf_ (Lens.folded . JsonCodec._EntityDef) verifyDef
     where
-        verifyDef def =
-            do
-                def ^. Def.defType & verifyScheme
-                Lens.traverseOf_ (Def.defBody . Def._BodyExpr) verifyDefExpr def
-        verifyDefExpr = Lens.traverseOf_ (Def.exprFrozenDeps . depsGlobalTypes . traverse) verifyScheme
+        verifyDef = traverse_ verifyScheme . defSchemes
         verifyScheme (Pure s) = verifyTypeInScheme (s ^. S.sForAlls) (s ^. S.sTyp)
+
+defSchemes :: Def.Definition valExpr a -> [Pure # T.Scheme]
+defSchemes def =
+    def ^. Def.defType :
+    def ^.. Def.defBody . Def._BodyExpr . Def.exprFrozenDeps . depsGlobalTypes . traverse
 
 class VerifyTypeInScheme t where
     verifyTypeInScheme :: T.Types # S.QVars -> Pure # t -> IO ()
