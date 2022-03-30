@@ -67,7 +67,7 @@ library:
   - aeson-diff
   - aeson-pretty
   - ansi-wl-pprint
-  - base-compat >= 0.8.2 && < 0.12
+  - base-compat >= 0.8.2
   - base16-bytestring >=1
   - binary >= 0.7
   - bitmap
@@ -80,7 +80,7 @@ library:
   - filepath >= 1.1
   - edit-distance
   - generic-data >= 0.7
-  - GLFW-b >= 3.3.0.0 && < 3.4
+  - GLFW-b >= 3.3.0.0
   - graphics-drawingcombinators >= 1.7.1
   - hashable
   - lamdu-calculus >= 0.2
@@ -94,7 +94,7 @@ library:
   - inline-js-core
   - optparse-applicative >= 0.12
   - ordered-containers
-  - pretty >=1.1.2 && <1.2
+  - pretty >=1.1.2
   - process
   - random >= 1.0.0
   - split
