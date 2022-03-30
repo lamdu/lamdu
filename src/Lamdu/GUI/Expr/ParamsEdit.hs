@@ -250,7 +250,7 @@ makeParams ::
     GuiM env i o (EventMap (o GuiState.Update), Responsive o)
 makeParams annotationOpts prevId nextId items =
     do
-        o <- Lens.view has <&> \d -> Lens.cloneLens . dirKey d Horizontal
+        o <- Lens.view has <&> (`dirKey` Horizontal)
         keys <-
             traverse Lens.view TaggedList.Keys
             { TaggedList._kAdd = has . Config.addNextParamKeys

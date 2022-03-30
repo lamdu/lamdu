@@ -68,7 +68,7 @@ makeLabeled (Ann (Const pl) apply) =
                     let swapAction order =
                             s <&> (\x -> if x then GuiState.updateCursor myId else mempty)
                             & E.keyPresses
-                                (env ^. has . Config.orderDirKeys . Lens.cloneLens (dirKey (env ^. has) Horizontal order))
+                                (env ^. has . Config.orderDirKeys . dirKey (env ^. has) Horizontal order)
                                 (E.toDoc env [has . MomentuTexts.edit, has . Texts.swapOperatorArgs])
                             & Widget.weakerEvents
                     navigateOut <-
