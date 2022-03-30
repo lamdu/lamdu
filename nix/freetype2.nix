@@ -1,4 +1,4 @@
-{ mkDerivation, base, bindings-DSL, fetchFromGitHub, hsc2hs, stdenv
+{ mkDerivation, base, bindings-DSL, fetchFromGitHub, hsc2hs, lib
 }:
 mkDerivation {
   pname = "freetype2";
@@ -11,7 +11,7 @@ mkDerivation {
   };
   libraryHaskellDepends = [ base ];
   librarySystemDepends = [ hsc2hs ];
-  license = stdenv.lib.licenses.bsd3;
+  license = lib.licenses.bsd3;
   postInstall = ''
     mkdir $out/include
     cp freetype2/include/ft2build.h \

@@ -1,7 +1,7 @@
 { mkDerivation, base, base-compat, base16-bytestring, binary
 , bytestring, constraints, containers, deepseq, fetchFromGitHub
 , generic-data, hashable, lattices, lens, monad-st, mtl, pretty
-, QuickCheck, hypertypes, transformers, stdenv, HUnit, test-framework, test-framework-hunit
+, QuickCheck, hypertypes, transformers, lib, HUnit, test-framework, test-framework-hunit
 }:
 mkDerivation {
   pname = "lamdu-calculus";
@@ -19,5 +19,5 @@ mkDerivation {
   ];
   homepage = "https://github.com/lamdu/lamdu-calculus.git#readme";
   description = "The Lamdu Calculus programming language";
-  license = stdenv.lib.licenses.bsd3;
+  license = lib.licenses.bsd3;
 }

@@ -8,7 +8,7 @@ import           Control.Monad.Trans.FastWriter (WriterT)
 import qualified Control.Monad.Trans.FastWriter as Writer
 import           Data.Aeson (FromJSON(..), Result(..), eitherDecode', fromJSON, object)
 import           Data.Aeson.Lens (_Object, _String, key, values)
-import           Data.Aeson.Types (Value(..))
+import           Data.Aeson.Types (Key, Value(..))
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.Map as Map
 import qualified Data.Text as Text
@@ -24,7 +24,7 @@ override (Object x) (Object y) =
         toMap = Map.fromList . (^@.. Lens.ifolded)
 override x _ = x
 
-importsKey :: Text
+importsKey :: Key
 importsKey = "imports"
 
 imports :: FilePath -> Value -> WriterT [FilePath] IO Value

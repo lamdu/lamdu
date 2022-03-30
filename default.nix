@@ -2,7 +2,7 @@ let config = {
     packageOverrides = pkgs: rec {
         haskell = pkgs.haskell // {
             packages = pkgs.haskell.packages // {
-                ghc8103 = pkgs.haskell.packages.ghc8103.override {
+                ghc902 = pkgs.haskell.packages.ghc902.override {
                     overrides = self: super: rec {
                         hsc2hs = pkgs.haskell.lib.unmarkBroken (haskell.lib.dontCheck super.hsc2hs);
                         universe-reverse-instances = pkgs.haskell.lib.unmarkBroken (haskell.lib.dontCheck super.universe-reverse-instances);
@@ -35,10 +35,10 @@ let config = {
         };
     };
 };
-in with import (builtins.fetchTarball "https://github.com/NixOS/nixpkgs/archive/ba8a41c6fc0.tar.gz") {
+in with import (builtins.fetchTarball "https://github.com/NixOS/nixpkgs/archive/7aaef4f8365.tar.gz") {
     inherit config;
 };
 
 {
-lamdu = pkgs.haskell.packages.ghc8103.callPackage ./nix/lamdu.nix {};
+lamdu = pkgs.haskell.packages.ghc902.callPackage ./nix/lamdu.nix {};
 }

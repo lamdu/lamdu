@@ -1,4 +1,4 @@
-{ mkDerivation, fetchFromGitHub, stdenv
+{ mkDerivation, fetchFromGitHub, lib
 , GLFW-b, HUnit, OpenGL, QuickCheck, aeson, base, base-compat, binary, bytestring
 , containers, deepseq, generic-data, generic-random, graphics-drawingcombinators
 , lens, mtl, safe-exceptions, stm, template-haskell
@@ -22,5 +22,5 @@ mkDerivation {
   ];
   homepage = "https://github.com/lamdu/momentu.git#readme";
   description = "The Momentu purely functional animated GUI framework";
-  license = stdenv.lib.licenses.bsd3;
+  license = lib.licenses.bsd3;
 }

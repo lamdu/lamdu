@@ -11,6 +11,7 @@ module Lamdu.Data.Export.JSON.Migration.ToVersion3 (migrate) where
 import qualified Control.Lens as Lens
 import           Control.Lens.Extended ((~~>))
 import qualified Data.Aeson as Aeson
+import qualified Data.Aeson.Key as Aeson.Key
 import           Data.Aeson.Lens (_Object)
 import           Data.List.Class (sortOn)
 import qualified Data.Vector as Vector
@@ -39,7 +40,8 @@ migrateEntity tagMap (Aeson.Object obj) =
                 Aeson.Object ("Infix" ~~> (take 2 tags <&> Aeson.String & Vector.fromList & Aeson.Array))
             & Right & Just
         mkNewPresMode _ _ = Nothing
-        mTags = mRecordType <&> (^.. Lens.ifolded . Lens.asIndex) <&> sortOn tagOrder
+        mTags :: Maybe [Text]
+        mTags = mRecordType <&> (^.. Lens.ifolded . Lens.asIndex . Lens.to Aeson.Key.toText) <&> sortOn tagOrder
         tagOrder t = tagMap ^. Lens.at t
         mRecordType =
             obj ^?

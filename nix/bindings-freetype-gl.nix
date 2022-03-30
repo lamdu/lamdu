@@ -1,5 +1,5 @@
 { mkDerivation, base, bindings-DSL, bytestring, fetchFromGitHub, file-embed, freetype2, glew
-, stdenv, freetype
+, lib, freetype
 }:
 mkDerivation {
   pname = "bindings-freetype-gl";
@@ -16,5 +16,5 @@ mkDerivation {
   librarySystemDepends = [ glew ];
   homepage = "https://github.com/Peaker/bindings-freetype-gl#readme";
   description = "Haskell bindings and embedding of freetype-gl";
-  license = stdenv.lib.licenses.bsd3;
+  license = lib.licenses.bsd3;
 }

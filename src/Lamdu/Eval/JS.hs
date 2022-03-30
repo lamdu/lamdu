@@ -20,7 +20,9 @@ import qualified Control.Lens as Lens
 import           Control.Monad (msum)
 import           Control.Monad.Cont (ContT(..))
 import           Control.Monad.Trans.State (State, runState)
+import           Data.Aeson (Key)
 import qualified Data.Aeson as Aeson
+import qualified Data.Aeson.Key as Aeson.Key
 import qualified Data.Aeson.Types as Json
 import           Data.Bitraversable (Bitraversable(..))
 import qualified Data.ByteString.Extended as BS
@@ -126,7 +128,7 @@ parseRecord =
             parseResult v
             <&> \pv ->
             ER.RRecExtend RowExtend
-            { _eKey = parseHexNameBs k & Identifier & Tag
+            { _eKey = parseHexNameBs (Aeson.Key.toText k) & Identifier & Tag
             , _eVal = pv
             , _eRest = r
             } & Ann (Const ())
@@ -156,10 +158,10 @@ parseInject tag mData =
     , ER._injectVal = iv
     } & Ann (Const ())
 
-(.:) :: Json.FromJSON a => Json.Object -> Text -> Either String a
+(.:) :: Json.FromJSON a => Json.Object -> Key -> Either String a
 obj .: tag = Json.parseEither (Json..: tag) obj
 
-(.:?) :: Json.FromJSON a => Json.Object -> Text -> Either String (Maybe a)
+(.:?) :: Json.FromJSON a => Json.Object -> Key -> Either String (Maybe a)
 obj .:? tag = Json.parseEither (Json..:? tag) obj
 
 parseObj :: Json.Object -> Parse (ER.Val ())

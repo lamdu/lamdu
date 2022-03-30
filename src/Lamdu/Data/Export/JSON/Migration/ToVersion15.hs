@@ -5,6 +5,7 @@ module Lamdu.Data.Export.JSON.Migration.ToVersion15 (migrate) where
 import qualified Control.Lens as Lens
 import qualified Data.Aeson as Aeson
 import           Data.Aeson.Lens (_Object, _Array, _String, key, members, values)
+import           Data.Aeson.Lens.Extended (_Key)
 import           Data.Bifunctor (first)
 import qualified Data.Set as Set
 import           Data.String (IsString(..))
@@ -13,16 +14,16 @@ import           Lamdu.Data.Export.JSON.Migration.Common (migrateToVer)
 
 import           Lamdu.Prelude
 
-extend :: IsString a => Text -> a
+extend :: Text -> Text
 extend =
-    fromString . take uuidHexLen . (<> replicate uuidHexLen '0') . Text.unpack
+    Text.take uuidHexLen . (<> Text.replicate uuidHexLen "0")
     where
         uuidHexLen = 32
 
 rekey :: Aeson.Value -> Aeson.Value
 rekey x =
     x ^@.. _Object . Lens.ifolded
-    <&> first extend
+    <&> first (_Key %~ extend)
     & Aeson.object
 
 -- When the scheme belongs to a nominal decl, each of the extended
@@ -32,9 +33,9 @@ migrateScheme :: Set Text -> Aeson.Value -> Aeson.Value
 migrateScheme needExtension =
     key "schemeType" %~ eachObj
     where
+        shouldExtend :: Text -> Bool
         shouldExtend x = needExtension ^. Lens.contains x
-        extendVar =
-            _String . Lens.filtered shouldExtend %~ extend
+        extendVar = _String . Lens.filtered shouldExtend %~ extend
         eachObj x =
             x
             & key "typeVar" %~ extendVar

@@ -9,8 +9,10 @@ module Lamdu.Data.Export.JSON.Codec
 import qualified Control.Lens as Lens
 import           Control.Lens.Extended ((~~>))
 import           Data.Aeson ((.:))
-import           Data.Aeson.Lens (_Object)
 import qualified Data.Aeson as Aeson
+import           Data.Aeson.Key (Key)
+import qualified Data.Aeson.Key as Aeson.Key
+import           Data.Aeson.Lens (_Object)
 import qualified Data.Aeson.Types as AesonTypes
 import           Data.Bitraversable (Bitraversable(..))
 import qualified Data.ByteString.Base16 as Hex
@@ -147,7 +149,7 @@ encodeSquash ::
     Text -> (a -> j) -> a -> Aeson.Object
 encodeSquash name encode x
     | x == mempty = mempty
-    | otherwise = name ~~> Aeson.toJSON (encode x)
+    | otherwise = Aeson.Key.fromText name ~~> Aeson.toJSON (encode x)
 
 -- | Parse object based on containing some traversal
 decodeVariantObj ::
@@ -156,7 +158,7 @@ decodeVariantObj ::
     Aeson.Object -> AesonTypes.Parser r
 decodeVariantObj msg [] _ = "parseVariantObj of " <> msg <> " failed!" & fail
 decodeVariantObj msg ((field, parser):rest) obj
-    | Lens.has (Lens.ix field) obj = parser obj
+    | Lens.has (Lens.ix (Aeson.Key.fromText field)) obj = parser obj
     | otherwise = decodeVariantObj msg rest obj
 
 decodeVariant ::
@@ -171,7 +173,7 @@ decodeSquashed ::
     (Aeson.FromJSON j, Monoid a) =>
     Text -> (j -> AesonTypes.Parser a) -> Aeson.Object -> AesonTypes.Parser a
 decodeSquashed name decode o
-    | Lens.has (Lens.ix name) o = o .: name >>= decode
+    | Lens.has (Lens.ix (Aeson.Key.fromText name)) o = o .: Aeson.Key.fromText name >>= decode
     | otherwise = pure mempty
 
 encodeTagId :: Encoder T.Tag
@@ -349,12 +351,12 @@ decodeLeaf =
         l key v =
             ( key
             , \obj ->
-                obj .: key >>=
+                obj .: Aeson.Key.fromText key >>=
                 \case
                 Aeson.Object x | x == mempty -> pure v
                 x -> fail ("bad val for leaf " ++ show x)
             )
-        f key v = (key, \o -> o .: key >>= v)
+        f key v = (key, \o -> o .: Aeson.Key.fromText key >>= v)
 
 encodeVal :: Codec h => Encoder (Ann (Const UUID) # h)
 encodeVal (Ann uuid body) =
@@ -525,7 +527,7 @@ decodeRepl :: Aeson.Object -> AesonTypes.Parser (Definition.Expr (Val UUID))
 decodeRepl obj =
     obj .: "repl" >>= Aeson.withObject "defExpr" decodeDefExpr
 
-insertField :: Aeson.ToJSON a => Text -> a -> Aeson.Object -> Aeson.Object
+insertField :: Aeson.ToJSON a => Key -> a -> Aeson.Object -> Aeson.Object
 insertField k v = Lens.at k ?~ Aeson.toJSON v
 
 encodeNominal :: Pure # NominalDecl T.Type -> Aeson.Object
@@ -540,14 +542,14 @@ decodeNominal obj =
     <*> (obj .: "nomType" >>= decodeScheme <&> (^. _Pure))
     <&> (_Pure #)
 
-encodeTagged :: Text -> (a -> Aeson.Object) -> ((T.Tag, Identifier), a) -> Aeson.Object
+encodeTagged :: Key -> (a -> Aeson.Object) -> ((T.Tag, Identifier), a) -> Aeson.Object
 encodeTagged idAttrName encoder ((tag, ident), x) =
     encoder x
     & insertField idAttrName (encodeIdent ident)
     & insertField "tag" (encodeTagId tag)
 
 decodeTagged ::
-    Text ->
+    Key ->
     (Aeson.Object -> AesonTypes.Parser a) ->
     Aeson.Object -> AesonTypes.Parser ((T.Tag, Identifier), a)
 decodeTagged idAttrName decoder obj =

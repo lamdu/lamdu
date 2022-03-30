@@ -1,5 +1,5 @@
 { mkDerivation, base, bindings-freetype-gl, bytestring, directory
-, fetchFromGitHub, GLFW-b, OpenGL, stdenv, text, transformers
+, fetchFromGitHub, GLFW-b, OpenGL, lib, text, transformers
 }:
 mkDerivation {
   pname = "freetype-gl";
@@ -22,5 +22,5 @@ mkDerivation {
   ];
   homepage = "https://github.com/Peaker/freetype-gl#readme";
   description = "Initial project template from stack";
-  license = stdenv.lib.licenses.bsd3;
+  license = lib.licenses.bsd3;
 }

@@ -1,5 +1,5 @@
 { mkDerivation, base, bytestring, data-default, exceptions, filepath, resourcet, transformers
-, fetchFromGitHub, hsc2hs, stdenv
+, fetchFromGitHub, hsc2hs, lib
 }:
 mkDerivation {
   pname = "leveldb-haskell";
@@ -18,5 +18,5 @@ mkDerivation {
     base bytestring data-default exceptions filepath resourcet transformers
   ];
   librarySystemDepends = [ hsc2hs ];
-  license = stdenv.lib.licenses.bsd3;
+  license = lib.licenses.bsd3;
 }

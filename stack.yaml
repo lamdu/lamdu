@@ -6,6 +6,9 @@ extra-deps:
 - stb-image-0.2.1
 - unicode-properties-3.2.0.0
 - language-ecmascript-0.19.1.0
+- ekg-core-0.1.1.7
+- aeson-diff-1.1.0.12
+- lens-aeson-1.2
 - github: lamdu/bindings-freetype-gl
   commit: 440ee6a7a5f25ebc24e087d0d3ea9f588da6bb93
 - github: lamdu/lamdu-calculus
@@ -27,7 +30,7 @@ extra-deps:
   subdirs:
     - inline-js-core
 
-resolver: lts-18.12
+resolver: lts-19.1
 
 allow-newer: true
 

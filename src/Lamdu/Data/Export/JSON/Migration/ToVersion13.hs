@@ -3,11 +3,12 @@ module Lamdu.Data.Export.JSON.Migration.ToVersion13 (migrate) where
 import qualified Control.Lens as Lens
 import           Control.Lens.Extended ((~~>))
 import qualified Data.Aeson as Aeson
+import           Data.Aeson.Instances ()
 import           Data.Aeson.Lens (_Array, _Object, _String)
 import           Data.Binary.Extended (encodeS)
-import qualified Data.Vector as Vector
 import           Data.UUID (UUID)
 import qualified Data.UUID.Utils as UUIDUtils
+import qualified Data.Vector as Vector
 import           Lamdu.Data.Export.JSON.Migration.Common (migrateToVer)
 
 import           Lamdu.Prelude

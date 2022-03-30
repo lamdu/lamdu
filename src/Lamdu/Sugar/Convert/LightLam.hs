@@ -106,7 +106,7 @@ instance AddLightLams (Term v InternalName i o) where
                     <> _LhsVar . Lens.filteredBy (vIsNullParam . Lens.only False) . vTag . oTag
                 ) . tagRefTag . tagName
                 & Set.fromList
-            isUsed = funcParams ^.. Lens.folded <&> (used ^.) . Lens.contains
+            isUsed = funcParams ^.. Lens.folded <&> \x -> used ^. Lens.contains x
             allUsed =
                 and isUsed
                 -- Avoid light lambda with recursive destructure

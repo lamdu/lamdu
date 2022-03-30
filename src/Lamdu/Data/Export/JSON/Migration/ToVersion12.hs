@@ -4,6 +4,7 @@ import           Control.Applicative ((<|>))
 import qualified Control.Lens as Lens
 import           Control.Lens.Extended ((~~>))
 import qualified Data.Aeson as Aeson
+import qualified Data.Aeson.Key as Aeson.Key
 import           Data.Aeson.Lens (key, members, _Array)
 import           Data.List (sortOn)
 import qualified Data.Text as Text
@@ -21,7 +22,7 @@ migrateObject tagMap defObj (Aeson.String objTag) =
     case defObj ^? recordType of
     Just recordObj ->
         recordObj ^@.. members
-        <&> fst
+        <&> Aeson.Key.toText . fst
         & filter (/= objTag)
         & sortOn tagOrder
         & objTags
