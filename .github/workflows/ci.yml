@@ -33,7 +33,7 @@ jobs:
         ghc-version: ${{ matrix.ghc }}
         stack-version: ${{ matrix.stack }}
 
-    - uses: actions/cache@v2
+    - uses: actions/cache@v3.0.1
       name: Cache ~/.stack
       with:
         path: ~/.stack
