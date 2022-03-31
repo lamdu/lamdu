@@ -1,4 +1,4 @@
-{-# LANGUAGE TypeFamilies, TypeApplications #-}
+{-# LANGUAGE TypeFamilies, TypeApplications, StandaloneDeriving, UndecidableInstances #-}
 
 module Tests.Stdlib (test) where
 
@@ -12,8 +12,9 @@ import qualified Data.Set as Set
 import qualified Data.Text as Text
 import           Hyper
 import           Hyper.Recurse
-import           Hyper.Syntax.Nominal (nScheme)
+import           Hyper.Syntax.Nominal
 import qualified Hyper.Syntax.Scheme as S
+import           Hyper.Unify.QuantifiedVar
 import           Lamdu.Calc.Definition (depsGlobalTypes)
 import           Lamdu.Calc.Identifier (identHex)
 import           Lamdu.Calc.Infer (alphaEq)
@@ -36,6 +37,7 @@ test =
     , testCase "dead-tags" verifyUsedTags
     , testCase "no-broken-defs" verifyNoBrokenDefsTest
     , testCase "valid-typevars" testValidTypeVars
+    , testCase "nom-type-params" testValidNomTypeParams
     ]
 
 verifyUsedTags :: IO ()
@@ -216,3 +218,42 @@ instance ValidTypeVars T.Row where
         | Lens.has (T.tRow . S._QVars . Lens.ix v) s = pure ()
         | otherwise = assertString ("Row variable not declared " ++ show v)
     validTypeVars _ _ = pure ()
+
+newtype NomParams t = NomParams [QVar (GetHyperType t)]
+deriving instance Eq (QVar (GetHyperType t)) => Eq (NomParams t)
+deriving instance Show (QVar (GetHyperType t)) => Show (NomParams t)
+
+toNomParams :: Map (QVar t) a -> NomParams # t
+toNomParams = NomParams . (^.. Lens.ifolded . Lens.asIndex)
+
+testValidNomTypeParams :: IO ()
+testValidNomTypeParams =
+    do
+        db <- readFreshDb
+        let nomParams =
+                db ^.. traverse . JsonCodec._EntityNominal
+                <&> ( \(_, nomId, body) ->
+                        ( nomId
+                        , either id (^. _Pure . nParams) body & hmap (const (toNomParams . (^. S._QVars)))
+                        )
+                    )
+                & Map.fromList
+        let verifyScheme (Pure s) =
+                foldMapRecursive (Proxy @ValidNomParams ##>> validNomParams nomParams) (s ^. S.sTyp . _Pure)
+        Lens.traverseOf_ (traverse . JsonCodec._EntityDef) (traverse_ verifyScheme . defSchemes) db
+
+class ValidNomParams t where validNomParams :: Map T.NominalId (T.Types # NomParams) -> t # h -> IO ()
+instance ValidNomParams T.Row where validNomParams _ _ = pure ()
+
+instance ValidNomParams T.Type where
+    validNomParams nomParams (T.TInst nomInst)
+        | args == expected = pure ()
+        | otherwise =
+            assertString
+            ( "Mismatching args for " <> show (nomInst ^. nId) <> ":\n" <> show args
+                <> "\nExpected: \n" <> show expected
+            )
+        where
+            args = hmap (const (toNomParams . (^. S._QVarInstances))) (nomInst ^. nArgs)
+            expected = nomParams ^?! Lens.ix (nomInst ^. nId)
+    validNomParams _ _ = pure ()
