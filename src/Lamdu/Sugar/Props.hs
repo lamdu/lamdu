@@ -7,7 +7,7 @@ module Lamdu.Sugar.Props
 
 import qualified Control.Lens as Lens
 import           Hyper
-import           Hyper.Recurse (Recursive(..), proxyArgument)
+import           Hyper.Recurse
 import           Lamdu.Sugar.Types
 
 import           Lamdu.Prelude
@@ -19,11 +19,8 @@ class HTraversable t => SugarExpr t where
     isForbiddenInLightLam :: t f -> Bool
     isForbiddenInLightLam = isUnfinished
 
-    sugarExprRecursive ::
-        Proxy t -> Dict (HNodesConstraint t SugarExpr)
-    default sugarExprRecursive ::
-        HNodesConstraint t SugarExpr =>
-        Proxy t -> Dict (HNodesConstraint t SugarExpr)
+    sugarExprRecursive :: RecMethod SugarExpr t
+    default sugarExprRecursive :: DefRecMethod SugarExpr t
     sugarExprRecursive _ = Dict
 
 instance Recursive SugarExpr where recurse = sugarExprRecursive . proxyArgument

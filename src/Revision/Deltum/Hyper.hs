@@ -24,11 +24,9 @@ import           Lamdu.Prelude
 type T = Transaction
 
 class (Monad m, HTraversable h, HContext h, Binary (h # F (IRef m))) => HStore m h where
-    hstoreRecursive :: Proxy m -> Proxy h -> Dict (HNodesConstraint h (HStore m))
+    hstoreRecursive :: Proxy m -> RecMethod (HStore m) h
     {-# INLINE hstoreRecursive #-}
-    default hstoreRecursive ::
-        HNodesConstraint h (HStore m) =>
-        Proxy m -> Proxy h -> Dict (HNodesConstraint h (HStore m))
+    default hstoreRecursive :: HNodesConstraint h (HStore m) => Proxy m -> RecMethod (HStore m) h
     hstoreRecursive _ _ = Dict
 
 instance Recursive (HStore m) where

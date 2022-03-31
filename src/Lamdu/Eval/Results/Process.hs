@@ -8,6 +8,7 @@ import qualified Data.Map as Map
 import qualified Data.Text as Text
 import           Hyper
 import           Hyper.Class.Optic (HNodeLens(..))
+import           Hyper.Recurse
 import qualified Hyper.Syntax.Nominal as N
 import           Hyper.Syntax.Row (RowExtend(..))
 import qualified Hyper.Syntax.Row as Row
@@ -105,7 +106,7 @@ addTypes nomsMap typ (Ann (Const ()) b) =
 class
     (HFunctor k, HasQuantifiedVar k, Ord (QVar k), HNodeLens T.Types k) =>
     ApplyNominal k where
-    applyNominalRecursive :: Proxy k -> Dict (HNodesConstraint k ApplyNominal)
+    applyNominalRecursive :: RecMethod ApplyNominal k
 instance ApplyNominal T.Type where applyNominalRecursive _ = Dict
 instance ApplyNominal T.Row where applyNominalRecursive _ = Dict
 

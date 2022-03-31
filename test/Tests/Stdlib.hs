@@ -205,8 +205,8 @@ defSchemes def =
 
 class ValidTypeVars t where
     validTypeVars :: T.Types # S.QVars -> t # h -> IO ()
-    validTypeVarsRec :: Proxy t -> Dict (HNodesConstraint t ValidTypeVars)
-    default validTypeVarsRec :: HNodesConstraint t ValidTypeVars => Proxy t -> Dict (HNodesConstraint t ValidTypeVars)
+    validTypeVarsRec :: RecMethod ValidTypeVars t
+    default validTypeVarsRec :: DefRecMethod ValidTypeVars t
     validTypeVarsRec _ = Dict
 
 instance Recursive ValidTypeVars where recurse = validTypeVarsRec . proxyArgument

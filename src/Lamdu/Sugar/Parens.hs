@@ -7,7 +7,7 @@ module Lamdu.Sugar.Parens
 
 import qualified Control.Lens as Lens
 import           Hyper
-import           Hyper.Recurse (Recursive(..), proxyArgument)
+import           Hyper.Recurse
 import qualified Lamdu.Calc.Term as V
 import           Lamdu.Precedence (Prec, Precedence(..), HasPrecedence(..), before, after)
 import qualified Lamdu.Sugar.Lens.Annotations as SugarLens
@@ -48,10 +48,8 @@ class HFunctor expr => AddParens expr where
         (NeedsParens, expr # (Const (MinOpPrec, Precedence Prec) :*: h))
     parenInfo _ = (,) False . unambiguousBody
 
-    addParensRecursive :: Proxy expr -> Dict (HNodesConstraint expr AddParens)
-    default addParensRecursive ::
-        HNodesConstraint expr AddParens =>
-        Proxy expr -> Dict (HNodesConstraint expr AddParens)
+    addParensRecursive :: RecMethod AddParens expr
+    default addParensRecursive :: DefRecMethod AddParens expr
     addParensRecursive _ = Dict
 
 instance Recursive AddParens where
