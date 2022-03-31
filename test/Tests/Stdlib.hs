@@ -1,4 +1,4 @@
-{-# LANGUAGE TypeFamilies, TypeApplications, DefaultSignatures #-}
+{-# LANGUAGE TypeFamilies, TypeApplications #-}
 
 module Tests.Stdlib (test) where
 
@@ -203,13 +203,7 @@ defSchemes def =
     def ^. Def.defType :
     def ^.. Def.defBody . Def._BodyExpr . Def.exprFrozenDeps . depsGlobalTypes . traverse
 
-class ValidTypeVars t where
-    validTypeVars :: T.Types # S.QVars -> t # h -> IO ()
-    validTypeVarsRec :: RecMethod ValidTypeVars t
-    default validTypeVarsRec :: DefRecMethod ValidTypeVars t
-    validTypeVarsRec _ = Dict
-
-instance Recursive ValidTypeVars where recurse = validTypeVarsRec . proxyArgument
+class ValidTypeVars t where validTypeVars :: T.Types # S.QVars -> t # h -> IO ()
 
 instance ValidTypeVars T.Type where
     validTypeVars s (T.TVar v)
