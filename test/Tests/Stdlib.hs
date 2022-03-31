@@ -1,4 +1,4 @@
-{-# LANGUAGE TypeFamilies, TypeApplications #-}
+{-# LANGUAGE TypeFamilies, TypeApplications, DefaultSignatures #-}
 
 module Tests.Stdlib (test) where
 
@@ -11,6 +11,7 @@ import qualified Data.Map as Map
 import qualified Data.Set as Set
 import qualified Data.Text as Text
 import           Hyper
+import           Hyper.Recurse
 import           Hyper.Syntax.Nominal (nScheme)
 import qualified Hyper.Syntax.Scheme as S
 import           Lamdu.Calc.Definition (depsGlobalTypes)
@@ -192,27 +193,32 @@ verifyDefs tagName defs =
 
 testValidTypeVars :: IO ()
 testValidTypeVars =
-    readFreshDb >>= Lens.traverseOf_ (Lens.folded . JsonCodec._EntityDef) verifyDef
+    readFreshDb >>= Lens.traverseOf_ (Lens.folded . JsonCodec._EntityDef) (traverse_ verifyScheme . defSchemes)
     where
-        verifyDef = traverse_ verifyScheme . defSchemes
-        verifyScheme (Pure s) = verifyTypeInScheme (s ^. S.sForAlls) (s ^. S.sTyp)
+        verifyScheme (Pure s) =
+            foldMapRecursive (Proxy @ValidTypeVars ##>> validTypeVars (s ^. S.sForAlls)) (s ^. S.sTyp . _Pure)
 
 defSchemes :: Def.Definition valExpr a -> [Pure # T.Scheme]
 defSchemes def =
     def ^. Def.defType :
     def ^.. Def.defBody . Def._BodyExpr . Def.exprFrozenDeps . depsGlobalTypes . traverse
 
-class VerifyTypeInScheme t where
-    verifyTypeInScheme :: T.Types # S.QVars -> Pure # t -> IO ()
+class ValidTypeVars t where
+    validTypeVars :: T.Types # S.QVars -> t # h -> IO ()
+    validTypeVarsRec :: Proxy t -> Dict (HNodesConstraint t ValidTypeVars)
+    default validTypeVarsRec :: HNodesConstraint t ValidTypeVars => Proxy t -> Dict (HNodesConstraint t ValidTypeVars)
+    validTypeVarsRec _ = Dict
 
-instance VerifyTypeInScheme T.Type where
-    verifyTypeInScheme s (Pure (T.TVar v))
+instance Recursive ValidTypeVars where recurse = validTypeVarsRec . proxyArgument
+
+instance ValidTypeVars T.Type where
+    validTypeVars s (T.TVar v)
         | Lens.has (T.tType . S._QVars . Lens.ix v) s = pure ()
         | otherwise = assertString ("Type variable not declared " ++ show v)
-    verifyTypeInScheme s (Pure t) = htraverse_ (Proxy @VerifyTypeInScheme #> verifyTypeInScheme s) t
+    validTypeVars _ _ = pure ()
 
-instance VerifyTypeInScheme T.Row where
-    verifyTypeInScheme s (Pure (T.RVar v))
+instance ValidTypeVars T.Row where
+    validTypeVars s (T.RVar v)
         | Lens.has (T.tRow . S._QVars . Lens.ix v) s = pure ()
         | otherwise = assertString ("Row variable not declared " ++ show v)
-    verifyTypeInScheme s (Pure t) = htraverse_ (Proxy @VerifyTypeInScheme #> verifyTypeInScheme s) t
+    validTypeVars _ _ = pure ()
