@@ -8,7 +8,7 @@ import qualified Data.Map as Map
 import           Data.UUID.Types (UUID)
 import qualified Lamdu.Data.Db.Init as DbInit
 import           Lamdu.Data.Db.Layout (DbM(..))
-import           Lamdu.Data.Export.JSON (fileImportAll)
+import           Lamdu.Data.Export.JSON.Import (fileImportAll)
 import qualified Revision.Deltum.Transaction as Transaction
 import           System.Random (randomIO)
 

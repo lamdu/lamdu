@@ -8,6 +8,7 @@ import qualified Data.ByteString.Lazy.Char8 as LBSChar
 import           Lamdu.Data.Db.Layout (runDbTransaction)
 import qualified Lamdu.Data.Export.JSON as JsonFormat
 import qualified Lamdu.Data.Export.JSON.Codec as Codec
+import qualified Lamdu.Data.Export.JSON.Import as JsonFormat
 import           Lamdu.VersionControl (runAction)
 import           Test.Lamdu.Db (ramDB)
 

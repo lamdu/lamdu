@@ -10,6 +10,7 @@ import qualified Lamdu.Data.Db as Db
 import           Lamdu.Data.Db.Layout (DbM)
 import qualified Lamdu.Data.Db.Layout as DbLayout
 import qualified Lamdu.Data.Export.JSON as Export
+import qualified Lamdu.Data.Export.JSON.Import as Import
 import qualified Lamdu.Editor as Editor
 import qualified Lamdu.Opts as Opts
 import qualified Lamdu.Paths as LamduPaths
@@ -78,7 +79,7 @@ undoN n db =
 
 importPath :: FilePath -> Transaction.Store DbM -> IO ()
 importPath path db =
-    Export.fileImportAll path
+    Import.fileImportAll path
     <&> VersionControl.runAction . snd
     >>= DbLayout.runDbTransaction db
 

@@ -6,6 +6,7 @@ import qualified Lamdu.Config as Config
 import           Lamdu.Data.Db.Layout (ViewM)
 import           Lamdu.Data.Export.JS (exportFancy)
 import qualified Lamdu.Data.Export.JSON as Export
+import qualified Lamdu.Data.Export.JSON.Import as Import
 import           Lamdu.Eval.Results (EvalResults)
 import qualified Lamdu.GUI.IOTrans as IOTrans
 import qualified Lamdu.GUI.Main as GUIMain
@@ -30,4 +31,4 @@ exportActions config evalResults executeIOProcess =
     where
         exportPath = config ^. Config.export . Config.exportPath
         fileExport exporter = exporter exportPath & IOTrans.liftTIO
-        importAll path = Export.fileImportAll path <&> snd & IOTrans.liftIOT
+        importAll path = Import.fileImportAll path <&> snd & IOTrans.liftIOT

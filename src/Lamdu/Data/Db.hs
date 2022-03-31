@@ -5,7 +5,7 @@ module Lamdu.Data.Db
 import           Control.Exception (onException)
 import qualified Lamdu.Data.Db.Init as DbInit
 import           Lamdu.Data.Db.Layout (DbM(..), ViewM, curDbSchemaVersion)
-import           Lamdu.Data.Export.JSON (fileImportAll)
+import           Lamdu.Data.Export.JSON.Import (fileImportAll)
 import qualified Lamdu.Paths as Paths
 import qualified Revision.Deltum.Db as Db
 import           Revision.Deltum.Transaction (Transaction)
