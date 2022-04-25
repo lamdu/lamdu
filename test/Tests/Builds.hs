@@ -12,7 +12,7 @@
 -- Make sure to do these steps and not just make the test pass by changing the "rev" value,
 -- otherwise the nix build will be broken!
 
-module Tests.Nix (test) where
+module Tests.Builds (test) where
 
 import qualified Control.Lens as Lens
 import qualified Data.Aeson.Lens as LensAeson
@@ -29,7 +29,7 @@ import           Test.Lamdu.Prelude
 -- instead of quick & dirty string manipulations
 
 test :: Test
-test = testGroup "Nix" [stackDepsTest, cabalDepsTest, ghcVersionTest]
+test = testGroup "Builds" [stackDepsTest, cabalDepsTest, ghcVersionTest]
 
 stackDepsTest :: Test
 stackDepsTest =

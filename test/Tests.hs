@@ -1,6 +1,7 @@
 module Main where
 
 import qualified Tests.AnimIdClash
+import qualified Tests.Builds
 import qualified Tests.Codec
 import qualified Tests.ColorSchemes
 import qualified Tests.Config
@@ -11,7 +12,6 @@ import qualified Tests.Gui
 import qualified Tests.JsExport
 import qualified Tests.JsRtsTags
 import qualified Tests.Names
-import qualified Tests.Nix
 import qualified Tests.Precedence
 import qualified Tests.Readme
 import qualified Tests.Stdlib
@@ -27,6 +27,7 @@ main =
     where
         tests =
             [ Tests.AnimIdClash.test
+            , Tests.Builds.test
             , Tests.Codec.test
             , Tests.ColorSchemes.test
             , Tests.Config.test
@@ -37,7 +38,6 @@ main =
             , Tests.JsExport.test
             , Tests.JsRtsTags.test
             , Tests.Names.test
-            , Tests.Nix.test
             , Tests.Precedence.test
             , Tests.Readme.test
             , Tests.Stdlib.test
