@@ -41,6 +41,7 @@ jobs:
 
     - name: Install Haskell dependencies
       run: |
+        stack build --system-ghc --test --bench --no-run-tests --no-run-benchmarks --only-dependencies || rm -r ~/.stack
         stack build --system-ghc --test --bench --no-run-tests --no-run-benchmarks --only-dependencies
 
     - name: Build
