@@ -29,7 +29,7 @@ import           Test.Lamdu.Prelude
 -- instead of quick & dirty string manipulations
 
 test :: Test
-test = testGroup "Builds" [stackDepsTest, cabalDepsTest, ghcVersionTest]
+test = testGroup "Builds" [stackDepsTest, cabalDepsTest, nixGhcVersionTest, ciGhcVersionTest]
 
 stackDepsTest :: Test
 stackDepsTest =
@@ -132,13 +132,21 @@ parseCabalDeps cabal =
         -- Specifically check for one indentation level, to avoid conditional "build-depends: ekg".
         buildDepsPrefix = "  build-depends:"
 
-ghcVersionTest :: Test
-ghcVersionTest =
+nixGhcVersionTest :: Test
+nixGhcVersionTest =
     do
         nixFile <- readFile "default.nix"
         let nixGhcVer = read (take 2 (splitOn "ghc" nixFile ^?! Lens.ix 1))
         assertEqual "ghc version" ghcVer nixGhcVer
-    & testCase "verify-ghc-version"
+    & testCase "nix-ghc-version"
     where
         ghcVer :: Int
         ghcVer = __GLASGOW_HASKELL__ `div` 10 + __GLASGOW_HASKELL__ `mod` 10
+
+ciGhcVersionTest :: Test
+ciGhcVersionTest =
+    do
+        ciFile <- readFile ".github/workflows/ci.yml"
+        let [major, minor] = take 2 (splitOn "." (splitOn "ghc: [\"" ciFile ^?! Lens.ix 1)) <&> read
+        assertEqual "ghc version" (__GLASGOW_HASKELL__ :: Int) (major*100+minor)
+    & testCase "github-actions-ghc-version"
