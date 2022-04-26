@@ -354,14 +354,31 @@ compileDefExpr (Definition.Expr x frozenDeps) =
     compileVal NotTailCall x & local (envExpectedTypes .~ frozenDeps ^. depsGlobalTypes)
 
 compileGlobal :: Monad m => V.Var -> M m CodeGen
-compileGlobal globalId =
+compileGlobal var =
     do
-        def <- performAction (`readGlobal` globalId)
-        globalTypes . Lens.at globalId ?= def ^. Definition.defType
-        case def ^. Definition.defBody of
-            Definition.BodyBuiltin ffiName -> ffiCompile ffiName & codeGenFromExpr & pure
-            Definition.BodyExpr defExpr -> compileDefExpr defExpr
-    & withGlobal (ER.GlobalDef globalId)
+        mode <- Lens.view envMode
+        let newGlobal =
+                do
+                    varName <- freshStoredName var "global_" <&> Text.unpack <&> JS.ident
+                    globalVarNames . Lens.at var ?= varName
+                    makeGlobal
+                        <&> wrapGlobalDef mode
+                        <&> varinit varName
+                        >>= ppOut
+                    pure varName
+        Lens.use (globalVarNames . Lens.at var)
+            >>= maybe newGlobal pure
+            <&> useGlobal mode
+            <&> codeGenFromExpr
+    where
+        makeGlobal =
+            do
+                def <- performAction (`readGlobal` var)
+                globalTypes . Lens.at var ?= def ^. Definition.defType
+                case def ^. Definition.defBody of
+                    Definition.BodyBuiltin ffiName -> ffiCompile ffiName & codeGenFromExpr & pure
+                    Definition.BodyExpr defExpr -> compileDefExpr defExpr
+            & withGlobal (ER.GlobalDef var)
 
 throwErr :: Monad m => ValId -> ER.CompiledErrorType -> M m CodeGen
 throwErr valId err =
@@ -384,33 +401,18 @@ wrapGlobalDef _ = (rts "memo" `JS.call`) . (: []) . JS.lambda [] . codeGenLamStm
 
 compileGlobalVar :: Monad m => ValId -> V.Var -> M m CodeGen
 compileGlobalVar valId var =
-    do
-        mode <- Lens.view envMode
-        let newGlobal =
-                do
-                    varName <- freshStoredName var "global_" <&> Text.unpack <&> JS.ident
-                    globalVarNames . Lens.at var ?= varName
-                    compileGlobal var
-                        <&> wrapGlobalDef mode
-                        <&> varinit varName
-                        >>= ppOut
-                    pure varName
-        let loadGlobal =
-                Lens.use (globalVarNames . Lens.at var)
-                >>= maybe newGlobal pure
-                <&> useGlobal mode
-                <&> codeGenFromExpr
-        let verifyType expectedType =
-                do
-                    scheme <-
-                        Lens.use (globalTypes . Lens.at var)
-                        >>= maybe newGlobalType pure
-                    if alphaEq scheme expectedType
-                        then loadGlobal
-                        else throwErr valId ER.DependencyTypeOutOfDate
-        Lens.view (envExpectedTypes . Lens.at var)
-            >>= maybe loadGlobal verifyType
+    Lens.view (envExpectedTypes . Lens.at var)
+    >>= maybe go verifyType
     where
+        go = compileGlobal var
+        verifyType expectedType =
+            do
+                scheme <-
+                    Lens.use (globalTypes . Lens.at var)
+                    >>= maybe newGlobalType pure
+                if alphaEq scheme expectedType
+                    then go
+                    else throwErr valId ER.DependencyTypeOutOfDate
         newGlobalType =
             do
                 scheme <- performAction (`readGlobalType` var)
