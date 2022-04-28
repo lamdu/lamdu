@@ -61,6 +61,7 @@ entityOrdering (Codec.EntityNominal _ (T.NominalId nomId) _)          = (2, nomI
 entityOrdering (Codec.EntityLamVar _ (V.Var ident))                   = (3, ident)
 entityOrdering (Codec.EntityDef (Definition _ _ (_, _, V.Var ident))) = (4, ident)
 entityOrdering (Codec.EntityRepl _)                                   = (5, "")
+entityOrdering (Codec.EntityOpenDefPane (V.Var ident))                = (6, ident)
 
 entityVersion :: Codec.Entity
 entityVersion = Codec.EntitySchemaVersion Migration.currentVersion
@@ -173,7 +174,8 @@ fileExportRepl = export "repl" exportRepl
 
 fileExportDef :: Monad m => V.Var -> FilePath -> T m (IO ())
 fileExportDef globalId =
-    export ("def: " ++ show globalId) (exportDef globalId)
+    export ("def: " ++ show globalId)
+    (exportDef globalId >> tell (Codec.EntityOpenDefPane globalId))
 
 fileExportTag :: Monad m => T.Tag -> FilePath -> T m (IO ())
 fileExportTag tag =
@@ -189,11 +191,16 @@ exportAll =
         exportSet DbLayout.globals (exportDef . ExprIRef.globalId)
         exportSet DbLayout.tags exportTag
         exportSet DbLayout.tids exportNominal
+        exportSet DbLayout.panes exportOpenPane
         exportRepl
     where
         exportSet indexIRef exportFunc =
             indexIRef DbLayout.codeIRefs & Transaction.readIRef & trans
             >>= traverse_ exportFunc
+
+exportOpenPane :: Monad m => Anchors.Pane ViewM -> Export m ()
+exportOpenPane (Anchors.PaneDefinition defI) = ExprIRef.globalId defI & Codec.EntityOpenDefPane & tell
+exportOpenPane _ = pure ()
 
 fileExportAll :: FilePath -> T ViewM (IO ())
 fileExportAll = export "all" exportAll

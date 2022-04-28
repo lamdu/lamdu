@@ -28,6 +28,7 @@ import qualified Lamdu.Data.Definition as Definition
 import           Lamdu.Data.Export.JSON.Codec (Version(..))
 import qualified Lamdu.Data.Export.JSON.Codec as Codec
 import qualified Lamdu.Data.Export.JSON.Migration as Migration
+import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Data.Meta as Meta
 import           Lamdu.Data.Tag (Tag(..))
 import           Lamdu.Expr.IRef (ValI)
@@ -98,6 +99,7 @@ importOne (Codec.EntityRepl x) = importRepl x
 importOne (Codec.EntityTag tagId tagData) = importTag tagId tagData
 importOne (Codec.EntityNominal mName nomId nom) = importNominal mName nomId nom
 importOne (Codec.EntityLamVar tag var) = importLamVar tag var
+importOne (Codec.EntityOpenDefPane var) = DataOps.newPane DbLayout.codeAnchors (Anchors.PaneDefinition (ExprIRef.defI var))
 importOne (Codec.EntitySchemaVersion _) =
     error "Only one schemaVersion allowed in beginning of document"
 

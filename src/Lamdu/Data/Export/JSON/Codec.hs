@@ -8,6 +8,7 @@ module Lamdu.Data.Export.JSON.Codec
 
 import qualified Control.Lens as Lens
 import           Control.Lens.Extended ((~~>))
+import           Control.Monad ((>=>))
 import           Data.Aeson ((.:))
 import qualified Data.Aeson as Aeson
 import           Data.Aeson.Key (Key)
@@ -56,6 +57,7 @@ data Entity
     | EntityTag T.Tag Tag
     | EntityNominal T.Tag T.NominalId (Either (T.Types # QVars) (Pure # NominalDecl T.Type))
     | EntityLamVar T.Tag V.Var
+    | EntityOpenDefPane V.Var
 Lens.makePrisms ''Entity
 
 instance Aeson.ToJSON Entity where
@@ -65,6 +67,7 @@ instance Aeson.ToJSON Entity where
     toJSON (EntityTag tid tdata) = encodeNamedTag (tid, tdata)
     toJSON (EntityNominal tag nomId nom) = encodeTaggedNominal ((tag, nomId), nom)
     toJSON (EntityLamVar tag var) = encodeTaggedLamVar (tag, var)
+    toJSON (EntityOpenDefPane (V.Var v)) = "openDefPane" ~~> encodeIdent v & Aeson.Object
 
 instance Aeson.FromJSON Entity where
     parseJSON =
@@ -74,6 +77,7 @@ instance Aeson.FromJSON Entity where
         , ("tagOrder", fmap (uncurry EntityTag) . decodeNamedTag)
         , ("nom", fmap (\((tag, nomId), nom) -> EntityNominal tag nomId nom) . decodeTaggedNominal)
         , ("lamVar", fmap (uncurry EntityLamVar) . decodeTaggedLamVar)
+        , ("openDefPane", fmap (EntityOpenDefPane . V.Var) . ((.: "openDefPane") >=> decodeIdent))
         , ("schemaVersion", fmap EntitySchemaVersion . decodeSchemaVersion)
         ]
 
