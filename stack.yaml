@@ -9,6 +9,8 @@ extra-deps:
 - ekg-core-0.1.1.7
 - aeson-diff-1.1.0.12
 - lens-aeson-1.2
+- github: lamdu/rocksdb-haskell
+  commit: b0016acefbb38b1fbe148163f226f4cae15c03c7
 - github: lamdu/bindings-freetype-gl
   commit: 440ee6a7a5f25ebc24e087d0d3ea9f588da6bb93
 - github: lamdu/lamdu-calculus

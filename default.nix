@@ -7,6 +7,7 @@ let config = {
                         hsc2hs = pkgs.haskell.lib.unmarkBroken (haskell.lib.dontCheck super.hsc2hs);
                         universe-reverse-instances = pkgs.haskell.lib.unmarkBroken (haskell.lib.dontCheck super.universe-reverse-instances);
                         lattices = pkgs.haskell.lib.unmarkBroken (haskell.lib.dontCheck super.lattices);
+                        rocksdb-haskell = self.callPackage ./nix/rocksdb-haskell.nix {};
                         freetype2 = self.callPackage ./nix/freetype2.nix {};
                         bindings-freetype-gl = self.callPackage ./nix/bindings-freetype-gl.nix {};
                         freetype-gl = self.callPackage ./nix/FreetypeGL.nix {};
