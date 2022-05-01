@@ -3,6 +3,7 @@
 module Tests.Sugar (test) where
 
 import qualified Control.Lens as Lens
+import           Control.Monad ((>=>))
 import           Control.Monad.Once (OnceT)
 import qualified Data.Property as Property
 import qualified Lamdu.Annotations as Annotations
@@ -61,6 +62,7 @@ test =
     , testNoInjectValAnn
     , testCaseNav
     , testSkolemScope
+    , testAddRecursiveFuncParam
     , testGroup "insist-tests"
         [ testInsistFactorial
         , testInsistEq
@@ -705,6 +707,24 @@ testDisambig =
             replBinder . _BinderTerm . _BodyLabeledApply . aAnnotatedArgs . traverse . aaExpr .
             hVal . _BodyLabeledApply . aFunc .
             hVal . Lens._Wrapped . vNameRef . nrName . _NameTag . tnTagCollision . _Collision
+
+testAddRecursiveFuncParam :: Test
+testAddRecursiveFuncParam =
+    testSugarActions "recursive-func.json"
+    [ lift . void . (^?! openDef)
+    , (^?! addParam) >=> lift . (^. tcNewTag . toPick)
+    , verify
+    ]
+    & testCase "add-recursive-func-param"
+    where
+        openDef =
+            replBody . _BodySimpleApply . appFunc .
+            hVal . _BodyLeaf . _LeafGetVar . vNameRef . nrGotoDefinition
+        func = waPanes . traverse . SugarLens.paneBinder . hVal . _BodyFunction
+        addParam = Lens.cloneTraversal func . fParams . _LhsVar . vAddNext . _AddNext
+        verify workArea
+            | Lens.has (Lens.cloneTraversal func) workArea = pure ()
+            | otherwise = error "Adding parameter created fragment"
 
 getHoleResults ::
     FilePath ->
