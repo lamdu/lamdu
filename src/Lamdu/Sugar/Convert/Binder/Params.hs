@@ -628,10 +628,11 @@ isParamAlwaysUsedWithGetField (V.TypedLam param _paramTyp bod) =
 
 convertLamParams ::
     Monad m =>
+    BinderKind m ->
     V.TypedLam V.Var (HCompose Prune T.Type) V.Term # Ann (Input.Payload m) ->
     Input.Payload m # V.Term ->
     ConvertM m (LhsNames InternalName (OnceT (T m)) (T m) EvalPrep)
-convertLamParams lambda lambdaPl =
+convertLamParams binderKind lambda lambdaPl =
     do
         sugarLhsRecord <- Lens.view (ConvertM.scConfig . Config.sugarsEnabled . Config.destructure)
         case lambdaPl ^. Input.inferredType . _Pure of
@@ -642,8 +643,8 @@ convertLamParams lambda lambdaPl =
                 , List.isLengthAtLeast 2 fields
                 , isParamAlwaysUsedWithGetField lambda
                 , let fieldParams = fields <&> uncurry FieldParam
-                -> convertRecordParams Nothing BinderKindLambda fieldParams (mkStoredLam lambda lambdaPl)
-            _ -> convertNonRecordParam BinderKindLambda lambda lambdaPl
+                -> convertRecordParams Nothing binderKind fieldParams (mkStoredLam lambda lambdaPl)
+            _ -> convertNonRecordParam binderKind lambda lambdaPl
 
 convertVarToCalls ::
     Monad m => T m (ValI m) -> V.Var -> Ann (HRef m) # V.Term -> T m ()

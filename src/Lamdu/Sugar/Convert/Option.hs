@@ -375,7 +375,7 @@ makeOption dstPl res =
                         <&> map (nameWithContext Nothing v) . nubOrd . map head . (^.. Lens.folded)
 
         s <-
-            convertBinder resExpr <&> annValue %~
+            convertBinder ConvertM.BinderPos resExpr <&> annValue %~
                 case recordVarTags of
                 Just t -> const (Sugar.HoleVarsRecord t)
                 Nothing -> Sugar.HoleBinder

@@ -203,7 +203,7 @@ repl env =
                 }
         Repl
             <$> ConvertM.run context
-                (addLightLambdas <*> convertBinder valInferred <&> collectHiddenEntityIds valInferred)
+                (addLightLambdas <*> convertBinder ConvertM.BinderPos valInferred <&> collectHiddenEntityIds valInferred)
             <*> runReaderT (mkVarInfo (valInferred ^. hAnn . Input.inferredType)) env
             ?? CurAndPrev Nothing Nothing
     where

@@ -47,12 +47,13 @@ lamParamToHole (V.TypedLam param _paramTyp x) =
 
 convertBinder ::
     Monad m =>
+    ConvertM.PositionInfo ->
     Ann (Input.Payload m) # V.Term ->
     ConvertM m (Annotated (ConvertPayload m) # Binder EvalPrep InternalName (OnceT (T m)) (T m))
-convertBinder expr =
+convertBinder pos expr =
     do
         convertSub <- Lens.view id <&> ConvertM.scConvertSubexpression
-        convertSub ConvertM.BinderPos expr
+        convertSub pos expr
     >>= convertBinderBody expr
     & local (ConvertM.scScopeInfo %~ addPos)
     where
@@ -107,12 +108,19 @@ convertBinderBody rawExpr expr =
 
 makeFunction ::
     Monad m =>
+    ConvertM.PositionInfo ->
     V.TypedLam V.Var (HCompose Prune T.Type) V.Term # Ann (Input.Payload m) ->
     Input.Payload m # V.Term ->
     ConvertM m (Function EvalPrep InternalName (OnceT (T m)) (T m) # Annotated (ConvertPayload m))
-makeFunction lam exprPl =
+makeFunction pos lam exprPl =
     do
-        params <- convertLamParams lam exprPl
+        params <-
+            convertLamParams
+            ( case pos of
+                ConvertM.TopPos v -> BinderKindDef (ExprIRef.defI v)
+                _ -> BinderKindLambda
+            )
+            lam exprPl
         let addParams ctx =
                 ctx
                 & ConvertM.siRecordParams <>~
@@ -127,7 +135,7 @@ makeFunction lam exprPl =
                 LhsVar v | v ^. vIsNullParam -> Set.singleton (lam ^. V.tlIn)
                 _ -> Set.empty
         assignmentBody <-
-            convertBinder (lam ^. V.tlOut)
+            convertBinder ConvertM.BinderPos (lam ^. V.tlOut)
             & local (ConvertM.scScopeInfo %~ addParams)
         pure
             Function
@@ -146,11 +154,12 @@ makeFunction lam exprPl =
 
 convertLam ::
     Monad m =>
+    ConvertM.PositionInfo ->
     V.TypedLam V.Var (HCompose Prune T.Type) V.Term # Ann (Input.Payload m) ->
     Input.Payload m # V.Term ->
     ConvertM m (ExpressionU EvalPrep m)
-convertLam lam exprPl =
-    makeFunction lam exprPl
+convertLam pos lam exprPl =
+    makeFunction pos lam exprPl
     >>= addActions (Ann exprPl (V.BLam lam)) . BodyLam . Lambda False UnlimitedFuncApply
     <&> hVal %~ hmap (const (annotation . pActions . mReplaceParent . Lens._Just %~ (lamParamToHole lam >>)))
 
@@ -173,4 +182,4 @@ convertDefinitionBinder ::
     DefI m -> Ann (Input.Payload m) # V.Term ->
     ConvertM m (Annotated (ConvertPayload m) # Assignment EvalPrep InternalName (OnceT (T m)) (T m))
 convertDefinitionBinder defI t =
-    addLightLambdas <*> (convertBinder t >>= toAssignment (BinderKindDef defI))
+    addLightLambdas <*> (convertBinder (ConvertM.TopPos (ExprIRef.globalId defI)) t >>= toAssignment (BinderKindDef defI))

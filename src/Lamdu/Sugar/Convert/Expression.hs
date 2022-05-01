@@ -56,7 +56,7 @@ convert ::
     PositionInfo ->
     Ann (Input.Payload m) # V.Term ->
     ConvertM m (ExpressionU EvalPrep m)
-convert _ (Ann pl (V.BLam x)) = ConvertBinder.convertLam x pl
+convert pos (Ann pl (V.BLam x)) = ConvertBinder.convertLam pos x pl
 convert _ (Ann pl (V.BRecExtend x)) = ConvertRecord.convertExtend x pl
 convert _ (Ann pl (V.BToNom x)) = ConvertNominal.convertToNom x pl
 convert _ (Ann pl (V.BCase x)) = ConvertCase.convert x pl

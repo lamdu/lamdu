@@ -79,7 +79,7 @@ newtype ConvertM m a = ConvertM (ReaderT (Context m) (OnceT (T m)) a)
 instance Monad m => MonadTransaction m (ConvertM m) where
     transaction = ConvertM . lift . lift
 
-data PositionInfo = BinderPos | ExpressionPos deriving Eq
+data PositionInfo = TopPos V.Var | BinderPos | ExpressionPos deriving Eq
 
 data Context m = Context
     { _scInferContext :: InferState

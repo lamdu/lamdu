@@ -27,7 +27,7 @@ import qualified Lamdu.Expr.Load as ExprLoad
 import qualified Lamdu.Sugar.Convert.Binder as ConvertBinder
 import           Lamdu.Sugar.Convert.Expression.Actions (addActions)
 import qualified Lamdu.Sugar.Convert.Input as Input
-import           Lamdu.Sugar.Convert.Monad (ConvertM)
+import           Lamdu.Sugar.Convert.Monad (ConvertM, PositionInfo(..))
 import qualified Lamdu.Sugar.Convert.TId as ConvertTId
 import qualified Lamdu.Sugar.Convert.Tag as ConvertTag
 import qualified Lamdu.Sugar.Convert.TaggedList as ConvertTaggedList
@@ -52,7 +52,7 @@ convertToNom t@(ToNom tid x) pl =
         ConvertText.text t pl & justToLeft
         Nominal
             <$> ConvertTId.convert tid
-            <*> ConvertBinder.convertBinder x
+            <*> ConvertBinder.convertBinder BinderPos x
             <&> BodyToNom
             >>= addActions (Ann pl (V.BToNom t))
             & lift
