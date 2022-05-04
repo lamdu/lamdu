@@ -11,7 +11,6 @@ module Lamdu.GUI.CodeEdit
     ) where
 
 import qualified Control.Lens as Lens
-import           Control.Lens.Extended ((~~>))
 import           Control.Monad (zipWithM)
 import           Control.Monad.Once (OnceT)
 import           Control.Monad.Trans.Reader (ReaderT)
@@ -30,14 +29,11 @@ import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
-import           Hyper.Syntax.Scheme (Scheme(..), QVars(..))
 import qualified Lamdu.Builtins.Anchors as Builtins
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Data.Anchors as Anchors
-import           Lamdu.Data.Definition (Definition(..))
-import qualified Lamdu.Data.Definition as Definition
 import qualified Lamdu.Data.Ops as DataOps
 import           Lamdu.Data.Tag (Tag, IsOperator, TextsInLang, getTagName)
 import qualified Lamdu.Eval.Results as EvalResults
@@ -260,20 +256,8 @@ makePaneEdit theExportActions prevId pane =
 makeNewDefinition ::
     Monad m => Anchors.CodeAnchors m -> GuiM env (OnceT (T m)) (T m) (T m Widget.Id)
 makeNewDefinition cp =
-    GuiM.mkPrejumpPosSaver <&>
-    \savePrecursor ->
-    do
-        savePrecursor
-        holeI <- DataOps.newHole
-        Definition
-            (Definition.BodyExpr (Definition.Expr holeI mempty))
-            ( _Pure # Scheme
-                { _sForAlls =
-                    T.Types (QVars ("a" ~~> mempty)) (QVars mempty)
-                , _sTyp = _Pure # T.TVar "a"
-            }) ()
-            & DataOps.newPublicDefinitionWithPane cp
-    <&> WidgetIds.fromIRef
+    GuiM.mkPrejumpPosSaver <&> (*> DataOps.newEmptyPublicDefinitionWithPane cp)
+    <&> Lens.mapped %~ WidgetIds.fromIRef
 
 newDefinitionDoc :: _ => m E.Doc
 newDefinitionDoc =

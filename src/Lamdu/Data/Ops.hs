@@ -4,7 +4,7 @@ module Lamdu.Data.Ops
     , replace, replaceWithHole, setToHole, lambdaWrap, redexWrap
     , redexWrapWithGivenParam
     , genNewTag, assocTagName
-    , newPublicDefinitionWithPane
+    , newPublicDefinitionWithPane, newEmptyPublicDefinitionWithPane
     , newPublicDefinitionToIRef
     , newPane
     , newIdentityLambda
@@ -12,6 +12,7 @@ module Lamdu.Data.Ops
     ) where
 
 import qualified Control.Lens as Lens
+import           Control.Lens.Extended ((~~>))
 import qualified Data.ByteString.Extended as BS
 import           Data.Char (toLower)
 import           Data.Property (MkProperty', Property(..))
@@ -21,12 +22,14 @@ import qualified Data.UUID as UUID
 import qualified GUI.Momentu.Direction as Dir
 import           Hyper (_HCompose)
 import           Hyper.Type.Prune (Prune(..))
+import           Hyper.Syntax.Scheme (Scheme(..), QVars(..))
 import           Lamdu.Calc.Identifier (Identifier(..))
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.CharClassification as Chars
 import qualified Lamdu.Data.Anchors as Anchors
 import           Lamdu.Data.Definition (Definition(..))
+import qualified Lamdu.Data.Definition as Definition
 import           Lamdu.Data.Meta (SpecialArgs(..), PresentationMode)
 import           Lamdu.Data.Tag (Symbol(..), TextsInLang(..), tagOrder, tagTexts, tagSymbol, getTagName, name)
 import           Lamdu.Expr.IRef (DefI, HRef, ValI)
@@ -166,6 +169,19 @@ newPublicDefinitionWithPane codeAnchors def =
         Property.modP (Anchors.globals codeAnchors) (Set.insert defI)
         newPane codeAnchors (Anchors.PaneDefinition defI)
         pure defI
+
+newEmptyPublicDefinitionWithPane :: Monad m => Anchors.CodeAnchors m -> T m (DefI m)
+newEmptyPublicDefinitionWithPane cp =
+    do
+        holeI <- newHole
+        Definition
+            (Definition.BodyExpr (Definition.Expr holeI mempty))
+            ( _Pure # Scheme
+                { _sForAlls =
+                    T.Types (QVars ("a" ~~> mempty)) (QVars mempty)
+                , _sTyp = _Pure # T.TVar "a"
+            }) ()
+            & newPublicDefinitionWithPane cp
 
 newIdentityLambda :: Monad m => T m (V.Var, ValI m)
 newIdentityLambda =
