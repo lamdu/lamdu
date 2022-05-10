@@ -38,7 +38,7 @@ import qualified Lamdu.Data.Ops as DataOps
 import           Lamdu.Data.Tag (Tag, IsOperator, TextsInLang, getTagName)
 import qualified Lamdu.Eval.Results as EvalResults
 import qualified Lamdu.GUI.CodeEdit.GotoDefinition as GotoDefinition
-import qualified Lamdu.GUI.DefinitionEdit as DefinitionEdit
+import qualified Lamdu.GUI.Definition as DefinitionEdit
 import qualified Lamdu.GUI.Expr as ExpressionEdit
 import qualified Lamdu.GUI.Expr.BinderEdit as BinderEdit
 import           Lamdu.GUI.IOTrans (IOTrans(..))

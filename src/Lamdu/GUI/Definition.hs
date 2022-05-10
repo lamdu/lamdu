@@ -1,6 +1,6 @@
 {-# LANGUAGE RankNTypes #-}
 
-module Lamdu.GUI.DefinitionEdit
+module Lamdu.GUI.Definition
     ( make
     ) where
 
