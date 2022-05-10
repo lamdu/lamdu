@@ -67,6 +67,7 @@ resultWidget myId varInfo tag res =
                                 Lens._Wrapped # True & tell & DefRes
                                 & E.keysEventMap actionKeys (toDoc [Texts.execRepl])
                         Widget.makeFocusableView ?? myId <&> (M.tValue %~) ?? view
+                            <&> M.tValue %~ Widget.takesStroll myId
                             <&> M.tValue %~ Widget.weakerEvents executeEventMap
                 _ -> view & M.tValue %~ Widget.fromView & pure
     Sugar.EvalError err ->
@@ -114,7 +115,8 @@ errorIndicator myId tag (Sugar.EvalException errorType jumpToErr) =
                 & E.keysEventMapMovesCursor actionKeys jumpDoc
         indicator <-
             (Widget.makeFocusableView ?? myId <&> (M.tValue %~))
-            <*> makeIndicator tag Theme.errorColor  "⚠"
+            <*> makeIndicator tag Theme.errorColor "⚠"
+            <&> Lens.mapped %~ Widget.takesStroll myId
             <&> Lens.mapped %~ Widget.weakerEvents (foldMap jumpEventMap jumpToErr)
         if Widget.isFocused (indicator ^. M.tValue)
             then
