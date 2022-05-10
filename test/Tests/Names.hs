@@ -16,7 +16,6 @@ import           Lamdu.Sugar.Names.CPS (liftCPS)
 import qualified Lamdu.Sugar.Names.Walk as Walk
 import qualified Lamdu.Sugar.Types as Sugar
 import qualified Test.Lamdu.Env as Env
-import           Test.Lamdu.SugarStubs ((~>))
 import qualified Test.Lamdu.SugarStubs as Stub
 
 import           Test.Lamdu.Prelude
@@ -36,8 +35,7 @@ instance Walk.MonadNaming (CollectNames name) where
 test :: Test
 test =
     testGroup "Disambiguation"
-    [ testCase "disambiguation(#396)" workArea396
-    , testCase "globals collide" workAreaGlobals
+    [ testCase "globals collide" workAreaGlobals
     , testCase "anonymous globals" anonGlobals
     ]
 
@@ -47,16 +45,6 @@ nameTexts =
     { Texts._unnamed = "Unnamed"
     , Texts._emptyName = "empty"
     }
-
-assertNoCollisions :: Name -> IO ()
-assertNoCollisions name =
-    case Name.visible name nameTexts of
-    (Name.TagText _ Name.NoCollision, Name.NoCollision) -> pure ()
-    (Name.TagText text textCollision, tagCollision) ->
-        unwords
-        [ "Unexpected collision for name", show text
-        , show textCollision, show tagCollision
-        ] & assertString
 
 testWorkArea ::
     (Name -> IO b) ->
@@ -84,25 +72,6 @@ getNames workArea =
     & snd
 
 --- test inputs:
-
-workArea396 :: IO ()
-workArea396 =
-    Sugar.WorkArea
-    { Sugar._waPanes =
-        [ Stub.funcExpr "paneVar" "num" Stub.hole & Sugar.BodyFunction & Stub.node
-            & Stub.def lamType "def" "def"
-            & Stub.pane
-        ]
-    , Sugar._waGlobals = Sugar.Globals (pure []) (pure []) (pure [])
-    } & testWorkArea assertNoCollisions
-    where
-        lamType = Stub.numType ~> Stub.numType
-        lamExpr =
-            Sugar.BodyLam Sugar.Lambda
-            { Sugar._lamLightweight = False
-            , Sugar._lamApplyLimit = Sugar.UnlimitedFuncApply
-            , Sugar._lamFunc = Stub.funcExpr "lamVar" "num" Stub.hole
-            } & Stub.expr
 
 workAreaGlobals :: IO ()
 workAreaGlobals =
