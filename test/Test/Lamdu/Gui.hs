@@ -1,6 +1,7 @@
 module Test.Lamdu.Gui where
 
 import           Control.Monad.Once (OnceT)
+import           Control.Monad.Trans.FastWriter (runWriterT)
 import           Data.List (group, sort)
 import           GHC.Stack (prettyCallStack, callStack)
 import           GUI.Momentu.Responsive (Responsive)
@@ -27,6 +28,7 @@ import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Db.Layout as DbLayout
 import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.GUI.CodeEdit as CodeEdit
+import           Lamdu.GUI.Definition.Result (_DefRes)
 import qualified Lamdu.GUI.Expr as ExpressionEdit
 import qualified Lamdu.GUI.Expr.BinderEdit as BinderEdit
 import qualified Lamdu.GUI.Monad as GuiM
@@ -73,6 +75,8 @@ makeGui afterDoc env workArea =
             & GuiM.run assocTagName ExpressionEdit.make BinderEdit.make
                 (Anchors.onGui (Property.mkProperty %~ lift) DbLayout.guiAnchors)
                 env
+            -- We ignore whether execute button was clicked
+            <&> Widget.updates %~ fmap fst . runWriterT . (^. _DefRes)
         if Lens.has wideFocused gui
             then pure gui
             else error ("Red cursor after " ++ afterDoc ++ ": " ++ show (env ^. cursor))

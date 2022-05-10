@@ -14,9 +14,12 @@ import qualified Control.Lens as Lens
 import           Control.Monad (zipWithM)
 import           Control.Monad.Once (OnceT)
 import           Control.Monad.Trans.Reader (ReaderT)
+import           Control.Monad.Trans.FastWriter (runWriterT)
 import           Control.Monad.Transaction (MonadTransaction(..))
 import           Data.CurAndPrev (CurAndPrev(..))
+import           Data.Functor.Compose (Compose(..))
 import qualified Data.Property as Property
+import           Data.Tuple (swap)
 import qualified GUI.Momentu as M
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Element as Element
@@ -39,6 +42,7 @@ import           Lamdu.Data.Tag (Tag, IsOperator, TextsInLang, getTagName)
 import qualified Lamdu.Eval.Results as EvalResults
 import qualified Lamdu.GUI.CodeEdit.GotoDefinition as GotoDefinition
 import qualified Lamdu.GUI.Definition as DefinitionEdit
+import           Lamdu.GUI.Definition (DefRes, _DefRes)
 import qualified Lamdu.GUI.Expr as ExpressionEdit
 import qualified Lamdu.GUI.Expr.BinderEdit as BinderEdit
 import           Lamdu.GUI.IOTrans (IOTrans(..))
@@ -173,12 +177,12 @@ deleteAndClosePaneEventMap prevId pane defState =
         , has . MomentuTexts.delete
         ])
 
-makePaneBodyEdit :: _ => ExprGui.Top Sugar.Pane i o -> GuiM env i o (Responsive o)
+makePaneBodyEdit :: _ => ExprGui.Top Sugar.Pane i o -> GuiM env i o (Responsive (DefRes o))
 makePaneBodyEdit pane =
     case pane ^. Sugar.paneBody of
-    Sugar.PaneTag tag -> TagPaneEdit.make tag myId <&> Responsive.fromWidget
+    Sugar.PaneTag tag -> TagPaneEdit.make tag myId <&> Responsive.fromWidget <&> Widget.updates %~ lift
     Sugar.PaneDefinition def -> DefinitionEdit.make def myId
-    Sugar.PaneNominal nom -> NominalPane.make nom
+    Sugar.PaneNominal nom -> NominalPane.make nom <&> Widget.updates %~ lift
     where
         myId = pane ^. Sugar.paneEntityId & WidgetIds.fromEntityId
 
@@ -235,10 +239,15 @@ makePaneEdit theExportActions prevId pane =
                 , exportPaneEventMap env theExportActions (pane ^. Sugar.paneBody)
                 ] & mconcat
             paneConfig = env ^. has . Config.pane
-        bodyGui <- makePaneBodyEdit pane
+        bodyGui <-
+            makePaneBodyEdit pane <&> Widget.updates %~
+            IOTrans . Compose . pure . Compose .
+            fmap ((_1 %~ (`when` exec) . (^. Lens._Wrapped)) . swap) .
+            runWriterT . (^. _DefRes)
         case pane ^. Sugar.paneDefinitionState . Property.pVal of
             Sugar.LiveDefinition ->
                 deleteAndClosePaneEventMap prevId pane (pane ^. Sugar.paneDefinitionState)
+                <&> Lens.mapped %~ IOTrans.liftTrans
                 <&> (`Widget.weakerEvents` bodyGui)
             Sugar.DeletedDefinition ->
                 do
@@ -246,6 +255,7 @@ makePaneEdit theExportActions prevId pane =
                         WidgetIds.fromEntityId (pane ^. Sugar.paneEntityId)
                         <$ (pane ^. Sugar.paneDefinitionState . Property.pSet) Sugar.LiveDefinition
                         & undeleteButton <&> Responsive.fromWithTextPos
+                        <&> Widget.updates %~ IOTrans.liftTrans
                     style <- Styled.deletedDef
                     Responsive.vbox ??
                         [ buttonGui
@@ -253,8 +263,11 @@ makePaneEdit theExportActions prevId pane =
                             & Responsive.alignedWidget . M.tValue .> Widget.wFocused %@~ wholeFocused
                             & style
                         ]
-            <&> Widget.updates %~ IOTrans.liftTrans
             <&> Widget.weakerEvents paneEventMap
+    where
+        exec =
+            traverse_ (executeDef theExportActions)
+            (pane ^? Sugar.paneBody . Sugar._PaneDefinition . Sugar.drDefI)
 
 makeNewDefinition ::
     Monad m => Anchors.CodeAnchors m -> GuiM env (OnceT (T m)) (T m) (T m Widget.Id)

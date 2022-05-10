@@ -2,10 +2,12 @@
 
 module Lamdu.GUI.Definition
     ( make
+    , module Lamdu.GUI.Definition.Result
     ) where
 
 import qualified Control.Lens as Lens
 import           Control.Lens.Extended (OneOf)
+import           Control.Monad.Writer (MonadWriter(..))
 import           Data.CurAndPrev (CurPrevTag(..), fallbackToPrev, curPrevTag)
 import           Hyper (annValue)
 import qualified GUI.Momentu as M
@@ -27,6 +29,7 @@ import qualified Lamdu.Config as Config
 import           Lamdu.Config.Theme (Theme)
 import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.Config.Theme.TextColors as TextColors
+import           Lamdu.GUI.Definition.Result
 import qualified Lamdu.GUI.Expr.AssignmentEdit as AssignmentEdit
 import qualified Lamdu.GUI.Expr.BuiltinEdit as BuiltinEdit
 import qualified Lamdu.GUI.Expr.TagEdit as TagEdit
@@ -39,6 +42,7 @@ import qualified Lamdu.GUI.Types as ExprGui
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.I18N.Code as Texts
 import qualified Lamdu.I18N.CodeUI as Texts
+import qualified Lamdu.I18N.Definitions as Texts
 import qualified Lamdu.I18N.Navigation as Texts
 import           Lamdu.Name (Name(..))
 import qualified Lamdu.Sugar.Types as Sugar
@@ -48,18 +52,26 @@ import           Lamdu.Prelude
 resultWidget ::
     _ =>
     M.WidgetId -> Sugar.VarInfo -> CurPrevTag -> Sugar.EvalCompletionResult o ->
-    m (M.TextWidget o)
+    m (M.TextWidget (DefRes o))
 resultWidget myId varInfo tag res =
     case res of
-    Sugar.EvalSuccess{} ->
+    Sugar.EvalSuccess ->
         do
             view <- makeIndicator tag Theme.successColor "✔"
+            toDoc <- Lens.view has <&> E.toDoc
             case varInfo of
                 Sugar.VarNominal (Sugar.TId _ tid _) | tid == Builtins.mutTid ->
-                    Widget.makeFocusableView ?? myId <&> (M.tValue %~) ?? view
+                    do
+                        actionKeys <- Lens.view (has . Config.actionKeys)
+                        let executeEventMap =
+                                Lens._Wrapped # True & tell & DefRes
+                                & E.keysEventMap actionKeys (toDoc [Texts.execRepl])
+                        Widget.makeFocusableView ?? myId <&> (M.tValue %~) ?? view
+                            <&> M.tValue %~ Widget.weakerEvents executeEventMap
                 _ -> view & M.tValue %~ Widget.fromView & pure
     Sugar.EvalError err ->
         errorIndicator myId tag err
+        <&> M.tValue . Widget.updates %~ lift
 
 indicatorColor :: _ => CurPrevTag -> Lens.ALens' Theme M.Color -> m M.Color
 indicatorColor Current color = Lens.view (has . Lens.cloneLens color)
@@ -130,7 +142,7 @@ makeExprDefinition ::
     Sugar.OptionalTag Name i o ->
     ExprGui.Top Sugar.DefinitionExpression i o ->
     M.WidgetId ->
-    GuiM env i o (Responsive o)
+    GuiM env i o (Responsive (DefRes o))
 makeExprDefinition defName bodyExpr myId =
     case bodyExpr ^. Sugar.deContent . hVal of
     Sugar.BodyPlain x | Lens.has (Sugar.oTag . Sugar.tagRefJumpTo . Lens._Nothing) defName ->
@@ -143,6 +155,7 @@ makeExprDefinition defName bodyExpr myId =
                         nameEdit <- makeNameEdit <&> Responsive.fromWithTextPos
                         AssignmentEdit.makePlainLhs nameEdit (x ^. Sugar.apAddFirstParam)
                             (WidgetIds.fromExprPayload (bodyExpr ^. Sugar.deContent . annotation))
+                    <&> Lens.mapped . Widget.updates %~ lift
                 else
                     do
                         nameEventMap <- TagEdit.makeChooseEventMap pickNameId
@@ -159,6 +172,7 @@ makeExprDefinition defName bodyExpr myId =
             bodyExpr ^. Sugar.deContent & annValue .~ x ^. Sugar.apBody & GuiM.makeBinder
                 & GuiState.assignCursor myId
                     (WidgetIds.fromExprPayload (bodyExpr ^. Sugar.deContent . annotation))
+                <&> Widget.updates %~ lift
                 >>= AssignmentEdit.layout lhs
         where
             indicatorId = Widget.joinId myId ["result indicator"]
@@ -177,6 +191,7 @@ makeExprDefinition defName bodyExpr myId =
             makeNameEdit <&> (|---| fromMaybe M.empty mPresentationEdit) <&> Responsive.fromWithTextPos
                 >>= AssignmentEdit.make nameEditId (bodyExpr ^. Sugar.deContent)
         & GuiState.assignCursor myId nameEditId
+        <&> Widget.updates %~ lift
     where
         makeNameEdit = TagEdit.makeBinderTagEdit TextColors.definitionColor defName
         nameEditId = defName ^. Sugar.oTag . Sugar.tagRefTag . Sugar.tagInstance & WidgetIds.fromEntityId
@@ -203,7 +218,7 @@ make ::
     _ =>
     ExprGui.Top Sugar.Definition i o ->
     M.WidgetId ->
-    GuiM env i o (Responsive o)
+    GuiM env i o (Responsive (DefRes o))
 make def myId =
     do
         env <- Lens.view id
@@ -213,11 +228,13 @@ make def myId =
                 (E.Doc [env ^. has . Texts.gotoNextOutdated])
                 (def ^. Sugar.drGotoNextOutdated
                     <&> foldMap (GuiState.updateCursor . WidgetIds.fromEntityId))
+                <&> lift
         case def ^. Sugar.drBody of
             Sugar.DefinitionBodyExpression bodyExpr ->
                 makeExprDefinition (def ^. Sugar.drName) bodyExpr myId
             Sugar.DefinitionBodyBuiltin builtin ->
                 makeBuiltinDefinition def builtin myId <&> Responsive.fromWithTextPos
+                <&> Widget.updates %~ lift
             <&> M.weakerEvents nextOutdated
     & local (M.animIdPrefix .~ Widget.toAnimId myId)
 
