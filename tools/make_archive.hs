@@ -6,6 +6,7 @@ import           Control.Lens.Operators
 import           Control.Monad (when, unless)
 import qualified Data.ByteString.Lazy as LBS
 import           Data.Foldable (traverse_)
+import qualified Data.List as List
 import qualified System.Directory as Dir
 import qualified System.Environment as Env
 import           System.FilePath ((</>), takeFileName, takeDirectory)
@@ -78,9 +79,10 @@ otoolMinMacosVersion path =
 findDylibs :: FilePath -> IO [FilePath]
 findDylibs path =
     do
-        deps <- readProcess "otool" ["-L", path] "" <&> parseOtoolLibs <&> filter (/= path)
+        deps <- readProcess "otool" ["-L", path] "" <&> parseOtoolLibs <&> filter shouldInclude
         traverse findDylibs deps <&> concat <&> (deps <>)
     where
+        shouldInclude x = x /= path && not ("/usr/lib/" `List.isPrefixOf` x)
         parseOtoolLibs otoolOut =
             lines otoolOut & tail <&> words >>= take 1
             & filter isInteresting
