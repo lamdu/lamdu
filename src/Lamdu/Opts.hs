@@ -15,7 +15,7 @@ import qualified Control.Lens as Lens
 import           Data.List.Split (splitOn)
 import           Data.Vector.Vector2 (Vector2(..))
 import           Data.Word (Word16)
-import           GUI.Momentu (WindowMode(..))
+import qualified GUI.Momentu as M
 import qualified Lamdu.Annotations as Annotations
 import           Lamdu.Eval.JS.Types (JSDebugPaths(..))
 import           Options.Applicative ((<|>))
@@ -24,7 +24,7 @@ import qualified Options.Applicative as P
 import           Lamdu.Prelude
 
 data EditorOpts = EditorOpts
-    { _eoWindowMode :: Vector2 Int -> WindowMode
+    { _eoWindowMode :: M.MonitorInfo -> M.WindowMode
     , _eoJSDebugPaths :: JSDebugPaths FilePath
     , _eoWindowTitle :: String
     , _eoSubpixelEnabled :: Bool
@@ -148,9 +148,9 @@ editorOpts =
 command :: P.Parser Command
 command = Editor <$> editorOpts <|> subcommands
 
-windowMode :: P.Parser (Vector2 Int -> WindowMode)
+windowMode :: P.Parser (M.MonitorInfo -> M.WindowMode)
 windowMode =
-    P.flag' (const FullScreen)
+    P.flag' (const M.FullScreen)
     ( P.long "fullscreen"
       <> P.short 'f'
       <> P.help "Run Lamdu in a fullscreen window"
@@ -160,11 +160,21 @@ windowMode =
     where
         parseWindowSize s =
             case splitOn "x" s <&> (^? Lens._Show) of
-            [Just w, Just h] -> Vector2 w h & Windowed & const & Just
+            [Just w, Just h] -> Vector2 w h & M.Windowed & const & Just
             _ -> Nothing
-        defaultSize (Vector2 w h)
-            | w < 2000 = Vector2 w h & Windowed
-            | otherwise = Vector2 1000 1200 & Windowed
+        defaultSize monitorInfo
+            | monitorInfo ^. M.monitorSizeMillimeters . _1 < 350 =
+                monitorInfo ^. M.monitorSizeOSLogicalPixels & M.Windowed
+            | otherwise =
+                ( mediumWindowMillimeters
+                    / (monitorInfo ^. M.monitorSizeMillimeters <&> fromIntegral)
+                    <&> max (1/3)
+                )
+                * (monitorInfo ^. M.monitorSizeOSLogicalPixels <&> fromIntegral)
+                <&> round
+                & M.Windowed
+        mediumWindowMillimeters :: Vector2 Double
+        mediumWindowMillimeters = Vector2 233 280
 
 commandWithDb :: P.Parser CommandWithDb
 commandWithDb =
