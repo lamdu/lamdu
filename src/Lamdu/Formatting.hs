@@ -8,7 +8,7 @@ import           Control.Monad (mplus)
 import qualified Data.ByteString.Base16 as Hex
 import qualified Data.Char as Char
 import qualified Data.Text as Text
-import           Data.Text.Encoding (encodeUtf8, decodeUtf8)
+import           Data.Text.Encoding (encodeUtf8, decodeUtf8, decodeUtf8')
 import           Text.Printf (printf)
 import           Text.Read (readMaybe)
 
@@ -33,7 +33,11 @@ instance Format ByteString where
         case Text.uncons str of
         Just ('#', xs) -> Hex.decode (encodeUtf8 xs) ^? Lens._Right
         _ -> Nothing
-    format bs = Text.cons '#' $ decodeUtf8 (Hex.encode bs)
+    format bs =
+        Text.cons '#' (decodeUtf8 (Hex.encode bs)) <>
+        case decodeUtf8' bs of
+        Left{} -> mempty
+        Right txt -> "\n\"" <> txt <> "\""
 
 instance Format Double where
     tryParse str
