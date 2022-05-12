@@ -1,5 +1,5 @@
 #define MyAppName "Lamdu"
-#define MyAppVersion "0.8"
+#define MyAppVersion "0.8.1"
 #define MyAppPublisher "Lamdu"
 #define MyAppURL "http://www.lamdu.org/"
 #define MyAppExeName "lamdu.exe"

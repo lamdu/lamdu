@@ -35,7 +35,7 @@ currentVersionInfo =
 #ifdef DEV_BUILD
         "<devel>"
 #else
-        "0.8"
+        "0.8.1"
 #endif
     , gitCommit = $(Git.hash)
     , gitStatus = $(Git.status)
