@@ -3,7 +3,6 @@
 module Test.Lamdu.SugarStubs where
 
 import           Control.Monad.Unit (Unit(..))
-import           Data.CurAndPrev (CurAndPrev(..))
 import           Data.Property (Property(..))
 import           Data.String (IsString(..))
 import           Data.UUID.Types (UUID)
@@ -149,6 +148,8 @@ def typ var tag body =
             }
         , Sugar._dePresentationMode = Nothing
         , Sugar._deContent = body
+        , Sugar._deVarInfo = Sugar.VarGeneric
+        , Sugar._deResult = pure Nothing
         }
     }
     where
