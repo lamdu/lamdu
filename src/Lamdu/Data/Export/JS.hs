@@ -22,7 +22,7 @@ import qualified Lamdu.Builtins.PrimVal as PrimVal
 import           Lamdu.Calc.Term (Var)
 import qualified Lamdu.Data.Anchors as Anchors
 import           Lamdu.Data.Db.Layout (ViewM)
-import           Lamdu.Data.Export.JSON (jsonExportDef)
+import           Lamdu.Data.Export.JSON (ExportError, jsonExportDef)
 import qualified Lamdu.Data.Definition as Def
 import           Lamdu.Data.Tag (getTagName, name)
 import qualified Lamdu.Eval.JS.Compiler as Compiler
@@ -97,10 +97,11 @@ formatResult (Ann _ b) =
     EV.RInject inj -> inj ^. EV.injectVal & formatResult
     _ -> "<TODO: Format result>"
 
-exportFancy :: Var -> EvalResults -> T ViewM (IO ())
+exportFancy :: Var -> EvalResults -> T ViewM (Either (ExportError ViewM) (IO ()))
 exportFancy def evalResults =
+    jsonExportDef def >>= Lens._Right %%~
+    \json ->
     do
-        exportedCode <- jsonExportDef def <&> AesonPretty.encodePretty
         repl <- ExprLoad.def (ExprIRef.defI def) <&> (^?! Def.defBody . Def._BodyExpr)
         let replResult =
                 evalResults
@@ -126,7 +127,7 @@ exportFancy def evalResults =
                         archive
                 SBS.writeFile "output.txt" replResult
                 foldl addFile Zip.emptyArchive
-                    [ ("source.lamdu", exportedCode)
+                    [ ("source.lamdu", AesonPretty.encodePretty json)
                     -- , ("screenshot.png", screenshot)
                     , ("README.md", readme)
                     , ("js/main.js", replJs)

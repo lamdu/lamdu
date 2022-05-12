@@ -37,7 +37,10 @@ reExportTest :: FilePath -> Test
 reExportTest name =
     do
         src <- LBS.readFile path <&> Aeson.eitherDecode >>= either fail pure
-        dst <- ramDB [path] & join >>= (runDbTransaction ?? runAction (JsonFormat.jsonExportDef repl))
+        dst <-
+            ramDB [path] & join
+            >>= (runDbTransaction ?? runAction (JsonFormat.jsonExportDef repl))
+            <&> (^?! Lens._Right)
         if src == dst
             then pure ()
             else

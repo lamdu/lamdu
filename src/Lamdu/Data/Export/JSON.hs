@@ -2,10 +2,12 @@
 {-# LANGUAGE TemplateHaskell, TypeApplications, FlexibleInstances #-}
 module Lamdu.Data.Export.JSON
     ( fileExportAll, fileExportDef, fileExportTag, fileExportNominal, jsonExportDef
+    , ExportError(..), deletedDefUsedInDef, deletedDefUseTerm
     , Version(..)
     ) where
 
 import qualified Control.Lens as Lens
+import           Control.Monad.Except
 import           Control.Monad.Trans.FastWriter (WriterT, runWriterT)
 import qualified Control.Monad.Trans.FastWriter as Writer
 import           Control.Monad.Trans.State (StateT)
@@ -31,6 +33,7 @@ import qualified Lamdu.Data.Definition as Definition
 import           Lamdu.Data.Export.JSON.Codec (Version(..))
 import qualified Lamdu.Data.Export.JSON.Codec as Codec
 import qualified Lamdu.Data.Export.JSON.Migration as Migration
+import qualified Lamdu.Data.Meta as Meta
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Load as Load
 import           Lamdu.Expr.UniqueId (ToUUID(..))
@@ -49,7 +52,14 @@ data Visited = Visited
     }
 Lens.makeLenses ''Visited
 
-type Export m = WriterT [Codec.Entity] (StateT Visited (T m))
+data ExportError m =
+    ExportDeletedDef
+    { _deletedDefUsedInDef :: ExprIRef.DefI m
+    , _deletedDefUseTerm :: ExprIRef.ValI m
+    }
+Lens.makeLenses ''ExportError
+
+type Export m = WriterT [Codec.Entity] (StateT Visited (ExceptT (ExportError m) (T m)))
 
 type EntityOrdering = (Int, Identifier)
 
@@ -64,15 +74,16 @@ entityOrdering (Codec.EntityOpenDefPane (V.Var ident))                = (5, iden
 entityVersion :: Codec.Entity
 entityVersion = Codec.EntitySchemaVersion Migration.currentVersion
 
-runExport :: Monad m => Export m a -> T m (a, Aeson.Value)
+runExport :: Monad m => Export m a -> T m (Either (ExportError m) (a, Aeson.Value))
 runExport act =
     act
     & runWriterT
     <&> _2 %~ Aeson.toJSON . List.sortOn entityOrdering . (entityVersion :)
     & (`State.evalStateT` Visited mempty mempty mempty)
+    & runExceptT
 
 trans :: Monad m => T m a -> Export m a
-trans = lift . lift
+trans = lift . lift . lift
 
 withVisited ::
     (Monad m, Ord a) =>
@@ -130,13 +141,20 @@ instance ExportSubexpr (HCompose Prune T.Type)
 instance ExportSubexpr (HCompose Prune T.Row)
     -- TODO: Export used tags!
 
-exportVal :: Monad m => Ann (HRef m) # V.Term -> Export m ()
-exportVal x =
+exportVal :: Monad m => ExprIRef.DefI m -> Ann (HRef m) # V.Term -> Export m ()
+exportVal outerDef x =
     do
-        x ^.. ExprLens.valGlobals mempty & traverse_ exportDef
+        Lens.itraverseOf_ (ExprLens.valGlobals mempty) onDef x
         x ^.. ExprLens.valTags & traverse_ exportTag
         x ^.. ExprLens.valNominals & traverse_ exportNominal
         unwrapM (Proxy @ExportSubexpr ##>> \n -> n ^. hVal <$ exportSubexpr n) x & void
+    where
+        onDef usage def =
+            Property.getP (Anchors.assocDefinitionState def) & trans >>=
+            \case
+            Meta.DeletedDefinition ->
+                ExportDeletedDef outerDef (usage ^. ExprIRef.iref) & throwError & lift
+            Meta.LiveDefinition -> exportDef def
 
 exportTopDef :: Monad m => V.Var -> Export m ()
 exportTopDef globalId =
@@ -151,7 +169,7 @@ exportDef globalId =
         tag <- readAssocTag globalId & trans
         exportTag tag
         def <- Load.def defI & trans
-        def ^. Definition.defBody & traverse_ exportVal
+        def ^. Definition.defBody & traverse_ (exportVal defI)
         let def' =
                 def
                 & Definition.defBody . Lens.mapped . hflipped %~
@@ -161,17 +179,17 @@ exportDef globalId =
     where
         defI = ExprIRef.defI globalId
 
-jsonExportDef :: V.Var -> T ViewM Aeson.Value
-jsonExportDef = fmap snd . runExport . exportTopDef
+jsonExportDef :: V.Var -> T ViewM (Either (ExportError ViewM) Aeson.Value)
+jsonExportDef = (fmap . fmap) snd . runExport . exportTopDef
 
-fileExportDef :: Monad m => V.Var -> FilePath -> T m (IO ())
+fileExportDef :: Monad m => V.Var -> FilePath -> T m (Either (ExportError m) (IO ()))
 fileExportDef globalId = export ("def: " ++ show globalId) (exportTopDef globalId)
 
-fileExportTag :: Monad m => T.Tag -> FilePath -> T m (IO ())
+fileExportTag :: Monad m => T.Tag -> FilePath -> T m (Either (ExportError m) (IO ()))
 fileExportTag tag =
     export ("tag: " ++ show tag) (exportTag tag)
 
-fileExportNominal :: Monad m => T.NominalId -> FilePath -> T m (IO ())
+fileExportNominal :: Monad m => T.NominalId -> FilePath -> T m (Either (ExportError m) (IO ()))
 fileExportNominal nomId =
     export ("nominal: " ++ show nomId) (exportNominal nomId)
 
@@ -191,14 +209,14 @@ exportOpenPane :: Monad m => Anchors.Pane ViewM -> Export m ()
 exportOpenPane (Anchors.PaneDefinition defI) = ExprIRef.globalId defI & Codec.EntityOpenDefPane & tell
 exportOpenPane _ = pure ()
 
-fileExportAll :: FilePath -> T ViewM (IO ())
+fileExportAll :: FilePath -> T ViewM (Either (ExportError ViewM) (IO ()))
 fileExportAll = export "all" exportAll
 
-export :: Monad m => String -> Export m a -> FilePath -> T m (IO ())
+export :: Monad m => String -> Export m a -> FilePath -> T m (Either (ExportError m) (IO ()))
 export msg act exportPath =
-    runExport act
-    <&> snd
-    <&> \json ->
-        do
-            putStrLn $ "Exporting " ++ msg ++ " to " ++ show exportPath
-            LBS.writeFile exportPath (AesonPretty.encodePretty json)
+    runExport act <&> fmap snd
+    <&> Lens.mapped %~
+    \json ->
+    do
+        putStrLn $ "Exporting " ++ msg ++ " to " ++ show exportPath
+        LBS.writeFile exportPath (AesonPretty.encodePretty json)

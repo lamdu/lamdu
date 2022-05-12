@@ -68,12 +68,12 @@ import           Lamdu.Prelude
 type T = Transaction
 
 data ExportActions m = ExportActions
-    { exportAll :: IOTrans m ()
-    , exportDef :: V.Var -> IOTrans m ()
-    , exportDefToJS :: V.Var -> IOTrans m ()
+    { exportAll :: IOTrans m GuiState.Update
+    , exportDef :: V.Var -> IOTrans m GuiState.Update
+    , exportDefToJS :: V.Var -> IOTrans m GuiState.Update
     , executeDef :: V.Var -> IO ()
-    , exportTag :: T.Tag -> IOTrans m ()
-    , exportNominal :: T.NominalId -> IOTrans m ()
+    , exportTag :: T.Tag -> IOTrans m GuiState.Update
+    , exportNominal :: T.NominalId -> IOTrans m GuiState.Update
     , importAll :: FilePath -> IOTrans m ()
     }
 
@@ -156,7 +156,7 @@ exportPaneEventMap env theExportActions paneBody =
         exportKeys = env ^. has . Config.export . Config.exportKeys
         exportEventMap act arg docLens =
             act theExportActions arg
-            & E.keysEventMap exportKeys
+            & E.keyPresses exportKeys
             (E.toDoc (env ^. has) [Texts.collaboration, docLens])
 
 deleteAndClosePaneEventMap ::
@@ -320,7 +320,7 @@ panesEventMap theExportActions cp gp =
               (E.keysEventMapMovesCursor (env ^. has . Config.previousCursorKeys)
                (E.toDoc env [has . MomentuTexts.navigation, has . Texts.goBack]))
                 mJumpBack
-            , E.keysEventMap (exportConfig ^. Config.exportAllKeys)
+            , E.keyPresses (exportConfig ^. Config.exportAllKeys)
               (collaborationDoc [Texts.collaboration, Texts.exportEverythingToJSON])
                 exportAll
             , importAll (exportConfig ^. Config.exportPath)

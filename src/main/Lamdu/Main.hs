@@ -88,4 +88,4 @@ exportToPath path db =
     Export.fileExportAll path
     & VersionControl.runAction
     & DbLayout.runDbTransaction db
-    & join
+    >>= either (const (putStrLn "Uses deleted definition")) id
