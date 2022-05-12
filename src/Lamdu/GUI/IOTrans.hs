@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell, GeneralizedNewtypeDeriving, TupleSections #-}
+{-# LANGUAGE TemplateHaskell, GeneralizedNewtypeDeriving #-}
 
 module Lamdu.GUI.IOTrans
     ( IOTrans(..), ioTrans, trans, liftTrans, liftIO, liftIOT, liftTIO
@@ -44,10 +44,9 @@ liftIOT :: Functor m => IO (T m a) -> IOTrans m a
 liftIOT = IOTrans . Compose . fmap (Compose . fmap pure)
 
 -- | Run T / IO
-liftTIO :: Functor m => T m (IO ()) -> IOTrans m ()
+liftTIO :: T m (IO (), a) -> IOTrans m a
 liftTIO act =
     act
-    <&> (, ())
     & Compose
     & pure
     & Compose

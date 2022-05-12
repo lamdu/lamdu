@@ -1,3 +1,5 @@
+{-# LANGUAGE TupleSections #-}
+
 module Lamdu.Editor.Exports (exportActions) where
 
 import           GUI.Momentu.ModKey (ModKey)
@@ -19,7 +21,7 @@ exportActions config evalResults executeIOProcess =
     GUIMain.ExportActions
     { GUIMain.exportAll = fileExport Export.fileExportAll
     , GUIMain.exportDef = fileExport . Export.fileExportDef
-    , GUIMain.exportDefToJS = IOTrans.liftTIO . (`exportFancy` evalResults)
+    , GUIMain.exportDefToJS = exportRes . (`exportFancy` evalResults)
     , GUIMain.executeDef = executeIOProcess
     , GUIMain.exportTag = fileExport . Export.fileExportTag
     , GUIMain.exportNominal = fileExport . Export.fileExportNominal
@@ -27,5 +29,6 @@ exportActions config evalResults executeIOProcess =
     }
     where
         exportPath = config ^. Config.export . Config.exportPath
-        fileExport exporter = exporter exportPath & IOTrans.liftTIO
+        exportRes a = a <&> (, ()) & IOTrans.liftTIO
+        fileExport = exportRes . (exportPath &)
         importAll path = Import.fileImportAll path <&> snd & IOTrans.liftIOT
