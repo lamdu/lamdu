@@ -26,7 +26,7 @@ extra-deps:
 - github: lamdu/FreetypeGL
   commit: 18ca298d8fd48ad18f75264553b57714bf070c77
 - github: tweag/inline-js
-  commit: 5da3690abd454e5e94021dcd4486484e89fc419f
+  commit: 8512b09d2c0533a41d5d2aef182b11a58c420c10
   subdirs:
     - inline-js-core
 

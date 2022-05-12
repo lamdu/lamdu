@@ -1,5 +1,5 @@
 { mkDerivation, base, bytestring, data-default, exceptions, filepath, resourcet, transformers
-, fetchFromGitHub, hsc2hs, lib
+, fetchFromGitHub, hsc2hs, lib, rocksdb
 }:
 mkDerivation {
   pname = "rocksdb-haskell";
@@ -17,6 +17,6 @@ mkDerivation {
   libraryHaskellDepends = [
     base bytestring data-default exceptions filepath resourcet transformers
   ];
-  librarySystemDepends = [ hsc2hs ];
+  librarySystemDepends = [ hsc2hs rocksdb ];
   license = lib.licenses.bsd3;
 }

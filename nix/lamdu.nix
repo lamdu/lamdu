@@ -10,7 +10,7 @@
 , template-haskell, temporary, test-framework, test-framework-hunit
 , text, time, timeit, transformers, generic-constraints
 , uuid, uuid-types, vector, yaml
-, zip-archive, lib, gitMinimal
+, zip-archive, lib, gitMinimal, nodejs
 }:
 mkDerivation {
   pname = "Lamdu";
@@ -39,6 +39,7 @@ mkDerivation {
   enableLibraryProfiling = false;
   enableExecutableProfiling = false;
   enableSeparateDataOutput = true;
+  librarySystemDepends = [ nodejs ];
   libraryHaskellDepends = [
     aeson aeson-pretty ansi-wl-pprint base base-compat
     base16-bytestring binary bitmap bytestring containers cryptohash-sha256
