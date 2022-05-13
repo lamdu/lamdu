@@ -1,0 +1,45 @@
+[
+    {
+        "schemaVersion": 16
+    },
+    {
+        "def": "9db5194f098c4de094abebfbcf4958fd",
+        "defPresentationMode": "Verbose",
+        "tag": null,
+        "typ": {
+            "schemeType": {
+                "typeVar": "61"
+            },
+            "typeVars": [
+                "61"
+            ]
+        },
+        "val": {
+            "hole": {},
+            "id": "5285a942-792f-4668-8b70-4aadfa88418d"
+        }
+    },
+    {
+        "def": "ba6c9c8194dc4f5698be358638679d21",
+        "defPresentationMode": "Verbose",
+        "tag": null,
+        "typ": {
+            "schemeType": {
+                "typeVar": "7430"
+            },
+            "typeVars": [
+                "7430"
+            ]
+        },
+        "val": {
+            "id": "22c353d0-3476-4efb-bc79-2bde3679679f",
+            "hole": {}
+        }
+    },
+    {
+        "openDefPane": "9db5194f098c4de094abebfbcf4958fd"
+    },
+    {
+        "openDefPane": "ba6c9c8194dc4f5698be358638679d21"
+    }    
+]

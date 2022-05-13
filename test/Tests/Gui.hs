@@ -5,6 +5,7 @@ import           Control.Monad.Once (OnceT, _OnceT)
 import           Control.Monad.State (mapStateT)
 import           Control.Monad.Unit (Unit(..))
 import           Data.Containers.ListUtils (nubOrdOn)
+import qualified Data.Property as Property
 import qualified Data.Text as Text
 import           Data.Vector.Vector2 (Vector2(..))
 import qualified GUI.Momentu.Align as Align
@@ -54,6 +55,7 @@ test =
     , testPunnedRecordAddField
     , testRecordPunAndAdd
     , testChooseTagAndAddNext
+    , testTwoDeletedDefs
     ]
 
 defExprs :: Lens.Traversal' (Sugar.WorkArea v name i o a) (Annotated a # Sugar.Assignment v name i o)
@@ -90,6 +92,18 @@ fromWorkArea ::
 fromWorkArea env path =
     convertWorkArea "" env
     <&> (^?! Lens.cloneTraversal path)
+
+testTwoDeletedDefs :: Test
+testTwoDeletedDefs =
+    testCase "two-deleted-defs" $
+    Env.make >>=
+    \baseEnv ->
+    do
+        convertWorkArea "" baseEnv
+            <&> (^.. Sugar.waPanes . traverse . Sugar.paneDefinitionState . Property.pSet)
+            >>= traverse_ (lift . (Sugar.DeletedDefinition &))
+        convertWorkArea "" baseEnv >>= makeFocusedWidget "" baseEnv & void
+    & testProgram "two-repls.json"
 
 testTagPanes :: Test
 testTagPanes =
