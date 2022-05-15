@@ -4,6 +4,7 @@ module Main
 
 import qualified Control.Exception as E
 import           Control.Monad (replicateM_)
+import           Data.Either (fromRight)
 import           GHC.Conc (setNumCapabilities, getNumProcessors)
 import           GHC.Stack (whoCreated)
 import qualified Lamdu.Data.Db as Db
@@ -88,4 +89,4 @@ exportToPath path db =
     Export.fileExportAll path
     & VersionControl.runAction
     & DbLayout.runDbTransaction db
-    >>= either (const (putStrLn "Uses deleted definition")) id
+    >>= fromRight (putStrLn "Uses deleted definition")
