@@ -203,7 +203,7 @@ makeHoleSearchTerm ::
 makeHoleSearchTerm newTagOption mkPickResult holeId =
     do
         searchTerm <- SearchMenu.readSearchTerm holeId
-        let allowNewTag = Name.isValidSearchText searchTerm
+        let allowNewTag = Name.isValidText searchTerm
         newTag <- makeNewTag newTagOption
         newTagEventMap <-
             if allowNewTag
