@@ -28,6 +28,8 @@ charEvent '\t' = noMods GLFW.Key'Tab & simpleKeyEvent
 charEvent ',' = noMods GLFW.Key'Comma & simpleKeyEvent
 charEvent '⌫' = noMods GLFW.Key'Backspace & simpleKeyEvent
 charEvent '→' = noMods GLFW.Key'Right & simpleKeyEvent
+charEvent '↑' = noMods GLFW.Key'Up & simpleKeyEvent
+charEvent '↓' = noMods GLFW.Key'Down & simpleKeyEvent
 charEvent '←' = shift GLFW.Key'Left & simpleKeyEvent
 charEvent x = EventChar x
 
@@ -91,5 +93,7 @@ test =
             , wytiwys "1==2←←if 3\t4" "4"
 
             , wytiwys "if 'a'=='b'\t1\t2" "2"
+
+            , wytiwys "===↑↓⌫⌫⌫1" "1"
             ] & pure
         & buildTest
