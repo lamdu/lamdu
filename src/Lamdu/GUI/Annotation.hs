@@ -19,6 +19,7 @@ import           Control.Monad.Unit (Unit)
 import           Data.CurAndPrev (CurAndPrev(..), CurPrevTag(..), curPrevTag, fallbackToPrev)
 import qualified GUI.Momentu as M
 import qualified GUI.Momentu.Align as Align
+import qualified GUI.Momentu.Direction as Dir
 import qualified GUI.Momentu.Draw as Draw
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.Glue as Glue
@@ -139,6 +140,28 @@ data NeighborVals a = NeighborVals
     , nextNeighbor :: a
     } deriving (Functor, Foldable, Traversable, Show)
 
+neighborPositions ::
+    ( Element.SizedElement evalView
+    , Element.SizedElement prevView
+    , Element.SizedElement nextView
+    , MonadReader env m, Has Dir.Layout env
+    ) =>
+    evalView -> prevView -> nextView -> m (M.Vector2 Widget.R, M.Vector2 Widget.R)
+neighborPositions evalView prev next =
+    Lens.view has <&>
+    \case
+    Dir.LeftToRight -> f (-prev ^. Element.width) rightX
+    Dir.RightToLeft -> f rightX (-next ^. Element.width)
+    where
+        f prevX nextX =
+            ( M.Vector2 prevX prevY
+            , M.Vector2 nextX nextY
+            )
+        baseline = 0.5 * evalView ^. Element.height
+        prevY = baseline - prev ^. Element.height
+        nextY = baseline
+        rightX = evalView ^. Element.width
+
 makeEvalView ::
     _ =>
     Maybe (NeighborVals (Maybe (EvalResDisplay Name))) ->
@@ -159,8 +182,7 @@ makeEvalView mNeighbours evalRes =
                 <$> neighbourView mPrev
                 <*> neighbourView mNext
         evalView <- makeEvaluationResultView evalRes
-        let prevPos = M.Vector2 0 0.5 * evalView ^. Element.size - prev ^. Element.size
-        let nextPos = M.Vector2 1 0.5 * evalView ^. Element.size
+        (prevPos, nextPos) <- neighborPositions evalView prev next
         evalView
             & Element.setLayeredImage <>~ Element.translateLayeredImage prevPos (prev ^. View.vAnimLayers)
             & Element.setLayeredImage <>~ Element.translateLayeredImage nextPos (next ^. View.vAnimLayers)
