@@ -156,7 +156,7 @@ makeExprDefinition defName bodyExpr myId =
                         nameEdit <- makeNameEdit <&> Responsive.fromWithTextPos
                         AssignmentEdit.makePlainLhs nameEdit (x ^. Sugar.apAddFirstParam)
                             (WidgetIds.fromExprPayload (bodyExpr ^. Sugar.deContent . annotation))
-                    <&> Lens.mapped . Widget.updates %~ lift
+                        <&> Lens.mapped . Widget.updates %~ lift
                 else
                     do
                         nameEventMap <- TagEdit.makeChooseEventMap pickNameId
@@ -173,7 +173,7 @@ makeExprDefinition defName bodyExpr myId =
             bodyExpr ^. Sugar.deContent & annValue .~ x ^. Sugar.apBody & GuiM.makeBinder
                 <&> Widget.updates %~ lift
                 >>= AssignmentEdit.layout lhs
-        & GuiState.assignCursor myId pickNameId
+            & GuiState.assignCursor myId (WidgetIds.tagHoleId pickNameId)
         where
             indicatorId = Widget.joinId myId ["result indicator"]
             pickNameId =
