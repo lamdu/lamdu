@@ -48,7 +48,7 @@ getTagPrefix searchTerm = searchTerm ^? Lens.ix 0 . Lens.filtered (`elem` ['\'',
 
 allowSearchTerm :: Text -> Bool
 allowSearchTerm text =
-    Text.drop prefixLength text & Name.isValidText
+    Text.drop prefixLength text & Name.isValidSearchText
     where
         prefixLength = length (getTagPrefix text)
 

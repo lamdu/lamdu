@@ -150,7 +150,7 @@ makeOptions tagRefReplace newTagOpt mkPickResult ctx
                     & any not
             addNewTag <- makeAddNewTag newTagOpt
             let maybeAddNewTagOption
-                    | nonFuzzyResults || not (Name.isValidText searchTerm) = id
+                    | nonFuzzyResults || not (Name.isValidSearchText searchTerm) = id
                     | otherwise =
                         maybe id (:) (addNewTag mkPickResult ctx)
             chooseText <- Lens.view (has . MomentuTexts.choose)
@@ -193,7 +193,7 @@ makeOptions tagRefReplace newTagOpt mkPickResult ctx
         searchTerm = ctx ^. SearchMenu.rSearchTerm
 
 allowedSearchTerm :: Text -> Bool
-allowedSearchTerm = Name.isValidText
+allowedSearchTerm = Name.isValidSearchText
 
 makeHoleSearchTerm ::
     _ =>
@@ -203,7 +203,7 @@ makeHoleSearchTerm ::
 makeHoleSearchTerm newTagOption mkPickResult holeId =
     do
         searchTerm <- SearchMenu.readSearchTerm holeId
-        let allowNewTag = Name.isValidText searchTerm
+        let allowNewTag = Name.isValidSearchText searchTerm
         newTag <- makeNewTag newTagOption
         newTagEventMap <-
             if allowNewTag
