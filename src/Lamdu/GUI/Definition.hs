@@ -9,6 +9,7 @@ import qualified Control.Lens as Lens
 import           Control.Lens.Extended (OneOf)
 import           Control.Monad.Writer (MonadWriter(..))
 import           Data.CurAndPrev (CurPrevTag(..), fallbackToPrev, curPrevTag)
+import qualified Data.List as List
 import           Hyper (annValue)
 import qualified GUI.Momentu as M
 import qualified GUI.Momentu.Element as Element
@@ -149,17 +150,15 @@ makeExprDefinition defName bodyExpr myId =
     Sugar.BodyPlain x ->
         do
             isPickingName <- GuiState.isSubCursor ?? pickNameId
-            lhs <-
-                if isPickingName || Lens.has (Sugar.oTag . Sugar.tagRefJumpTo . Lens._Just) defName
-                then
-                    do
-                        nameEdit <- makeNameEdit <&> Responsive.fromWithTextPos
-                        AssignmentEdit.makePlainLhs nameEdit (x ^. Sugar.apAddFirstParam)
-                            (WidgetIds.fromExprPayload (bodyExpr ^. Sugar.deContent . annotation))
-                        <&> Lens.mapped . Widget.updates %~ lift
-                else
-                    (Widget.makeFocusableView ?? nameTagHoleId <&> (M.tValue %~)) <*> label Texts.repl
-                    <&> Responsive.fromWithTextPos <&> (:[])
+            let isPlainLhs = isPickingName || Lens.has (Sugar.oTag . Sugar.tagRefJumpTo . Lens._Just) defName
+            nameEdit <-
+                makeNameEdit <&> Responsive.fromWithTextPos
+                & if isPlainLhs then id else local (GuiState.cursor .~ nameTagHoleId)
+            plainLhs <-
+                AssignmentEdit.makePlainLhs nameEdit (x ^. Sugar.apAddFirstParam)
+                (WidgetIds.fromExprPayload (bodyExpr ^. Sugar.deContent . annotation))
+                <&> Lens.mapped . Widget.updates %~ lift
+            spaceWidth <- Spacer.getSpaceSize <&> (^. _1)
             resWidget <-
                 (resultWidget indicatorId (bodyExpr ^. Sugar.deVarInfo) <$> curPrevTag <&> fmap) <*> bodyExpr ^. Sugar.deResult
                 & fallbackToPrev
@@ -172,6 +171,18 @@ makeExprDefinition defName bodyExpr myId =
                         (Responsive.lWide %~ addResToWidget Glue.Vertical) .
                         (Responsive.lWideDisambig %~ addResToWidget Glue.Vertical)
                     ) . (Responsive.rNarrow . Lens.mapped %~ addResToWidget Glue.Horizontal)
+            let width =
+                    (plainLhs & Lens.ix 0 %~ addRes)
+                    ^.. traverse . Responsive.rWide . Responsive.lWide . M.tValue . Widget.wSize . Lens._1
+                    & List.intersperse spaceWidth & sum
+            lhs <-
+                if isPlainLhs
+                then pure plainLhs
+                else
+                    do
+                        repl <- (Widget.makeFocusableView ?? nameTagHoleId <&> (M.tValue %~)) <*> label Texts.repl
+                        Element.padToSize ?? (repl ^. M.tValue . Widget.wSize & _1 %~ max width) ?? 0.5 ?? repl
+                    <&> Responsive.fromWithTextPos <&> (:[])
             bodyExpr ^. Sugar.deContent & annValue .~ x ^. Sugar.apBody & GuiM.makeBinder
                 <&> Widget.updates %~ lift
                 >>= AssignmentEdit.layout (lhs & Lens.ix 0 %~ addRes)
