@@ -158,18 +158,14 @@ makeExprDefinition defName bodyExpr myId =
                             (WidgetIds.fromExprPayload (bodyExpr ^. Sugar.deContent . annotation))
                         <&> Lens.mapped . Widget.updates %~ lift
                 else
-                    do
-                        nameEventMap <- TagEdit.makeChooseEventMap pickNameId
-                        ((Widget.makeFocusableView ?? nameTagHoleId <&> (M.tValue %~)) <*> label Texts.repl)
-                            Glue./-/
-                            ( (resultWidget indicatorId (bodyExpr ^. Sugar.deVarInfo) <$> curPrevTag <&> fmap) <*> bodyExpr ^. Sugar.deResult
-                                & fallbackToPrev
-                                & fromMaybe (Widget.respondToCursorPrefix ?? indicatorId ?? M.empty <&> M.WithTextPos 0)
-                                & local (M.animIdPrefix <>~ ["result widget"])
-                            )
-                            <&> Responsive.fromWithTextPos
-                            <&> M.weakerEvents nameEventMap
-                            <&> (:[])
+                    ((Widget.makeFocusableView ?? nameTagHoleId <&> (M.tValue %~)) <*> label Texts.repl)
+                    Glue./-/
+                    ( (resultWidget indicatorId (bodyExpr ^. Sugar.deVarInfo) <$> curPrevTag <&> fmap) <*> bodyExpr ^. Sugar.deResult
+                        & fallbackToPrev
+                        & fromMaybe (Widget.respondToCursorPrefix ?? indicatorId ?? M.empty <&> M.WithTextPos 0)
+                        & local (M.animIdPrefix <>~ ["result widget"])
+                    )
+                    <&> Responsive.fromWithTextPos <&> (:[])
             bodyExpr ^. Sugar.deContent & annValue .~ x ^. Sugar.apBody & GuiM.makeBinder
                 <&> Widget.updates %~ lift
                 >>= AssignmentEdit.layout lhs

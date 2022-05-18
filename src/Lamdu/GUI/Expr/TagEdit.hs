@@ -4,7 +4,6 @@ module Lamdu.GUI.Expr.TagEdit
     , makeArgTag
     , makeTagHoleEdit
     , makeBinderTagEdit
-    , makeChooseEventMap
     ) where
 
 import qualified Control.Lens as Lens
