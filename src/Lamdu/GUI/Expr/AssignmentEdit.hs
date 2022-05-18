@@ -261,6 +261,7 @@ makePlainLhs nameEdit addFirstParam rhsId =
         equals <- grammar (label Texts.assign) <&> Responsive.fromTextView
         pure [Widget.weakerEvents (rhsJumperEquals <> addParam) nameEdit, equals]
 
+-- The given nameEdit may represent an LhsRecord, hence it is a Responsive and not a simple widget
 make ::
     _ =>
     Widget.Id ->
