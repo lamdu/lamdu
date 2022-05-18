@@ -1,0 +1,42 @@
+[
+    {
+        "schemaVersion": 16
+    },
+    {
+        "lamVar": "cd4921439da441e181377a2f69c3f2db",
+        "tag": null
+    },
+    {
+        "def": "72d8db7dbaf44209924ebee47e01faee",
+        "defPresentationMode": "Verbose",
+        "tag": null,
+        "typ": {
+            "schemeType": {
+                "funcParam": {
+                    "typeVar": "7430"
+                },
+                "funcResult": {
+                    "typeVar": "7431"
+                }
+            },
+            "typeVars": [
+                "7430",
+                "7431"
+            ]
+        },
+        "val": {
+            "id": "16eb3810-5d92-4c08-a3ce-3474a086f999",
+            "lamBody": {
+                "hole": {},
+                "id": "b120ba0f-5ee3-4a89-85a7-c66c701e4c4f"
+            },
+            "lamParamType": {
+                "id": "71ac5eeb-157d-4039-b83a-7784e17c0b6e"
+            },
+            "lamVar": "cd4921439da441e181377a2f69c3f2db"
+        }
+    },
+    {
+        "openDefPane": "72d8db7dbaf44209924ebee47e01faee"
+    }
+]

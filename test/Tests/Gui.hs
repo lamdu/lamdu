@@ -56,6 +56,7 @@ test =
     , testRecordPunAndAdd
     , testChooseTagAndAddNext
     , testTwoDeletedDefs
+    , testDelArg
     ]
 
 defExprs :: Lens.Traversal' (Sugar.WorkArea v name i o a) (Annotated a # Sugar.Assignment v name i o)
@@ -250,6 +251,24 @@ testChooseTagAndAddNext =
             >>= applyEvent dummyVirt (simpleKeyEvent (noMods GLFW.Key'Comma))
             >>= convertAndMakeGui "" & void
     & testProgram "record.json"
+
+testDelArg :: HasCallStack => Test
+testDelArg =
+    testCase "del-arg" $
+    Env.make >>=
+    \baseEnv ->
+    do
+        tagId <-
+            fromWorkArea baseEnv
+            ( defExprs . hVal . Sugar._BodyFunction
+            . Sugar.fParams . Sugar._LhsVar . Sugar.vTag . Sugar.oTag . Sugar.tagRefTag . Sugar.tagInstance
+            )
+        env0 <-
+            baseEnv & cursor .~ WidgetIds.fromEntityId tagId
+            & applyEvent dummyVirt (simpleKeyEvent (noMods GLFW.Key'Backspace))
+            >>= applyEvent dummyVirt (simpleKeyEvent (noMods GLFW.Key'Backspace))
+        convertWorkArea "" env0 >>= makeFocusedWidget "" env0 & void
+    & testProgram "a-func.json"
 
 -- | Test for
 -- https://trello.com/c/uLlMpi5g/509-when-picking-record-tag-makes-the-field-pun-it-causes-red-cursor
