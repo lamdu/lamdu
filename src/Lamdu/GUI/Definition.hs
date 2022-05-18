@@ -146,11 +146,11 @@ makeExprDefinition ::
     GuiM env i o (Responsive (DefRes o))
 makeExprDefinition defName bodyExpr myId =
     case bodyExpr ^. Sugar.deContent . hVal of
-    Sugar.BodyPlain x | Lens.has (Sugar.oTag . Sugar.tagRefJumpTo . Lens._Nothing) defName ->
+    Sugar.BodyPlain x ->
         do
             isPickingName <- GuiState.isSubCursor ?? pickNameId
             lhs <-
-                if isPickingName
+                if isPickingName || Lens.has (Sugar.oTag . Sugar.tagRefJumpTo . Lens._Just) defName
                 then
                     do
                         nameEdit <- makeNameEdit <&> Responsive.fromWithTextPos
@@ -158,17 +158,23 @@ makeExprDefinition defName bodyExpr myId =
                             (WidgetIds.fromExprPayload (bodyExpr ^. Sugar.deContent . annotation))
                         <&> Lens.mapped . Widget.updates %~ lift
                 else
-                    ((Widget.makeFocusableView ?? nameTagHoleId <&> (M.tValue %~)) <*> label Texts.repl)
-                    Glue./-/
-                    ( (resultWidget indicatorId (bodyExpr ^. Sugar.deVarInfo) <$> curPrevTag <&> fmap) <*> bodyExpr ^. Sugar.deResult
-                        & fallbackToPrev
-                        & fromMaybe (Widget.respondToCursorPrefix ?? indicatorId ?? M.empty <&> M.WithTextPos 0)
-                        & local (M.animIdPrefix <>~ ["result widget"])
-                    )
+                    (Widget.makeFocusableView ?? nameTagHoleId <&> (M.tValue %~)) <*> label Texts.repl
                     <&> Responsive.fromWithTextPos <&> (:[])
+            resWidget <-
+                (resultWidget indicatorId (bodyExpr ^. Sugar.deVarInfo) <$> curPrevTag <&> fmap) <*> bodyExpr ^. Sugar.deResult
+                & fallbackToPrev
+                & fromMaybe (Widget.respondToCursorPrefix ?? indicatorId ?? M.empty <&> M.WithTextPos 0)
+                & local (M.animIdPrefix <>~ ["result widget"])
+            g <- Glue.mkGlue
+            let addResToWidget o w = g o w resWidget
+            let addRes =
+                    ( Responsive.rWide %~
+                        (Responsive.lWide %~ addResToWidget Glue.Vertical) .
+                        (Responsive.lWideDisambig %~ addResToWidget Glue.Vertical)
+                    ) . (Responsive.rNarrow . Lens.mapped %~ addResToWidget Glue.Horizontal)
             bodyExpr ^. Sugar.deContent & annValue .~ x ^. Sugar.apBody & GuiM.makeBinder
                 <&> Widget.updates %~ lift
-                >>= AssignmentEdit.layout lhs
+                >>= AssignmentEdit.layout (lhs & Lens.ix 0 %~ addRes)
             & GuiState.assignCursor myId nameTagHoleId
         where
             indicatorId = Widget.joinId myId ["result indicator"]
