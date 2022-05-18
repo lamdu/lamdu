@@ -46,9 +46,8 @@ make hole@(Ann (Const pl) _) =
                 -- Make space go to the hole inside a result
                 E.keysEventMap [noMods ModKey.Key'Space]
                 (E.toDoc env [has . MomentuTexts.edit, has . Texts.nextEntry]) (pure ())
-        allowedSearchTerm <- ExprEventMap.allowedSearchTerm
         let mkSearchTerm firstRes =
-                SearchMenu.searchTermEdit myId (pure . allowedSearchTerm) firstRes
+                SearchMenu.searchTermEdit myId (pure . ExprEventMap.allowedSearchTerm) firstRes
                 <&> if searchTerm == "" then SearchMenu.termEditEventMap .~ mempty else id
         (ExprEventMap.add options pl <&> (M.tValue %~))
             <*> ((maybeAddAnnotationPl pl <&> (M.tValue %~)) 

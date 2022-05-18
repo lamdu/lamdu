@@ -6,7 +6,6 @@ import qualified Control.Lens as Lens
 import qualified GUI.Momentu as M
 import           GUI.Momentu ((/|/))
 import qualified GUI.Momentu.Animation as Anim
-import qualified GUI.Momentu.Direction as Dir
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.I18N as MomentuTexts
@@ -47,16 +46,14 @@ import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
 
-allowedSearchTerm :: (MonadReader env m, Has Dir.Layout env) => m (Text -> Bool)
-allowedSearchTerm =
-    do
-        as <- ExprEventMap.allowedSearchTerm
-        recordOpener <- ExprEventMap.recordOpener
-        let isWrapInRec x =
-                case x ^? Lens._Cons of
-                Nothing -> False
-                Just (p, r) -> p == recordOpener && ExprEventMap.isAlphaNumericName r
-        pure (\x -> as x || isWrapInRec x)
+allowedSearchTerm :: Text -> Bool
+allowedSearchTerm x =
+    ExprEventMap.allowedSearchTerm x || isWrapInRec
+    where
+        isWrapInRec =
+            case x ^? Lens._Cons of
+            Nothing -> False
+            Just (p, r) -> p == '{' && ExprEventMap.isAlphaNumericName r
 
 make :: _ => ExprGui.Expr Sugar.Fragment i o -> GuiM env i o (Responsive o)
 make (Ann (Const pl) fragment) =
@@ -79,10 +76,9 @@ make (Ann (Const pl) fragment) =
             <> (ExprEventMap.makeLiteralCharEventMap searchTerm ?? applyPl ^. Sugar.plActions . Sugar.setToLiteral)
             <&> Lens.mapped %~ ((optApply ^. Sugar.optionPick) *>)
 
-        as <- allowedSearchTerm
         searchMenu <-
             SearchMenu.make
-            (SearchMenu.searchTermEdit menuId (pure . as))
+            (SearchMenu.searchTermEdit menuId (pure . allowedSearchTerm))
             (makeResults (fragment ^. Sugar.fOptions) (fragment ^. Sugar.fTagSuffixes)) M.empty menuId
             ?? Menu.AnyPlace
             & local (has . SearchMenu.emptyStrings . Lens.mapped .~ "?")

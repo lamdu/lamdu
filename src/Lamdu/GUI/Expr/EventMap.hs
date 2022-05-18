@@ -6,7 +6,7 @@ module Lamdu.GUI.Expr.EventMap
     , makeLiteralNumberEventMap
     , makeLiteralCharEventMap
     , makeLiteralEventMap
-    , allowedSearchTerm, isAlphaNumericName, recordOpener
+    , allowedSearchTerm, isAlphaNumericName
     , parenKeysEvent
     , closeParenEvent
     ) where
@@ -14,7 +14,6 @@ module Lamdu.GUI.Expr.EventMap
 import qualified Control.Lens as Lens
 import qualified Data.Char as Char
 import qualified Data.Text as Text
-import qualified GUI.Momentu.Direction as Dir
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.I18N as MomentuTexts
@@ -178,7 +177,7 @@ transformSearchTerm =
         transform c =
             do
                 guard (c `notElem` Chars.operator)
-                guard (allowedSearchTerm env (Text.singleton c))
+                guard (allowedSearchTerm (Text.singleton c))
                 pure (Text.singleton c)
         searchStrRemainder = eventCtx ^. Widget.ePrevTextRemainder
         acceptOp = (>= exprInfoMinOpPrec exprInfo) . precedence
@@ -216,17 +215,12 @@ transformEventMap =
         widgetId = pure . WidgetIds.fromEntityId
 
 parenKeysEvent ::
-    (MonadReader env m, Has Dir.Layout env) => m ([Lens.ALens' env Text] -> o a -> EventMap (o a))
+    MonadReader env m => m ([Lens.ALens' env Text] -> o a -> EventMap (o a))
 parenKeysEvent =
     Lens.view id <&>
     \env texts act ->
-    let parenKeys =
-            case env ^. has of
-            Dir.LeftToRight -> "(["
-            Dir.RightToLeft -> ")]"
-    in
     E.charGroup (Just "Open Paren")
-    (E.toDoc env texts) parenKeys (const act)
+    (E.toDoc env texts) "([" (const act)
 
 detachEventMap :: _ => m (ExprInfo o -> EventMap (o GuiState.Update))
 detachEventMap =
@@ -296,21 +290,12 @@ makeLiteralEventMap =
     where
         f = Lens.mapped . Lens.mapped . Lens.mapped %~ goToLiteral
 
-recordOpener :: (MonadReader env m, Has Dir.Layout env) => m Char
-recordOpener =
-    Lens.view has <&>
-    \case
-    Dir.LeftToRight -> '{'
-    Dir.RightToLeft -> '}'
-
-allowedSearchTerm :: (MonadReader env m, Has Dir.Layout env) => m (Text -> Bool)
-allowedSearchTerm =
-    recordOpener <&>
-    \r searchTerm ->
+allowedSearchTerm :: Text -> Bool
+allowedSearchTerm searchTerm =
     any (searchTerm &)
     [ Text.all (`elem` Chars.operator)
     , isNameOrPrefixed
-    , (`elem` ["\\", Text.singleton r])
+    , (`elem` ["\\", "{"])
     , isCharSearchTerm
     ]
 
@@ -336,18 +321,11 @@ isAlphaNumericName suffix =
     Nothing -> True
     Just (x, xs) -> Char.isAlpha x && Text.all Char.isAlphaNum xs
 
-closeParenChars :: (MonadReader env m, Has Dir.Layout env) => m [Char]
-closeParenChars =
-    Lens.view has <&>
-    \case
-    Dir.LeftToRight -> ")]"
-    Dir.RightToLeft -> "(["
-
 closeParenEvent ::
-    (MonadReader env m, Has Dir.Layout env, Functor f) =>
+    (MonadReader env m, Functor f) =>
     [Lens.ALens' env Text] -> f Widget.Id -> m (EventMap (f GuiState.Update))
 closeParenEvent doc action =
     E.charGroup (Just "Close Paren")
     <$> (Lens.view id <&> (`E.toDoc` doc))
-    <*> closeParenChars
+    ?? ")]"
     ?? const (action <&> GuiState.updateCursor)
