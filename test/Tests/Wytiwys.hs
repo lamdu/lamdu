@@ -28,7 +28,7 @@ charEvent '\t' = noMods GLFW.Key'Tab & simpleKeyEvent
 charEvent ',' = noMods GLFW.Key'Comma & simpleKeyEvent
 charEvent '⌫' = noMods GLFW.Key'Backspace & simpleKeyEvent
 charEvent '→' = noMods GLFW.Key'Right & simpleKeyEvent
-charEvent '⇐' = shift GLFW.Key'Left & simpleKeyEvent
+charEvent '←' = shift GLFW.Key'Left & simpleKeyEvent
 charEvent x = EventChar x
 
 applyActions :: HasCallStack => Env.Env -> String -> OnceT (T ViewM) Env.Env
@@ -88,7 +88,7 @@ test =
             , wytiwys "if ⌫1+2" "3" -- Backspace after "if " deletes it
 
             , wytiwys "7+negate\n→4" "3"
-            , wytiwys "1==2⇐⇐if 3\t4" "4"
+            , wytiwys "1==2←←if 3\t4" "4"
 
             , wytiwys "if 'a'=='b'\t1\t2" "2"
             ] & pure
