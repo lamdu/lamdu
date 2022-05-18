@@ -161,7 +161,7 @@ makeExprDefinition defName bodyExpr myId =
                 else
                     do
                         nameEventMap <- TagEdit.makeChooseEventMap pickNameId
-                        ((Widget.makeFocusableView <*> (subAnimId ?? ["repl"] <&> M.WidgetId) <&> (M.tValue %~)) <*> label Texts.repl)
+                        ((Widget.makeFocusableView ?? pickNameId <&> (M.tValue %~)) <*> label Texts.repl)
                             Glue./-/
                             ( (resultWidget indicatorId (bodyExpr ^. Sugar.deVarInfo) <$> curPrevTag <&> fmap) <*> bodyExpr ^. Sugar.deResult
                                 & fallbackToPrev
@@ -180,7 +180,7 @@ makeExprDefinition defName bodyExpr myId =
             indicatorId = Widget.joinId myId ["result indicator"]
             pickNameId =
                 defName ^. Sugar.oTag . Sugar.tagRefTag . Sugar.tagInstance
-                & WidgetIds.fromEntityId & WidgetIds.tagHoleId
+                & WidgetIds.fromEntityId
     _ ->
         do
             mPresentationEdit <-
