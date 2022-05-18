@@ -7,12 +7,8 @@ import Test.Lamdu.Prelude
 test :: Test
 test =
     do
-        ver <-
-            readFile "src/main/Lamdu/Version.hs"
-            <&> read . head . tail . dropWhile (/= "#else") . lines
-        readFile "Lamdu.cabal"
+        ver <- readFile "Lamdu.cabal"
             <&> last . words . head . filter ("version:" `isPrefixOf`) . lines
-            >>= assertEqual "cabal version" ver
         readFile "tools/data/Info.plist"
             <&> head . tail . dropWhile (/= "  <key>CFBundleShortVersionString</key>") . lines
             <&> takeWhile (/= '<') . tail . dropWhile (/= '>')
