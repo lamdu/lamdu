@@ -71,7 +71,9 @@ convertPane ::
 convertPane env (Property panes setPanes) i pane =
     do
         body <- convertPaneBody env pane
-        defState <- Anchors.assocDefinitionState myEntityId ^. Property.mkProperty & lift
+        defState <-
+            Anchors.assocDefinitionState myEntityId ^. Property.mkProperty & lift
+            <&> addRemoveOnDelete (env ^. Anchors.codeAnchors) pane
         pure Pane
             { _paneBody = body
             , _paneEntityId = myEntityId
@@ -93,6 +95,21 @@ convertPane env (Property panes setPanes) i pane =
         mkMMovePaneUp
             | i-1 >= 0 = Just $ movePane i (i-1)
             | otherwise = Nothing
+
+addRemoveOnDelete ::
+    Monad m =>
+    Anchors.CodeAnchors m -> Anchors.Pane m -> Property (T m) DefinitionState -> Property (T m) DefinitionState
+addRemoveOnDelete anchors pane =
+    Property.pSet . Lens.imapped %@~
+    \newState -> (fix newState *>)
+    where
+        fix newState =
+            case pane of
+            Anchors.PaneDefinition x -> f Anchors.globals x
+            Anchors.PaneNominal x -> f Anchors.tids x
+            Anchors.PaneTag x -> f Anchors.tags x
+            where
+                f w x = Property.modP (w anchors) (Lens.contains x .~ (newState == LiveDefinition))
 
 loadPanes ::
     ( Monad m, Typeable m
