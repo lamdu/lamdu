@@ -11,7 +11,6 @@ import           Control.Monad.Writer (MonadWriter(..))
 import           Data.CurAndPrev (CurPrevTag(..), fallbackToPrev, curPrevTag)
 import           Hyper (annValue)
 import qualified GUI.Momentu as M
-import           GUI.Momentu.Element (subAnimId)
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.Glue as Glue
