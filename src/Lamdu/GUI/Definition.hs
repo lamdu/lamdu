@@ -172,10 +172,9 @@ makeExprDefinition defName bodyExpr myId =
                             <&> M.weakerEvents nameEventMap
                             <&> (:[])
             bodyExpr ^. Sugar.deContent & annValue .~ x ^. Sugar.apBody & GuiM.makeBinder
-                & GuiState.assignCursor myId
-                    (WidgetIds.fromExprPayload (bodyExpr ^. Sugar.deContent . annotation))
                 <&> Widget.updates %~ lift
                 >>= AssignmentEdit.layout lhs
+        & GuiState.assignCursor myId pickNameId
         where
             indicatorId = Widget.joinId myId ["result indicator"]
             pickNameId =
