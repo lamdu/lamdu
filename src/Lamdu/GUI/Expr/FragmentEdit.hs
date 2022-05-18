@@ -88,8 +88,7 @@ make (Ann (Const pl) fragment) =
             <&> Lens.mapped %~ Widget.strongerEventsWithoutPreevents applyActionsEventMap
         hbox <- Options.boxSpaced ?? Options.disambiguationNone
         addParens <-
-            if pl ^. Sugar.plParenInfo . Sugar.piNeedParens &&
-                not (fragment ^. Sugar.fExpr . annotation . Sugar.plParenInfo . Sugar.piNeedParens)
+            if pl ^. Sugar.plParenInfo . Sugar.piNeedParens
             then
                 ResponsiveExpr.addParens ??
                 -- Use id of inner expr for better animations
