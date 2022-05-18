@@ -100,7 +100,7 @@ instance HasPrecedence name => AddParens (Term v name i o) where
             )
         BodyFragment x ->
             ( parentPrec ^. before > 0 || parentPrec ^. after > 0
-            , x & fExpr %~ (Const (13, pure 1) :*:) & BodyFragment
+            , x & fExpr %~ (Const (13, pure 13) :*:) & BodyFragment
             )
         BodyNullaryInject x -> (False, unambiguousBody x & BodyNullaryInject)
         BodyLeaf x ->
