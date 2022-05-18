@@ -2,6 +2,7 @@ module Lamdu.GUI.Expr.HoleEdit
     ( make
     ) where
 
+import           Control.Applicative (Alternative(..))
 import qualified Control.Lens as Lens
 import           Hyper
 import qualified GUI.Momentu as M
@@ -47,8 +48,15 @@ make hole@(Ann (Const pl) _) =
                 E.keysEventMap [noMods ModKey.Key'Space]
                 (E.toDoc env [has . MomentuTexts.edit, has . Texts.nextEntry]) (pure ())
         let mkSearchTerm firstRes =
-                SearchMenu.searchTermEdit myId (pure . ExprEventMap.allowedSearchTerm) firstRes
-                <&> if searchTerm == "" then SearchMenu.termEditEventMap .~ mempty else id
+                SearchMenu.searchTermEdit myId (pure . ExprEventMap.allowedSearchTerm) firstRes <&>
+                if searchTerm == ""
+                then SearchMenu.termEditEventMap .~ mempty
+                else
+                    (SearchMenu.termWidget . Lens.mapped . Widget.eventMapMaker . Lens.mapped %~ blockChars) .
+                    case firstRes of
+                    Menu.PickFirstResult{} -> id
+                    Menu.NoPickFirstResult ->
+                        SearchMenu.termEditEventMap %~ blockChars
         (ExprEventMap.add options pl <&> (M.tValue %~))
             <*> ((maybeAddAnnotationPl pl <&> (M.tValue %~)) 
                 <*> (SearchMenu.make mkSearchTerm (makeResults hole) M.empty myId ?? Menu.AnyPlace))
@@ -57,6 +65,9 @@ make hole@(Ann (Const pl) _) =
             <&> M.weakerEvents innerHoleEventMap
             <&> Widget.strongerEvents (negativeNumberEventMap <> charEventMap)
     where
+        blockChars =
+            E.emAllCharsHandler . traverse . E.chDocHandler . E.dhHandler . Lens.mapped
+            %~ (<|> Just (pure mempty))
         setToLiteral = pl ^. Sugar.plActions . Sugar.setToLiteral
         myId = WidgetIds.fromExprPayload pl
         options =
