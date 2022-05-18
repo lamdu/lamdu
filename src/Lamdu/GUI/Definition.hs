@@ -10,7 +10,6 @@ import           Control.Lens.Extended (OneOf)
 import           Control.Monad.Writer (MonadWriter(..))
 import           Data.CurAndPrev (CurPrevTag(..), fallbackToPrev, curPrevTag)
 import qualified Data.List as List
-import           Hyper (annValue)
 import qualified GUI.Momentu as M
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as E
@@ -24,6 +23,7 @@ import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Label as Label
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified GUI.Momentu.Widgets.TextView as TextView
+import           Hyper (annValue)
 import qualified Lamdu.Builtins.Anchors as Builtins
 import qualified Lamdu.Config as Config
 import           Lamdu.Config.Theme (Theme)
@@ -181,7 +181,7 @@ makeExprDefinition defName bodyExpr myId =
                 else
                     do
                         repl <- (Widget.makeFocusableView ?? nameTagHoleId <&> (M.tValue %~)) <*> label Texts.repl
-                        Element.padToSize ?? (repl ^. M.tValue . Widget.wSize & _1 %~ max width) ?? 0.5 ?? repl
+                        Element.padToSize ?? M.Vector2 width 0 ?? 0 ?? repl
                     <&> Responsive.fromWithTextPos <&> (:[])
             bodyExpr ^. Sugar.deContent & annValue .~ x ^. Sugar.apBody & GuiM.makeBinder
                 <&> Widget.updates %~ lift
