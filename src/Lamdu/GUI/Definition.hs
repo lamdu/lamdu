@@ -160,7 +160,7 @@ makeExprDefinition defName bodyExpr myId =
                 else
                     do
                         nameEventMap <- TagEdit.makeChooseEventMap pickNameId
-                        ((Widget.makeFocusableView ?? pickNameId <&> (M.tValue %~)) <*> label Texts.repl)
+                        ((Widget.makeFocusableView ?? nameTagHoleId <&> (M.tValue %~)) <*> label Texts.repl)
                             Glue./-/
                             ( (resultWidget indicatorId (bodyExpr ^. Sugar.deVarInfo) <$> curPrevTag <&> fmap) <*> bodyExpr ^. Sugar.deResult
                                 & fallbackToPrev
@@ -173,9 +173,10 @@ makeExprDefinition defName bodyExpr myId =
             bodyExpr ^. Sugar.deContent & annValue .~ x ^. Sugar.apBody & GuiM.makeBinder
                 <&> Widget.updates %~ lift
                 >>= AssignmentEdit.layout lhs
-            & GuiState.assignCursor myId (WidgetIds.tagHoleId pickNameId)
+            & GuiState.assignCursor myId nameTagHoleId
         where
             indicatorId = Widget.joinId myId ["result indicator"]
+            nameTagHoleId = WidgetIds.tagHoleId pickNameId
             pickNameId =
                 defName ^. Sugar.oTag . Sugar.tagRefTag . Sugar.tagInstance
                 & WidgetIds.fromEntityId
