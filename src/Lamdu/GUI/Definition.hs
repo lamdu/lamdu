@@ -149,18 +149,24 @@ makeExprDefinition defName bodyExpr myId =
     Sugar.BodyPlain x | Lens.has (Sugar.oTag . Sugar.tagRefJumpTo . Lens._Nothing) defName ->
         do
             isPickingName <- GuiState.isSubCursor ?? pickNameId
+            replLabelRaw <- label Texts.repl
+
+            nameEdit <- makeNameEdit <&> Responsive.fromWithTextPos
+            plainLhsEditRaw <-
+                AssignmentEdit.makePlainLhs nameEdit (x ^. Sugar.apAddFirstParam)
+                (WidgetIds.fromExprPayload (bodyExpr ^. Sugar.deContent . annotation))
+                <&> Lens.mapped . Widget.updates %~ lift
+
+            let maxLhsSize = max <$> replLabelRaw ^. Element.size <*> plainLhsEditRaw ^. Element.size
+
             lhs <-
                 if isPickingName
-                then
-                    do
-                        nameEdit <- makeNameEdit <&> Responsive.fromWithTextPos
-                        AssignmentEdit.makePlainLhs nameEdit (x ^. Sugar.apAddFirstParam)
-                            (WidgetIds.fromExprPayload (bodyExpr ^. Sugar.deContent . annotation))
-                        <&> Lens.mapped . Widget.updates %~ lift
+                then Element.padToSize ?? maxLhsSize ?? 0 ?? plainLhsEditRaw
                 else
                     do
                         nameEventMap <- TagEdit.makeChooseEventMap pickNameId
-                        ((Widget.makeFocusableView ?? nameTagHoleId <&> (M.tValue %~)) <*> label Texts.repl)
+                        replLabel <- Element.padToSize ?? maxLhsSize ?? 0 ?? replLabelRaw
+                        (Widget.makeFocusableView ?? nameTagHoleId <&> (M.tValue %~) ?? replLabel)
                             Glue./-/
                             ( (resultWidget indicatorId (bodyExpr ^. Sugar.deVarInfo) <$> curPrevTag <&> fmap) <*> bodyExpr ^. Sugar.deResult
                                 & fallbackToPrev
