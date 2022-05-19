@@ -39,7 +39,7 @@ var bytesFromAscii = function (str) {
 var toString = function (bytes) {
     // This is a nodejs only method to convert a UInt8Array to a string.
     // For the browser we'll need to augment this.
-    return Buffer(bytes).toString();
+    return Buffer.from(bytes).toString();
 };
 
 var makeOpaque = function (obj) {
