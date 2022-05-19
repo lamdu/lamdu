@@ -14,7 +14,6 @@ data Collaboration a = Collaboration
     , _exportTagToJSON :: a
     , _exportNominalToJSON :: a
     , _exportEverythingToJSON :: a
-    , _exportReplToJSON :: a
     , _exportReplToJS :: a
     , _importJSON :: a
     } deriving Eq

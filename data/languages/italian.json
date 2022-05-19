@@ -33,7 +33,6 @@
             "exportTagToJSON": "Esporta tag in JSON",
             "exportNominalToJSON": "Esporta nominale in JSON",
             "exportEverythingToJSON": "Esporta tutto in JSON",
-            "exportReplToJSON": "Esporta definizione in un file JSON",
             "exportReplToJS": "Esporta definizione come JS",
             "importJSON": "Importa file JSON"
         },
