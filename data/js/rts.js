@@ -282,10 +282,12 @@ module.exports = {
                 currentWorkDir: cont => {
                     cont(bytes(Buffer.from(process.cwd())));
                 },
-                exec: cmd => {
-                    return cont => {
-                        require('child_process').exec(toString(cmd), x => cont({}));
-                    };
+                exec: function (cmd) {
+                    return function (cont) {
+                        require('child_process').exec(toString(cmd), function (error, stdout, stderr) {
+                            cont(bytes(Buffer.from(stdout)));
+                        });
+                    }
                 }
             },
             network: {
