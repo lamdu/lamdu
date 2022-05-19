@@ -14,7 +14,7 @@ data Collaboration a = Collaboration
     , _exportTagToJSON :: a
     , _exportNominalToJSON :: a
     , _exportEverythingToJSON :: a
-    , _exportReplToJS :: a
+    , _exportDefToJS :: a
     , _importJSON :: a
     } deriving Eq
 Lens.makeLenses ''Collaboration

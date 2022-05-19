@@ -138,7 +138,9 @@ exportPaneEventMap ::
 exportPaneEventMap env theExportActions paneBody =
     case paneBody of
     Sugar.PaneDefinition def ->
-        exportEventMap exportDef (def ^. Sugar.drDefI) Texts.exportDefToJSON
+        exportEventMap exportDef (def ^. Sugar.drDefI) Texts.exportDefToJSON exportKeys
+        <> exportEventMap exportDefToJS (def ^. Sugar.drDefI) Texts.exportDefToJS
+            (env ^. has . Config.export . Config.exportFancyKeys)
         <> execEventMap
         where
             execEventMap =
@@ -149,14 +151,14 @@ exportPaneEventMap env theExportActions paneBody =
                     (IOTrans.liftIO (executeDef theExportActions (def ^. Sugar.drDefI)))
                 _ -> mempty
     Sugar.PaneTag tag ->
-        exportEventMap exportTag (tag ^. Sugar.tpTag) Texts.exportTagToJSON
+        exportEventMap exportTag (tag ^. Sugar.tpTag) Texts.exportTagToJSON exportKeys
     Sugar.PaneNominal nom ->
-        exportEventMap exportNominal (nom ^. Sugar.npNominalId) Texts.exportNominalToJSON
+        exportEventMap exportNominal (nom ^. Sugar.npNominalId) Texts.exportNominalToJSON exportKeys
     where
         exportKeys = env ^. has . Config.export . Config.exportKeys
-        exportEventMap act arg docLens =
+        exportEventMap act arg docLens keys =
             act theExportActions arg
-            & E.keyPresses exportKeys
+            & E.keyPresses keys
             (E.toDoc (env ^. has) [Texts.collaboration, docLens])
 
 deleteAndClosePaneEventMap ::

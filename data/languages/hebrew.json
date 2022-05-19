@@ -34,7 +34,7 @@
             "exportTagToJSON": "ייצא תג לקובץ שיתוף",
             "exportNominalToJSON": "ייצא נומינלי לקובץ שיתוף",
             "exportEverythingToJSON": "ייצא הכל לקובץ שיתוף",
-            "exportReplToJS": "ייצא שורת פקודה לג'אווהסקריפט",
+            "exportDefToJS": "ייצא שורת פקודה לג'אווהסקריפט",
             "importJSON": "ייבא קובץ שיתוף"
         },
         "definitions": {

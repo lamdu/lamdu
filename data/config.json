@@ -41,7 +41,7 @@
     "export": {
         "exportPath"      : "export.json",
         "exportKeys"      : [ "Alt+E" ],
-        "exportFancyKeys" : [ "Alt+Shift+J" ],
+        "exportFancyKeys" : [ "Cmd+J" ],
         "exportAllKeys"   : [ "Alt+Shift+E" ],
         "executeKeys"     : [ "Cmd+Alt+Shift+R" ],
         "importKeys"      : [ "Alt+I" ]
