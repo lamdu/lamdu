@@ -6,7 +6,6 @@ import           Control.Monad.Unit (Unit(..))
 import           Data.Property (Property(..))
 import           Data.String (IsString(..))
 import           Data.UUID.Types (UUID)
-import           Hyper.Syntax (FuncType(..))
 import           Hyper.Syntax.Scheme (QVars(..))
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
@@ -16,13 +15,6 @@ import           Lamdu.Sugar.Names.Add (InternalName(..))
 import qualified Lamdu.Sugar.Types as Sugar
 
 import           Test.Lamdu.Prelude
-
-infixr 1 ~>
-(~>) ::
-    Annotated Sugar.EntityId # Sugar.Type name o ->
-    Annotated Sugar.EntityId # Sugar.Type name o ->
-    Annotated Sugar.EntityId # Sugar.Type name o
-param ~> res = FuncType param res & Sugar.TFun & Ann (Const "dummy")
 
 nameRef :: name -> Sugar.NameRef name Unit
 nameRef = (`Sugar.NameRef` Unit)

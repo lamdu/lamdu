@@ -1,18 +1,16 @@
 -- | Convert eval results
 
 module Lamdu.Sugar.Convert.Eval
-    ( results, param, completion
+    ( results, param
     ) where
 
 import           Control.Applicative ((<|>))
 import qualified Control.Lens as Lens
 import           Data.Char (chr)
-import           Data.CurAndPrev (CurAndPrev(..))
 import qualified Data.List as List
 import qualified Data.Map as Map
 import           Data.Maybe.Extended (maybeToMPlus)
 import           Data.Text.Encoding (decodeUtf8')
-import           Data.UUID (UUID)
 import           Hyper.Syntax.Nominal (NominalInst(..))
 import           Hyper.Syntax.Row (RowExtend(..))
 import           Hyper.Syntax.Scheme (QVarInstances(..))
@@ -20,19 +18,13 @@ import qualified Lamdu.Builtins.Anchors as Builtins
 import qualified Lamdu.Builtins.PrimVal as PrimVal
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
-import qualified Lamdu.Data.Anchors as Anchors
-import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Eval.Results as ER
-import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Sugar.Convert.Tag as ConvertTag
 import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import           Lamdu.Sugar.Types
-import           Revision.Deltum.Transaction (Transaction)
 
 import           Lamdu.Prelude
-
-type T = Transaction
 
 nullToNothing :: Map k v -> Maybe (Map k v)
 nullToNothing m
@@ -221,23 +213,3 @@ param ::
     Applicative i =>
     EntityId -> EvalScopes ERV -> EvaluationScopes InternalName i
 param = convertEvalResultsWith . entityIdForParam
-
-completion ::
-    Monad m =>
-    Anchors.CodeAnchors m ->
-    CurAndPrev (Maybe (Either (ER.EvalException UUID) a)) ->
-    EvalCompletion (T m)
-completion cp completions =
-    completions <&> Lens._Just %~ f
-    where
-        f (Left (ER.EvalException errType position)) =
-                EvalError EvalException
-                { _evalExceptionType = errType
-                , _evalExceptionJumpTo =
-                    position
-                    <&>
-                    \(whichGlobal, valI) ->
-                    EntityId.EntityId valI
-                    <$ DataOps.newPane cp (Anchors.PaneDefinition (ExprIRef.defI whichGlobal))
-                }
-        f Right{} = EvalSuccess
