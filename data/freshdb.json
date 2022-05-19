@@ -258,6 +258,20 @@
     },
     {
         "names": {
+            "english": {
+                "abbreviation": "cwd",
+                "name": "currentWorkDirectory"
+            },
+            "hebrew": {
+                "abbreviation": "ספריה_נוכחית",
+                "name": "ספריית_עבודה_נוכחית"
+            }
+        },
+        "tag": "24aeab996503496a9f1ed4137f936bb5",
+        "tagOrder": 0
+    },
+    {
+        "names": {
             "english": "f",
             "hebrew": "פ",
             "italian": "f",
@@ -6044,6 +6058,32 @@
                     "nomId": "42493a666c6f61740000000000000000"
                 }
             }
+        }
+    },
+    {
+        "builtin": [
+            "IO",
+            "os",
+            "currentWorkDir"
+        ],
+        "def": "159cdb1be88d4fd0b98aba6794c4d1fb",
+        "defPresentationMode": "Verbose",
+        "tag": "24aeab996503496a9f1ed4137f936bb5",
+        "typ": {
+            "schemeType": {
+                "nomId": "42493a53540000000000000000000000",
+                "nomTypeArgs": {
+                    "6eeb55f76600d4ad08be72ad3ac13d96": {
+                        "nomId": "42493a62797465730000000000000000"
+                    },
+                    "73000000000000000000000000000000": {
+                        "typeVar": "7430"
+                    }
+                }
+            },
+            "typeVars": [
+                "7430"
+            ]
         }
     },
     {

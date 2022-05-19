@@ -279,6 +279,9 @@ module.exports = {
                         data: {}
                     };
                 }),
+                currentWorkDir: cont => {
+                    cont(bytes(Buffer.from(process.cwd())));
+                },
                 exec: cmd => {
                     return cont => {
                         require('child_process').exec(toString(cmd), x => cont({}));
