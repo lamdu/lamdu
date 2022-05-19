@@ -36,8 +36,7 @@
             "exportEverythingToJSON": "ייצא הכל לקובץ שיתוף",
             "exportReplToJSON": "ייצא שורת פקודה לקובץ שיתוף",
             "exportReplToJS": "ייצא שורת פקודה לג'אווהסקריפט",
-            "importJSON": "ייבא קובץ שיתוף",
-            "importReplFromJSON": "ייבא שורת פקודה מקובץ שיתוף"
+            "importJSON": "ייבא קובץ שיתוף"
         },
         "definitions": {
             "defUpdateHeader": "עדכן",

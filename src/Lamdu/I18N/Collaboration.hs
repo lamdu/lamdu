@@ -17,7 +17,6 @@ data Collaboration a = Collaboration
     , _exportReplToJSON :: a
     , _exportReplToJS :: a
     , _importJSON :: a
-    , _importReplFromJSON :: a
     } deriving Eq
 Lens.makeLenses ''Collaboration
 JsonTH.derivePrefixed "_" ''Collaboration

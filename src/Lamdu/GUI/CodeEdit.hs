@@ -325,9 +325,6 @@ panesEventMap theExportActions cp gp =
             , E.keyPresses (exportConfig ^. Config.exportAllKeys)
               (collaborationDoc [Texts.collaboration, Texts.exportEverythingToJSON])
                 exportAll
-            , importAll (exportConfig ^. Config.exportPath)
-              & E.keysEventMap (exportConfig ^. Config.importKeys)
-                (collaborationDoc [Texts.collaboration, Texts.importReplFromJSON])
             ] & pure
     where
         ExportActions{importAll,exportAll} = theExportActions

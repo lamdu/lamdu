@@ -35,10 +35,9 @@
             "exportTagToJSON": "Exportar el tag a JSON",
             "exportNominalToJSON": "Exportar el nominal a JSON",
             "exportEverythingToJSON": "Exportar todo a JSON",
-            "exportReplToJSON": "Exportar repl a archivo JSON",
-            "exportReplToJS": "Exportar repl a JS",
-            "importJSON": "Importar archivo JSON",
-            "importReplFromJSON": "Importar REPL desde un archivo JSON"
+            "exportReplToJSON": "Exportar definizione a archivo JSON",
+            "exportReplToJS": "Exportar definizione a JS",
+            "importJSON": "Importar archivo JSON"
         },
         "definitions": {
             "defUpdateHeader": "Actualizar",
