@@ -6,7 +6,7 @@ module Lamdu.Opts
     , ImportOpts(..), importPath, importImplicitPrelude
     , Command(..), _DeleteDb, _Undo, _Editor
     , CommandWithDb(..), cCommand, cLamduDB
-    , Parsed(..), _ParsedCommand
+    , Parsed(..), _ParsedRequestVersion, _ParsedCommand
     , get
     ) where
 
@@ -49,7 +49,7 @@ data CommandWithDb = CommandWithDb
     , _cLamduDB :: Maybe FilePath
     }
 
-newtype Parsed = ParsedCommand CommandWithDb
+data Parsed = ParsedRequestVersion | ParsedCommand CommandWithDb
 
 traverse Lens.makeLenses [''CommandWithDb, ''EditorOpts, ''ImportOpts] <&> concat
 traverse Lens.makePrisms [''Command, ''Parsed] <&> concat
@@ -185,8 +185,14 @@ commandWithDb =
             (P.metavar "PATH" <> P.long "lamduDB" <>
              P.help "Override path to lamdu DB"))
 
+requestVersion :: P.Parser Parsed
+requestVersion =
+    P.long "version" <>
+    P.help "Get the build's version information"
+    & P.flag' ParsedRequestVersion
+
 parser :: P.Parser Parsed
-parser = ParsedCommand <$> commandWithDb
+parser = requestVersion <|> ParsedCommand <$> commandWithDb
 
 get :: IO Parsed
 get =
