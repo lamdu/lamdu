@@ -6,6 +6,8 @@ on:
     types: [synchronize, opened, reopened]
   push:
     branches: [main]
+    tags:
+      - 'v*'
   schedule:
     # additionally run once per week (At 00:00 on Sunday) to maintain cache
     - cron: '0 0 * * 0'
@@ -50,6 +52,20 @@ jobs:
     - name: Test
       run: |
         stack test --system-ghc
+
+    - name: Build release
+      if: startsWith(github.ref, 'refs/tags/v')
+      run: |
+        stack exec --system-ghc make_archive `stack exec --system-ghc which lamdu`
+
+    - name: Upload release
+      if: startsWith(github.ref, 'refs/tags/v')
+      id: upload-release-asset
+      uses: softprops/action-gh-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        files: lamdu-*-linux.tgz
 
   hlint:
     name: hlint
