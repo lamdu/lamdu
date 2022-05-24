@@ -9,7 +9,7 @@ test =
     do
         ver <-
             readFile "src/main/Lamdu/Version.hs"
-            <&> read . head . tail . dropWhile (/= "#else") . lines
+            <&> read . head . tail . dropWhile (/= "currentVersionInfo =") . lines
         readFile "Lamdu.cabal"
             <&> last . words . head . filter ("version:" `isPrefixOf`) . lines
             >>= assertEqual "cabal version" ver

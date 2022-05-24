@@ -1,56 +1,12 @@
 -- | Export lamdu version for --help
-{-# LANGUAGE CPP, TemplateHaskell, NamedFieldPuns #-}
 {-# OPTIONS -O0 #-}
-#ifndef DEV_BUILD
-{-# OPTIONS -fforce-recomp #-}
-#endif
-module Lamdu.Version
-    ( VersionInfo(..), currentVersionInfo, currentVersionInfoStr
-    ) where
-
-import           Data.Time (getZonedTime, formatTime, defaultTimeLocale)
-import           Language.Haskell.TH (runIO, stringE)
-import qualified System.Process.Git as Git
+module Lamdu.Version (currentVersionInfoStr) where
 
 import           Prelude.Compat
 
-data VersionInfo = VersionInfo
-    { version :: !String
-    , gitCommit :: !String
-    , gitStatus :: !String
-    , gitDirty :: !Bool
-    }
-
-_curdate :: String
-_curdate =
-    $(runIO (formatTime defaultTimeLocale "%y-%m-%d" <$> getZonedTime) >>= stringE)
-
-_rc :: String -> String
-_rc ver = ver ++ "-rc-" ++ _curdate
-
-currentVersionInfo :: VersionInfo
+currentVersionInfo :: String
 currentVersionInfo =
-    VersionInfo
-    { version =
-#ifdef DEV_BUILD
-        "<devel>"
-#else
-        "0.8.1"
-#endif
-    , gitCommit = $(Git.hash)
-    , gitStatus = $(Git.status)
-    , gitDirty = $(Git.dirty)
-    }
+    "0.8.1"
 
 currentVersionInfoStr :: String
-currentVersionInfoStr =
-    concat
-    [ "Lamdu ", version
-    , "\n  built from git revision: ", gitCommit
-    , statusLine
-    ]
-    where
-        statusLine
-            | null gitStatus = ""
-            | otherwise = "\n  status:" ++ gitStatus
-        VersionInfo{version, gitCommit, gitStatus} = currentVersionInfo
+currentVersionInfoStr = concat ["Lamdu ", currentVersionInfo, "\n"]

@@ -132,7 +132,6 @@ executables:
     - directory
     - process
     - template-haskell
-    - time
     - base-compat
     ghc-options:
     - -rtsopts
