@@ -30,7 +30,6 @@ dependencies:
 
 default-extensions:
 - NoImplicitPrelude
-- OverloadedStrings
 - LambdaCase
 
 ghc-options:
@@ -59,6 +58,7 @@ library:
   - DeriveAnyClass
   - DerivingStrategies
   - FlexibleContexts
+  - OverloadedStrings
   - TypeOperators
   ghc-options:
   - -O2
@@ -157,6 +157,13 @@ executables:
     - directory
     - filepath
     - optparse-applicative >= 0.12
+  make_archive:
+    main: tools/make_archive.hs
+    dependencies:
+    - directory
+    - filepath
+    - lens
+    - process
 
 tests:
   Tests:
@@ -169,6 +176,7 @@ tests:
     - DeriveAnyClass
     - DerivingStrategies
     - FlexibleContexts
+    - OverloadedStrings
     - TypeOperators
     ghc-options:
     - -O0

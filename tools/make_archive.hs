@@ -1,10 +1,7 @@
-#!/usr/bin/env runhaskell
-
 import           Control.Exception (bracket_)
 import qualified Control.Lens as Lens
 import           Control.Lens.Operators
 import           Control.Monad (when, unless)
-import qualified Data.ByteString.Lazy as LBS
 import           Data.Foldable (traverse_)
 import qualified Data.List as List
 import qualified System.Directory as Dir
