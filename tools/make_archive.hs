@@ -42,7 +42,8 @@ interestingLibs =
     , "libicudata"
 
     -- for macOS:
-    , "libtcmalloc"
+    , "libgflags"
+    , "libsnappy"
     ]
 
 isInteresting :: FilePath -> Bool
