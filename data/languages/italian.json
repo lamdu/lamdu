@@ -46,7 +46,6 @@
             "newDefinitionButton": "Nuovo...",
             "undelete": "Annulla cancellazione",
             "undeleteButton": "Annulla cancellazione...",
-            "extractReplToDef": "Estrai come definizione",
             "extract": "Estrai",
             "extractToOuter": "Estrai a visibilità esterna",
             "execRepl": "Esegui processo Repl"

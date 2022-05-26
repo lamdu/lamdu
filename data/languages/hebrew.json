@@ -47,7 +47,6 @@
             "newDefinitionButton": "חדש...",
             "undelete": "שחזר",
             "undeleteButton": "שחזר...",
-            "extractReplToDef": "ייצא שורת פקודה להגדרה",
             "extract": "חלץ",
             "extractToOuter": "חלץ לתחום חיצוני יותר",
             "execRepl": "הפעל תוצאת שורת פקודה"

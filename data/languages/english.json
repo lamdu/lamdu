@@ -46,7 +46,6 @@
             "newDefinitionButton": "New...",
             "undelete": "Undelete",
             "undeleteButton": "Undelete...",
-            "extractReplToDef": "Extract to definition",
             "extract": "Extract",
             "extractToOuter": "Extract to outer scope",
             "execRepl": "Execute Repl Process"

@@ -48,7 +48,6 @@
             "newDefinitionButton": "Nuevo...",
             "undelete": "Deshacer borrado",
             "undeleteButton": "Deshacer borrado...",
-            "extractReplToDef": "Extraer como definición",
             "extract": "Extraer",
             "extractToOuter": "Extraer como visibilidad externa",
             "execRepl": "Ejecutar proceso  REPL"

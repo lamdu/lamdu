@@ -19,7 +19,6 @@ data Definitions a = Definitions
     , _updateDefType :: a
     , _typeUpdateDialog :: a
     , _def :: a
-    , _extractReplToDef :: a
     , _execRepl :: a
     , _extract :: a
     , _extractToOuter :: a
