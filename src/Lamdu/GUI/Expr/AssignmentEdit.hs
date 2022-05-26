@@ -248,18 +248,24 @@ layout lhsParts body =
         lhs <- Options.boxSpaced ?? Options.disambiguationNone ?? lhsParts
         Responsive.vboxSpaced ?? [lhs, indent indentId body] <&> Options.tryWideLayout hbox [lhs, space, body]
 
-makePlainLhs ::
-    _ => Responsive o -> o Sugar.EntityId -> M.WidgetId -> GuiM env i o [Responsive o]
-makePlainLhs nameEdit addFirstParam rhsId =
+makePlainLhsEventMap ::
+    _ => o Sugar.EntityId -> Widget.Id -> GuiM env i o (EventMap (o GuiState.Update))
+makePlainLhsEventMap addFirstParam rhsId =
     do
         env <- Lens.view id
         let addParam =
                 E.keysEventMapMovesCursor (env ^. has . Config.addNextParamKeys)
                 (E.toDoc env [has . MomentuTexts.edit, has . Texts.parameter, has . Texts.add])
                 (addFirstParam <&> WidgetIds.tagHoleId . WidgetIds.fromEntityId)
-        rhsJumperEquals <- makeJumpToRhs rhsId
+        makeJumpToRhs rhsId <&> (<> addParam)
+
+makePlainLhs ::
+    _ => Responsive o -> o Sugar.EntityId -> M.WidgetId -> GuiM env i o [Responsive o]
+makePlainLhs nameEdit addFirstParam rhsId =
+    do
+        eventMap <- makePlainLhsEventMap addFirstParam rhsId
         equals <- grammar (label Texts.assign) <&> Responsive.fromTextView
-        pure [Widget.weakerEvents (rhsJumperEquals <> addParam) nameEdit, equals]
+        pure [Widget.weakerEvents eventMap nameEdit, equals]
 
 -- The given nameEdit may represent an LhsRecord, hence it is a Responsive and not a simple widget
 make ::
