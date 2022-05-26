@@ -14,36 +14,31 @@ import           Prelude
 
 interestingLibs :: [String]
 interestingLibs =
-    [ "librocksdb"
-    , "libgmp"
-    , "libelf"
-    , "libdw"
-    , "libsnappy"
-    , "liblzma"
-    , "libbz2"
-    , "libbsd"
-    , "libGLEW"
+    [ "libGLEW"
     , "libGLU"
-    , "libXi"
-    , "libXrandr"
     , "libXcursor"
+    , "libXi"
     , "libXinerama"
+    , "libXrandr"
     , "libXrender"
-
-    -- for linux/node:
-    , "libnode"
-    , "libuv"
+    , "libbsd"
+    , "libbz2"
     , "libcares"
-    , "libnghttp2"
     , "libcrypto"
-    , "libssl"
+    , "libdw"
+    , "libelf"
+    , "libgflags"
+    , "libgmp"
+    , "libicudata"
     , "libicui18n"
     , "libicuuc"
-    , "libicudata"
-
-    -- for macOS:
-    , "libgflags"
+    , "liblzma"
+    , "libnghttp2"
+    , "libnode"
+    , "librocksdb"
     , "libsnappy"
+    , "libssl"
+    , "libuv"
     ]
 
 isInteresting :: FilePath -> Bool
