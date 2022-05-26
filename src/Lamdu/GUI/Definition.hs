@@ -9,7 +9,6 @@ import qualified Control.Lens as Lens
 import           Control.Lens.Extended (OneOf)
 import           Control.Monad.Writer (MonadWriter(..))
 import           Data.CurAndPrev (CurPrevTag(..), fallbackToPrev, curPrevTag)
-import qualified Data.List as List
 import qualified GUI.Momentu as M
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as E
@@ -18,6 +17,7 @@ import qualified GUI.Momentu.Hover as Hover
 import qualified GUI.Momentu.I18N as MomentuTexts
 import           GUI.Momentu.Responsive (Responsive)
 import qualified GUI.Momentu.Responsive as Responsive
+import qualified GUI.Momentu.Responsive.Options as Options
 import qualified GUI.Momentu.State as GuiState
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Label as Label
@@ -175,12 +175,10 @@ makeExprDefinition defName bodyExpr myId =
                 <&> addRes
 
             equals <- grammar (label Texts.assign) <&> Responsive.fromTextView
-            spaceWidth <- Spacer.getSpaceSize <&> (^. _1)
-            let plainLhs = [nameEdit, equals]
+            plainLhs <- Options.boxSpaced ?? Options.disambiguationNone ?? [nameEdit, equals]
             let width =
                     plainLhs
-                    ^.. traverse . Responsive.rWide . Responsive.lWide . M.tValue . Widget.wSize . Lens._1
-                    & List.intersperse spaceWidth & sum
+                    ^. Responsive.rWide . Responsive.lWide . M.tValue . Widget.wSize . Lens._1
             lhs <-
                 if isPlainLhs
                 then pure plainLhs
@@ -189,7 +187,6 @@ makeExprDefinition defName bodyExpr myId =
                         repl <- (Widget.makeFocusableView ?? nameTagHoleId <&> (M.tValue %~)) <*> label Texts.repl
                         Element.padToSize ?? M.Vector2 width 0 ?? 0 ?? repl
                         <&> Responsive.fromWithTextPos <&> addRes
-                        <&> (:[])
             bodyExpr ^. Sugar.deContent & annValue .~ x ^. Sugar.apBody & GuiM.makeBinder
                 <&> Widget.updates %~ lift
                 >>= AssignmentEdit.layout lhs

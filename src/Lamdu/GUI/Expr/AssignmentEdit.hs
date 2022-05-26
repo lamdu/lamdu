@@ -238,15 +238,16 @@ makeJumpToRhs rhsId =
                 ])
             "="
 
-layout :: _ => [Responsive o] -> Responsive o -> m (Responsive o)
-layout lhsParts body =
+layout :: _ => Responsive o -> Responsive o -> m (Responsive o)
+layout lhs body =
     do
         space <- Spacer.stdHSpace <&> Responsive.fromView
         indent <- ResponsiveExpr.indent
         indentId <- subAnimId ?? ["assignment-body"]
         hbox <- Options.hbox ?? id ?? id
-        lhs <- Options.boxSpaced ?? Options.disambiguationNone ?? lhsParts
-        Responsive.vboxSpaced ?? [lhs, indent indentId body] <&> Options.tryWideLayout hbox [lhs, space, body]
+        Responsive.vboxSpaced
+            ?? [lhs, indent indentId body]
+            <&> Options.tryWideLayout hbox [lhs, space, body]
 
 makePlainLhsEventMap ::
     _ => o Sugar.EntityId -> Widget.Id -> GuiM env i o (EventMap (o GuiState.Update))
@@ -274,8 +275,11 @@ make delParamDest assignment nameEdit =
                     lhsEventMap <-
                         makePlainLhsEventMap (x ^. Sugar.apAddFirstParam) (WidgetIds.fromExprPayload pl)
                     equals <- grammar (label Texts.assign) <&> Responsive.fromTextView
+                    assignmentPrefix <-
+                        Options.boxSpaced ?? Options.disambiguationNone
+                        ?? [Widget.weakerEvents lhsEventMap nameEdit, equals]
                     x ^. Sugar.apBody & Ann (Const (assignment ^. annotation)) & GuiM.makeBinder
-                        >>= layout [Widget.weakerEvents lhsEventMap nameEdit, equals]
+                        >>= layout assignmentPrefix
             Sugar.BodyFunction x ->
                 do
                     Parts lhsEventMap paramsEdit mScopeEdit eventMap scopeId <-
@@ -287,7 +291,10 @@ make delParamDest assignment nameEdit =
                         Responsive.vboxSpaced
                         ?? (paramsEdit : fmap Responsive.fromWidget mScopeEdit ^.. Lens._Just)
                         <&> Widget.strongerEvents rhsJumperEquals
-                    layout [Widget.weakerEvents (rhsJumperEquals <> lhsEventMap) nameEdit, paramScopeEdit, equals] bodyEdit
+                    assignmentPrefix <-
+                        Options.boxSpaced ?? Options.disambiguationNone
+                        ?? [Widget.weakerEvents (rhsJumperEquals <> lhsEventMap) nameEdit, paramScopeEdit, equals]
+                    layout assignmentPrefix bodyEdit
                         & stdWrap pl
                         <&> Widget.weakerEvents eventMap
     & local (M.animIdPrefix .~ Widget.toAnimId myId)
