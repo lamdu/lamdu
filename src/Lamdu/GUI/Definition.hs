@@ -36,7 +36,7 @@ import qualified Lamdu.GUI.Expr.TagEdit as TagEdit
 import           Lamdu.GUI.Monad (GuiM)
 import qualified Lamdu.GUI.Monad as GuiM
 import qualified Lamdu.GUI.PresentationModeEdit as PresentationModeEdit
-import           Lamdu.GUI.Styled (label)
+import           Lamdu.GUI.Styled (label, grammar)
 import qualified Lamdu.GUI.TypeView as TypeView
 import qualified Lamdu.GUI.Types as ExprGui
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
@@ -151,14 +151,7 @@ makeExprDefinition defName bodyExpr myId =
         do
             isPickingName <- GuiState.isSubCursor ?? nameEditId
             let isPlainLhs = isPickingName || Lens.has (Sugar.oTag . Sugar.tagRefJumpTo . Lens._Just) defName
-            nameEdit <-
-                makeNameEdit <&> Responsive.fromWithTextPos
-                & if isPlainLhs then id else local (GuiState.cursor .~ nameTagHoleId)
-            plainLhs <-
-                AssignmentEdit.makePlainLhs nameEdit (x ^. Sugar.apAddFirstParam)
-                (WidgetIds.fromExprPayload (bodyExpr ^. Sugar.deContent . annotation))
-                <&> Lens.mapped . Widget.updates %~ lift
-            spaceWidth <- Spacer.getSpaceSize <&> (^. _1)
+
             resWidget <-
                 (resultWidget indicatorId (bodyExpr ^. Sugar.deVarInfo) <$> curPrevTag <&> fmap) <*> bodyExpr ^. Sugar.deResult
                 & fallbackToPrev
@@ -171,8 +164,21 @@ makeExprDefinition defName bodyExpr myId =
                         (Responsive.lWide %~ addResToWidget Glue.Vertical) .
                         (Responsive.lWideDisambig %~ addResToWidget Glue.Vertical)
                     ) . (Responsive.rNarrow . Lens.mapped %~ addResToWidget Glue.Horizontal)
+
+            let rhsId = bodyExpr ^. Sugar.deContent . annotation & WidgetIds.fromExprPayload
+            lhsEventMap <- AssignmentEdit.makePlainLhsEventMap (x ^. Sugar.apAddFirstParam) rhsId
+            nameEdit <-
+                makeNameEdit <&> Responsive.fromWithTextPos
+                & (if isPlainLhs then id else local (GuiState.cursor .~ nameTagHoleId))
+                <&> Widget.weakerEvents lhsEventMap
+                <&> Widget.updates %~ lift
+                <&> addRes
+
+            equals <- grammar (label Texts.assign) <&> Responsive.fromTextView
+            spaceWidth <- Spacer.getSpaceSize <&> (^. _1)
+            let plainLhs = [nameEdit, equals]
             let width =
-                    (plainLhs & Lens.ix 0 %~ addRes)
+                    plainLhs
                     ^.. traverse . Responsive.rWide . Responsive.lWide . M.tValue . Widget.wSize . Lens._1
                     & List.intersperse spaceWidth & sum
             lhs <-
@@ -182,10 +188,11 @@ makeExprDefinition defName bodyExpr myId =
                     do
                         repl <- (Widget.makeFocusableView ?? nameTagHoleId <&> (M.tValue %~)) <*> label Texts.repl
                         Element.padToSize ?? M.Vector2 width 0 ?? 0 ?? repl
-                        <&> Responsive.fromWithTextPos <&> (:[])
+                        <&> Responsive.fromWithTextPos <&> addRes
+                        <&> (:[])
             bodyExpr ^. Sugar.deContent & annValue .~ x ^. Sugar.apBody & GuiM.makeBinder
                 <&> Widget.updates %~ lift
-                >>= AssignmentEdit.layout (lhs & Lens.ix 0 %~ addRes)
+                >>= AssignmentEdit.layout lhs
     _ ->
         do
             mPresentationEdit <-

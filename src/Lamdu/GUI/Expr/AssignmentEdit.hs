@@ -2,7 +2,7 @@ module Lamdu.GUI.Expr.AssignmentEdit
     ( make
     , Parts(..), makeFunctionParts
     , makeJumpToRhs
-    , layout, makePlainLhs
+    , layout, makePlainLhsEventMap
     ) where
 
 import           Control.Applicative (liftA2)
@@ -259,14 +259,6 @@ makePlainLhsEventMap addFirstParam rhsId =
                 (addFirstParam <&> WidgetIds.tagHoleId . WidgetIds.fromEntityId)
         makeJumpToRhs rhsId <&> (<> addParam)
 
-makePlainLhs ::
-    _ => Responsive o -> o Sugar.EntityId -> M.WidgetId -> GuiM env i o [Responsive o]
-makePlainLhs nameEdit addFirstParam rhsId =
-    do
-        eventMap <- makePlainLhsEventMap addFirstParam rhsId
-        equals <- grammar (label Texts.assign) <&> Responsive.fromTextView
-        pure [Widget.weakerEvents eventMap nameEdit, equals]
-
 -- The given nameEdit may represent an LhsRecord, hence it is a Responsive and not a simple widget
 make ::
     _ =>
@@ -279,8 +271,11 @@ make delParamDest assignment nameEdit =
         case assignmentBody of
             Sugar.BodyPlain x ->
                 do
-                    lhs <- makePlainLhs nameEdit (x ^. Sugar.apAddFirstParam) (WidgetIds.fromExprPayload pl)
-                    x ^. Sugar.apBody & Ann (Const (assignment ^. annotation)) & GuiM.makeBinder >>= layout lhs
+                    lhsEventMap <-
+                        makePlainLhsEventMap (x ^. Sugar.apAddFirstParam) (WidgetIds.fromExprPayload pl)
+                    equals <- grammar (label Texts.assign) <&> Responsive.fromTextView
+                    x ^. Sugar.apBody & Ann (Const (assignment ^. annotation)) & GuiM.makeBinder
+                        >>= layout [Widget.weakerEvents lhsEventMap nameEdit, equals]
             Sugar.BodyFunction x ->
                 do
                     Parts lhsEventMap paramsEdit mScopeEdit eventMap scopeId <-
