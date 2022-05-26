@@ -182,7 +182,7 @@ makeExprDefinition defName bodyExpr myId =
                     do
                         repl <- (Widget.makeFocusableView ?? nameTagHoleId <&> (M.tValue %~)) <*> label Texts.repl
                         Element.padToSize ?? M.Vector2 width 0 ?? 0 ?? repl
-                    <&> Responsive.fromWithTextPos <&> (:[])
+                        <&> Responsive.fromWithTextPos <&> (:[])
             bodyExpr ^. Sugar.deContent & annValue .~ x ^. Sugar.apBody & GuiM.makeBinder
                 <&> Widget.updates %~ lift
                 >>= AssignmentEdit.layout (lhs & Lens.ix 0 %~ addRes)
@@ -200,12 +200,12 @@ makeExprDefinition defName bodyExpr myId =
                     presModeProp <- bodyExpr ^. Sugar.dePresentationMode
                     params <- bodyExpr ^? Sugar.deContent . hVal . Sugar._BodyFunction . Sugar.fParams
                     GuiM.im presModeProp >>= PresentationModeEdit.make presentationChoiceId params & Just
-                & sequenceA
+                    & sequenceA
             (|---|) <- Glue.mkGlue ?? Glue.Vertical
             makeNameEdit <&> (|---| fromMaybe M.empty mPresentationEdit) <&> Responsive.fromWithTextPos
                 >>= AssignmentEdit.make nameEditId (bodyExpr ^. Sugar.deContent)
-        & GuiState.assignCursor myId nameEditId
-        <&> Widget.updates %~ lift
+            & GuiState.assignCursor myId nameEditId
+            <&> Widget.updates %~ lift
     where
         makeNameEdit = TagEdit.makeBinderTagEdit TextColors.definitionColor defName
         nameEditId = defName ^. Sugar.oTag . Sugar.tagRefTag . Sugar.tagInstance & WidgetIds.fromEntityId
