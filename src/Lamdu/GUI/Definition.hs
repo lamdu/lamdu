@@ -171,8 +171,6 @@ makeExprDefinition defName bodyExpr myId =
             isPickingName <- GuiState.isSubCursor ?? nameEditId
             let isPlainLhs = isPickingName || Lens.has (Sugar.oTag . Sugar.tagRefJumpTo . Lens._Just) defName
 
-            addRes <- makeAddResultWidget myId bodyExpr
-
             let rhsId = bodyExpr ^. Sugar.deContent . annotation & WidgetIds.fromExprPayload
             lhsEventMap <- AssignmentEdit.makePlainLhsEventMap (x ^. Sugar.apAddFirstParam) rhsId
             nameEdit <-
@@ -180,7 +178,6 @@ makeExprDefinition defName bodyExpr myId =
                 & (if isPlainLhs then id else local (GuiState.cursor .~ nameTagHoleId))
                 <&> Widget.weakerEvents lhsEventMap
                 <&> Widget.updates %~ lift
-                <&> addRes
 
             equals <- grammar (label Texts.assign) <&> Responsive.fromTextView
             plainLhs <- Options.boxSpaced ?? Options.disambiguationNone ?? [nameEdit, equals]
@@ -188,13 +185,14 @@ makeExprDefinition defName bodyExpr myId =
                     plainLhs
                     ^. Responsive.rWide . Responsive.lWide . M.tValue . Widget.wSize . Lens._1
             lhs <-
+                makeAddResultWidget myId bodyExpr <*>
                 if isPlainLhs
                 then pure plainLhs
                 else
                     do
                         repl <- (Widget.makeFocusableView ?? nameTagHoleId <&> (M.tValue %~)) <*> label Texts.repl
                         Element.padToSize ?? M.Vector2 width 0 ?? 0 ?? repl
-                        <&> Responsive.fromWithTextPos <&> addRes
+                        <&> Responsive.fromWithTextPos
             bodyExpr ^. Sugar.deContent & annValue .~ x ^. Sugar.apBody & GuiM.makeBinder
                 <&> Widget.updates %~ lift
                 >>= AssignmentEdit.layout lhs
