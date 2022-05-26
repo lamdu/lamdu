@@ -149,7 +149,7 @@ makeExprDefinition defName bodyExpr myId =
     case bodyExpr ^. Sugar.deContent . hVal of
     Sugar.BodyPlain x ->
         do
-            isPickingName <- GuiState.isSubCursor ?? pickNameId
+            isPickingName <- GuiState.isSubCursor ?? nameEditId
             let isPlainLhs = isPickingName || Lens.has (Sugar.oTag . Sugar.tagRefJumpTo . Lens._Just) defName
             nameEdit <-
                 makeNameEdit <&> Responsive.fromWithTextPos
@@ -186,13 +186,6 @@ makeExprDefinition defName bodyExpr myId =
             bodyExpr ^. Sugar.deContent & annValue .~ x ^. Sugar.apBody & GuiM.makeBinder
                 <&> Widget.updates %~ lift
                 >>= AssignmentEdit.layout (lhs & Lens.ix 0 %~ addRes)
-            & GuiState.assignCursor myId nameTagHoleId
-        where
-            indicatorId = Widget.joinId myId ["result indicator"]
-            nameTagHoleId = WidgetIds.tagHoleId pickNameId
-            pickNameId =
-                defName ^. Sugar.oTag . Sugar.tagRefTag . Sugar.tagInstance
-                & WidgetIds.fromEntityId
     _ ->
         do
             mPresentationEdit <-
@@ -204,9 +197,11 @@ makeExprDefinition defName bodyExpr myId =
             (|---|) <- Glue.mkGlue ?? Glue.Vertical
             makeNameEdit <&> (|---| fromMaybe M.empty mPresentationEdit) <&> Responsive.fromWithTextPos
                 >>= AssignmentEdit.make nameEditId (bodyExpr ^. Sugar.deContent)
-            & GuiState.assignCursor myId nameEditId
             <&> Widget.updates %~ lift
+    & GuiState.assignCursor myId nameEditId
     where
+        indicatorId = Widget.joinId myId ["result indicator"]
+        nameTagHoleId = WidgetIds.tagHoleId nameEditId
         makeNameEdit = TagEdit.makeBinderTagEdit TextColors.definitionColor defName
         nameEditId = defName ^. Sugar.oTag . Sugar.tagRefTag . Sugar.tagInstance & WidgetIds.fromEntityId
         presentationChoiceId = Widget.joinId myId ["presentation"]
