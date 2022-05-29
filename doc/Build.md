@@ -124,3 +124,5 @@ In `lamdu/stack.yaml`, add `'../bindings-freetype-gl'` as an `extra-dep`
     cd lamdu
     stack exec pacman -S mingw-w64-x86_64-rocksdb
     stack build
+
+If the installation of RocksDB fails due to signature verification, consider the work-around in https://github.com/msys2/MSYS2-packages/issues/2343#issuecomment-780121556
