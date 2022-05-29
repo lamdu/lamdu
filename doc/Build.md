@@ -107,22 +107,8 @@ Install:
 Then run:
 
     git clone https://github.com/lamdu/lamdu.git
-
-#### Workaround bindings-freetype-gl problem
-
-(Todo: the underlying problem should be fixed and this section should subsequently be removed)
-
-    git clone https://github.com/lamdu/bindings-freetype-gl
-    cd bindings-freetype-gl
-    stack exec bash prepare_submodule.sh
-    cd ..
-
-In `lamdu/stack.yaml`, add `'../bindings-freetype-gl'` as an `extra-dep`
-
-#### Build Lamdu
-
     cd lamdu
-    stack exec pacman -S mingw-w64-x86_64-rocksdb
+    stack exec -- pacman -S mingw-w64-x86_64-rocksdb
     stack build
 
 If the installation of RocksDB fails due to signature verification, consider the work-around in https://github.com/msys2/MSYS2-packages/issues/2343#issuecomment-780121556
