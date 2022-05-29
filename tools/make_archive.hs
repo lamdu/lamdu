@@ -124,8 +124,12 @@ findDeps exec
         [ "libwinpthread-1.dll"
         , "libstdc++-6.dll"
         , "libgcc_s_seh-1.dll"
-        ]
-        <&> ("/c/msys64/mingw64/bin/" ++)
+        , "librocksdb.dll"
+        , "libbz2-1.dll"
+        , "liblz4.dll"
+        , "zlib1.dll"
+        , "libzstd.dll"
+        ] <&> ("/mingw64/bin" </>)
         & pure
     | isMacOS =
         findDylibs exec

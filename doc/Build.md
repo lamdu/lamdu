@@ -102,25 +102,25 @@ Install:
 
 * [git](https://git-scm.com/)
 * [stack](https://haskellstack.org/)
-* [msys2](http://msys2.org/)
 * [NodeJS](https://nodejs.org/en/)
 
-In the Windows `cmd.exe` shell:
+Then run:
 
-    cd <WORK-DIR>
-    git clone https://github.com/fastogt/rocksdb.git
     git clone https://github.com/lamdu/lamdu.git
 
-In the msys2 mingw64 shell:
+#### Workaround bindings-freetype-gl problem
 
-    pacman -S mingw-w64-x86_64-{cmake,make,gcc}
+(Todo: the underlying problem should be fixed and this section should subsequently be removed)
 
-    cd <WORK-DIR>/rocksdb
-    cmake -G "MinGW Makefiles" .
-    mingw32-make
+    git clone https://github.com/lamdu/bindings-freetype-gl
+    cd bindings-freetype-gl
+    stack exec bash prepare_submodule.sh
+    cd ..
 
-In the Windows `cmd.exe` shell:
+In `lamdu/stack.yaml`, add `'../bindings-freetype-gl'` as an `extra-dep`
 
-    cd <WORK-DIR>/lamdu
-    stack build --extra-lib-dirs="%cd%"\..\rocksdb --extra-include-dirs="%cd%"\..\rocksdb\include
-    stack exec lamdu
+#### Build Lamdu
+
+    cd lamdu
+    stack exec pacman -S mingw-w64-x86_64-rocksdb
+    stack build
