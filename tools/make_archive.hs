@@ -180,7 +180,7 @@ main =
                 toPackageWith nodePath (dataDir </> "bin/node.exe")
                 traverse_ libToPackage allDeps
                 when isWindows $
-                    callProcess "C:\\Program Files (x86)\\Inno Setup 5\\iscc.exe" ["/Flamdu-" ++ version ++ "-win-setup", "tools\\data\\lamdu.iss"]
+                    callProcess "iscc.exe" ["/Flamdu-" ++ version ++ "-win-setup", "tools\\data\\lamdu.iss"]
                 when isLinux $
                     do
                         toPackage "tools/data/run-lamdu.sh"

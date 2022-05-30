@@ -14,17 +14,20 @@ on:
 
 jobs:
   stack:
-    name: stack / ghc ${{ matrix.ghc }}
-    runs-on: ubuntu-latest
+    name: stack / ghc ${{ matrix.ghc }} / ${{ matrix.os }}
     strategy:
       matrix:
         stack: ["2.7.5"]
         ghc: ["9.0.2"]
+        os: ["ubuntu-latest", "windows-2022"]
+
+    runs-on: ${{ matrix.os }}
 
     steps:
     - uses: actions/checkout@v3
 
-    - name: Install system dependencies
+    - name: Install Linux dependencies
+      if: ${{ matrix.os == 'ubuntu-latest' }}
       run: |
         sudo apt-get install nodejs zlib1g-dev libglew-dev librocksdb-dev
         sudo apt-get install libxxf86vm-dev libxrandr-dev libxi-dev libxcursor-dev libxinerama-dev
@@ -35,7 +38,13 @@ jobs:
         ghc-version: ${{ matrix.ghc }}
         stack-version: ${{ matrix.stack }}
 
+    - name: Install Windows dependencies
+      if: ${{ matrix.os == 'windows-2022' }}
+      run: |
+        stack exec --system-ghc -- pacman -S --noconfirm mingw-w64-x86_64-rocksdb
+
     - uses: actions/cache@v3.0.2
+      if: ${{ matrix.os == 'ubuntu-latest' }}
       name: Cache ~/.stack
       with:
         path: ~/.stack
@@ -50,13 +59,15 @@ jobs:
         stack build --system-ghc --test --bench --no-run-tests --no-run-benchmarks
 
     - name: Test
+      # Running the tests only on Linux should suffice
+      if: ${{ matrix.os == 'ubuntu-latest' }}
       run: |
         stack test --system-ghc
 
     - name: Build release
       if: startsWith(github.ref, 'refs/tags/v')
       run: |
-        stack exec --system-ghc make_archive `stack exec --system-ghc which lamdu`
+        stack exec --system-ghc -- bash tools/win_make_archive.sh
 
     - name: Upload release
       if: startsWith(github.ref, 'refs/tags/v')
@@ -65,7 +76,7 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        files: lamdu-*-linux.tgz
+        files: ${{ matrix.os == 'ubuntu-latest' && 'lamdu-*-linux.tgz' || 'lamdu-*-win-setup.exe' }}
 
   hlint:
     name: hlint
