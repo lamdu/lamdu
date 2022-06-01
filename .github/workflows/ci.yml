@@ -14,7 +14,7 @@ on:
 
 jobs:
   stack:
-    name: stack / ghc ${{ matrix.ghc }} / ${{ matrix.os }}
+    name: ghc ${{ matrix.ghc }} / ${{ matrix.os }}
     strategy:
       matrix:
         stack: ["2.7.5"]
