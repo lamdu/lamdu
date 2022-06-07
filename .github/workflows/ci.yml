@@ -43,7 +43,7 @@ jobs:
       run: |
         stack exec --system-ghc -- pacman -S --noconfirm mingw-w64-x86_64-rocksdb
 
-    - uses: actions/cache@v3.0.3
+    - uses: actions/cache@v3.0.4
       if: ${{ matrix.os == 'ubuntu-latest' }}
       name: Cache ~/.stack
       with:
