@@ -197,14 +197,25 @@ data Leaf name i o
 data Term v name i o k
     = BodyLam (Lambda v name i o k)
     | BodySimpleApply (App (Term v name i o) k)
+        -- ^ A simple function application (aka function call): <function> <argument>
     | BodyPostfixApply (PostfixApply v name i o k)
+        -- ^ A function application presented with postfix layout: <argument> .<function>
+        -- (used for pattern matching, record field access and nominal type unwrapping)
+    | BodyPostfixFunc (PostfixFunc v name i o k)
+        -- ^ A function for which postfix application layout apply.
     | BodyLabeledApply (LabeledApply v name i o k)
+        -- ^ A syntax sugar for function application with a record argument
     | BodyRecord (Composite v name i o k)
     | BodyIfElse (IfElse v name i o k)
     | BodyToNom (Nominal v name i o k)
-    | BodyPostfixFunc (PostfixFunc v name i o k)
+        -- ^ Wrap a value with a nominal type constructor
     | BodyNullaryInject (NullaryInject name i o k)
+        -- ^ A variant value with no content
     | BodyFragment (Fragment v name i o k)
+        -- ^ A fragment holds an unfinished term in the code.
+        -- Often generated when the inner term's type mismatches the expected type
+        -- at the fragment.
+        -- Also used as a placeholder for parentheses during typing.
     | BodyLeaf (Leaf name i o)
     deriving Generic
 
