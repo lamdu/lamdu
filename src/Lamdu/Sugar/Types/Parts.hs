@@ -13,11 +13,6 @@ module Lamdu.Sugar.Types.Parts
     , NodeActions(..), detach, delete, setToLiteral, extract, mReplaceParent, mApply
     , -- Let
       ExtractDestination(..)
-    , -- TaggedList
-      TaggedList(..), tlAddFirst, tlItems
-    , TaggedSwappableItem(..), tsiItem, tsiSwapWithPrevious
-    , TaggedListBody(..), tlHead, tlTail
-    , TaggedItem(..), tiTag, tiDelete, tiValue, tiAddAfter
     , -- Binders
       LhsNames(..), _LhsVar, _LhsRecord
     , FuncParam(..), fpAnnotation, fpUsages, fpVarInfo
@@ -51,8 +46,9 @@ import qualified Lamdu.I18N.CodeUI as Texts
 import qualified Lamdu.I18N.Name as Texts
 import           Lamdu.I18N.LangId (LangId)
 import           Lamdu.Sugar.Internal.EntityId (EntityId)
-import           Lamdu.Sugar.Types.GetVar
+import           Lamdu.Sugar.Types.GetVar (GetVar)
 import           Lamdu.Sugar.Types.Tag
+import           Lamdu.Sugar.Types.TaggedList (TaggedList)
 import qualified Lamdu.Sugar.Types.Type as SugarType
 
 import           Lamdu.Prelude
@@ -112,29 +108,6 @@ data NodeActions o = NodeActions
     , _mReplaceParent :: Maybe (o EntityId)
     , _mApply :: Maybe (o EntityId)
     } deriving Generic
-
-data TaggedItem name i o a = TaggedItem
-    { _tiTag :: TagRef name i o
-    , _tiDelete :: o ()
-    , _tiAddAfter :: i (TagChoice name o)
-    , _tiValue :: a
-    } deriving (Generic, Functor, Foldable, Traversable)
-
-data TaggedSwappableItem name i o a = TaggedSwappableItem
-    { _tsiItem :: TaggedItem name i o a
-    , _tsiSwapWithPrevious :: o ()
-    } deriving (Generic, Functor, Foldable, Traversable)
-
-data TaggedListBody name i o a = TaggedListBody
-    { _tlHead :: TaggedItem name i o a
-        -- The 2nd tagged item onwards can be swapped with their previous item
-    , _tlTail :: [TaggedSwappableItem name i o a]
-    } deriving (Generic, Functor, Foldable, Traversable)
-
-data TaggedList name i o a = TaggedList
-    { _tlAddFirst :: i (TagChoice name o)
-    , _tlItems :: Maybe (TaggedListBody name i o a)
-    } deriving (Generic, Functor, Foldable, Traversable)
 
 data Var name i o v = Var
     { _vParam :: FuncParam v
@@ -238,8 +211,7 @@ data Query = Query
 traverse Lens.makeLenses
     [ ''ClosedCompositeActions, ''FuncParam, ''LhsField, ''NodeActions
     , ''NullParamActions, ''NullaryInject, ''Option, ''ParenInfo, ''Payload, ''PunnedVar
-    , ''Query, ''QueryLangInfo
-    , ''TaggedList, ''TaggedListBody, ''TaggedItem, ''TaggedSwappableItem, ''Var
+    , ''Query, ''QueryLangInfo, ''Var
     ] <&> concat
 traverse Lens.makePrisms
     [ ''AddParam, ''Annotation, ''Delete, ''DetachAction

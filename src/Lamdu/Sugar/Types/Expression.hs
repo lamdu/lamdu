@@ -58,6 +58,7 @@ import           Lamdu.Sugar.Types.Eval (ParamScopes)
 import           Lamdu.Sugar.Types.GetVar (GetVar)
 import           Lamdu.Sugar.Types.Parts
 import           Lamdu.Sugar.Types.Tag
+import           Lamdu.Sugar.Types.TaggedList (TaggedList)
 import           Lamdu.Sugar.Types.Type (TId)
 import qualified Lamdu.Sugar.Types.Type as T
 

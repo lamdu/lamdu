@@ -34,6 +34,7 @@ import           Lamdu.Sugar.Types.GetVar as Exported
 import           Lamdu.Sugar.Types.NameRef as Exported
 import           Lamdu.Sugar.Types.Parts as Exported
 import           Lamdu.Sugar.Types.Tag as Exported
+import           Lamdu.Sugar.Types.TaggedList as Exported
 import           Lamdu.Sugar.Types.Type as Exported
 
 import           Lamdu.Prelude

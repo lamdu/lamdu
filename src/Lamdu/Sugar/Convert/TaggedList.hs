@@ -1,7 +1,7 @@
 module Lamdu.Sugar.Convert.TaggedList where
 
-import Lamdu.Sugar.Types.Parts
-import Lamdu.Sugar.Types.Tag
+import Lamdu.Sugar.Types.Tag (TagChoice)
+import Lamdu.Sugar.Types.TaggedList
 
 import Lamdu.Prelude
 
