@@ -16,7 +16,6 @@ module Lamdu.Sugar.Types.Parts
     , -- Binders
       LhsNames(..), _LhsVar, _LhsRecord
     , FuncParam(..), fpAnnotation, fpUsages, fpVarInfo
-    , NullParamActions(..), npDeleteLambda
     , Var(..), vTag, vAddPrev, vAddNext, vDelete, vIsNullParam, vParam
     , LhsField(..), fParam, fSubFields
     , AddParam(..), _AddNext, _NeedToPickTagToAddNext
@@ -72,10 +71,6 @@ data AddParam name i o
       -- contains the EntityId of the param requiring tag.
       NeedToPickTagToAddNext EntityId
     deriving Generic
-
-newtype NullParamActions o = NullParamActions
-    { _npDeleteLambda :: o ()
-    } deriving stock Generic
 
 data FuncParam v = FuncParam -- TODO: Better name
     { _fpAnnotation :: v
@@ -210,7 +205,7 @@ data Query = Query
 
 traverse Lens.makeLenses
     [ ''ClosedCompositeActions, ''FuncParam, ''LhsField, ''NodeActions
-    , ''NullParamActions, ''NullaryInject, ''Option, ''ParenInfo, ''Payload, ''PunnedVar
+    , ''NullaryInject, ''Option, ''ParenInfo, ''Payload, ''PunnedVar
     , ''Query, ''QueryLangInfo, ''Var
     ] <&> concat
 traverse Lens.makePrisms

@@ -112,7 +112,7 @@ instance Eq (Sugar.TagPane f) where
     , ''Sugar.PostfixApply, ''Sugar.PostfixFunc, ''Sugar.PunnedVar, ''Sugar.Term
     , ''Sugar.WorkArea, ''Sugar.VarInline, ''Sugar.ClosedCompositeActions, ''Sugar.Delete
     , ''Sugar.DetachAction, ''Sugar.EvalCompletionResult, ''Sugar.EvalException, ''Sugar.Hole
-    , ''Sugar.Literal, ''Sugar.NodeActions, ''Sugar.NullParamActions, ''Sugar.Globals
+    , ''Sugar.Literal, ''Sugar.NodeActions, ''Sugar.Globals
     , ''Sugar.AddParam, ''Sugar.VarForm, ''Sugar.Payload
     , ''Sugar.DefinitionBuiltin, ''Sugar.DefinitionForm, ''Sugar.NominalPane
     , ''Sugar.GetVar, ''Sugar.Leaf, ''Sugar.NameRef, ''Sugar.Var
