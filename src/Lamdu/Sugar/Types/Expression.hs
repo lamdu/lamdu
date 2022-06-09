@@ -56,6 +56,7 @@ import qualified Lamdu.Data.Meta as Meta
 import           Lamdu.Sugar.Internal.EntityId (EntityId)
 import           Lamdu.Sugar.Types.Eval (ParamScopes)
 import           Lamdu.Sugar.Types.GetVar (GetVar)
+import           Lamdu.Sugar.Types.Lhs (LhsNames)
 import           Lamdu.Sugar.Types.Parts
 import           Lamdu.Sugar.Types.Tag
 import           Lamdu.Sugar.Types.TaggedList (TaggedList)

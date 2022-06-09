@@ -2,8 +2,7 @@
 -- These don't contain more expressions in them.
 {-# LANGUAGE TemplateHaskell, DataKinds, GADTs, TypeFamilies, MultiParamTypeClasses #-}
 module Lamdu.Sugar.Types.Parts
-    ( VarInfo(..), _VarNominal, _VarGeneric, _VarFunction, _VarRecord, _VarVariant
-    , FuncApplyLimit(..), _UnlimitedFuncApply, _AtMostOneFuncApply
+    ( FuncApplyLimit(..), _UnlimitedFuncApply, _AtMostOneFuncApply
     , Literal(..), _LiteralNum, _LiteralBytes, _LiteralChar, _LiteralText
     , -- Annotations
       Annotation(..), _AnnotationVal, _AnnotationType, _AnnotationNone
@@ -13,12 +12,6 @@ module Lamdu.Sugar.Types.Parts
     , NodeActions(..), detach, delete, setToLiteral, extract, mReplaceParent, mApply
     , -- Let
       ExtractDestination(..)
-    , -- Binders
-      LhsNames(..), _LhsVar, _LhsRecord
-    , FuncParam(..), fpAnnotation, fpUsages, fpVarInfo
-    , Var(..), vTag, vAddPrev, vAddNext, vDelete, vIsNullParam, vParam
-    , LhsField(..), fParam, fSubFields
-    , AddParam(..), _AddNext, _NeedToPickTagToAddNext
     , -- Expressions
       Payload(..), plEntityId, plAnnotation, plActions, plHiddenEntityIds, plParenInfo
     , ClosedCompositeActions(..), closedCompositeOpen
@@ -47,7 +40,6 @@ import           Lamdu.I18N.LangId (LangId)
 import           Lamdu.Sugar.Internal.EntityId (EntityId)
 import           Lamdu.Sugar.Types.GetVar (GetVar)
 import           Lamdu.Sugar.Types.Tag
-import           Lamdu.Sugar.Types.TaggedList (TaggedList)
 import qualified Lamdu.Sugar.Types.Type as SugarType
 
 import           Lamdu.Prelude
@@ -64,19 +56,6 @@ data Annotation v name
     | AnnotationVal v
     | AnnotationNone
     deriving Generic
-
-data AddParam name i o
-    = AddNext (i (TagChoice name o))
-    | -- When the param has anon tag one can't add another one,
-      -- contains the EntityId of the param requiring tag.
-      NeedToPickTagToAddNext EntityId
-    deriving Generic
-
-data FuncParam v = FuncParam -- TODO: Better name
-    { _fpAnnotation :: v
-    , _fpUsages :: [EntityId]
-    , _fpVarInfo :: VarInfo
-    } deriving (Generic, Functor, Foldable, Traversable)
 
 data ExtractDestination
     = ExtractToLet EntityId
@@ -103,26 +82,6 @@ data NodeActions o = NodeActions
     , _mReplaceParent :: Maybe (o EntityId)
     , _mApply :: Maybe (o EntityId)
     } deriving Generic
-
-data Var name i o v = Var
-    { _vParam :: FuncParam v
-    , _vTag :: OptionalTag name i o
-    , _vAddPrev :: AddParam name i o
-    , _vAddNext :: AddParam name i o
-    , _vDelete :: o ()
-    , _vIsNullParam :: Bool
-    } deriving (Generic, Functor, Foldable, Traversable)
-
--- TODO: Is there a standard term for this?
-data LhsField name v = LhsField
-    { _fParam :: FuncParam v
-    , _fSubFields :: Maybe [(Tag name, LhsField name v)]
-    } deriving (Generic, Functor, Foldable, Traversable)
-
-data LhsNames name i o v
-    = LhsVar (Var name i o v)
-    | LhsRecord (TaggedList name i o (LhsField name v))
-    deriving (Generic, Functor, Foldable, Traversable)
 
 -- VarInfo is used for:
 -- * Differentiating Mut actions so UI can suggest executing them
@@ -204,13 +163,13 @@ data Query = Query
     }
 
 traverse Lens.makeLenses
-    [ ''ClosedCompositeActions, ''FuncParam, ''LhsField, ''NodeActions
+    [ ''ClosedCompositeActions, ''NodeActions
     , ''NullaryInject, ''Option, ''ParenInfo, ''Payload, ''PunnedVar
-    , ''Query, ''QueryLangInfo, ''Var
+    , ''Query, ''QueryLangInfo
     ] <&> concat
 traverse Lens.makePrisms
-    [ ''AddParam, ''Annotation, ''Delete, ''DetachAction
-    , ''FuncApplyLimit, ''LhsNames, ''Literal, ''VarInfo
+    [ ''Annotation, ''Delete, ''DetachAction
+    , ''FuncApplyLimit, ''Literal, ''VarInfo
     ] <&> concat
 traverse makeHTraversableAndBases [''NullaryInject, ''PunnedVar] <&> concat
 makeHMorph ''NullaryInject

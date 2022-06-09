@@ -31,6 +31,7 @@ import           Lamdu.Sugar.Internal.EntityId (EntityId)
 import           Lamdu.Sugar.Types.Eval as Exported
 import           Lamdu.Sugar.Types.Expression as Exported
 import           Lamdu.Sugar.Types.GetVar as Exported
+import           Lamdu.Sugar.Types.Lhs as Exported
 import           Lamdu.Sugar.Types.NameRef as Exported
 import           Lamdu.Sugar.Types.Parts as Exported
 import           Lamdu.Sugar.Types.Tag as Exported

@@ -1,5 +1,3 @@
--- | Different leaf types in the Sugar expressions.
--- These don't contain more expressions in them.
 {-# LANGUAGE TemplateHaskell #-}
 module Lamdu.Sugar.Types.TaggedList
     ( TaggedList(..), tlAddFirst, tlItems
