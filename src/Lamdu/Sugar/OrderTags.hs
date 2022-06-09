@@ -45,7 +45,7 @@ orderByTag presModeTags toTag ord =
 
 orderComposite ::
     MonadTransaction m i =>
-    OrderT i (Sugar.CompositeFields name (Ann a # Sugar.Type name o))
+    OrderT i (Sugar.CompositeFields name o # Ann a)
 orderComposite = Sugar.compositeFields (orderByTag [] fst (_2 orderType))
 
 orderTBody ::

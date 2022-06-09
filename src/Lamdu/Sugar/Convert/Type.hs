@@ -28,7 +28,7 @@ import qualified Lamdu.Sugar.Convert.TId as ConvertTid
 convertComposite ::
     (MonadTransaction n m, ConvertTid.JumpToNominal m o) =>
     EntityId -> Pure # T.Row ->
-    m (CompositeFields InternalName (Annotated EntityId # Type InternalName o))
+    m (CompositeFields InternalName o # Annotated EntityId)
 convertComposite entityId (Pure (T.RExtend (RowExtend tag typ rest))) =
     do
         typS <- convertType (EntityId.ofTypeOf entityId) typ

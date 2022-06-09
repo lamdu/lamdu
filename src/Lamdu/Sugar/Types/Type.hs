@@ -18,11 +18,10 @@ import           Lamdu.Sugar.Types.Tag (Tag)
 
 import           Lamdu.Prelude
 
--- TODO: Will making this a knot will not require `UndecidableInstances`?
-data CompositeFields name a = CompositeFields
-    { _compositeFields :: [(Tag name, a)]
+data CompositeFields name o k = CompositeFields
+    { _compositeFields :: [(Tag name, k :# Type name o)]
     , _compositeExtension :: Maybe name -- TyVar of more possible fields
-    } deriving (Functor, Foldable, Traversable, Generic)
+    } deriving Generic
 
 data TId name o = TId
     { _tidName :: name
@@ -40,9 +39,9 @@ data Type name o k
     | TInst (TId name o) [(Tag name, k :# Type name o)]
       -- ^ An instantiation of a nominal type of the given id with the
       -- given keyword type arguments
-    | TRecord (CompositeFields name (k :# Type name o))
+    | TRecord (CompositeFields name o k)
       -- ^ Lifts a composite record type
-    | TVariant (CompositeFields name (k :# Type name o))
+    | TVariant (CompositeFields name o k)
       -- ^ Lifts a composite variant type
     deriving Generic
 
@@ -51,8 +50,6 @@ data Scheme name o = Scheme
     , _schemeType :: Annotated EntityId # Type name o
     } deriving Generic
 
-Lens.makeLenses ''CompositeFields
-Lens.makeLenses ''Scheme
-Lens.makeLenses ''TId
+traverse Lens.makeLenses [''CompositeFields, ''Scheme, ''TId] <&> concat
 Lens.makePrisms ''Type
-makeHTraversableAndBases ''Type
+traverse makeHTraversableAndBases [''Type, ''CompositeFields] <&> concat

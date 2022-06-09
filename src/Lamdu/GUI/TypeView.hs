@@ -175,7 +175,7 @@ makeComposite ::
     m (WithTextPos View) -> m (WithTextPos View) -> m (WithTextPos View) ->
     ((Sugar.Tag Name, Annotated Sugar.EntityId # Sugar.Type Name o) ->
          m (WithTextPos View, WithTextPos View)) ->
-    Sugar.CompositeFields Name (Annotated Sugar.EntityId # Sugar.Type Name o) ->
+    Sugar.CompositeFields Name o # Annotated Sugar.EntityId ->
     m (WithTextPos View)
 makeComposite mkOpener mkPre mkPost mkField composite =
     case composite of

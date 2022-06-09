@@ -82,9 +82,7 @@ binderVarType :: VarForm name m -> NameType
 binderVarType (GetDefinition _) = GlobalDef
 binderVarType _ = TaggedVar
 
-instance
-    (a ~ OldName m, b ~ NewName m, Walk m fa fb) =>
-    Walk m (CompositeFields a fa) (CompositeFields b fb) where
+instance (a ~ OldName m, b ~ NewName m) => Walk m (CompositeFields a o # Annotated p) (CompositeFields b o # Annotated p) where
     walk (CompositeFields fields mExt) =
         CompositeFields
         <$> traverse (bitraverse (toTagOf Tag) walk) fields
