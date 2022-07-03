@@ -16,6 +16,7 @@ jobs:
   stack:
     name: ghc ${{ matrix.ghc }} / ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
         stack: ["2.7.5"]
         ghc: ["9.0.2"]
