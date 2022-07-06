@@ -4,6 +4,7 @@ module Lamdu.GUI.Expr.TagEdit
     , makeArgTag
     , makeTagHoleEdit
     , makeBinderTagEdit
+    , makeJumpToTagEventMap
     ) where
 
 import qualified Control.Lens as Lens
@@ -273,6 +274,19 @@ data TagRefEditType
     | SimpleView
     deriving (Eq)
 
+makeJumpToTagEventMap :: _ => m (o EntityId -> EventMap (o M.Update))
+makeJumpToTagEventMap =
+    Lens.view id <&>
+    \env jump ->
+    jump <&> WidgetIds.fromEntityId
+    & E.keysEventMapMovesCursor
+    (env ^. Config.hasConfig . Config.jumpToDefinitionKeys)
+    (E.toDoc env
+        [ has . MomentuTexts.edit
+        , has . Texts.tag
+        , has . Texts.jumpToTag
+        ])
+
 makeTagRefEditWith ::
     _ =>
     (n (M.TextWidget o) ->
@@ -285,15 +299,6 @@ makeTagRefEditWith onView onPickNext mSetToAnon tag =
     do
         isHole <- GuiState.isSubCursor ?? holeId
         env <- Lens.view id
-        let jumpToTagEventMap jump =
-                jump <&> WidgetIds.fromEntityId
-                & E.keysEventMapMovesCursor
-                (env ^. Config.hasConfig . Config.jumpToDefinitionKeys)
-                (E.toDoc env
-                    [ has . MomentuTexts.edit
-                    , has . Texts.tag
-                    , has . Texts.jumpToTag
-                    ])
         let chooseNewTagEventMap =
                 E.keysEventMapMovesCursor
                 (Config.delKeys env <> env ^. Config.hasConfig . Config.jumpToDefinitionKeys)
@@ -302,6 +307,7 @@ makeTagRefEditWith onView onPickNext mSetToAnon tag =
                     , has . Texts.tag
                     , has . MomentuTexts.choose
                     ] ) chooseAction
+        jumpToTagEventMap <- makeJumpToTagEventMap
         let eventMap =
                 foldMap jumpToTagEventMap (tag ^. Sugar.tagRefJumpTo)
                 <> chooseNewTagEventMap

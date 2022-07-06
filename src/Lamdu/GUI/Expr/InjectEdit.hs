@@ -18,6 +18,7 @@ import qualified Lamdu.GUI.Expr.EventMap as EventMap
 import qualified Lamdu.GUI.Expr.RecordEdit as RecordEdit
 import           Lamdu.GUI.Monad (GuiM)
 import           Lamdu.GUI.Styled (text, grammar, withColor)
+import qualified Lamdu.GUI.Expr.TagEdit as TagEdit
 import qualified Lamdu.GUI.TagView as TagView
 import qualified Lamdu.GUI.Types as ExprGui
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
@@ -37,11 +38,13 @@ injectTag tag =
 
 make :: _ => Annotated (ExprGui.Payload i o) # Const (Sugar.TagRef Name i o) -> GuiM env i o (Responsive o)
 make (Ann (Const pl) (Const tag)) =
-    (Widget.makeFocusableWidget ?? myId <&> (Widget.widget %~)) <*>
-    ( maybe (pure id) (ResponsiveExpr.addParens ??) (ExprGui.mParensId pl)
-        <*> (injectTag tag <&> Lens.mapped %~ Widget.fromView)
-        <&> Responsive.fromWithTextPos
-    )
+    do
+        jumpToTag <- foldMap (TagEdit.makeJumpToTagEventMap ??) (tag ^. Sugar.tagRefJumpTo)
+        (Widget.makeFocusableWidget ?? myId <&> (Widget.widget %~)) <*>
+            ( maybe (pure id) (ResponsiveExpr.addParens ??) (ExprGui.mParensId pl)
+                <*> (injectTag tag <&> Lens.mapped %~ Widget.fromView)
+                <&> Responsive.fromWithTextPos
+            ) <&> M.weakerEvents jumpToTag
     & Wrap.stdWrap pl
     where
         myId = WidgetIds.fromExprPayload pl
