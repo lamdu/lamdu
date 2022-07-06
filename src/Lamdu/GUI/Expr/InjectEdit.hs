@@ -110,6 +110,8 @@ makeNullary (Ann (Const pl) (Sugar.NullaryInject tag r)) =
                     <&> \leaveEventMap ->
                     [rawInjectEdit, Widget.weakerEvents leaveEventMap w]
 
+        jumpToTag <-
+            foldMap (TagEdit.makeJumpToTagEventMap ??) (tag ^. hVal . Lens._Wrapped . Sugar.tagRefJumpTo)
         valEventMap <-
             case r ^. annotation . Sugar.plActions . Sugar.delete of
             Sugar.SetToHole a ->
@@ -122,7 +124,7 @@ makeNullary (Ann (Const pl) (Sugar.NullaryInject tag r)) =
         ResponsiveExpr.boxSpacedMDisamb
             ?? ExprGui.mParensId pl
             ?? widgets
-            <&> M.weakerEvents valEventMap
+            <&> M.weakerEvents (jumpToTag <> valEventMap)
     & Wrap.stdWrap pl
     where
         myId = WidgetIds.fromExprPayload pl
