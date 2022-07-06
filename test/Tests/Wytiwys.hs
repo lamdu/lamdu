@@ -96,5 +96,7 @@ test =
             , wytiwys "if 'a'=='b'\t1\t2" "2"
 
             , wytiwys "===↑↓⌫⌫⌫1" "1"
+
+            , wytiwys "if 'a=='a\n←←id\t3\t4" "3"
             ] & pure
         & buildTest
