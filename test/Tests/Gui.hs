@@ -8,6 +8,7 @@ import           Data.Containers.ListUtils (nubOrdOn)
 import qualified Data.Property as Property
 import qualified Data.Text as Text
 import           Data.Vector.Vector2 (Vector2(..))
+import           Hyper.Syntax.App (appFunc)
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (Event(..))
@@ -58,6 +59,7 @@ test =
     , testTwoDeletedDefs
     , testDelArg
     , testRecordIndentClash
+    , testJumpToInjectTag
     ]
 
 defExprs :: Lens.Traversal' (Sugar.WorkArea v name i o a) (Annotated a # Sugar.Assignment v name i o)
@@ -94,6 +96,22 @@ fromWorkArea ::
 fromWorkArea env path =
     convertWorkArea "" env
     <&> (^?! Lens.cloneTraversal path)
+
+testJumpToInjectTag :: Test
+testJumpToInjectTag =
+    testCase "jump-to-inject-tag" $
+    Env.make >>=
+    \baseEnv ->
+    do
+        injId <-
+            fromWorkArea baseEnv
+            ( defExprs . hVal . Sugar._BodyPlain . Sugar.apBody . Sugar.bBody . Sugar._BinderTerm
+            . Sugar._BodySimpleApply . appFunc . hAnn . Lens._Wrapped . Sugar.plEntityId
+            )
+        baseEnv & cursor .~ WidgetIds.fromEntityId injId
+            & applyEvent dummyVirt (simpleKeyEvent (noMods GLFW.Key'Enter))
+            & void
+    & testProgram "inject.json"
 
 testTwoDeletedDefs :: Test
 testTwoDeletedDefs =
