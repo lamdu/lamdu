@@ -57,6 +57,7 @@ test =
     , testChooseTagAndAddNext
     , testTwoDeletedDefs
     , testDelArg
+    , testRecordIndentClash
     ]
 
 defExprs :: Lens.Traversal' (Sugar.WorkArea v name i o a) (Annotated a # Sugar.Assignment v name i o)
@@ -105,6 +106,21 @@ testTwoDeletedDefs =
             >>= traverse_ (lift . (Sugar.DeletedDefinition &))
         convertWorkArea "" baseEnv >>= makeFocusedWidget "" baseEnv & void
     & testProgram "two-repls.json"
+
+testRecordIndentClash :: Test
+testRecordIndentClash =
+    testCase "record-indent-clash" $
+    Env.make >>=
+    \baseEnv ->
+    convertWorkArea "" baseEnv >>= makeGui "" baseEnv
+    <&> (^. Responsive.rNarrow)
+    <&> (Responsive.NarrowLayoutParams 0 False &)
+    <&> (^?! Align.tValue . Widget.wState . Widget._StateFocused)
+    <&> (Widget.Surrounding 0 0 0 0 &)
+    <&> (^. Widget.fLayers)
+    <&> verifyLayers ""
+    & testProgram "record.json"
+    >>= either assertFailure pure
 
 testTagPanes :: Test
 testTagPanes =
