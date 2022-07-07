@@ -11,7 +11,7 @@ import qualified GUI.Momentu.I18N as MomentuTexts
 import           GUI.Momentu.Responsive (Responsive)
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.Responsive.Options as Options
-import           GUI.Momentu.Responsive.TaggedList (TaggedItem(..), taggedListIndent)
+import           GUI.Momentu.Responsive.TaggedList (TaggedItem(..), taggedListIndent, tagPost)
 import qualified GUI.Momentu.State as GuiState
 import           GUI.Momentu.View (View)
 import qualified GUI.Momentu.View as View
@@ -90,11 +90,14 @@ makeAltRow item =
             <&> M.tValue %~ Widget.weakerEvents (item ^. TaggedList.iEventMap)
             & local (M.animIdPrefix .~ Widget.toAnimId myId)
             & setPickAndAddNextKeys
+        post <-
+            label Texts.recordSep & grammar <&> Lens.mapped %~ Widget.fromView
+            & local (M.animIdPrefix .~ Widget.toAnimId myId)
         let row =
                 TaggedItem
                 { _tagPre = Just pre
                 , _taggedItem = M.weakerEvents (item ^. TaggedList.iEventMap) altExprGui
-                , _tagPost = Nothing
+                , _tagPost = Just post
                 }
         makeAddAlt (item ^. TaggedList.iAddAfter) myId <&> (^.. Lens._Just) <&> (row:)
     where
@@ -129,7 +132,7 @@ makeAltsWidget altsId alts punned =
                 (Widget.makeFocusableView ?? Widget.joinId altsId ["Ø"] <&> (M.tValue %~))
                 <*> grammar (label Texts.absurd)
                 <&> Responsive.fromWithTextPos
-            altWidgets -> taggedListIndent ?? altWidgets
+            altWidgets -> taggedListIndent ?? (altWidgets & Lens.reversed . Lens.ix 0 . tagPost ?~ M.empty)
             <&> (,) addAltEventMap
 
 makeAddAlt ::
@@ -144,16 +147,15 @@ makeAddAlt addField baseId =
 makeAddAltRow ::
     _ => Widget.Id -> Sugar.TagChoice Name o -> GuiM env i o (TaggedItem o)
 makeAddAltRow myId addAlt =
-    TagEdit.makeTagHoleEdit mkPickResult myId addAlt
-    & Styled.withColor TextColors.caseTagColor
-    & setPickAndAddNextKeys
-    <&>
-    \tagHole ->
-    TaggedItem
-    { _tagPre = Nothing
-    , _taggedItem = Responsive.fromWithTextPos tagHole
-    , _tagPost = Nothing
-    }
+    TaggedItem Nothing <$>
+    ( TagEdit.makeTagHoleEdit mkPickResult myId addAlt
+        & Styled.withColor TextColors.caseTagColor
+        & setPickAndAddNextKeys
+        <&> Responsive.fromWithTextPos
+    ) <*>
+    ( label Texts.recordSep & grammar <&> Lens.mapped %~ Widget.fromView
+        & local (M.animIdPrefix .~ Widget.toAnimId myId) <&> Just
+    )
     where
         mkPickResult dst =
             Menu.PickResult
