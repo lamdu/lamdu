@@ -83,7 +83,7 @@ test =
             , wytiwys "if {={:1\t2" "1" -- "{" expands to "{}"
             , wytiwys "let {val 1\trec.val\n" "1" -- "let " jumps straight to value of let
 
-            , wytiwys "1..10.sort lhs>rhs)).item 2" "7" -- Close parens get out of lambda
+            , wytiwys "1..10.sort lhs>rhs))@ 2" "7" -- Close parens get out of lambda
 
             , wytiwys "{a 7,b 5}.a\n" "7"
             , wytiwys "{a 7,b 5}.a+2" "9"
