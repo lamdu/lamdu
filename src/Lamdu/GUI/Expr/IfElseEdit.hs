@@ -11,6 +11,7 @@ import qualified GUI.Momentu as M
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.I18N as MomentuTexts
+import qualified GUI.Momentu.Glue as Glue
 import           GUI.Momentu.Responsive (Responsive)
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.Responsive.Expression as ResponsiveExpr
@@ -143,22 +144,21 @@ make (Ann (Const pl) ifElse) =
             <$> makeIfThen If animId ifElse
             <*> makeElse animId (ifElse ^. Sugar.iElse)
         res <- renderRows (ExprGui.mParensId pl) ?? rows
-        case rows of
-            [if_, else_]
-                | (if_ ^.. traverse <> else_ ^.. traverse)
-                    ^. traverse . Responsive.rWide . Responsive.lForm
-                    == Responsive.WideOneLiner ->
-                do
-                    frame <- addValFrame
-                    hbox <-
-                        Options.hbox
-                        <*> (maybe (pure id) (ResponsiveExpr.addParens ??) (ExprGui.mParensId pl) <&> (frame .))
-                        ?? id
-                    s <- Spacer.stdHSpace <&> Responsive.fromView
-                    Options.tryWideLayout hbox
-                        (if_ ^.. traverse <> [s, else_ ^. rKeyword, else_ ^. rPredicate, s, else_ ^. rResult])
-                        res & pure
-            _ -> pure res
+        frame <- addValFrame
+        s <- Spacer.stdHSpace <&> Widget.fromView <&> M.WithTextPos 0
+        disambig <- maybe (pure id) (ResponsiveExpr.addParens ??) (ExprGui.mParensId pl)
+        hbox <- Glue.hbox
+        let oneLinerLayout (Compose [if_, else_]) Responsive.WideOneLiner =
+                Just (Responsive.WideLayouts r (disambig r) Responsive.WideOneLiner)
+                where
+                    r = if_ ^.. traverse <> [s, else_ ^. rKeyword, else_ ^. rPredicate, s, else_ ^. rResult] & hbox & frame
+            oneLinerLayout _ _ = Nothing
+        let oneLiner =
+                Options.WideLayoutOption
+                { Options._wContexts = traverse . Options.wideUnambiguous
+                , Options._wLayout = oneLinerLayout
+                }
+        Options.tryWideLayout oneLiner (Compose rows) res & pure
     & stdWrapParentExpr pl
     where
         animId = WidgetIds.fromExprPayload pl & Widget.toAnimId

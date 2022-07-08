@@ -11,8 +11,8 @@ mkDerivation {
   src = fetchFromGitHub {
     owner = "lamdu";
     repo = "momentu";
-    sha256 = "19f87vqdbv1s1kr30yv58sca9x45zd7qq4yx2174b6nya2hvxhp7";
-    rev = "4ea4e09c8be8be6b6d0a5d22a4e49753d3a1e642";
+    sha256 = "12v0ww0n97rvn93063g4ac4ci76narsplky8scv0x6vkgbcapqd4";
+    rev = "f0e00366d4b522cf10484f4de9e6c94cb975c822";
   };
   libraryHaskellDepends = [
     GLFW-b HUnit OpenGL QuickCheck aeson base base-compat binary bytestring
