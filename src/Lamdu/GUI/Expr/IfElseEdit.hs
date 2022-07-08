@@ -145,8 +145,9 @@ make (Ann (Const pl) ifElse) =
         res <- renderRows (ExprGui.mParensId pl) ?? rows
         case rows of
             [if_, else_]
-                | Lens.has (Sugar.iThen . hVal . noLet) ifElse
-                && Lens.has (Sugar.iElse . hVal . Sugar._SimpleElse . noLet) ifElse ->
+                | (if_ ^.. traverse <> else_ ^.. traverse)
+                    ^. traverse . Responsive.rWide . Responsive.lForm
+                    == Responsive.WideOneLiner ->
                 do
                     frame <- addValFrame
                     hbox <-
@@ -161,6 +162,3 @@ make (Ann (Const pl) ifElse) =
     & stdWrapParentExpr pl
     where
         animId = WidgetIds.fromExprPayload pl & Widget.toAnimId
-        noLet =
-            Sugar._BodyLeaf . Lens.united <>
-            Sugar._BodyLam . Sugar.lamFunc . Sugar.fBody . hVal . Sugar.bBody . Sugar._BinderTerm . Lens.united
