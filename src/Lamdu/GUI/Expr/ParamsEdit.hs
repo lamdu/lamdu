@@ -82,7 +82,7 @@ addScopeEdit =
         Nothing -> id
         Just scopeEdit ->
             (Responsive.rWide . Responsive.lForm .~ Responsive.WideOneLiner) .
-            (|---|) (M.WithTextPos 0 scopeEdit)
+            ((|---|) ?? M.WithTextPos 0 scopeEdit)
     )
 
 mkLhsEdits :: _ => m (Responsive o -> Maybe (M.Widget o) -> [Responsive o])
