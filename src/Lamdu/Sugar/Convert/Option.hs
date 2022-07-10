@@ -127,13 +127,12 @@ filterResults ::
 filterResults tagsProp order res query =
     resGroups <&> (^. traverse)
     where
+        q = query ^. Sugar.qSearchTerm
         resGroups
-            | "" == query ^. Sugar.qSearchTerm = groups (gForType <> gSyntax <> gLocals)
-            | "." `Text.isPrefixOf` (query ^. Sugar.qSearchTerm) =
-                groups (gForType <> gSyntax <> gDefs <> gFromNoms <> gGetFields)
-            | "'" `Text.isPrefixOf` (query ^. Sugar.qSearchTerm) = groups (gForType <> gToNoms <> gInjects)
-            | "{" `Text.isPrefixOf` (query ^. Sugar.qSearchTerm) =
-                groups (gForType <> gSyntax <> gWrapInRecs)
+            | "" == q = groups (gForType <> gSyntax <> gLocals)
+            | "." `Text.isPrefixOf` q = groups (gForType <> gSyntax <> gDefs <> gFromNoms <> gGetFields)
+            | "'" `Text.isPrefixOf` q = groups (gForType <> gToNoms <> gInjects)
+            | "{" `Text.isPrefixOf` q = groups (gForType <> gSyntax <> gWrapInRecs)
             | otherwise =
                 -- Within certain search-term matching level (exact/prefix/infix),
                 -- prefer locals over globals even for type mismatches
