@@ -18,6 +18,7 @@ import qualified Control.Lens as Lens
 import           Control.Monad ((>=>))
 import           Control.Monad.Once (OnceT)
 import           Control.Monad.Transaction (MonadTransaction(..))
+import qualified Data.Char as Char
 import           Data.Containers.ListUtils (nubOrd)
 import           Data.List (sortOn)
 import           Data.Property (MkProperty', getP, modP, pureModify, pVal)
@@ -130,9 +131,13 @@ filterResults tagsProp order res query =
         q = query ^. Sugar.qSearchTerm
         resGroups
             | "" == q = groups (gForType <> gSyntax <> gLocals)
-            | "." `Text.isPrefixOf` q = groups (gForType <> gSyntax <> gDefs <> gFromNoms <> gGetFields)
             | "'" `Text.isPrefixOf` q = groups (gForType <> gToNoms <> gInjects)
             | "{" `Text.isPrefixOf` q = groups (gForType <> gSyntax <> gWrapInRecs)
+            | "." `Text.isPrefixOf` q =
+                if Lens.anyOf (Lens.ix 1) Char.isUpper q
+                then groups gFromNoms <> groups gForType
+                else groups (gForType <> gSyntax <> gDefs <> gFromNoms <> gGetFields)
+            | Char.isUpper (Text.head q) = groups gToNoms <> groups gForType
             | otherwise =
                 -- Within certain search-term matching level (exact/prefix/infix),
                 -- prefer locals over globals even for type mismatches
