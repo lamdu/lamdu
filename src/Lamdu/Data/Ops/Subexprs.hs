@@ -26,10 +26,8 @@ onMatchingSubexprs ::
     Ann a # V.Term ->
     m ()
 onMatchingSubexprs action predicate x =
-    ( if Lens.has predicate (unwrap (const (^. hVal)) x)
-        then action (x ^. hAnn)
-        else pure ()
-    ) *>
+    when (Lens.has predicate (unwrap (const (^. hVal)) x)) (action (x ^. hAnn))
+    *>
     htraverse_
     ( \case
         HWitness V.W_Term_Term -> onMatchingSubexprs action predicate
