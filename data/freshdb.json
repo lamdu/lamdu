@@ -4,6 +4,14 @@
     },
     {
         "names": {
+            "english": "freeze",
+            "hebrew": "הקפא"
+        },
+        "tag": "0144384524604214aa15c27b3be9d3b5",
+        "tagOrder": 0
+    },
+    {
+        "names": {
             "english": "fractional",
             "hebrew": "שבר",
             "italian": "frazionario",
@@ -24129,6 +24137,51 @@
                 ]
             },
             "lamVar": "d17e0d55521f4a0da5e0e95658c604c8"
+        }
+    },
+    {
+        "builtin": [
+            "Mut",
+            "Array",
+            "copy"
+        ],
+        "def": "d6d63335c2cf579586eca883fc572f5e",
+        "defPresentationMode": "Verbose",
+        "tag": "0144384524604214aa15c27b3be9d3b5",
+        "typ": {
+            "schemeType": {
+                "funcParam": {
+                    "nomId": "42493a73744172726179000000000000",
+                    "nomTypeArgs": {
+                        "42493a76616c00000000000000000000": {
+                            "typeVar": "61"
+                        },
+                        "73000000000000000000000000000000": {
+                            "typeVar": "73"
+                        }
+                    }
+                },
+                "funcResult": {
+                    "nomId": "42493a53540000000000000000000000",
+                    "nomTypeArgs": {
+                        "6eeb55f76600d4ad08be72ad3ac13d96": {
+                            "nomId": "42493a61727261790000000000000000",
+                            "nomTypeArgs": {
+                                "42493a76616c00000000000000000000": {
+                                    "typeVar": "61"
+                                }
+                            }
+                        },
+                        "73000000000000000000000000000000": {
+                            "typeVar": "73"
+                        }
+                    }
+                }
+            },
+            "typeVars": [
+                "61",
+                "73"
+            ]
         }
     },
     {

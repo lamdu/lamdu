@@ -226,6 +226,7 @@ module.exports = {
                     return {};
                 }),
                 new: cont => cont([]),
+                copy: mutFunc(x => x.map(v => v)),
                 run: function(st) {
                     var result = st(x => x);
                     if (result.hasOwnProperty("cacheId")) {
