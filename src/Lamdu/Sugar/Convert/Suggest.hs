@@ -85,8 +85,16 @@ suggestCase r t =
     T.RExtend (RowExtend tag fieldType rest) ->
         RowExtend tag
         <$> suggestVal (_Pure . T._TFun # FuncType fieldType t)
-        <*> suggestCase rest t
+        <*> suggestNestedCase rest t
         <&> (_Pure . V._BCase #)
+
+suggestNestedCase :: Monad m => Pure # T.Row -> Pure # T.Type -> T m (Pure # V.Term)
+suggestNestedCase (Pure T.RVar{}) _ =
+    -- Close suggested cases.
+    -- An example is zip's "tail" argument.
+    -- It can support functions handling more cases than it needs but no need to complete it as one.
+    _Pure # V.BLeaf V.LAbsurd & pure
+suggestNestedCase r t = suggestCase r t
 
 suggestRec :: Monad m => Pure # T.Row -> T m (Pure # V.Term)
 suggestRec t =
