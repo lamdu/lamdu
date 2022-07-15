@@ -10,6 +10,8 @@ import qualified Control.Lens as Lens
 import           Hyper
 import           Hyper.Class.Morph
 import qualified Lamdu.Builtins.Anchors as Builtins
+import           Lamdu.Calc.Identifier (identFromHex)
+import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Sugar.Lens as SugarLens
 import qualified Lamdu.Sugar.Props as SugarProps
 import           Lamdu.Sugar.Types
@@ -201,9 +203,17 @@ instance MarkBodyAnnotations v Term where
             & BodyPostfixApply
         )
     markBodyAnnotations (BodyLabeledApply x) =
-        ( showAnnotationWhenVerbose
+        ( if x ^. aFunc . hVal . Lens._Wrapped . vVar == V.Var consVar
+            then
+                -- Temporary behavious until we have literal lists syntax sugar:
+                -- Avoid showing the redundant annotations for result of cons.
+                -- Once lists syntax sugar exists such special behaviour won't be necessary.
+                dontShowEval
+            else showAnnotationWhenVerbose
         , morphMap (Proxy @MarkAnnotations #?> markNodeAnnotations) x & BodyLabeledApply
         )
+        where
+            Right consVar = identFromHex "d711f82f8a4d4e199ece3fc4536329ea"
     markBodyAnnotations (BodyIfElse x) = markBodyAnnotations x & _2 %~ BodyIfElse
     markBodyAnnotations (BodyLeaf (LeafHole x)) =
         ( alwaysShowAnnotations
