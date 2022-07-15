@@ -16,8 +16,6 @@ import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
 import qualified GUI.Momentu.Zoom as Zoom
 import qualified Lamdu.Debug.Tasks as Debug
 import qualified Lamdu.GUI.VersionControl.Config as VersionControl
-import qualified Lamdu.Sugar.Config as Sugar
-
 import           Lamdu.Prelude
 
 data Export key = Export
@@ -97,7 +95,6 @@ data Config key = Config
     , _export :: Export key
     , _pane :: Pane key
     , _versionControl :: VersionControl.Config key
-    , _sugar :: Sugar.Sugars Bool
     , _completion :: Completion key
     , _literal :: Literal key
     , _eval :: Eval key
@@ -149,8 +146,6 @@ Lens.makeLenses ''Config
 
 hasConfig :: Has (Config ModKey) env => Lens' env (Config ModKey)
 hasConfig = has @(Config ModKey)
-
-instance Has (Sugar.Sugars Bool) (Config key) where has = sugar
 
 delKeys :: (MonadReader env m, Has (Config ModKey) env) => m [ModKey]
 delKeys =

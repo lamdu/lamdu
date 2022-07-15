@@ -63,6 +63,7 @@ import           Lamdu.Settings (Settings(..))
 import qualified Lamdu.Settings as Settings
 import qualified Lamdu.Style.Make as MakeStyle
 import           Lamdu.Sugar (sugarWorkArea)
+import           Lamdu.Sugar.Config (Sugars)
 import qualified Lamdu.VersionControl as VersionControl
 import           Revision.Deltum.IRef (IRef)
 import           Revision.Deltum.Rev.Version (Version)
@@ -179,9 +180,9 @@ mainLoopOptions mkSettingsProp configSampler getFonts stateStorage
 mkEnv ::
     Cache.Functions -> Debug.Monitors -> Fonts M.Font ->
     EvalManager.Evaluator -> Sampler -> MainLoop.Env ->
-    Property IO Settings ->
+    Property IO Settings -> Property IO (Sugars Bool) ->
     IO Env
-mkEnv cachedFunctions monitors fonts evaluator configSampler mainEnv settings =
+mkEnv cachedFunctions monitors fonts evaluator configSampler mainEnv settings sugars =
     do
         sample <- ConfigSampler.getSample configSampler
         evalResults <- EvalManager.getResults evaluator
@@ -194,6 +195,7 @@ mkEnv cachedFunctions monitors fonts evaluator configSampler mainEnv settings =
             , _config = sample ^. sConfigData
             , _theme = sample ^. sThemeData
             , _settings = settings
+            , _sugars = sugars
             , _style = MakeStyle.make fonts (sample ^. sThemeData)
             , _sprites = sample ^. sSpritesData
             , _mainLoop = mainEnv
@@ -208,11 +210,11 @@ runMainLoop ::
     Maybe Ekg.Server -> MkProperty' IO M.GUIState -> Font.LCDSubPixelEnabled ->
     M.Window -> MainLoop Handlers -> Sampler ->
     EvalManager.Evaluator -> Transaction.Store DbM ->
-    MkProperty' IO Settings -> Cache -> Cache.Functions -> Debug.Monitors ->
+    MkProperty' IO Settings -> MkProperty' IO (Sugars Bool) -> Cache -> Cache.Functions -> Debug.Monitors ->
     IORef (Maybe EditorCache) ->
     IO ()
 runMainLoop ekg stateStorage subpixel win mainLoop configSampler
-    evaluator db mkSettingsProp cache cachedFunctions monitors cacheRef
+    evaluator db mkSettingsProp mkSugarsProp cache cachedFunctions monitors cacheRef
     =
     do
         getFonts <- EditorFonts.makeGetFonts configSampler subpixel
@@ -224,9 +226,12 @@ runMainLoop ekg stateStorage subpixel win mainLoop configSampler
                     fonts <- getFonts (mainEnv ^. MainLoop.eZoom)
                     Cache.fence cache
                     settingsProp <- mkSettingsProp ^. mkProperty
+                    sugarsProp <-
+                        mkSugarsProp ^. mkProperty
+                        <&> Property.pSet . Lens.mapped %~ (<* writeIORef cacheRef Nothing)
                     env <-
                         mkEnv cachedFunctions monitors fonts evaluator
-                        configSampler mainEnv settingsProp
+                        configSampler mainEnv settingsProp sugarsProp
                     makeRootWidget env monitors db evaluator sample cacheRef
         reportPerfCounters <- traverse makeReportPerfCounters ekg
         MainLoop.run mainLoop win MainLoop.Handlers
@@ -242,7 +247,7 @@ makeMainGui ::
     Env -> GUIMain.Model Env DbLayout.ViewM ->
     OnceT (T DbLayout.DbM) (Widget IO)
 makeMainGui themeNames langNames dbToIO env mkWorkArea =
-    GUIMain.make themeNames langNames (env ^. Env.settings) env mkWorkArea
+    GUIMain.make themeNames langNames (env ^. Env.settings) (env ^. Env.sugars) env mkWorkArea
     <&> Widget.updates %~
     \act ->
     act ^. ioTrans . Lens._Wrapped
@@ -422,8 +427,9 @@ run opts rawDb =
                 evaluator <- newEvaluator refresh dbMVar opts
                 mkSettingsProp <-
                     EditorSettings.newProp initialSettings configSampler evaluator
+                mkSugarsProp <- pure True & newIORef <&> Property.fromIORef
                 runMainLoop ekg stateStorage subpixel win mainLoop
-                    configSampler evaluator db mkSettingsProp cache
+                    configSampler evaluator db mkSettingsProp mkSugarsProp cache
                     cachedFunctions monitors cacheRef
     where
         subpixel

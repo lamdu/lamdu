@@ -26,7 +26,6 @@ import qualified GUI.Momentu.Widgets.TextView as TextView
 import qualified Lamdu.Annotations as Annotations
 import qualified Lamdu.Cache as Cache
 import           Lamdu.Config (Config)
-import qualified Lamdu.Config as Config
 import           Lamdu.Config.Folder (Selection(..))
 import qualified Lamdu.Config.Folder as Folder
 import           Lamdu.Config.Theme (Theme, baseTextSize, fonts)
@@ -46,7 +45,7 @@ import qualified Lamdu.Paths as Paths
 import           Lamdu.Settings (Settings(..), sAnnotationMode)
 import           Lamdu.Style (Style)
 import qualified Lamdu.Style.Make as MakeStyle
-import qualified Lamdu.Sugar.Config as SugarConfig
+import           Lamdu.Sugar.Config as SugarConfig (Sugars)
 import qualified System.Info as SysInfo
 import qualified Test.Lamdu.Config as TestConfig
 
@@ -61,6 +60,7 @@ data Env =
     , _eAnimIdPrefix :: Anim.AnimId
     , _eState :: GUIState
     , _eConfig :: Config ModKey
+    , _eSugars :: Sugars Bool
     , _eSettings :: Settings
     , _eTasksMonitor :: Debug.Monitors
     , _eResults :: EvalResults
@@ -90,7 +90,7 @@ instance Has LangId Env where has = eLanguage . has
 instance Has Language Env where has = eLanguage
 instance Has Debug.Monitors Env where has = eTasksMonitor
 instance Has Cache.Functions Env where has = eCacheFunctions
-instance Has (SugarConfig.Sugars Bool) Env where has = eConfig . Config.sugar
+instance Has (SugarConfig.Sugars Bool) Env where has = eSugars
 instance Has EvalResults Env where has = eResults
 instance Has Annotations.Mode Env where has = has . sAnnotationMode
 instance Has (Sprites Sprite) Env where has = eSprites
@@ -140,6 +140,7 @@ make =
                 , _sSelectedLanguage = Selection "english"
                 , _sHelpShown = HelpNotShown
                 }
+            , _eSugars = pure True
             , _eTasksMonitor = Debug.noopMonitors
             , _eResults = pure EvalResults.empty
             , _eCacheFunctions = cache

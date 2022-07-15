@@ -28,6 +28,21 @@
             "typ": "טיפוס",
             "row": "שורה"
         },
+        "sugars": {
+            "assignmentParameters": "פרמטרים מצד ימין",
+            "composite": "קומפוזיטים",
+            "fieldPuns": "Field Puns",
+            "fragment": "רסיסים",
+            "ifExpression": "ביטוי-אם",
+            "labeledApply": "הפעלות מסוכרות",
+            "letExpression": "ביטוי-יהי",
+            "lightLambda": "למבדות קלות",
+            "literalText": "קבועי טקסט",
+            "nullaryInject": "Nullary Injects",
+            "nullaryParameter": "פרמטר ריק",
+            "destructure": "רשומות פרמטרים",
+            "destructureNested": "רשומות פרמטרים מכוננות"
+        },
         "collaborationTexts": {
             "collaboration": "שיתוף",
             "exportDefToJSON": "ייצא הגדרה לקובץ שיתוף",

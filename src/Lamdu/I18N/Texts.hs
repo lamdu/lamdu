@@ -27,6 +27,7 @@ import           Lamdu.I18N.Name
 import           Lamdu.I18N.Navigation
 import           Lamdu.I18N.StatusBar
 import           Lamdu.I18N.Versioning
+import           Lamdu.Sugar.Config (Sugars)
 
 import           Lamdu.Prelude
 
@@ -34,6 +35,7 @@ data Texts a = Texts
     { _languageNames :: Map LangId a
     , _code :: Code a
     , _codeUI :: CodeUI a
+    , _sugars :: Sugars a
     , _commonTexts :: MomentuTexts.Texts a
     , _collaborationTexts :: Collaboration a
     , _navigationTexts :: Navigation a
@@ -74,5 +76,6 @@ instance Has (Navigation         Text) (Texts Text) where has = navigationTexts
 instance Has (Versioning         Text) (Texts Text) where has = versioning
 instance Has (Code               Text) (Texts Text) where has = code
 instance Has (CodeUI             Text) (Texts Text) where has = codeUI
+instance Has (Sugars             Text) (Texts Text) where has = sugars
 instance Has (Definitions        Text) (Texts Text) where has = definitions
 instance Has (MomentuTexts.Texts Text) (Texts Text) where has = commonTexts

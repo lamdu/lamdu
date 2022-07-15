@@ -27,6 +27,21 @@
             "typ": "type",
             "row": "row"
         },
+        "sugars": {
+            "assignmentParameters": "LHS Params",
+            "composite": "Composites",
+            "fieldPuns": "Field Puns",
+            "fragment": "Fragments",
+            "ifExpression": "If-Exprs",
+            "labeledApply": "Sugared App.",
+            "letExpression": "Let-Exprs",
+            "lightLambda": "Light Lambdas",
+            "literalText": "Text Literals",
+            "nullaryInject": "Nullary Injects",
+            "nullaryParameter": "Null Params",
+            "destructure": "Param Records",
+            "destructureNested": "Nested P. Recs"
+        },
         "collaborationTexts": {
             "collaboration": "Collaboration",
             "exportDefToJSON": "Export definition to JSON",

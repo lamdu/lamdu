@@ -29,6 +29,21 @@
             "typ": "tipos",
             "row": "fila"
         },
+        "sugars": {
+            "assignmentParameters": "Paráms en Izquierdo",
+            "composite": "Compuestos",
+            "fieldPuns": "Field Puns",
+            "fragment": "Fragmentos",
+            "ifExpression": "Si-Exprs",
+            "labeledApply": "Apl. Azucar.",
+            "letExpression": "Sea-Exprs",
+            "lightLambda": "Lambdas Ligeras",
+            "literalText": "Literales de Texto",
+            "nullaryInject": "Nullary Injects",
+            "nullaryParameter": "Inyecciones Nulas",
+            "destructure": "Reg. de Paráms",
+            "destructureNested": "Reg. de Paráms Anidados"
+        },
         "collaborationTexts": {
             "collaboration": "Colaboración",
             "exportDefToJSON": "Exportar la definición a JSON",

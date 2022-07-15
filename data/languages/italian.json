@@ -27,6 +27,21 @@
             "typ": "tipi",
             "row": "riga"
         },
+        "sugars": {
+            "assignmentParameters": "Parametri di Sinistra",
+            "composite": "Composti",
+            "fieldPuns": "Field Puns",
+            "fragment": "Frammenti",
+            "ifExpression": "Se-Espressioni",
+            "labeledApply": "Applicare Zuccherato",
+            "letExpression": "Sia-Espressioni",
+            "lightLambda": "Lambdas Leggere",
+            "literalText": "Letterali di Testo",
+            "nullaryInject": "Nullary Injects",
+            "nullaryParameter": "Parametri Nullari",
+            "destructure": "Record di Parametri",
+            "destructureNested": "Record di Parametri Nidificati"
+        },
         "collaborationTexts": {
             "collaboration": "Collaborazione",
             "exportDefToJSON": "Esporta definizione in JSON",

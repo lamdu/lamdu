@@ -8,6 +8,7 @@ module Lamdu.Main.Env
     , config
     , theme
     , settings
+    , sugars
     , sprites
     , style
     , mainLoop
@@ -63,6 +64,7 @@ data Env = Env
     , _theme :: Theme
     , _sprites :: Sprites Sprite
     , _settings :: Property IO Settings
+    , _sugars :: Property IO (SugarConfig.Sugars Bool)
     , _style :: Style.Style
     , _mainLoop :: MainLoop.Env
     , _animIdPrefix :: AnimId
@@ -93,7 +95,7 @@ instance Has Menu.Style Env where has = theme . Theme.menu
 instance Has SearchMenu.TermStyle Env where has = theme . Theme.searchTerm
 instance Has Settings Env where has = settings . Property.pVal
 instance Has Style Env where has = style
-instance Has (SugarConfig.Sugars Bool) Env where has = config . has
+instance Has (SugarConfig.Sugars Bool) Env where has = sugars . Property.pVal
 instance Has TextEdit.Style Env where has = style . Style.base
 instance Has TextView.Style Env where has = has @TextEdit.Style . has
 instance Has Theme Env where has = theme

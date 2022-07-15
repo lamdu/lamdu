@@ -33,6 +33,7 @@ import qualified Lamdu.GUI.StatusBar as StatusBar
 import qualified Lamdu.GUI.VersionControl as VersionControlGUI
 import           Lamdu.GUI.WidgetIds (defaultCursor)
 import           Lamdu.Settings (Settings)
+import           Lamdu.Sugar.Config (Sugars)
 import qualified Lamdu.VersionControl as VersionControl
 import qualified Lamdu.VersionControl.Actions as VCActions
 import           Revision.Deltum.Transaction (Transaction)
@@ -44,9 +45,10 @@ type T = Transaction
 make ::
     _ =>
     [TitledSelection Folder.Theme] -> [TitledSelection Folder.Language] ->
-    Property IO Settings -> env -> CodeEdit.Model env ViewM ->
+    Property IO Settings -> Property IO (Sugars Bool) ->
+    env -> CodeEdit.Model env ViewM ->
     OnceT (T DbM) (M.Widget (IOTrans DbM))
-make themeNames langNames settingsProp env mkWorkArea =
+make themeNames langNames settingsProp sugarsProp env mkWorkArea =
     do
         vcActions <-
             VersionControl.makeActions <&> VCActions.hoist IOTrans.liftTrans & transaction
@@ -58,7 +60,7 @@ make themeNames langNames settingsProp env mkWorkArea =
             <&> _1 %~ StatusBar.hoist viewToDb
             <&> _2 . Widget.updates %~ viewToDb
         statusBar <-
-            StatusBar.make gotoDefinition themeNames langNames settingsProp
+            StatusBar.make gotoDefinition themeNames langNames settingsProp sugarsProp
             (fullSize ^. _1) vcActions
         let statusBarWidget = statusBar ^. StatusBar.widget . M.tValue
 
