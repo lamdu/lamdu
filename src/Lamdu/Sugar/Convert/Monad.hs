@@ -7,7 +7,7 @@ module Lamdu.Sugar.Convert.Monad
 
     , Context(..)
     , scInferContext, scTopLevelExpr, scPostProcessRoot, siRecursiveRef, scConfig
-    , scScopeInfo, scDebugMonitors, scCacheFunctions
+    , scSugars, scScopeInfo, scDebugMonitors, scCacheFunctions
     , scOutdatedDefinitions, scFrozenDeps
 
     , cachedFunc
@@ -34,7 +34,7 @@ import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Debug as Debug
 import qualified Lamdu.Expr.IRef as ExprIRef
-import           Lamdu.Sugar.Config (Config)
+import           Lamdu.Sugar.Config (Config, Sugars)
 import qualified Lamdu.Sugar.Convert.Input as Input
 import qualified Lamdu.Sugar.Convert.PostProcess as PostProcess
 import           Lamdu.Sugar.Internal
@@ -95,6 +95,7 @@ data Context m = Context
     , _scDebugMonitors :: Debug.Monitors
     , _scCacheFunctions :: Cache.Functions
     , _scConfig :: Config
+    , _scSugars :: Sugars Bool
     , scConvertSubexpression ::
         PositionInfo -> Ann (Input.Payload m) # V.Term ->
         ConvertM m (ExpressionU EvalPrep m)

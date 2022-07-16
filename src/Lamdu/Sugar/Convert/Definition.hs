@@ -25,7 +25,7 @@ import qualified Lamdu.Debug as Debug
 import           Lamdu.Expr.IRef (DefI, HRef)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Load as ExprLoad
-import           Lamdu.Sugar.Config (Config)
+import           Lamdu.Sugar.Config (Config, sugarsEnabled)
 import qualified Lamdu.Sugar.Convert.DefExpr as ConvertDefExpr
 import qualified Lamdu.Sugar.Convert.DefExpr.OutdatedDefs as OutdatedDefs
 import qualified Lamdu.Sugar.Convert.Expression as ConvertExpr
@@ -106,6 +106,7 @@ convertInferDefExpr env defType defExpr defI =
                 Context
                 { _scInferContext = newInferContext
                 , _scConfig = env ^. has
+                , _scSugars = env ^. has . sugarsEnabled
                 , _scCodeAnchors = env ^. Anchors.codeAnchors
                 , _scScopeInfo =
                     emptyScopeInfo

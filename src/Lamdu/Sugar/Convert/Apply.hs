@@ -162,7 +162,7 @@ convertPostfix (App funcS argS) applyPl =
                 , _pFunc = postfixFunc
                 }
         setTo <- lift ConvertM.typeProtectedSetToVal ?? applyPl ^. Input.stored
-        ifSugar <- Lens.view (ConvertM.scConfig . Config.sugarsEnabled . Config.ifExpression)
+        ifSugar <- Lens.view (ConvertM.scSugars . Config.ifExpression)
         guard ifSugar *> convertIfElse setTo postfix
             & maybe (BodyPostfixApply postfix) BodyIfElse
             & pure
@@ -173,7 +173,7 @@ convertLabeled ::
     MaybeT (ConvertM m) (BodyU v m)
 convertLabeled (App funcS argS) exprPl =
     do
-        Lens.view (ConvertM.scConfig . Config.sugarsEnabled . Config.labeledApply) >>= guard
+        Lens.view (ConvertM.scSugars . Config.labeledApply) >>= guard
         -- Make sure it's a not a param, get the var
         -- Make sure it is not a "let" but a "def" (recursive or external)
         funcVar <-

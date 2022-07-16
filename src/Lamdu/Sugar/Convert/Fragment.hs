@@ -67,7 +67,7 @@ convertAppliedHole ::
     MaybeT (ConvertM m) (ExpressionU EvalPrep m)
 convertAppliedHole app exprPl =
     do
-        Lens.view (ConvertM.scConfig . Config.sugarsEnabled . Config.fragment) >>= guard
+        Lens.view (ConvertM.scSugars . Config.fragment) >>= guard
         Lens.has (Sugar.appFunc . ExprLens.valHole) app & guard
         convert app exprPl & lift
 

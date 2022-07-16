@@ -32,7 +32,7 @@ text ::
     MaybeT (ConvertM m) (ExpressionU v m)
 text t@(ToNom tid (Ann litPl bod)) toNomPl =
     do
-        Lens.view (ConvertM.scConfig . Config.sugarsEnabled . Config.literalText) >>= guard
+        Lens.view (ConvertM.scSugars . Config.literalText) >>= guard
         guard $ tid == Builtins.textTid
         lit <- bod ^? ExprLens.valBodyLiteral & maybeToMPlus
         txt <-

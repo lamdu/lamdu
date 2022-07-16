@@ -73,7 +73,7 @@ convertBinderBody ::
     ConvertM m (Annotated (ConvertPayload m) # Binder EvalPrep InternalName (OnceT (T m)) (T m))
 convertBinderBody rawExpr expr =
     do
-        supportLet <- Lens.view (ConvertM.scConfig . Config.sugarsEnabled . Config.letExpression)
+        supportLet <- Lens.view (ConvertM.scSugars . Config.letExpression)
         case expr ^. hVal of
             BodySimpleApply (App (Ann lamPl (BodyLam lam)) argT) | supportLet ->
                 do
@@ -170,7 +170,7 @@ toAssignment ::
     ConvertM m (Annotated (ConvertPayload m) # Assignment v name i (T m))
 toAssignment binderKind b =
     do
-        enabled <- Lens.view (ConvertM.scConfig . Config.sugarsEnabled . Config.assignmentParameters)
+        enabled <- Lens.view (ConvertM.scSugars . Config.assignmentParameters)
         case b ^? hVal . bBody . _BinderTerm . _BodyLam of
             Just l | enabled -> b & annValue .~ BodyFunction (l ^. lamFunc) & pure
             _ ->

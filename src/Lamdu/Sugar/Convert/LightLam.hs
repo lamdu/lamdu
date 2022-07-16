@@ -27,7 +27,7 @@ Lens.makeLenses ''SubTreeInfo
 
 addLightLambdas :: _ => m (Ann a # t -> Ann a # t)
 addLightLambdas =
-    Lens.view (ConvertM.scConfig . Config.sugarsEnabled . Config.lightLambda) <&>
+    Lens.view (ConvertM.scSugars . Config.lightLambda) <&>
     \case
     False -> id
     True -> (^. _2) . addLightLambdasH

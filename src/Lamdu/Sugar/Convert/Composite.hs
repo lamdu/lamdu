@@ -83,7 +83,7 @@ convertExtend cons valS exprPl extendV restC =
             convertItem addItemAction cons exprPl
             (Set.fromList restTags) valS
             (extendV & extendRest %~ (^. Input.stored . ExprIRef.iref))
-        punSugar <- Lens.view (ConvertM.scConfig . Config.sugarsEnabled . Config.fieldPuns)
+        punSugar <- Lens.view (ConvertM.scSugars . Config.fieldPuns)
         let addItem items =
                 Just TaggedListBody
                 { _tlHead = itemS
@@ -214,7 +214,7 @@ convert ::
     ExtendVal m (Input.Payload m # V.Term) ->
     ConvertM m (ExpressionU v m)
 convert closed cons prism valS restS expr extendV =
-    Lens.view (ConvertM.scConfig . Config.sugarsEnabled . Config.composite) >>=
+    Lens.view (ConvertM.scSugars . Config.composite) >>=
     \case
     False -> convertOneItem
     True ->

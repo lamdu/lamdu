@@ -286,7 +286,7 @@ fieldParamInfo binderKind tags fp storedLam tag =
             >>= ConvertM . lift
         del <- delFieldParamAndFixCalls binderKind tags fp storedLam
         vinfo <- mkVarInfo (fpFieldType fp)
-        nest <- Lens.view (ConvertM.scConfig . Config.sugarsEnabled . Config.destructureNested)
+        nest <- Lens.view (ConvertM.scSugars . Config.destructureNested)
         pure TaggedItem
             { _tiTag = tag
             , _tiAddAfter = addNext
@@ -566,7 +566,7 @@ convertNonRecordParam ::
 convertNonRecordParam binderKind lam@(V.TypedLam param _ _) lamExprPl =
     do
         nullParamSugar <-
-            Lens.view (ConvertM.scConfig . Config.sugarsEnabled . Config.nullaryParameter)
+            Lens.view (ConvertM.scSugars . Config.nullaryParameter)
         let typ = lamParamType lamExprPl
         varInfo <- mkVarInfo typ
         tag <- ConvertTag.taggedEntity (Just varInfo) param >>= ConvertM . lift
@@ -634,7 +634,7 @@ convertLamParams ::
     ConvertM m (LhsNames InternalName (OnceT (T m)) (T m) EvalPrep)
 convertLamParams binderKind lambda lambdaPl =
     do
-        sugarLhsRecord <- Lens.view (ConvertM.scConfig . Config.sugarsEnabled . Config.destructure)
+        sugarLhsRecord <- Lens.view (ConvertM.scSugars . Config.destructure)
         case lambdaPl ^. Input.inferredType . _Pure of
             T.TFun (FuncType (Pure (T.TRecord composite)) _)
                 | sugarLhsRecord
