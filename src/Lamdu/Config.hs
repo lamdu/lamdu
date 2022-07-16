@@ -1,5 +1,5 @@
 {-# OPTIONS -O0 #-}
-{-# LANGUAGE TemplateHaskell, MultiParamTypeClasses, TypeApplications #-}
+{-# LANGUAGE TemplateHaskell, MultiParamTypeClasses, TypeApplications, FlexibleInstances #-}
 module Lamdu.Config where
 
 import qualified Control.Lens as Lens
@@ -97,7 +97,7 @@ data Config key = Config
     , _export :: Export key
     , _pane :: Pane key
     , _versionControl :: VersionControl.Config key
-    , _sugar :: Sugar.Config
+    , _sugar :: Sugar.Sugars Bool
     , _completion :: Completion key
     , _literal :: Literal key
     , _eval :: Eval key
@@ -150,7 +150,7 @@ Lens.makeLenses ''Config
 hasConfig :: Has (Config ModKey) env => Lens' env (Config ModKey)
 hasConfig = has @(Config ModKey)
 
-instance Has Sugar.Config (Config key) where has = sugar
+instance Has (Sugar.Sugars Bool) (Config key) where has = sugar
 
 delKeys :: (MonadReader env m, Has (Config ModKey) env) => m [ModKey]
 delKeys =

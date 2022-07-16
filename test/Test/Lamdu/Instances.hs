@@ -120,7 +120,7 @@ instance Eq (Sugar.TagPane f) where
     ] & sequenceA <&> concat
 
 makeInstances [''NFData]
-    [ ''DebugTasks.Tasks, ''SugarConfig.Sugars, ''SugarConfig.Config
+    [ ''DebugTasks.Tasks, ''SugarConfig.Sugars
     , ''Config, ''Config.Completion, ''Config.Debug, ''Config.Eval
     , ''Config.Export, ''Config.Literal, ''Config.Pane
     , ''Grid.Keys, ''Menu.Config, ''SearchMenu.Config

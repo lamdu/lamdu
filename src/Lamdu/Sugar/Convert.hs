@@ -12,7 +12,7 @@ import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Tag as Tag
 import qualified Lamdu.Debug as Debug
 import qualified Lamdu.Expr.IRef as ExprIRef
-import           Lamdu.Sugar.Config (Config)
+import           Lamdu.Sugar.Config (Sugars)
 import qualified Lamdu.Sugar.Convert.Definition as ConvertDefinition
 import qualified Lamdu.Sugar.Convert.NameRef as ConvertNameRef
 import qualified Lamdu.Sugar.Convert.Nominal as ConvertNominal
@@ -30,7 +30,7 @@ type T = Transaction
 convertPaneBody ::
     ( Monad m, Typeable m
     , Has Debug.Monitors env
-    , Has Config env, Has Cache.Functions env
+    , Has (Sugars Bool) env, Has Cache.Functions env
     , Anchors.HasCodeAnchors env m
     ) =>
     env -> Anchors.Pane m ->
@@ -60,7 +60,7 @@ mkPaneEntityId (Anchors.PaneTag tag) = EntityId.ofTagPane tag
 convertPane ::
     ( Monad m, Typeable m
     , Has Debug.Monitors env
-    , Has Config env, Has Cache.Functions env
+    , Has (Sugars Bool) env, Has Cache.Functions env
     , Anchors.HasCodeAnchors env m
     ) =>
     env ->
@@ -114,7 +114,7 @@ addRemoveOnDelete anchors pane =
 loadPanes ::
     ( Monad m, Typeable m
     , Has Debug.Monitors env
-    , Has Config env, Has Cache.Functions env
+    , Has (Sugars Bool) env, Has Cache.Functions env
     , Anchors.HasCodeAnchors env m
     ) =>
     env ->
@@ -140,7 +140,7 @@ globals cp =
 loadWorkArea ::
     ( Monad m, Typeable m
     , Has Debug.Monitors env
-    , Has Config env, Has Cache.Functions env
+    , Has (Sugars Bool) env, Has Cache.Functions env
     , Anchors.HasCodeAnchors env m
     ) =>
     env ->

@@ -15,22 +15,20 @@
         }
     },
     "sugar": {
-        "sugarsEnabled": {
-            "assignmentParameters": true,
-            "caseWithArgument": true,
-            "composite": true,
-            "fieldPuns": true,
-            "fragment": true,
-            "ifExpression": true,
-            "labeledApply": true,
-            "letExpression": true,
-            "lightLambda": true,
-            "literalText": true,
-            "nullaryInject": true,
-            "nullaryParameter": true,
-            "destructure": true,
-            "destructureNested": true
-        }
+        "assignmentParameters": true,
+        "caseWithArgument": true,
+        "composite": true,
+        "fieldPuns": true,
+        "fragment": true,
+        "ifExpression": true,
+        "labeledApply": true,
+        "letExpression": true,
+        "lightLambda": true,
+        "literalText": true,
+        "nullaryInject": true,
+        "nullaryParameter": true,
+        "destructure": true,
+        "destructureNested": true
     },
     "zoom": {
         "shrinkKeys"    : [ "Cmd+Minus" ],

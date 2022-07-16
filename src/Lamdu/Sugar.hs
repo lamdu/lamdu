@@ -60,7 +60,7 @@ redirectLams lams results =
 sugarWorkArea ::
     ( HasCallStack
     , Has Debug.Monitors env0
-    , Has SugarConfig.Config env0
+    , Has (SugarConfig.Sugars Bool) env0
     , Has Cache.Functions env0
     , Anchors.HasCodeAnchors env0 m
     , Has Annotations.Mode env1

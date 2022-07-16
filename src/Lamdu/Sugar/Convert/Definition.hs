@@ -25,7 +25,7 @@ import qualified Lamdu.Debug as Debug
 import           Lamdu.Expr.IRef (DefI, HRef)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Load as ExprLoad
-import           Lamdu.Sugar.Config (Config, sugarsEnabled)
+import           Lamdu.Sugar.Config (Sugars)
 import qualified Lamdu.Sugar.Convert.DefExpr as ConvertDefExpr
 import qualified Lamdu.Sugar.Convert.DefExpr.OutdatedDefs as OutdatedDefs
 import qualified Lamdu.Sugar.Convert.Expression as ConvertExpr
@@ -88,7 +88,7 @@ convertDefIBuiltin scheme name defI =
 convertInferDefExpr ::
     ( HasCallStack, Monad m, Typeable m
     , Has Debug.Monitors env
-    , Has Config env, Has Cache.Functions env
+    , Has (Sugars Bool) env, Has Cache.Functions env
     , Anchors.HasCodeAnchors env m
     ) =>
     env ->
@@ -105,8 +105,7 @@ convertInferDefExpr env defType defExpr defI =
         let context =
                 Context
                 { _scInferContext = newInferContext
-                , _scConfig = env ^. has
-                , _scSugars = env ^. has . sugarsEnabled
+                , _scSugars = env ^. has
                 , _scCodeAnchors = env ^. Anchors.codeAnchors
                 , _scScopeInfo =
                     emptyScopeInfo
@@ -147,7 +146,7 @@ convertInferDefExpr env defType defExpr defI =
 convertDefBody ::
     ( HasCallStack, Monad m, Typeable m
     , Has Debug.Monitors env
-    , Has Config env, Has Cache.Functions env
+    , Has (Sugars Bool) env, Has Cache.Functions env
     , Anchors.HasCodeAnchors env m
     ) =>
     env ->
@@ -194,7 +193,7 @@ collectHiddenEntityIds top expr =
     & annotation . _1 <>~ goNode top
 
 pane ::
-    (Has Debug.Monitors env, Has Cache.Functions env, Has Config env, Monad m, Typeable m, Anchors.HasCodeAnchors env m) =>
+    (Has Debug.Monitors env, Has Cache.Functions env, Has (Sugars Bool) env, Monad m, Typeable m, Anchors.HasCodeAnchors env m) =>
     env -> DefI m -> OnceT (T m) (PaneBody EvalPrep InternalName (OnceT (T m)) (T m) ([EntityId], ConvertPayload m))
 pane env defI =
     Definition

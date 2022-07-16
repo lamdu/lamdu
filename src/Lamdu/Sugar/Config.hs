@@ -35,9 +35,3 @@ data Sugars a = Sugars
     deriving Applicative via Generically1 Sugars
 JsonTH.derivePrefixed "_" ''Sugars
 Lens.makeLenses ''Sugars
-
-newtype Config = Config
-    { _sugarsEnabled :: Sugars Bool
-    } deriving stock (Eq, Show, Generic)
-JsonTH.derivePrefixed "_" ''Config
-Lens.makeLenses ''Config
