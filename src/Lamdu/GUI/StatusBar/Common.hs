@@ -198,11 +198,11 @@ combineEdges =
     <$> (Glue.mkPoly ?? Glue.Horizontal)
     <*> combineWidgets
     <*> hspacer
-    <&> \(Glue.Poly (|||), combine, space) width (StatusWidget topLeftWidget em) topRightWidgets ->
-    let topLeftSpacedWidget = topLeftWidget ||| space
+    <&> \(Glue.Poly (/||/), combine, space) width (StatusWidget topLeftWidget em) topRightWidgets ->
+    let topLeftSpacedWidget = topLeftWidget /||/ space
         topRightMaxWidth = width - topLeftSpacedWidget ^. M.width
         topRightCombined = combine topRightMaxWidth topRightWidgets
     in  StatusWidget
-        { _widget = topLeftSpacedWidget ||| (topRightCombined ^. widget)
+        { _widget = topLeftSpacedWidget /||/ (topRightCombined ^. widget)
         , _globalEventMap = em <> topRightCombined ^. globalEventMap
         }
