@@ -16,7 +16,6 @@
     },
     "sugar": {
         "assignmentParameters": true,
-        "caseWithArgument": true,
         "composite": true,
         "fieldPuns": true,
         "fragment": true,
