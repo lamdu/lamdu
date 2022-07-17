@@ -12,6 +12,7 @@ data Sprites a = Sprites
     { _earthGlobe :: a
     , _pencilLine :: a
     , _theme :: a
+    , _sugar :: a
     , _help :: a
     }
     deriving stock (Eq, Generic, Generic1, Show, Functor, Foldable, Traversable)

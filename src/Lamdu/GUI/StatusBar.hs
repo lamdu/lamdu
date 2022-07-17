@@ -23,13 +23,14 @@ import qualified GUI.Momentu.Widgets.TextView as TextView
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Folder as Folder
 import qualified Lamdu.Config.Theme as Theme
+import qualified Lamdu.Config.Theme.Sprites as Sprites
 import           Lamdu.GUI.IOTrans (IOTrans(..))
 import qualified Lamdu.GUI.IOTrans as IOTrans
 import           Lamdu.GUI.Settings (TitledSelection(..), title, selection)
 import qualified Lamdu.GUI.Settings as SettingsGui
 import           Lamdu.GUI.StatusBar.Common
 import qualified Lamdu.GUI.StatusBar.Common as StatusBar
-import           Lamdu.GUI.Styled (info, label)
+import           Lamdu.GUI.Styled (info, label, sprite)
 import qualified Lamdu.GUI.VersionControl as VersionControlGUI
 import qualified Lamdu.I18N.StatusBar as Texts
 import           Lamdu.Settings (Settings)
@@ -80,9 +81,7 @@ make gotoDefinition themeNames langNames settingsProp sugarsProp width vcActions
 makeSugars :: _ => Property IO (Sugars Bool) -> m (StatusWidget IO)
 makeSugars prop =
     do
-        top <-
-            (Widget.makeFocusableView ?? sugarsId <> Widget.Id ["Header"] <&> fmap)
-            <*> (TextView.make ?? "S" ?? ["Sugar", "Header"])
+        top <- (Widget.makeFocusableView ?? sugarsId <> Widget.Id ["Header"]) <*> sprite Sprites.sugar
         showMenu <- isSubCursor ?? sugarsId
         if showMenu
             then
@@ -96,12 +95,12 @@ makeSugars prop =
                         <&> Lens.mapped %~ (^. M.tValue)
                     Glue.Poly (///) <- Glue.mkPoly ?? Glue.Vertical
                     let opt x =
-                            ( M.Aligned x (anchor (top ^. M.tValue))
+                            ( M.Aligned x (anchor top)
                                 /// Hover.sequenceHover (hover (vbox (elems <&> M.Aligned x)))
                             ) ^. Align.value
-                    top & M.tValue %~ Hover.hoverInPlaceOf [opt 0, opt 1] . anchor & pure
+                    top & Hover.hoverInPlaceOf [opt 0, opt 1] . anchor & pure
             else pure top
-    <&> (`StatusBar.StatusWidget` mempty)
+    <&> (`StatusBar.StatusWidget` mempty) . M.WithTextPos 0
 
 sugarsId :: Widget.Id
 sugarsId = Widget.Id ["Sugar"]
