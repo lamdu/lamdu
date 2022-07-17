@@ -142,6 +142,7 @@ type AppS v m =
 convertEmptyInject :: Monad m => AppS v m -> MaybeT (ConvertM m) (BodyU v m)
 convertEmptyInject (App funcS argS) =
     do
+        Lens.view (ConvertM.scSugars . Config.nullaryInject) >>= guard
         inject <- annValue (^? _BodyLeaf . _LeafInject . Lens._Unwrapped) funcS & maybeToMPlus
         r <- annValue (^? _BodyRecord) argS & maybeToMPlus
         r ^. hVal . cList . tlItems & null & guard
