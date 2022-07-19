@@ -175,7 +175,9 @@
             "switchLanguage": "שנה שפה",
             "switchTheme": "שנה תמה",
             "switchAnnotations": "החלף ביאורים",
-            "extraOptions": "אפשרויות נוספות"
+            "extraOptions": "אפשרויות נוספות",
+            "enable": "אפשר",
+            "disable": "בטל"
         },
         "name": {
             "unnamed": "פלוני",

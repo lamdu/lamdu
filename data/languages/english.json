@@ -178,7 +178,9 @@
             "switchLanguage": "Switch Language",
             "switchTheme": "Switch Theme",
             "switchAnnotations": "Switch Annotations",
-            "extraOptions": "Extra options"
+            "extraOptions": "Extra options",
+            "enable": "Enable",
+            "disable": "Disable"
         },
         "versioning": {
             "branches": "Branches",

@@ -180,7 +180,9 @@
             "switchLanguage": "Cambiar idioma",
             "switchTheme": "Cambiar tema",
             "switchAnnotations": "Cambiar a annotaciones",
-            "extraOptions": "Optiones extra"
+            "extraOptions": "Optiones extra",
+            "enable": "Habilatar",
+            "disable": "Deshabilatar"
         },
         "versioning": {
             "branches": "Ramas",

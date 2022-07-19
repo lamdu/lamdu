@@ -110,10 +110,12 @@ mkSugarToggle prop idx (text, val) =
     do
         actionKeys <- Lens.view (has . Config.actionKeys)
         disabledCol <- Lens.view (has . Theme.disabledColor)
+        sbText <- Lens.view (has . Texts.sbStatusBar)
+        actionText <- Lens.view (has . if val then Texts.sbDisable else Texts.sbEnable)
         (Widget.makeFocusableView ?? myId <&> (M.tValue %~))
             <*> (TextView.make ?? text ?? Widget.toAnimId myId)
             & (if val then id else local (TextView.color .~ disabledCol))
-            <&> M.tValue %~ M.weakerEvents (E.keysEventMap actionKeys (E.Doc ["TODO"]) toggle)
+            <&> M.tValue %~ M.weakerEvents (E.keysEventMap actionKeys (E.Doc [sbText, text, actionText]) toggle)
     & local (Element.animIdPrefix .~ Widget.toAnimId myId)
     where
         myId = sugarsId <> Widget.Id [BS8.pack (show idx)]

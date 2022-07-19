@@ -178,7 +178,9 @@
             "switchLanguage": "Cambia lingua",
             "switchTheme": "Cambia tema",
             "switchAnnotations": "Cambia annotazioni",
-            "extraOptions": "Opzioni extra"
+            "extraOptions": "Opzioni extra",
+            "enable": "Abilatare",
+            "disable": "Disabilatare"
         },
         "versioning": {
             "branches": "Rami",
