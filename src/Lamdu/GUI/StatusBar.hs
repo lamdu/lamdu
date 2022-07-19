@@ -1,6 +1,4 @@
 -- | The Lamdu status bar
-{-# LANGUAGE TypeFamilies #-}
-
 module Lamdu.GUI.StatusBar
     ( module Lamdu.GUI.StatusBar.Common
     , TitledSelection(..), title, selection

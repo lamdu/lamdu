@@ -1,5 +1,5 @@
 {-# OPTIONS -O0 #-}
-{-# LANGUAGE TemplateHaskell, MultiParamTypeClasses, TypeApplications, FlexibleInstances #-}
+{-# LANGUAGE TemplateHaskell, MultiParamTypeClasses #-}
 module Lamdu.Config where
 
 import qualified Control.Lens as Lens
@@ -145,7 +145,7 @@ JsonTH.derivePrefixed "_" ''Config
 Lens.makeLenses ''Config
 
 hasConfig :: Has (Config ModKey) env => Lens' env (Config ModKey)
-hasConfig = has @(Config ModKey)
+hasConfig = has
 
 delKeys :: (MonadReader env m, Has (Config ModKey) env) => m [ModKey]
 delKeys =
