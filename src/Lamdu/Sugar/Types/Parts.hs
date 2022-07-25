@@ -5,7 +5,7 @@ module Lamdu.Sugar.Types.Parts
     ( FuncApplyLimit(..), _UnlimitedFuncApply, _AtMostOneFuncApply
     , Literal(..), _LiteralNum, _LiteralBytes, _LiteralChar, _LiteralText
     , -- Annotations
-      Annotation(..), _AnnotationVal, _AnnotationType, _AnnotationNone
+      Annotation(..), _AnnotationVal, _AnnotationNone
     -- Node actions
     , DetachAction(..), _FragmentedAlready, _DetachAction
     , Delete(..), _SetToHole, _Delete, _CannotDelete
@@ -51,8 +51,7 @@ data FuncApplyLimit = UnlimitedFuncApply | AtMostOneFuncApply
     deriving (Eq, Ord, Generic)
 
 data Annotation v name
-    = AnnotationType (Annotated EntityId # SugarType.Type name)
-    | AnnotationVal v
+    = AnnotationVal v
     | AnnotationNone
     deriving Generic
 

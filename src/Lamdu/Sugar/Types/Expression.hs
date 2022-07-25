@@ -60,7 +60,6 @@ import           Lamdu.Sugar.Types.Parts
 import           Lamdu.Sugar.Types.Tag
 import           Lamdu.Sugar.Types.TaggedList (TaggedList)
 import           Lamdu.Sugar.Types.Type (TId)
-import qualified Lamdu.Sugar.Types.Type as T
 
 import           Lamdu.Prelude
 
@@ -102,7 +101,7 @@ data Lambda v name i o f = Lambda
 data Fragment v name i o k = Fragment
     { _fExpr :: k :# Term v name i o
     , _fHeal :: o EntityId
-    , _fTypeMismatch :: Maybe (Annotated EntityId # T.Type name)
+    , _fTypeMismatch :: Maybe ()
     , _fOptions :: i (Query -> i [Option FragOpt name i o])
     , _fOptApply :: i (Option FragOpt name i o)
         -- An option to apply (with a hole).

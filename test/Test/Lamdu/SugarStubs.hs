@@ -119,11 +119,10 @@ mkOptionalTag :: Maybe UUID -> T.Tag -> Sugar.OptionalTag InternalName Identity 
 mkOptionalTag var tag = Sugar.OptionalTag (mkTag var tag) Proxy
 
 def ::
-    Annotated Sugar.EntityId # Sugar.Type InternalName ->
     UUID -> T.Tag ->
     Annotated expr # Sugar.Assignment v InternalName Identity Proxy ->
     Sugar.Definition v InternalName Identity Proxy expr
-def typ var tag body =
+def var tag body =
     Sugar.Definition
     { Sugar._drName = mkOptionalTag (Just var) tag
     , Sugar._drDefI = "def"
@@ -133,7 +132,7 @@ def typ var tag body =
         { Sugar._deType =
             Sugar.Scheme
             { Sugar._schemeForAll = emptyForalls
-            , Sugar._schemeType = typ
+            , Sugar._schemeType = ()
             }
         , Sugar._dePresentationMode = Nothing
         , Sugar._deContent = body
@@ -167,11 +166,6 @@ expr ::
     Sugar.Body Sugar.Term (Sugar.Annotation v InternalName) InternalName Identity Proxy ->
     Sugar.Expr Sugar.Term (Sugar.Annotation v InternalName) InternalName Identity Proxy
 expr = node
-
-numType :: Annotated Sugar.EntityId # Sugar.Type InternalName
-numType =
-    Sugar.TInst (Sugar.TId (taggedEntityName "numTid" "num") "num") mempty
-    & Ann (Const "dummy")
 
 payload :: (Sugar.Payload (Sugar.Annotation v InternalName) Proxy)
 payload =

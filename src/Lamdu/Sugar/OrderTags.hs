@@ -2,7 +2,7 @@
 {-# LANGUAGE ScopedTypeVariables, UndecidableInstances #-}
 
 module Lamdu.Sugar.OrderTags
-    ( orderWorkArea, orderType
+    ( orderWorkArea
     ) where
 
 import qualified Control.Lens as Lens
@@ -42,23 +42,6 @@ orderByTag presModeTags toTag ord =
             case elemIndex t presModeTags of
             Just x -> Left x & pure
             Nothing -> ExprIRef.readTagData t & transaction <&> Right
-
-orderComposite ::
-    MonadTransaction m i =>
-    OrderT i (Sugar.CompositeFields name # Ann a)
-orderComposite = Sugar.compositeFields (orderByTag [] fst (_2 orderType))
-
-orderTBody ::
-    MonadTransaction m i =>
-    OrderT i (Sugar.Type name # Ann a)
-orderTBody t =
-    t
-    & Sugar._TRecord %%~ orderComposite
-    >>= Sugar._TVariant %%~ orderComposite
-    >>= htraverse1 orderType
-
-orderType :: MonadTransaction m i => OrderT i (Ann a # Sugar.Type name)
-orderType = hVal orderTBody
 
 orderTaggedList ::
     (MonadTransaction m f, MonadTransaction n o, Functor i) =>
@@ -225,8 +208,7 @@ orderDef ::
     OrderT i (Sugar.Definition v name i o a)
 orderDef def =
     def
-    & (SugarLens.defSchemes . Sugar.schemeType) orderType
-    >>= (Sugar.drBody . Sugar._DefinitionBodyExpression . Sugar.deContent)
+    & (Sugar.drBody . Sugar._DefinitionBodyExpression . Sugar.deContent)
         (orderNode >=> (hVal . Sugar._BodyFunction . Sugar.fParams . Sugar._LhsRecord) processPresentationMode)
     where
         processPresentationMode orig =
@@ -238,10 +220,7 @@ orderDef def =
 
 orderPaneBody :: (MonadTransaction m o, MonadTransaction m i) => OrderT i (Sugar.PaneBody v name i o a)
 orderPaneBody (Sugar.PaneDefinition x) = orderDef x <&> Sugar.PaneDefinition
-orderPaneBody (Sugar.PaneNominal x) =
-    Sugar.npParams (orderTaggedList [] pure) x
-    >>= (Sugar.npBody . Lens._Just . Sugar.schemeType) orderType
-    <&> Sugar.PaneNominal
+orderPaneBody (Sugar.PaneNominal x) = Sugar.npParams (orderTaggedList [] pure) x <&> Sugar.PaneNominal
 orderPaneBody x@Sugar.PaneTag{} = pure x
 
 orderWorkArea :: (MonadTransaction m o, MonadTransaction m i) => OrderT i (Sugar.WorkArea v name i o a)

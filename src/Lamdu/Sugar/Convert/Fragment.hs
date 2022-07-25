@@ -34,7 +34,6 @@ import           Lamdu.Expr.IRef (iref)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Load as Load
 import qualified Lamdu.Sugar.Config as Config
-import           Lamdu.Sugar.Convert.Annotation (makeTypeAnnotation)
 import qualified Lamdu.Sugar.Convert.Expression.Actions as Actions
 import           Lamdu.Sugar.Convert.Fragment.Heal (healMismatch)
 import qualified Lamdu.Sugar.Convert.Hole as Hole
@@ -95,13 +94,7 @@ convert (V.App funcI argI) exprPl =
               else local (ConvertM.scPostProcessRoot %~ unfragmentIfTypesAllow unfragment)
         postProcess <- ConvertM.postProcessAssert
         healMis <- healMismatch
-        typeMismatch <-
-            if isTypeMatch
-            then pure Nothing
-            else
-                makeTypeAnnotation
-                    (EntityId.ofFragmentArg (argS ^. annotation . pEntityId))
-                    (argS ^. annotation . pUnsugared . hAnn . Input.inferredType) <&> Just
+        let typeMismatch = guard isTypeMatch
         tagsProp <- Lens.view Anchors.codeAnchors <&> Anchors.tags
         opts <-
             do

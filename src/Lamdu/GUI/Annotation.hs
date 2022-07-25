@@ -33,7 +33,6 @@ import qualified Lamdu.GUI.EvalView as EvalView
 import           Lamdu.GUI.Monad (GuiM)
 import qualified Lamdu.GUI.Monad as GuiM
 import qualified Lamdu.GUI.Styled as Styled
-import qualified Lamdu.GUI.TypeView as TypeView
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Name (Name)
 import qualified Lamdu.Sugar.Types as Sugar
@@ -218,10 +217,9 @@ addAnnotationH f postProcess =
 
 addInferredType ::
     _ =>
-    Annotated Sugar.EntityId # Sugar.Type Name -> PostProcessAnnotation m ->
+    () -> PostProcessAnnotation m ->
     m (M.Widget f -> M.Widget f)
-addInferredType typ postProcess =
-    addAnnotationH (TypeView.make typ) (postProcess TypeAnnotation)
+addInferredType _ postProcess = addAnnotationH (pure M.empty) (postProcess TypeAnnotation)
 
 addEvaluationResult ::
     _ =>
@@ -279,7 +277,6 @@ maybeAddAnnotationWith ::
 maybeAddAnnotationWith opt postProcessAnnotation ann =
     case ann of
     Sugar.AnnotationNone -> pure id
-    Sugar.AnnotationType typ -> addInferredType typ postProcessAnnotation
     Sugar.AnnotationVal val -> maybeAddValAnnotationWith opt postProcessAnnotation val
 
 maybeAddValAnnotationWith ::

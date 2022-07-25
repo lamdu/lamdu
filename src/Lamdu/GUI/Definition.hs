@@ -34,7 +34,6 @@ import           Lamdu.GUI.Monad (GuiM)
 import qualified Lamdu.GUI.Monad as GuiM
 import qualified Lamdu.GUI.PresentationModeEdit as PresentationModeEdit
 import           Lamdu.GUI.Styled (label, grammar)
-import qualified Lamdu.GUI.TypeView as TypeView
 import qualified Lamdu.GUI.Types as ExprGui
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.I18N.Code as Texts
@@ -254,7 +253,7 @@ make def myId =
     & local (M.animIdPrefix .~ Widget.toAnimId myId)
 
 topLevelSchemeTypeView :: _ => Sugar.Scheme Name -> GuiM env i o (M.WithTextPos M.View)
-topLevelSchemeTypeView scheme =
+topLevelSchemeTypeView _ =
     -- At the definition-level, Schemes can be shown as ordinary
     -- types to avoid confusing forall's:
-    TypeView.make (scheme ^. Sugar.schemeType)
+    pure M.empty

@@ -78,8 +78,8 @@ workAreaGlobals =
     { Sugar._waPanes =
         -- 2 defs sharing the same tag with different Vars/UUIDs,
         -- should collide with ordinary suffixes
-        [ Stub.def Stub.numType "def1" "def" trivialBinder & Stub.pane
-        , Stub.def Stub.numType "def2" "def" trivialBinder & Stub.pane
+        [ Stub.def "def1" "def" trivialBinder & Stub.pane
+        , Stub.def "def2" "def" trivialBinder & Stub.pane
         ]
     , Sugar._waGlobals = Sugar.Globals (pure []) (pure []) (pure [])
     , Sugar._waOpenPane = const Proxy
@@ -112,8 +112,8 @@ anonGlobals =
     { Sugar._waPanes =
         -- 2 defs sharing the same tag with different Vars/UUIDs,
         -- should collide with ordinary suffixes
-        [ Stub.def Stub.numType "def1" anonTag trivialBinder & Stub.pane
-        , Stub.def Stub.numType "def2" anonTag trivialBinder & Stub.pane
+        [ Stub.def "def1" anonTag trivialBinder & Stub.pane
+        , Stub.def "def2" anonTag trivialBinder & Stub.pane
         ]
     , Sugar._waGlobals = Sugar.Globals (pure []) (pure []) (pure [])
     , Sugar._waOpenPane = const Proxy

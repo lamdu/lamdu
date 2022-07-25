@@ -585,7 +585,7 @@ testHoleTypeShown =
         env <- Env.make <&> has .~ Annotations.None
         workArea <- testProgram "to-nom.json" (convertWorkArea "" env)
         let x = workArea ^?! replBody . _BodyToNom . nVal
-        Lens.has (annotation . plAnnotation . _AnnotationType) x
+        Lens.has (annotation . plAnnotation . _AnnotationNone) x
             & assertBool "Expected to have type"
 
 -- Test for https://trello.com/c/Dzp5vgos/510-not-punning-auto-named-variables

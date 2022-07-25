@@ -17,13 +17,12 @@ import           Data.Property (Property)
 import qualified Data.Set as Set
 import           Hyper
 import           Hyper.Class.Morph (morphTraverse1)
-import           Hyper.Syntax (FuncType(..))
 import qualified Lamdu.Calc.Type as T
 import           Lamdu.Sugar.Names.NewTag (newTagName)
 import qualified Lamdu.Sugar.Lens as SugarLens
 import           Lamdu.Sugar.Names.CPS (CPS(..), liftCPS)
 import qualified Lamdu.Sugar.Types as Sugar
-import           Lamdu.Sugar.Types hiding (Tag(..), Type)
+import           Lamdu.Sugar.Types hiding (Tag(..))
 
 import           Lamdu.Prelude
 
@@ -77,27 +76,8 @@ binderVarType :: VarForm name m -> NameType
 binderVarType (GetDefinition _) = GlobalDef
 binderVarType _ = TaggedVar
 
-instance (a ~ OldName m, b ~ NewName m) => Walk m (CompositeFields a # Annotated p) (CompositeFields b # Annotated p) where
-    walk (CompositeFields fields mExt) =
-        CompositeFields
-        <$> traverse (bitraverse (toTagOf Tag) walk) fields
-        <*> Lens._Just (opGetName Nothing MayBeAmbiguous TypeVar) mExt
-
 instance (a ~ OldName m, b ~ NewName m) => Walk m (TId a) (TId b) where
     walk = tidName %%~ opGetName Nothing MayBeAmbiguous TaggedNominal
-
-instance (a ~ OldName m, b ~ NewName m) => Walk m (Sugar.Type a # Annotated p) (Sugar.Type b # Annotated p) where
-    walk (TVar tv) = opGetName Nothing MayBeAmbiguous TypeVar tv <&> TVar
-    walk (TFun (FuncType a b)) = FuncType <$> walk a <*> walk b <&> TFun
-    walk (TRecord composite) = TRecord <$> walk composite
-    walk (TVariant composite) = TVariant <$> walk composite
-    walk (TInst tid params) =
-        TInst
-        <$> walk tid
-        <*> traverse (bitraverse (toTagOf Tag) walk) params
-
-instance (a ~ OldName m, b ~ NewName m) => Walk m (Annotated p # Sugar.Type a) (Annotated p # Sugar.Type b) where
-    walk (Ann (Const pl) x) = walk x <&> Ann (Const pl)
 
 instance (a ~ OldName m, b ~ NewName m) => Walk m (Scheme a) (Scheme b) where
     walk (Scheme tvs typ) = Scheme tvs <$> walk typ
@@ -156,7 +136,6 @@ instance (a ~ OldName m, b ~ NewName m, i ~ IM m) => Walk m (EvaluationScopes a 
 
 instance (a ~ OldName m, b ~ NewName m, Walk m va vb) => Walk m (Annotation va a) (Annotation vb b) where
     walk AnnotationNone = pure AnnotationNone
-    walk (AnnotationType typ) = walk typ <&> AnnotationType
     walk (AnnotationVal x) = walk x <&> AnnotationVal
 
 instance Walk m va vb => Walk m (Payload va o) (Payload vb o) where

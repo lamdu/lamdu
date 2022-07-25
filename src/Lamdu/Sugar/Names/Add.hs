@@ -42,7 +42,7 @@ import           Lamdu.Sugar.Names.CPS (CPS(..), runcps, liftCPS)
 import qualified Lamdu.Sugar.Names.Clash as Clash
 import           Lamdu.Sugar.Names.Walk (MonadNameWalk(..), Disambiguator)
 import qualified Lamdu.Sugar.Names.Walk as Walk
-import           Lamdu.Sugar.Types hiding (Type)
+import           Lamdu.Sugar.Types
 
 import           Lamdu.Prelude
 
