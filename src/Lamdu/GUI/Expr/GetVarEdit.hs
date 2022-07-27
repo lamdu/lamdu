@@ -31,7 +31,7 @@ import qualified Lamdu.GUI.Monad as GuiM
 import qualified Lamdu.GUI.NameView as NameView
 import           Lamdu.GUI.Styled (grammar, label)
 import qualified Lamdu.GUI.Styled as Styled
-import qualified Lamdu.GUI.TypeView as TypeView
+import qualified Lamdu.GUI.TypeEdit as TypeEdit
 import qualified Lamdu.GUI.Types as ExprGui
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.GUI.Wrap (stdWrap)
@@ -134,7 +134,7 @@ definitionTypeChangeBox info getVarId =
     where
         update = info ^. Sugar.defTypeUseCurrent <&> WidgetIds.fromEntityId
         mkTypeView idSuffix scheme =
-            TypeView.makeScheme scheme & local (M.animIdPrefix .~ animId ++ [idSuffix])
+            TypeEdit.makeScheme scheme & local (M.animIdPrefix .~ animId ++ [idSuffix])
         myId = Widget.joinId getVarId ["type change"]
         animId = Widget.toAnimId myId
 

@@ -1,4 +1,4 @@
-module Lamdu.GUI.TypeView
+module Lamdu.GUI.TypeEdit
     ( makeScheme, addTypeBG
     ) where
 
