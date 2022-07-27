@@ -2,7 +2,7 @@
 {-# LANGUAGE TypeApplications, ScopedTypeVariables #-}
 
 module Lamdu.Sugar.Names.Walk
-    ( MonadNaming(..)
+    ( MonadNameWalk(..)
     , NameType(..), _GlobalDef, _TaggedVar, _TaggedNominal, _Tag
     , isGlobal
     , FunctionSignature(..), Disambiguator
@@ -55,8 +55,7 @@ type Disambiguator = FunctionSignature
 
 data IsUnambiguous = Unambiguous | MayBeAmbiguous
 
--- TODO: Rename MonadNameWalk
-class (Monad m, Monad (IM m)) => MonadNaming m where
+class (Monad m, Monad (IM m)) => MonadNameWalk m where
     type OldName m
     type NewName m
     type IM m :: Type -> Type
@@ -70,7 +69,7 @@ class (Monad m, Monad (IM m)) => MonadNaming m where
     tagSuffixes = pure mempty
 
 class Walk m s t where
-    walk :: MonadNaming m => s -> m t
+    walk :: MonadNameWalk m => s -> m t
 
 instance Walk m () () where walk = pure
 instance Walk m (Property o ParamKind) (Property o ParamKind) where walk = pure
@@ -112,7 +111,7 @@ instance (a ~ OldName m, b ~ NewName m) => Walk m (DefinitionOutdatedType a o p)
         DefinitionOutdatedType <$> walk whenUsed <*> walk current ?? useCur
 
 toBinderVarRef ::
-    MonadNaming m =>
+    MonadNameWalk m =>
     Maybe Disambiguator ->
     GetVar (OldName m) o ->
     m (GetVar (NewName m) o)
@@ -168,7 +167,7 @@ instance Walk m va vb => Walk m (Payload va o) (Payload vb o) where
     walk = plAnnotation walk
 
 toNode ::
-    (MonadNaming m, Walk m pa pb) =>
+    (MonadNameWalk m, Walk m pa pb) =>
     (ka # Annotated pa -> m (kb # Annotated pb)) ->
     Annotated pa # ka -> m (Annotated pb # kb)
 toNode toV (Ann (Const pl) v) = Ann <$> (walk pl <&> Const) <*> toV v
@@ -177,7 +176,7 @@ type BodyW t v n m (o :: Type -> Type) a = t v n (IM m) o # Annotated a
 type WalkBody t m o v0 v1 a0 a1 = BodyW t v0 (OldName m) m o a0 -> m (BodyW t v1 (NewName m) m o a1)
 
 class ToBody t where
-    toBody :: (MonadNaming m, Walk m v0 v1, Walk m a0 a1) => WalkBody t m o v0 v1 a0 a1
+    toBody :: (MonadNameWalk m, Walk m v0 v1, Walk m a0 a1) => WalkBody t m o v0 v1 a0 a1
 
 instance ToBody Let where
     toBody let_@Let{_lNames, _lBody, _lValue} =
@@ -199,7 +198,7 @@ instance ToBody BinderBody where
 instance (a ~ OldName m, b ~ NewName m, i ~ IM m) => Walk m (AddParam a i o) (AddParam b i o) where
     walk x = opRun <&> \run -> x & _AddNext %~ (>>= run . walk)
 
-toFunction :: (MonadNaming m, Walk m v0 v1, Walk m a0 a1) => IsUnambiguous -> WalkBody Function m o v0 v1 a0 a1
+toFunction :: (MonadNameWalk m, Walk m v0 v1, Walk m a0 a1) => IsUnambiguous -> WalkBody Function m o v0 v1 a0 a1
 toFunction u func@Function{_fParams, _fBody} =
     unCPS (withParams u _fParams) (toExpression _fBody)
     <&> \(_fParams, _fBody) -> func{_fParams, _fBody}
@@ -216,7 +215,7 @@ instance ToBody Assignment where
         BodyPlain x -> toBody x <&> BodyPlain
         BodyFunction x -> toFunction MayBeAmbiguous x <&> BodyFunction
 
-toTagOf :: MonadNaming m => NameType -> Sugar.Tag (OldName m) -> m (Sugar.Tag (NewName m))
+toTagOf :: MonadNameWalk m => NameType -> Sugar.Tag (OldName m) -> m (Sugar.Tag (NewName m))
 toTagOf = tagName . opGetName Nothing MayBeAmbiguous
 
 instance (a ~ OldName m, b ~ NewName m, i ~ IM m) => Walk m (TagChoice a o) (TagChoice b o) where
@@ -226,7 +225,7 @@ instance (a ~ OldName m, b ~ NewName m, i ~ IM m) => Walk m (TagChoice a o) (Tag
         <*> toInfo (toTagOf Tag) new
 
 walkOpts ::
-    (ToBody t, MonadNaming m, a ~ OldName m, b ~ NewName m, i ~ IM m) =>
+    (ToBody t, MonadNameWalk m, a ~ OldName m, b ~ NewName m, i ~ IM m) =>
     m ((Query -> i [Option t (OldName m) i o]) -> Query -> i [Option t (NewName m) i o])
 walkOpts =
     opRun <&>
@@ -245,7 +244,7 @@ instance (a ~ OldName m, b ~ NewName m, i ~ IM m) => Walk m (Hole a i o) (Hole b
         <*> tagSuffixes
 
 toTagRefOf ::
-    MonadNaming m =>
+    MonadNameWalk m =>
     NameType -> Sugar.TagRef (OldName m) (IM m) o ->
     m (Sugar.TagRef (NewName m) (IM m) o)
 toTagRefOf nameType (Sugar.TagRef info replace jumpTo) =
@@ -255,7 +254,7 @@ toTagRefOf nameType (Sugar.TagRef info replace jumpTo) =
     ?? jumpTo
 
 withTagRef ::
-    MonadNaming m =>
+    MonadNameWalk m =>
     IsUnambiguous -> NameType ->
     Sugar.TagRef (OldName m) (IM m) o ->
     CPS m (Sugar.TagRef (NewName m) (IM m) o)
@@ -266,13 +265,13 @@ withTagRef unambig nameType (Sugar.TagRef info replace jumpTo) =
     ?? jumpTo
 
 toOptionalTag ::
-    MonadNaming f =>
+    MonadNameWalk f =>
     NameType -> OptionalTag (OldName f) (IM f) o ->
     f (OptionalTag (NewName f) (IM f) o)
 toOptionalTag = Sugar.oTag . toTagRefOf
 
 withOptionalTag ::
-    MonadNaming m =>
+    MonadNameWalk m =>
     IsUnambiguous -> NameType ->
     OptionalTag (OldName m) (IM m) o ->
     CPS m (OptionalTag (NewName m) (IM m) o)
@@ -423,11 +422,11 @@ funcSignature apply =
     , sNormalArgs = apply ^.. aAnnotatedArgs . traverse . aaTag . tagVal & Set.fromList
     }
 
-toExpression :: (MonadNaming m, Walk m v0 v1, Walk m a0 a1, ToBody e) => WalkExpr e m o v0 v1 a0 a1
+toExpression :: (MonadNameWalk m, Walk m v0 v1, Walk m a0 a1, ToBody e) => WalkExpr e m o v0 v1 a0 a1
 toExpression = toNode toBody
 
 withRecordParam ::
-    (MonadNaming m, Walk m v0 v1) =>
+    (MonadNameWalk m, Walk m v0 v1) =>
     IsUnambiguous ->
     TaggedItem (OldName m) (IM m) o (LhsField (OldName m) v0) ->
     CPS m (TaggedItem (NewName m) (IM m) o (LhsField (NewName m) v1))
@@ -438,7 +437,7 @@ withRecordParam unambig (TaggedItem t d a v) =
     <*> withLhsField unambig v
 
 withLhsField ::
-    (MonadNaming m, Walk m v0 v1) =>
+    (MonadNameWalk m, Walk m v0 v1) =>
     IsUnambiguous ->
     LhsField (OldName m) v0 ->
     CPS m (LhsField (NewName m) v1)
@@ -449,13 +448,13 @@ withLhsField unambig (LhsField v s) =
         (bitraverse (tagName (opWithName unambig TaggedVar)) (withLhsField unambig)) s
 
 withFuncParam ::
-    (MonadNaming m, Walk m v0 v1) =>
+    (MonadNameWalk m, Walk m v0 v1) =>
     FuncParam v0 ->
     CPS m (FuncParam v1)
 withFuncParam = fpAnnotation (liftCPS . walk)
 
 withLhsRecord ::
-    (MonadNaming m, Walk m v0 v1) =>
+    (MonadNameWalk m, Walk m v0 v1) =>
     IsUnambiguous ->
     TaggedList (OldName m) (IM m) o (LhsField (OldName m) v0) ->
     CPS m (TaggedList (NewName m) (IM m) o (LhsField (NewName m) v1))
@@ -465,7 +464,7 @@ withLhsRecord u (TaggedList addFirst items) =
     <*> (Lens._Just . SugarLens.taggedListBodyItems) (withRecordParam u) items
 
 withParams ::
-    (MonadNaming m, Walk m v0 v1) =>
+    (MonadNameWalk m, Walk m v0 v1) =>
     IsUnambiguous ->
     LhsNames (OldName m) (IM m) o v0 ->
     CPS m (LhsNames (NewName m) (IM m) o v1)
@@ -526,7 +525,7 @@ instance
     walk (PaneNominal x) = walk x <&> PaneNominal
 
 toGlobals ::
-    (MonadNaming f, Traversable t, i ~ IM f) =>
+    (MonadNameWalk f, Traversable t, i ~ IM f) =>
     NameType -> i (t (NameRef (OldName f) a)) -> f (i (t (NameRef (NewName f) a)))
 toGlobals nameType x =
     opRun <&>
@@ -548,7 +547,7 @@ instance
         ?? _waOpenPane
 
 toWorkArea ::
-    MonadNaming m =>
+    MonadNameWalk m =>
     Top WorkArea (OldName m) (IM m) o
         (Annotation (EvaluationScopes (OldName m) (IM m)) (OldName m), a, b) ->
     m (Top WorkArea (NewName m) (IM m) o
@@ -556,7 +555,7 @@ toWorkArea ::
 toWorkArea = walk
 
 toWorkAreaTest ::
-    MonadNaming m =>
+    MonadNameWalk m =>
     Top WorkArea (OldName m) (IM m) o
         (Payload (Annotation (EvaluationScopes (OldName m) (IM m)) (OldName m)) o) ->
     m (Top WorkArea (NewName m) (IM m) o

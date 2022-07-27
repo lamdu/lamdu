@@ -23,7 +23,7 @@ import           Test.Lamdu.Prelude
 newtype CollectNames name a = CollectNames { runCollectNames :: Writer [name] a }
     deriving newtype (Functor, Applicative, Monad, MonadWriter [name])
 
-instance Walk.MonadNaming (CollectNames name) where
+instance Walk.MonadNameWalk (CollectNames name) where
     type OldName (CollectNames name) = name
     type NewName (CollectNames name) = name
     type IM (CollectNames name) = Identity

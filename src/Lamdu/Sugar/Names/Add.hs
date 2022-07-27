@@ -40,7 +40,7 @@ import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Names.Annotated as Annotated
 import           Lamdu.Sugar.Names.CPS (CPS(..), runcps, liftCPS)
 import qualified Lamdu.Sugar.Names.Clash as Clash
-import           Lamdu.Sugar.Names.Walk (MonadNaming(..), Disambiguator)
+import           Lamdu.Sugar.Names.Walk (MonadNameWalk(..), Disambiguator)
 import qualified Lamdu.Sugar.Names.Walk as Walk
 import           Lamdu.Sugar.Types hiding (Type)
 
@@ -67,7 +67,7 @@ newtype Pass0LoadNames i a =
 runPass0LoadNames :: P0Env i -> Pass0LoadNames i a -> i a
 runPass0LoadNames r = (`runReaderT` r) . unPass0LoadNames
 
-instance Monad i => MonadNaming (Pass0LoadNames i) where
+instance Monad i => MonadNameWalk (Pass0LoadNames i) where
     type OldName (Pass0LoadNames i) = InternalName
     type NewName (Pass0LoadNames i) = P0Name
     type IM (Pass0LoadNames i) = i
@@ -123,7 +123,7 @@ runPass1PropagateUp (Pass1PropagateUp act) = runWriter act
 tellSome :: MonadWriter w m => Lens.ASetter' w a -> a -> m ()
 tellSome l v = mempty & l .~ v & Writer.tell
 
-instance Monad i => MonadNaming (Pass1PropagateUp i o) where
+instance Monad i => MonadNameWalk (Pass1PropagateUp i o) where
     type OldName (Pass1PropagateUp i o) = P0Name
     type NewName (Pass1PropagateUp i o) = P1Name
     type IM (Pass1PropagateUp i o) = i
@@ -400,7 +400,7 @@ getCollision tagsBelow aName =
     where
         InternalName mCtx tag _ = aName ^. Annotated.internal
 
-instance Monad i => MonadNaming (Pass2MakeNames i o) where
+instance Monad i => MonadNameWalk (Pass2MakeNames i o) where
     type OldName (Pass2MakeNames i o) = P1Name
     type NewName (Pass2MakeNames i o) = Name
     type IM (Pass2MakeNames i o) = i

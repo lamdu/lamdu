@@ -77,11 +77,11 @@ To find which names clash with which, and auto-generating names, `Add` needs to 
 three passes on the expression tree.
 
 These passes "walk" on the tree and change its "name" type-parameter. Because the traversal of the
-tree is the same for all three passes, we created a type-class, `MonadNaming`, for the passes, so
+tree is the same for all three passes, we created a type-class, `MonadNameWalk`, for the passes, so
 that common AST-traversal code could be used for all of them. It can be thought of as an advanced
 traversal (in the lens sense) that also informs about scoping rules.
 
-* `Lamdu.Sugar.Names.Walk` defines the `MonadNaming` class and the expressions traversals for it.
+* `Lamdu.Sugar.Names.Walk` defines the `MonadNameWalk` class and the expressions traversals for it.
 
 The three passes each convert an `OldName m` to a `NewName m` and are:
 
