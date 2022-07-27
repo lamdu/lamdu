@@ -1,6 +1,6 @@
 -- Work in progress
 
-{-# LANGUAGE GeneralizedNewtypeDeriving, TypeFamilies #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving, TypeFamilies, MultiParamTypeClasses #-}
 
 module Tests.Names (test) where
 
@@ -26,11 +26,12 @@ newtype CollectNames name a = CollectNames { runCollectNames :: Writer [name] a 
 instance Walk.MonadNameWalk (CollectNames name) where
     type OldName (CollectNames name) = name
     type NewName (CollectNames name) = name
-    type IM (CollectNames name) = Identity
     opGetName _ _ _ x = x <$ tell [x]
     opWithName _ _ x = x <$ liftCPS (tell [x])
-    opRun = pure (pure . fst . runWriter . runCollectNames)
     opWithNewTag _ _ = id
+
+instance Walk.MonadNameWalkInfo (CollectNames name) Identity where
+    opRun = pure (pure . fst . runWriter . runCollectNames)
 
 test :: Test
 test =

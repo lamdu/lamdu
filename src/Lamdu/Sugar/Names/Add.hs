@@ -40,7 +40,7 @@ import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Names.Annotated as Annotated
 import           Lamdu.Sugar.Names.CPS (CPS(..), runcps, liftCPS)
 import qualified Lamdu.Sugar.Names.Clash as Clash
-import           Lamdu.Sugar.Names.Walk (MonadNameWalk(..), Disambiguator)
+import           Lamdu.Sugar.Names.Walk (MonadNameWalk(..), MonadNameWalkInfo(..), Disambiguator)
 import qualified Lamdu.Sugar.Names.Walk as Walk
 import           Lamdu.Sugar.Types hiding (Type)
 
@@ -70,11 +70,12 @@ runPass0LoadNames r = (`runReaderT` r) . unPass0LoadNames
 instance Monad i => MonadNameWalk (Pass0LoadNames i) where
     type OldName (Pass0LoadNames i) = InternalName
     type NewName (Pass0LoadNames i) = P0Name
-    type IM (Pass0LoadNames i) = i
-    opRun = Reader.ask <&> runPass0LoadNames
     opWithName _ _ n = CPS $ \inner -> (,) <$> getP0Name n <*> inner
     opGetName _ _ _ = getP0Name
     opWithNewTag _ _ = id
+
+instance Monad i => MonadNameWalkInfo (Pass0LoadNames i) i where
+    opRun = Reader.ask <&> runPass0LoadNames
 
 p0lift :: Monad i => i a -> Pass0LoadNames i a
 p0lift = Pass0LoadNames . lift
@@ -126,12 +127,13 @@ tellSome l v = mempty & l .~ v & Writer.tell
 instance Monad i => MonadNameWalk (Pass1PropagateUp i o) where
     type OldName (Pass1PropagateUp i o) = P0Name
     type NewName (Pass1PropagateUp i o) = P1Name
-    type IM (Pass1PropagateUp i o) = i
-    opRun = pure (pure . fst . runPass1PropagateUp)
     opWithName = p1Name Nothing
     opGetName mDisambiguator u nameType p0Name =
         p1Name mDisambiguator u nameType p0Name & runcps
     opWithNewTag _ _ = id
+
+instance Monad i => MonadNameWalkInfo (Pass1PropagateUp i o) i where
+    opRun = pure (pure . fst . runPass1PropagateUp)
 
 displayOf :: Has (Texts.Name Text) env => env -> Text -> Text
 displayOf env text
@@ -400,15 +402,16 @@ getCollision tagsBelow aName =
     where
         InternalName mCtx tag _ = aName ^. Annotated.internal
 
-instance Monad i => MonadNameWalk (Pass2MakeNames i o) where
+instance MonadNameWalk (Pass2MakeNames i o) where
     type OldName (Pass2MakeNames i o) = P1Name
     type NewName (Pass2MakeNames i o) = Name
-    type IM (Pass2MakeNames i o) = i
-    opRun = Lens.view id <&> flip (runReader . runPass2MakeNames) <&> (pure .)
     opWithName u _ = p2cpsNameConvertor u
     opGetName _ = p2nameConvertor
     opWithNewTag tag text = local (p2TagTexts . Lens.at tag ?~ TagText text NoCollision)
     tagSuffixes = Lens.view p2TagSuffixes
+
+instance Monad i => MonadNameWalkInfo (Pass2MakeNames i o) i where
+    opRun = Lens.view id <&> flip (runReader . runPass2MakeNames) <&> (pure .)
 
 getTag :: Bool -> Annotated.Name -> Pass2MakeNames i o T.Tag
 getTag autoGen aName =
