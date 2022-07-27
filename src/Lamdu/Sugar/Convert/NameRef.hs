@@ -62,10 +62,10 @@ makeForNominal ::
 makeForNominal = makeInternal jumpToNominal
 
 makeForTag ::
-    (MonadTransaction n m, Monad f) =>
-    Anchors.CodeAnchors f -> T.Tag -> m (NameRef InternalName (T f))
+    Monad f =>
+    Anchors.CodeAnchors f -> T.Tag -> NameRef InternalName (T f)
 makeForTag cp tag =
-    pure NameRef
+    NameRef
     { _nrName = nameWithoutContext tag
     , _nrGotoDefinition = jumpToTag cp tag
     }

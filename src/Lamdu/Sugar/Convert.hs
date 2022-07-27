@@ -131,7 +131,7 @@ globals cp =
     Globals
     { _globalDefs = globalNameRefs Anchors.globals ConvertNameRef.makeForDefinition
     , _globalNominals = globalNameRefs Anchors.tids ConvertNameRef.makeForNominal
-    , _globalTags = globalNameRefs Anchors.tags ConvertNameRef.makeForTag
+    , _globalTags = globalNameRefs Anchors.tags (ConvertNameRef.makeForTag <&> Lens.mapped %~ pure)
     }
     where
         globalNameRefs globs makeNameRef =
