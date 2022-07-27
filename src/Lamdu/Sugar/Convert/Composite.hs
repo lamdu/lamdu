@@ -92,8 +92,7 @@ convertExtend cons valS exprPl extendV restC =
         do
             guard punSugar
             getVar <- itemS ^? tiValue . hVal . _BodyLeaf . _LeafGetVar
-            name <- getVar ^? vNameRef . nrName
-            _ <- internalNameMatch (itemS ^. tiTag . tagRefTag . tagName) name
+            _ <- internalNameMatch (itemS ^. tiTag . tagRefTag . tagName) (getVar ^. vNameRef . nrName)
             let punned =
                     PunnedVar
                     { _pvVar = Ann (Const (itemS ^. tiValue . annotation)) (Const getVar)
