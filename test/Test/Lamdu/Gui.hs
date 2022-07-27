@@ -72,7 +72,7 @@ makeGui afterDoc env workArea =
                 & traverse CodeEdit.makePaneBodyEdit
                 & GuiState.assignCursor WidgetIds.defaultCursor defId
             )
-            & GuiM.run assocTagName ExpressionEdit.make BinderEdit.make
+            & GuiM.run (workArea ^. Sugar.waOpenPane) assocTagName ExpressionEdit.make BinderEdit.make
                 (Anchors.onGui (Property.mkProperty %~ lift) DbLayout.guiAnchors)
                 env
             -- We ignore whether execute button was clicked

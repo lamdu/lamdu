@@ -5,8 +5,10 @@ module Lamdu.Sugar.Types
     , PaneBody(..), _PaneDefinition
     , Pane(..), paneBody, paneClose, paneMoveDown, paneMoveUp, paneEntityId, paneDefinitionState
     , TagPane(..), tpTag, tpTagData, tpSetTexts, tpSetSymbol, tpSetOrder
-    , WorkArea(..), waPanes, waGlobals
-    , Globals(..), allGlobals, globalDefs, globalNominals, globalTags
+    , WorkArea(..), waPanes, waGlobals, waOpenPane
+    , Globals(..), globalDefs, globalNominals, globalTags
+    , NameRef(..), nrName, nrId
+    , GotoDest(..), _GoToDef, _GoToNom, _GoToTag
     , ParamKind(..), _TypeParam, _RowParam
     , NominalPane(..), npName, npParams, npNominalId, npEntityId, npBody
     , Definition(..), drName, drBody, drDefI, drGotoNextOutdated
@@ -32,7 +34,6 @@ import           Lamdu.Sugar.Types.Eval as Exported
 import           Lamdu.Sugar.Types.Expression as Exported
 import           Lamdu.Sugar.Types.GetVar as Exported
 import           Lamdu.Sugar.Types.Lhs as Exported
-import           Lamdu.Sugar.Types.NameRef as Exported
 import           Lamdu.Sugar.Types.Parts as Exported
 import           Lamdu.Sugar.Types.Tag as Exported
 import           Lamdu.Sugar.Types.TaggedList as Exported
@@ -112,23 +113,27 @@ data Pane v name i o a = Pane
     , _paneMoveUp :: Maybe (o ())
     } deriving (Functor, Foldable, Traversable, Generic)
 
-data Globals name i o = Globals
-    { _globalDefs     :: i [NameRef name o]
-    , _globalNominals :: i [NameRef name o]
-    , _globalTags     :: i [NameRef name o]
+data NameRef name a = NameRef
+    { _nrName :: name
+    , _nrId :: a
+    } deriving (Functor, Foldable, Traversable, Generic)
+
+data Globals name i = Globals
+    { _globalDefs     :: i [NameRef name V.Var]
+    , _globalNominals :: i [NameRef name T.NominalId]
+    , _globalTags     :: i [NameRef name T.Tag]
     } deriving Generic
 
--- In the future, maybe the different NameRefs will have different
--- types, but for now they're traversable
-allGlobals :: Lens.Traversal (Globals name i o) (Globals name' i' o') (i [NameRef name o]) (i' [NameRef name' o'])
-allGlobals f (Globals x y z) = Globals <$> f x <*> f y <*> f z
+data GotoDest = GoToDef V.Var | GoToNom T.NominalId | GoToTag T.Tag
+    deriving Generic
 
 data WorkArea v name i o a = WorkArea
     { _waPanes :: [Pane v name i o a]
-    , _waGlobals :: Globals name i o
+    , _waGlobals :: Globals name i
+    , _waOpenPane :: GotoDest -> o EntityId
     } deriving (Functor, Foldable, Traversable, Generic)
 
 traverse Lens.makeLenses
-    [''Definition, ''DefinitionBuiltin, ''Pane, ''TagPane, ''Globals, ''WorkArea, ''NominalPane]
+    [''Definition, ''DefinitionBuiltin, ''Pane, ''NameRef, ''TagPane, ''Globals, ''WorkArea, ''NominalPane]
     <&> concat
-traverse Lens.makePrisms [''DefinitionBody, ''PaneBody, ''ParamKind] <&> concat
+traverse Lens.makePrisms [''DefinitionBody, ''PaneBody, ''ParamKind, ''GotoDest] <&> concat

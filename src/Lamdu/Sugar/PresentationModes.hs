@@ -99,7 +99,7 @@ makeLabeledApply func args punnedArgs exprPl =
                 filter ((`notElem` removedKeys) . (^. Sugar.aaTag . Sugar.tagVal)) args
             , Sugar._aPunnedArgs =
                 filter
-                ((`notElem` removedKeys) . (^?! Sugar.pvVar . hVal . Lens._Wrapped . Sugar.vNameRef . Sugar.nrName . inTag))
+                ((`notElem` removedKeys) . (^?! Sugar.pvVar . hVal . Lens._Wrapped . Sugar.vName . inTag))
                 punnedArgs
             }
     where
@@ -107,7 +107,7 @@ makeLabeledApply func args punnedArgs exprPl =
             (args <&> \x -> (x ^. Sugar.aaTag . Sugar.tagVal, x ^. Sugar.aaExpr)) <>
             (punnedArgs <&>
                 \x ->
-                ( x ^?! Sugar.pvVar . hVal . Lens._Wrapped . Sugar.vNameRef . Sugar.nrName . inTag
+                ( x ^?! Sugar.pvVar . hVal . Lens._Wrapped . Sugar.vName . inTag
                 , x ^. Sugar.pvVar . hVal . Lens._Wrapped & Sugar.LeafGetVar & Sugar.BodyLeaf
                     & Ann (Const (x ^. Sugar.pvVar . annotation))
                 ))

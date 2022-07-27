@@ -105,7 +105,7 @@ convertGlobal var exprPl =
                     ctx ^. ConvertM.scOutdatedDefinitions . Lens.at var
                     <&> Lens.mapped .~ exprPl ^. Input.entityId
                     & maybe DefUpToDate DefTypeChanged
-        nameRef <- NameRef.makeForDefinition (ctx ^. Anchors.codeAnchors) defI & lift
+        nameRef <- NameRef.makeForDefinition defI & lift
         inline <-
             case defForm of
             DefUpToDate
@@ -113,7 +113,8 @@ convertGlobal var exprPl =
                     inlineDef var (exprPl ^. Input.stored) & lift <&> InlineVar
             _ -> pure CannotInline
         pure GetVar
-            { _vNameRef = nameRef
+            { _vName = nameRef
+            , _vGotoParam = Nothing
             , _vVar = var
             , _vForm = GetDefinition defForm
             , _vInline = inline
@@ -127,24 +128,20 @@ convertParam param exprPl =
     do
         inline <- Lens.view (ConvertM.scScopeInfo . ConvertM.siLetItems . Lens.at param)
         varInfo <- mkVarInfo (exprPl ^. Input.inferredType)
-        nameRef <- convertLocalNameRef varInfo param
+        (name, dest) <- convertLocalNameRef varInfo param
         pure GetVar
-            { _vNameRef = nameRef
+            { _vName = name
+            , _vGotoParam = Just dest
             , _vVar = param
             , _vForm = GetNormalVar
             , _vInline = maybe CannotInline (exprPl ^. Input.entityId &) inline
             }
 
-convertLocalNameRef ::
-    (Applicative f, MonadTransaction n m) =>
-    VarInfo -> V.Var -> m (NameRef InternalName f)
+convertLocalNameRef :: MonadTransaction n m => VarInfo -> V.Var -> m (InternalName, EntityId)
 convertLocalNameRef varInfo param =
-    Anchors.assocTag param & getP
-    <&> \tag ->
-    NameRef
-    { _nrName = nameWithContext (Just varInfo) param tag
-    , _nrGotoDefinition = EntityId.ofTaggedEntity param tag & pure
-    }
+    Anchors.assocTag param & getP <&>
+    \tag ->
+    (nameWithContext (Just varInfo) param tag, EntityId.ofTaggedEntity param tag)
 
 convert :: Monad m => V.Var -> Input.Payload m # V.Term -> ConvertM m (ExpressionU v m)
 convert param exprPl =

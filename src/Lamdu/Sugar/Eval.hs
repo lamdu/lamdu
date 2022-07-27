@@ -236,7 +236,7 @@ addEvaluationResults ::
     T m (
         WorkArea (Annotation (EvaluationScopes InternalName i) n) n i (T m)
         (Annotation (EvaluationScopes InternalName i) n, a, ConvertPayload m))
-addEvaluationResults cp r wa@(WorkArea panes globals) =
+addEvaluationResults cp r wa@(WorkArea panes globals goto) =
     makeNominalsMap
     ( wa ^..
         SugarLens.annotations @(Annotation EvalPrep n)
@@ -266,4 +266,4 @@ addEvaluationResults cp r wa@(WorkArea panes globals) =
                     }
                     & EvalError
     in
-    WorkArea (panes <&> paneBody . _PaneDefinition %~ fixDef) globals
+    WorkArea (panes <&> paneBody . _PaneDefinition %~ fixDef) globals goto

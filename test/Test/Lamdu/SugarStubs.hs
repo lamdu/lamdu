@@ -16,9 +16,6 @@ import qualified Lamdu.Sugar.Types as Sugar
 
 import           Test.Lamdu.Prelude
 
-nameRef :: name -> Sugar.NameRef name Unit
-nameRef = (`Sugar.NameRef` Unit)
-
 prop :: a -> Property Unit a
 prop x = Property x (const Unit)
 
@@ -32,8 +29,9 @@ litNum x = prop x & Sugar.LiteralNum & Sugar.LeafLiteral & Sugar.BodyLeaf & expr
 defRef :: String -> T.Tag -> Sugar.GetVar InternalName Unit
 defRef var tag =
     Sugar.GetVar
-    { Sugar._vNameRef = nameRef (taggedEntityName (fromString var) tag)
+    { Sugar._vName = taggedEntityName (fromString var) tag
     , Sugar._vForm = Sugar.GetDefinition Sugar.DefUpToDate
+    , Sugar._vGotoParam = Nothing
     , Sugar._vVar = fromString var
     , Sugar._vInline = Sugar.CannotInline
     }

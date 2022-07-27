@@ -116,12 +116,11 @@ toBinderVarRef ::
     Maybe Disambiguator ->
     GetVar (OldName m) o ->
     m (GetVar (NewName m) o)
-toBinderVarRef mDisambig (GetVar nameRef form var inline) =
+toBinderVarRef mDisambig (GetVar name form goto var inline) =
     GetVar
-    <$> ( nrName %%~
-          opGetName mDisambig amb (binderVarType form)
-        ) nameRef
+    <$> opGetName mDisambig amb (binderVarType form) name
     <*> (_GetDefinition . _DefTypeChanged %%~ walk) form
+    ?? goto
     ?? var
     ?? inline
     where
@@ -527,25 +526,26 @@ instance
     walk (PaneNominal x) = walk x <&> PaneNominal
 
 toGlobals ::
-    (MonadNaming f, Traversable t) =>
-    IM f (t (NameRef (OldName f) o)) -> NameType -> f (IM f (t (NameRef (NewName f) o)))
-toGlobals x nameType =
+    (MonadNaming f, Traversable t, i ~ IM f) =>
+    NameType -> i (t (NameRef (OldName f) a)) -> f (i (t (NameRef (NewName f) a)))
+toGlobals nameType x =
     opRun <&>
     \run -> x >>= run . (traverse . nrName) (opGetName Nothing MayBeAmbiguous nameType)
 
 instance
     (a ~ OldName m, b ~ NewName m, i ~ IM m) =>
-    Walk m (Globals a i o) (Globals b i o) where
+    Walk m (Globals a i) (Globals b i) where
     walk (Globals d n t) =
-        Globals <$> toGlobals d GlobalDef <*> toGlobals n TaggedNominal <*> toGlobals t Tag
+        Globals <$> toGlobals GlobalDef d <*> toGlobals TaggedNominal n <*> toGlobals Tag t
 
 instance
     (a ~ OldName m, b ~ NewName m, i ~ IM m, Walk m pa pb) =>
     Walk m (Top WorkArea a i o pa) (Top WorkArea b i o pb) where
-    walk WorkArea { _waPanes, _waGlobals } =
+    walk WorkArea { _waPanes, _waGlobals, _waOpenPane } =
         WorkArea
         <$> (traverse . paneBody) walk _waPanes
         <*> walk _waGlobals
+        ?? _waOpenPane
 
 toWorkArea ::
     MonadNaming m =>

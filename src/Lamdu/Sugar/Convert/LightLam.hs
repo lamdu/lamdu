@@ -72,10 +72,10 @@ instance AddLightLams (PostfixFunc v InternalName i o)
 
 instance AddLightLams (Const (GetVar InternalName o)) where
     markLightParams paramNames =
-        Lens._Wrapped . Lens.filteredBy (vNameRef . nrName . Lens.filtered f) . vForm .~ GetLightParam
+        Lens._Wrapped . Lens.filteredBy (vName . Lens.filtered f) . vForm .~ GetLightParam
         where
             f n = paramNames ^. Lens.contains n
-    getVars = (^? Lens._Wrapped . vNameRef . nrName)
+    getVars = (^? Lens._Wrapped . vName)
 
 instance AddLightLams (Assignment v InternalName i o) where
     markLightParams ps (BodyPlain x) = x & apBody %~ markLightParams ps & BodyPlain

@@ -15,7 +15,7 @@ module Lamdu.GUI.Monad
     , im
 
     , makeSubexpression, makeBinder
-    , assocTagName
+    , assocTagName, openPane
 
     , GuiM, run
     ) where
@@ -79,6 +79,7 @@ data Askable env i o = Askable
     , _aAssocTagName :: T.Tag -> MkProperty' o Text
     , _aMakeSubexpression :: ExprGui.Expr Sugar.Term i o -> GuiM env i o (Responsive o)
     , _aMakeBinder :: ExprGui.Expr Sugar.Binder i o -> GuiM env i o (Responsive o)
+    , _aGoto :: Sugar.GotoDest -> o Sugar.EntityId
     , _aGuiAnchors :: Anchors.GuiAnchors i o
     , _aDepthLeft :: Int
     , _aMScopeId :: CurAndPrev (Maybe ScopeId)
@@ -130,6 +131,9 @@ readGuiAnchors = Lens.view aGuiAnchors
 
 assocTagName :: MonadReader (Askable env i o) m => m (T.Tag -> MkProperty' o Text)
 assocTagName = Lens.view aAssocTagName
+
+openPane :: MonadReader (Askable env i o) m => m (Sugar.GotoDest -> o Sugar.EntityId)
+openPane = Lens.view aGoto
 
 mkPrejumpPosSaver :: (Monad i, Monad o) => GuiM env i o (o ())
 mkPrejumpPosSaver =
@@ -186,12 +190,13 @@ makeBinder = make aMakeBinder
 
 run ::
     _ =>
+    (Sugar.GotoDest -> o Sugar.EntityId) ->
     (T.Tag -> MkProperty' o Text) ->
     (ExprGui.Expr Sugar.Term i o -> GuiM env i o (Responsive o)) ->
     (ExprGui.Expr Sugar.Binder i o -> GuiM env i o (Responsive o)) ->
     Anchors.GuiAnchors i o ->
     env -> GuiM env i o a -> i a
-run assocTagName_ makeSubexpr mkBinder theGuiAnchors env (GuiM action) =
+run goto assocTagName_ makeSubexpr mkBinder theGuiAnchors env (GuiM action) =
     runReaderT action
     Askable
     { _aAssocTagName = assocTagName_
@@ -207,6 +212,7 @@ run assocTagName_ makeSubexpr mkBinder theGuiAnchors env (GuiM action) =
     , _aGuiAnchors = theGuiAnchors
     , _aDepthLeft = env ^. Config.hasConfig . Config.maxExprDepth
     , _aMScopeId = Just topLevelScopeId & pure
+    , _aGoto = goto
     , _aStyle = env ^. has
     , _aDirLayout = env ^. has
     , _aEnv = env

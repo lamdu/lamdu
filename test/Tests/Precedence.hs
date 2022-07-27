@@ -131,8 +131,8 @@ test514 =
                 , Sugar._lamApplyLimit = Sugar.UnlimitedFuncApply
                 , Sugar._lamFunc =
                     (Stub.node . Sugar.BodyLeaf . Sugar.LeafGetVar)
-                    (Sugar.GetVar (Stub.nameRef (Stub.taggedEntityName "x" "x"))
-                        Sugar.GetNormalVar "x" Sugar.CannotInline)
+                    (Sugar.GetVar (Stub.taggedEntityName "x" "x")
+                        Sugar.GetNormalVar Nothing "x" Sugar.CannotInline)
                     $$ Stub.hole
                     & Stub.funcExpr "x" "x"
                 } & Stub.node

@@ -5,6 +5,7 @@ module Lamdu.GUI.CodeEdit.GotoDefinition
     ) where
 
 import qualified Control.Lens as Lens
+import           Control.Monad.Trans.Reader (ReaderT)
 import qualified Data.ByteString.Char8 as BS8
 import           Data.MRUMemo (memo)
 import qualified Data.Text as Text
@@ -38,7 +39,8 @@ data Global o = Global
     { _globalIdx :: !Int
     , _globalPrefix :: !Text
     , _globalColor :: !(Lens.ALens' TextColors M.Color)
-    , _globalNameRef :: !(Sugar.NameRef Name o)
+    , _globalName :: !Name
+    , _globalOpen :: !(o Sugar.EntityId)
     }
 Lens.makeLenses ''Global
 
@@ -67,32 +69,34 @@ nameToText name =
         collisionText (Name.Collision i) = Text.pack (show i)
         collisionText Name.UnknownCollision = "?"
 
-toGlobal :: Int -> (Text, Lens.ALens' TextColors M.Color, Sugar.NameRef Name o) -> Global o
-toGlobal idx (prefix, color, nameRef) = Global idx prefix color nameRef
+toGlobal ::
+    Text -> Lens.ALens' TextColors M.Color -> (a -> o Sugar.EntityId) -> Sugar.NameRef Name a -> Int ->
+    Global o
+toGlobal prefix color goto nameRef idx = Global idx prefix color (nameRef ^. Sugar.nrName) (goto (nameRef ^. Sugar.nrId))
 
 {-# ANN makeOptions ("HLint: ignore Redundant <$>"::String) #-}
 makeOptions ::
-    ( MonadReader env m, Has (Texts.Navigation Text) env, Has (Texts.Name Text) env
+    ( Monad i, Has (Texts.Navigation Text) env, Has (Texts.Name Text) env
     , M.HasCursor env, M.HasAnimIdPrefix env, Has Theme env, Has TextView.Style env
     , Has Dir.Layout env
     , Applicative o
     ) =>
-    Sugar.Globals Name m o -> SearchMenu.ResultsContext -> m (Menu.OptionList (Menu.Option m o))
-makeOptions globals (SearchMenu.ResultsContext searchTerm prefix)
+    (Sugar.GotoDest -> o Sugar.EntityId) -> Sugar.Globals Name i ->
+    SearchMenu.ResultsContext -> ReaderT env i (Menu.OptionList (Menu.Option (ReaderT env i) o))
+makeOptions goto globals (SearchMenu.ResultsContext searchTerm prefix)
     | Text.null searchTerm =
         pure Menu.OptionList { Menu._olIsTruncated = False, Menu._olOptions = [] }
     | otherwise =
         do
             env <- Lens.view id
-            let toRenderedOption nameRef widget =
+            let toRenderedOption go widget =
                     Menu.RenderedOption
                     { Menu._rWidget = widget
                     , Menu._rPick =
                         Widget.PreEvent
                         { Widget._pDesc = env ^. has . Texts.goto
                         , Widget._pAction =
-                            nameRef ^. Sugar.nrGotoDefinition
-                            <&> WidgetIds.fromEntityId <&> toPickResult
+                            go <&> WidgetIds.fromEntityId <&> toPickResult
                         , Widget._pTextRemainder = ""
                         }
                     }
@@ -104,24 +108,27 @@ makeOptions globals (SearchMenu.ResultsContext searchTerm prefix)
                             <*> (Element.subAnimId ?? ["."]))
                         /|/
                         GetVarEdit.makeSimpleView (global ^. globalColor) name optId
-                        <&> toRenderedOption (global ^. globalNameRef)
+                        <&> toRenderedOption (global ^. globalOpen)
                         & local (M.animIdPrefix .~ Widget.toAnimId optId)
                     , Menu._oSubmenuWidgets = Menu.SubmenuEmpty
                     }
                     where
-                        name = global ^. globalNameRef . Sugar.nrName
+                        name = global ^. globalName
                         idx = global ^. globalIdx
                         optId = prefix `Widget.joinId` [BS8.pack (show idx)]
             globs <-
                 case mTagPrefix of
                 Just tagPrefix ->
-                    globals ^. Sugar.globalTags <&> map ((,,) (Text.singleton tagPrefix) TextColors.baseColor)
+                    globals ^. Sugar.globalTags
+                    <&> Lens.mapped %~
+                        toGlobal (Text.singleton tagPrefix) TextColors.baseColor (goto . Sugar.GoToTag)
                 Nothing ->
                     (<>)
-                    <$> (globals ^. Sugar.globalDefs <&> map ((,,) "" TextColors.definitionColor))
-                    <*> (globals ^. Sugar.globalNominals <&> map ((,,) "" TextColors.nomColor))
-            Lens.imap toGlobal globs
-                & traverse withTexts
+                    <$> (globals ^. Sugar.globalDefs <&> Lens.mapped %~ toGlobal "" TextColors.definitionColor (goto . Sugar.GoToDef))
+                    <*> (globals ^. Sugar.globalNominals <&> Lens.mapped %~ toGlobal "" TextColors.nomColor (goto . Sugar.GoToNom))
+                & lift
+            Lens.imap (&) globs &
+                traverse withTexts
                 <&> (Fuzzy.memoableMake fuzzyMaker ?? searchTerm)
                 <&> map (makeOption . snd)
                 <&> Menu.OptionList isTruncated
@@ -129,12 +136,12 @@ makeOptions globals (SearchMenu.ResultsContext searchTerm prefix)
         mTagPrefix = getTagPrefix searchTerm
         isTruncated = False
         withTexts global =
-            nameToText (global ^. globalNameRef . Sugar.nrName) <&>
+            nameToText (global ^. globalName) <&>
             \texts -> (texts <&> maybe id Text.cons mTagPrefix, global)
         toPickResult x = Menu.PickResult x (Just x)
 
-make :: _ => Sugar.Globals Name m o -> m (StatusBar.StatusWidget o)
-make globals =
+make :: _ => (Sugar.GotoDest -> o Sugar.EntityId) -> Sugar.Globals Name i -> ReaderT env i (StatusBar.StatusWidget o)
+make gotoPane globals =
     do
         goto <- Lens.view (has . Texts.goto)
         let onTermStyle x =
@@ -142,7 +149,7 @@ make globals =
                 & SearchMenu.emptyStrings . Lens.mapped .~ goto
                 & SearchMenu.bgColors . Lens.mapped .~ M.Color 0 0 0 0
         SearchMenu.make (SearchMenu.searchTermEdit WidgetIds.gotoDefId (pure . allowSearchTerm))
-            (makeOptions globals) M.empty WidgetIds.gotoDefId ?? Menu.Below
+            (makeOptions gotoPane globals) M.empty WidgetIds.gotoDefId ?? Menu.Below
             & local (has . Theme.searchTerm %~ onTermStyle)
             <&> \searchWidget -> StatusBar.StatusWidget
             { StatusBar._widget = searchWidget

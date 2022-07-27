@@ -34,11 +34,9 @@ convertGetFieldParam (V.App (Ann _ (V.BLeaf (V.LGetField tag))) recExpr) =
         guard (tags ^. Lens.contains chain)
         let base = foldl EntityId.ofTaggedEntity (EntityId.ofBinder param) (reverse restTags)
         LeafGetVar GetVar
-            { _vNameRef = NameRef
-                { _nrName = nameWithContext Nothing base tag
-                , _nrGotoDefinition = EntityId.ofTaggedEntity base tag & pure
-                }
+            { _vName = nameWithContext Nothing base tag
             , _vForm = GetNormalVar
+            , _vGotoParam = EntityId.ofTaggedEntity base tag & Just
             , _vVar = param
             , _vInline = CannotInline
             } & BodyLeaf & Just

@@ -98,7 +98,7 @@ make cp gp width mkWorkArea =
         env <- Lens.view id
         workArea <- mkWorkArea >>= (\x -> x (getTagName env) env) & lift
         gotoDefinition <-
-            GotoDefinition.make (workArea ^. Sugar.waGlobals & Sugar.allGlobals %~ lift)
+            GotoDefinition.make (workArea ^. Sugar.waOpenPane) (workArea ^. Sugar.waGlobals)
             <&> StatusBar.hoist IOTrans.liftTrans
         assocTagName <- DataOps.assocTagName
         do
@@ -117,7 +117,7 @@ make cp gp width mkWorkArea =
             Responsive.vboxSpaced
                 ?? panesEdits <> [newDefinitionButton]
                 <&> Widget.widget . Widget.eventMapMaker . Lens.mapped %~ (<> eventMap)
-            & GuiM.run assocTagName ExpressionEdit.make BinderEdit.make
+            & GuiM.run (workArea ^. Sugar.waOpenPane) assocTagName ExpressionEdit.make BinderEdit.make
                 (Anchors.onGui (Property.mkProperty %~ lift) gp) env
             & lift
             <&> render

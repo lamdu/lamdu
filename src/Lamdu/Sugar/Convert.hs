@@ -9,6 +9,7 @@ import           Data.Property (Property(..), MkProperty)
 import qualified Data.Property as Property
 import qualified Lamdu.Cache as Cache
 import qualified Lamdu.Data.Anchors as Anchors
+import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Data.Tag as Tag
 import qualified Lamdu.Debug as Debug
 import qualified Lamdu.Expr.IRef as ExprIRef
@@ -128,19 +129,22 @@ globalNameRefs ::
     Monad m =>
     Anchors.Code (MkProperty (T m) (T m)) m ->
     (Anchors.Code (MkProperty (T m) (T m)) m -> MkProperty (T m) (T m) (Set a)) ->
-    (Anchors.Code (MkProperty (T m) (T m)) m -> a -> OnceT (T m) (NameRef InternalName (T m))) ->
-    OnceT (T m) [NameRef InternalName (T m)]
+    (a -> OnceT (T m) InternalName) ->
+    OnceT (T m) [NameRef InternalName a]
 globalNameRefs cp globs makeNameRef =
-    Property.getP (globs cp) & lift <&> (^.. Lens.folded) >>= traverse (makeNameRef cp)
+    Property.getP (globs cp) & lift <&> (^.. Lens.folded)
+    >>= traverse (\x -> makeNameRef x <&> (`NameRef` x))
 
 globals ::
     Monad m =>
-    Anchors.Code (Property.MkProperty (T m) (T m)) m -> Globals InternalName (OnceT (T m)) (T m)
+    Anchors.Code (Property.MkProperty (T m) (T m)) m -> Globals InternalName (OnceT (T m))
 globals cp =
     Globals
-    { _globalDefs = globalNameRefs cp Anchors.globals ConvertNameRef.makeForDefinition
+    { _globalDefs =
+        globalNameRefs cp Anchors.globals ConvertNameRef.makeForDefinition
+        <&> Lens.mapped . Lens.mapped %~ ExprIRef.globalId
     , _globalNominals = globalNameRefs cp Anchors.tids ConvertNameRef.makeForNominal
-    , _globalTags = globalNameRefs cp Anchors.tags (ConvertNameRef.makeForTag <&> Lens.mapped %~ pure)
+    , _globalTags = globalNameRefs cp Anchors.tags (pure . ConvertNameRef.makeForTag)
     }
 
 loadWorkArea ::
@@ -152,7 +156,11 @@ loadWorkArea ::
     env ->
     OnceT (T m) (WorkArea EvalPrep InternalName (OnceT (T m)) (T m) ([EntityId], ConvertPayload m))
 loadWorkArea env =
-    loadPanes env <&> (`WorkArea` globals cp)
-    >>= orderWorkArea
+    do
+        p <- loadPanes env
+        WorkArea p (globals cp) goto & orderWorkArea
     where
         cp = env ^. Anchors.codeAnchors
+        goto (GoToDef x) = EntityId.ofBinder x <$ DataOps.newPane cp (Anchors.PaneDefinition (ExprIRef.defI x))
+        goto (GoToNom x) = EntityId.ofNominalPane x <$ DataOps.newPane cp (Anchors.PaneNominal x)
+        goto (GoToTag x) = EntityId.ofTagPane x <$ DataOps.newPane cp (Anchors.PaneTag x)

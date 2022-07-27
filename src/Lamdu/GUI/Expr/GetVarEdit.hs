@@ -63,12 +63,13 @@ makeNameRef ::
     _ =>
     Role ->
     Lens.ALens' TextColors M.Color -> Widget.Id ->
-    Sugar.NameRef Name o ->
+    Sugar.GetVar Name o ->
     GuiM env i o (M.TextWidget o)
-makeNameRef role color myId nameRef =
+makeNameRef role color myId var =
     do
         savePrecursor <- GuiM.mkPrejumpPosSaver
         env <- Lens.view id
+        openPane <- GuiM.openPane
         let jumpToDefinitionEventMap =
                 E.keysEventMapMovesCursor
                 (env ^. has . Config.jumpToDefinitionKeys ++
@@ -76,7 +77,9 @@ makeNameRef role color myId nameRef =
                 (navDoc env Texts.jumpToDef) $
                 do
                     savePrecursor
-                    nameRef ^. Sugar.nrGotoDefinition <&> WidgetIds.fromEntityId
+                    case var ^. Sugar.vGotoParam of
+                        Just x -> WidgetIds.fromEntityId x & pure
+                        Nothing -> var ^. Sugar.vVar & Sugar.GoToDef & openPane <&> WidgetIds.fromEntityId
         let mAddMarker =
                 case role of
                 Operator
@@ -91,7 +94,7 @@ makeNameRef role color myId nameRef =
     & local (M.animIdPrefix .~ Widget.toAnimId nameId)
     & GuiState.assignCursor myId nameId
     where
-        name = nameRef ^. Sugar.nrName
+        name = var ^. Sugar.vName
         nameId = Widget.joinId myId ["name"]
 
 makeInlineEventMap :: _ => env -> Sugar.VarInline f -> EventMap (f GuiState.Update)
@@ -203,7 +206,7 @@ make role (Ann (Const pl) (Const var)) =
             case var ^. Sugar.vForm of
             Sugar.GetLightParam -> Lens.view has <&> LightLambda.underline <&> (TextView.underline ?~)
             _ -> pure id
-        makeNameRef role color myId (var ^. Sugar.vNameRef)
+        makeNameRef role color myId var
             & local mUnderline
             <&> Align.tValue %~ Widget.weakerEvents
                 (makeInlineEventMap env (var ^. Sugar.vInline))

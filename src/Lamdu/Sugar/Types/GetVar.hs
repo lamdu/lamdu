@@ -4,7 +4,7 @@ module Lamdu.Sugar.Types.GetVar
     , DefinitionForm(..), _DefUpToDate, _DefDeleted, _DefTypeChanged
     , DefinitionOutdatedType(..), defTypeWhenUsed, defTypeCurrent, defTypeUseCurrent
     , VarInline(..), _InlineVar, _CannotInlineDueToUses, _CannotInline
-    , GetVar(..), vNameRef, vForm, vVar, vInline
+    , GetVar(..), vName, vForm, vGotoParam, vVar, vInline
     ) where
 
 import qualified Control.Lens as Lens
@@ -12,7 +12,6 @@ import           Control.Monad.Unit (Unit)
 import qualified Lamdu.Calc.Term as V
 import           Lamdu.Sugar.Internal.EntityId (EntityId)
 import           Lamdu.Sugar.Types.Type
-import           Lamdu.Sugar.Types.NameRef (NameRef)
 
 import           Lamdu.Prelude
 
@@ -41,14 +40,13 @@ data VarInline o
     deriving Generic
 
 data GetVar name o = GetVar
-    { _vNameRef :: NameRef name o
+    { _vName :: name
     , _vForm :: VarForm name o
+    , _vGotoParam :: Maybe EntityId
     , _vVar :: V.Var
     , -- Just means it is stored and inlinable:
       _vInline :: VarInline o
     } deriving Generic
 
-traverse Lens.makeLenses
-    [''GetVar, ''DefinitionOutdatedType] <&> concat
-traverse Lens.makePrisms
-    [''VarForm, ''VarInline, ''DefinitionForm] <&> concat
+traverse Lens.makeLenses [''GetVar, ''DefinitionOutdatedType] <&> concat
+traverse Lens.makePrisms [''VarForm, ''VarInline, ''DefinitionForm] <&> concat

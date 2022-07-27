@@ -39,33 +39,14 @@ jumpToNominal = jumpInternal EntityId.ofNominalPane Anchors.PaneNominal
 jumpToTag :: Monad m => Anchors.CodeAnchors m -> T.Tag -> T m EntityId
 jumpToTag = jumpInternal EntityId.ofTagPane Anchors.PaneTag
 
-makeInternal ::
-    (MonadTransaction n m, ToUUID global) =>
-    (codeAnchors -> global -> o EntityId) ->
-    codeAnchors -> global -> m (NameRef InternalName o)
-makeInternal makeJumper cp ident =
-    taggedName Nothing ident <&>
-    \name ->
-    NameRef
-    { _nrName = name
-    , _nrGotoDefinition = makeJumper cp ident
-    }
+makeInternal :: (MonadTransaction n m, ToUUID global) => global -> m InternalName
+makeInternal = taggedName Nothing
 
-makeForDefinition ::
-    (MonadTransaction n m, Monad f) =>
-    Anchors.CodeAnchors f -> DefI f -> m (NameRef InternalName (T f))
-makeForDefinition = makeInternal jumpToDefinition
+makeForDefinition :: MonadTransaction n m => DefI f -> m InternalName
+makeForDefinition = makeInternal
 
-makeForNominal ::
-    (MonadTransaction n m, Monad f) =>
-    Anchors.CodeAnchors f -> T.NominalId -> m (NameRef InternalName (T f))
-makeForNominal = makeInternal jumpToNominal
+makeForNominal :: MonadTransaction n m => T.NominalId -> m InternalName
+makeForNominal = makeInternal
 
-makeForTag ::
-    Monad f =>
-    Anchors.CodeAnchors f -> T.Tag -> NameRef InternalName (T f)
-makeForTag cp tag =
-    NameRef
-    { _nrName = nameWithoutContext tag
-    , _nrGotoDefinition = jumpToTag cp tag
-    }
+makeForTag :: T.Tag -> InternalName
+makeForTag = nameWithoutContext

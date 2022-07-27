@@ -129,7 +129,7 @@ testUnnamed =
     & testCase "name-of-unnamed"
     where
         verify workArea =
-            case workArea ^?! replBody . _BodyLeaf . _LeafGetVar . vNameRef . nrName of
+            case workArea ^?! replBody . _BodyLeaf . _LeafGetVar . vName of
             Unnamed{} -> pure ()
             _ -> error "Unexpected name"
 
@@ -309,14 +309,15 @@ delLet =
 testExtractForRecursion :: Test
 testExtractForRecursion =
     testSugarActions "fold.json"
-    [ lift . void . (^?! openDef)
+    [ lift . void . openDef
     , lift . void . (^?! extractDef)
     ]
     & testCase "no-extract-recursive"
     where
-        openDef =
-            replBody . _BodyLabeledApply . aFunc .
-            hVal . Lens._Wrapped . vNameRef . nrGotoDefinition
+        openDef x =
+            x ^?! replBody . _BodyLabeledApply . aFunc . hVal . Lens._Wrapped . vVar
+            & GoToDef
+            & x ^. waOpenPane
         extractDef =
             waPanes . traverse . SugarLens.paneBinder .
             annotation . plActions . extract
@@ -324,15 +325,16 @@ testExtractForRecursion =
 testInsistFactorial :: Test
 testInsistFactorial =
     testSugarActions "factorial-mismatch.json"
-    [ lift . void . (^?! openDef)
+    [ lift . void . openDef
     , lift . void . (^?! insist)
     , verify
     ]
     & testCase "insist-factorial"
     where
-        openDef =
-            replBody . _BodySimpleApply . appFunc .
-            hVal . _BodyLeaf . _LeafGetVar . vNameRef . nrGotoDefinition
+        openDef x =
+            x ^?! replBody . _BodySimpleApply . appFunc . hVal . _BodyLeaf . _LeafGetVar . vVar
+            & GoToDef
+            & x ^. waOpenPane
         ifElse =
             waPanes . traverse . SugarLens.paneBinder .
             hVal . _BodyFunction . fBody .
@@ -440,8 +442,11 @@ testNotALightLambda =
         expected = replBody . _BodyFragment . fExpr . hVal . _BodyLam . lamLightweight . Lens.only False
 
 openTopLevelDef :: WorkArea v name i (T ViewM) a -> OnceT (T ViewM) ()
-openTopLevelDef =
-    lift . void . (^?! replBody . _BodyLeaf . _LeafGetVar . vNameRef . nrGotoDefinition)
+openTopLevelDef x =
+    x ^?! replBody . _BodyLeaf . _LeafGetVar . vVar
+    & GoToDef
+    & x ^. waOpenPane
+    & void & lift
 
 delDefParam :: Test
 delDefParam =
@@ -595,7 +600,7 @@ testPunnedIso =
     <&> (^.. replBinder . _BinderLet . lBody . hVal . bBody . _BinderLet . lBody .
             hVal . bBody . _BinderTerm . _BodyRecord . cList . SugarLens.taggedListItems)
     <&> Lens.mapped %~
-        (\x -> (x ^. tiTag . tagRefTag . tagName, x ^? tiValue . hVal . _BodyLeaf . _LeafGetVar . vNameRef . nrName))
+        (\x -> (x ^. tiTag . tagRefTag . tagName, x ^? tiValue . hVal . _BodyLeaf . _LeafGetVar . vName))
     >>= assertEqual "Record items expected to be punned" []
 
 testNullParamUnused :: Test
@@ -703,20 +708,21 @@ testDisambig =
         itemOp =
             replBinder . _BinderTerm . _BodyLabeledApply . aAnnotatedArgs . traverse . aaExpr .
             hVal . _BodyLabeledApply . aFunc .
-            hVal . Lens._Wrapped . vNameRef . nrName . _NameTag . tnTagCollision . _Collision
+            hVal . Lens._Wrapped . vName . _NameTag . tnTagCollision . _Collision
 
 testAddRecursiveFuncParam :: Test
 testAddRecursiveFuncParam =
     testSugarActions "recursive-func.json"
-    [ lift . void . (^?! openDef)
+    [ lift . void . openDef
     , (^?! addParam) >=> lift . (^. tcNewTag . toPick)
     , verify
     ]
     & testCase "add-recursive-func-param"
     where
-        openDef =
-            replBody . _BodySimpleApply . appFunc .
-            hVal . _BodyLeaf . _LeafGetVar . vNameRef . nrGotoDefinition
+        openDef x =
+            x ^?! replBody . _BodySimpleApply . appFunc . hVal . _BodyLeaf . _LeafGetVar . vVar
+            & GoToDef
+            & x ^. waOpenPane
         func = waPanes . traverse . SugarLens.paneBinder . hVal . _BodyFunction
         addParam = Lens.cloneTraversal func . fParams . _LhsVar . vAddNext . _AddNext
         verify workArea

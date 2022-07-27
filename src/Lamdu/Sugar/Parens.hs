@@ -35,7 +35,7 @@ class GetPrec h where
     getPrec :: HasPrecedence name => h # Const (GetVar name o) -> Prec
 
 instance GetPrec (Ann a) where
-    getPrec = precedence . (^. hVal . Lens._Wrapped . vNameRef . nrName)
+    getPrec = precedence . (^. hVal . Lens._Wrapped . vName)
 
 class HFunctor expr => AddParens expr where
     parenInfo ::
