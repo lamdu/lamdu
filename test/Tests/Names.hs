@@ -83,6 +83,7 @@ workAreaGlobals =
         , Stub.def Stub.numType "def2" "def" trivialBinder & Stub.pane
         ]
     , Sugar._waGlobals = Sugar.Globals (pure []) (pure []) (pure [])
+    , Sugar._waOpenPane = const Unit
     } & testWorkArea verifyName
     where
         verifyName name =
@@ -116,4 +117,5 @@ anonGlobals =
         , Stub.def Stub.numType "def2" anonTag trivialBinder & Stub.pane
         ]
     , Sugar._waGlobals = Sugar.Globals (pure []) (pure []) (pure [])
+    , Sugar._waOpenPane = const Unit
     } & testWorkArea (\x -> length (show x) `seq` pure ())
