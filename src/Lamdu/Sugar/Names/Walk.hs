@@ -526,15 +526,18 @@ instance
     walk (PaneTag x) = PaneTag x & pure
     walk (PaneNominal x) = walk x <&> PaneNominal
 
+toGlobals ::
+    (MonadNaming f, Traversable t) =>
+    IM f (t (NameRef (OldName f) o)) -> NameType -> f (IM f (t (NameRef (NewName f) o)))
+toGlobals x nameType =
+    opRun <&>
+    \run -> x >>= run . (traverse . nrName) (opGetName Nothing MayBeAmbiguous nameType)
+
 instance
     (a ~ OldName m, b ~ NewName m, i ~ IM m) =>
     Walk m (Globals a i o) (Globals b i o) where
     walk (Globals d n t) =
-        do
-            run <- opRun
-            let toGlobals x nameType =
-                    x >>= run . (traverse . nrName) (opGetName Nothing MayBeAmbiguous nameType)
-            Globals (toGlobals d GlobalDef) (toGlobals n TaggedNominal) (toGlobals t Tag) & pure
+        Globals <$> toGlobals d GlobalDef <*> toGlobals n TaggedNominal <*> toGlobals t Tag
 
 instance
     (a ~ OldName m, b ~ NewName m, i ~ IM m, Walk m pa pb) =>
