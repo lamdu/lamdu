@@ -469,7 +469,7 @@ p2nameConvertor _ nameType (P1Name (P1AnonName uuid) _ _) =
     Walk.TaggedNominal -> p2globalAnon uuid
     Walk.GlobalDef -> p2globalAnon uuid
 
-p2cpsNameConvertor :: Walk.IsUnambiguous -> Walk.CPSNameConvertor (Pass2MakeNames i o)
+p2cpsNameConvertor :: Walk.IsUnambiguous -> P1Name -> CPS (Pass2MakeNames i o) Name
 p2cpsNameConvertor _ (P1Name (P1AnonName uuid) _ _) = p2globalAnon uuid & liftCPS
 p2cpsNameConvertor u (P1Name (P1TagName aName isOp texts) tagsBelow isAutoGen) =
     CPS $ \inner ->

@@ -7,7 +7,6 @@ module Lamdu.Sugar.Names.Walk
     , isGlobal
     , FunctionSignature(..), Disambiguator
     , IsUnambiguous(..)
-    , NameConvertor, CPSNameConvertor
     , Walk(..), toWorkArea, toWorkAreaTest
     ) where
 
@@ -43,9 +42,6 @@ isGlobal GlobalDef = True
 isGlobal TaggedNominal = True
 isGlobal _ = False
 
-type CPSNameConvertor m = OldName m -> CPS m (NewName m)
-type NameConvertor m = OldName m -> m (NewName m)
-
 data FunctionSignature = FunctionSignature
     { sIsOperator :: Bool
     , sNormalArgs :: Set T.Tag
@@ -61,8 +57,8 @@ class (Monad m, Monad (IM m)) => MonadNameWalk m where
     type IM m :: Type -> Type
     opRun :: m (m a -> IM m a)
 
-    opWithName :: IsUnambiguous -> NameType -> CPSNameConvertor m
-    opGetName :: Maybe Disambiguator -> IsUnambiguous -> NameType -> NameConvertor m
+    opWithName :: IsUnambiguous -> NameType -> OldName m -> CPS m (NewName m)
+    opGetName :: Maybe Disambiguator -> IsUnambiguous -> NameType -> OldName m -> m (NewName m)
     opWithNewTag :: T.Tag -> Text -> m a -> m a
 
     tagSuffixes :: m TagSuffixes
@@ -172,8 +168,8 @@ toNode ::
     Annotated pa # ka -> m (Annotated pb # kb)
 toNode toV (Ann (Const pl) v) = Ann <$> (walk pl <&> Const) <*> toV v
 
-type BodyW t v n m (o :: Type -> Type) a = t v n (IM m) o # Annotated a
-type WalkBody t m o v0 v1 a0 a1 = BodyW t v0 (OldName m) m o a0 -> m (BodyW t v1 (NewName m) m o a1)
+type BodyW t v n (i :: Type -> Type) (o :: Type -> Type) a = t v n i o # Annotated a
+type WalkBody t m o v0 v1 a0 a1 = BodyW t v0 (OldName m) (IM m) o a0 -> m (BodyW t v1 (NewName m) (IM m) o a1)
 
 class ToBody t where
     toBody :: (MonadNameWalk m, Walk m v0 v1, Walk m a0 a1) => WalkBody t m o v0 v1 a0 a1
@@ -205,9 +201,6 @@ toFunction u func@Function{_fParams, _fBody} =
 
 instance ToBody AssignPlain where
     toBody = apBody toBody
-
-type ExprW t v n m (o :: Type -> Type) a = Annotated a # t v n (IM m) o
-type WalkExpr t m o v0 v1 a0 a1 = ExprW t v0 (OldName m) m o a0 -> m (ExprW t v1 (NewName m) m o a1)
 
 instance ToBody Assignment where
     toBody =
@@ -422,7 +415,9 @@ funcSignature apply =
     , sNormalArgs = apply ^.. aAnnotatedArgs . traverse . aaTag . tagVal & Set.fromList
     }
 
-toExpression :: (MonadNameWalk m, Walk m v0 v1, Walk m a0 a1, ToBody e) => WalkExpr e m o v0 v1 a0 a1
+toExpression ::
+    (MonadNameWalk m, Walk m v0 v1, Walk m a0 a1, ToBody e) =>
+    Annotated a0 # e v0 (OldName m) (IM m) o -> m (Annotated a1 # e v1 (NewName m) (IM m) o)
 toExpression = toNode toBody
 
 withRecordParam ::
