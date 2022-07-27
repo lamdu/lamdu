@@ -5,7 +5,7 @@ module Lamdu.Sugar.Convert
 import qualified Control.Lens as Lens
 import           Control.Monad.Once (OnceT, Typeable)
 import           Data.List.Extended (insertAt, removeAt)
-import           Data.Property (Property(Property))
+import           Data.Property (Property(..), MkProperty)
 import qualified Data.Property as Property
 import qualified Lamdu.Cache as Cache
 import qualified Lamdu.Data.Anchors as Anchors
@@ -124,18 +124,24 @@ loadPanes env =
         prop <- Anchors.panes (env ^. Anchors.codeAnchors) ^. Property.mkProperty & lift
         Property.value prop & Lens.itraversed %%@~ convertPane env prop
 
+globalNameRefs ::
+    Monad m =>
+    Anchors.Code (MkProperty (T m) (T m)) m ->
+    (Anchors.Code (MkProperty (T m) (T m)) m -> MkProperty (T m) (T m) (Set a)) ->
+    (Anchors.Code (MkProperty (T m) (T m)) m -> a -> OnceT (T m) (NameRef InternalName (T m))) ->
+    OnceT (T m) [NameRef InternalName (T m)]
+globalNameRefs cp globs makeNameRef =
+    Property.getP (globs cp) & lift <&> (^.. Lens.folded) >>= traverse (makeNameRef cp)
+
 globals ::
     Monad m =>
     Anchors.Code (Property.MkProperty (T m) (T m)) m -> Globals InternalName (OnceT (T m)) (T m)
 globals cp =
     Globals
-    { _globalDefs = globalNameRefs Anchors.globals ConvertNameRef.makeForDefinition
-    , _globalNominals = globalNameRefs Anchors.tids ConvertNameRef.makeForNominal
-    , _globalTags = globalNameRefs Anchors.tags (ConvertNameRef.makeForTag <&> Lens.mapped %~ pure)
+    { _globalDefs = globalNameRefs cp Anchors.globals ConvertNameRef.makeForDefinition
+    , _globalNominals = globalNameRefs cp Anchors.tids ConvertNameRef.makeForNominal
+    , _globalTags = globalNameRefs cp Anchors.tags (ConvertNameRef.makeForTag <&> Lens.mapped %~ pure)
     }
-    where
-        globalNameRefs globs makeNameRef =
-            Property.getP (globs cp) & lift <&> (^.. Lens.folded) >>= traverse (makeNameRef cp)
 
 loadWorkArea ::
     ( Monad m, Typeable m
