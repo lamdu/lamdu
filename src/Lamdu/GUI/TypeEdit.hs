@@ -23,5 +23,5 @@ addTypeBG view =
             & MDraw.backgroundColor bgId color
             & pure
 
-makeScheme :: _ => Sugar.Scheme Name -> m (WithTextPos View)
+makeScheme :: _ => Sugar.Scheme Name i o -> m (WithTextPos View)
 makeScheme _ = pure Element.empty

@@ -214,7 +214,7 @@ makeExprDefinition defName bodyExpr myId =
 makeBuiltinDefinition ::
     _ =>
     Sugar.Definition v Name i o (Sugar.Payload v o) ->
-    Sugar.DefinitionBuiltin Name o ->
+    Sugar.DefinitionBuiltin Name i o ->
     M.WidgetId ->
     GuiM env i o (M.TextWidget o)
 makeBuiltinDefinition def builtin myId =
@@ -252,7 +252,7 @@ make def myId =
             <&> M.weakerEvents nextOutdated
     & local (M.animIdPrefix .~ Widget.toAnimId myId)
 
-topLevelSchemeTypeView :: _ => Sugar.Scheme Name -> GuiM env i o (M.WithTextPos M.View)
+topLevelSchemeTypeView :: _ => Sugar.Scheme Name i Proxy -> GuiM env i o (M.WithTextPos M.View)
 topLevelSchemeTypeView _ =
     -- At the definition-level, Schemes can be shown as ordinary
     -- types to avoid confusing forall's:

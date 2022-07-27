@@ -72,25 +72,25 @@ instance Walk m (Property o ParamKind) (Property o ParamKind) where walk = pure
 instance Walk m s t => Walk m (s, x, y) (t, x, y) where
     walk = _1 walk
 
-binderVarType :: VarForm name m -> NameType
+binderVarType :: VarForm name i o -> NameType
 binderVarType (GetDefinition _) = GlobalDef
 binderVarType _ = TaggedVar
 
 instance (a ~ OldName m, b ~ NewName m) => Walk m (TId a) (TId b) where
     walk = tidName %%~ opGetName Nothing MayBeAmbiguous TaggedNominal
 
-instance (a ~ OldName m, b ~ NewName m) => Walk m (Scheme a) (Scheme b) where
-    walk (Scheme tvs typ) = Scheme tvs <$> walk typ
+instance (a ~ OldName m, b ~ NewName m, i ~ IM m) => Walk m (Scheme a i o) (Scheme b i o) where
+    walk (Scheme tvs typ) = Scheme <$> walk tvs <*> walk typ
 
-instance (a ~ OldName m, b ~ NewName m) => Walk m (DefinitionOutdatedType a o p) (DefinitionOutdatedType b o p) where
+instance (a ~ OldName m, b ~ NewName m, i ~ IM m) => Walk m (DefinitionOutdatedType a i o p) (DefinitionOutdatedType b i o p) where
     walk (DefinitionOutdatedType whenUsed current useCur) =
         DefinitionOutdatedType <$> walk whenUsed <*> walk current ?? useCur
 
 toBinderVarRef ::
-    MonadNameWalk m =>
+    (MonadNameWalk m, i ~ IM m) =>
     Maybe Disambiguator ->
-    GetVar (OldName m) o ->
-    m (GetVar (NewName m) o)
+    GetVar (OldName m) i o ->
+    m (GetVar (NewName m) i o)
 toBinderVarRef mDisambig (GetVar name form goto var inline) =
     GetVar
     <$> opGetName mDisambig amb (binderVarType form) name
@@ -102,7 +102,7 @@ toBinderVarRef mDisambig (GetVar name form goto var inline) =
         amb | Lens.has _GetLightParam form = Unambiguous
             | otherwise = MayBeAmbiguous
 
-instance (a ~ OldName m, b ~ NewName m) => Walk m (GetVar a o) (GetVar b o) where
+instance (a ~ OldName m, b ~ NewName m, i ~ IM m) => Walk m (GetVar a i o) (GetVar b i o) where
     walk = toBinderVarRef Nothing
 
 instance (a ~ OldName m, b ~ NewName m) => Walk m (ResInject a # Annotated p) (ResInject b # Annotated p) where

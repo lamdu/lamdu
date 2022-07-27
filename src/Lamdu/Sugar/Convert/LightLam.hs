@@ -70,7 +70,7 @@ instance AddLightLams (Else v InternalName i o)
 instance AddLightLams (Function v InternalName i o)
 instance AddLightLams (PostfixFunc v InternalName i o)
 
-instance AddLightLams (Const (GetVar InternalName o)) where
+instance AddLightLams (Const (GetVar InternalName i o)) where
     markLightParams paramNames =
         Lens._Wrapped . Lens.filteredBy (vName . Lens.filtered f) . vForm .~ GetLightParam
         where

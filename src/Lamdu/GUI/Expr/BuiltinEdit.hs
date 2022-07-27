@@ -59,7 +59,7 @@ makeNamePartEditor color namePartStr setter myId =
             , TextEdit._focused = ""
             }
 
-make :: _ => Sugar.DefinitionBuiltin name o -> Widget.Id -> f (M.TextWidget o)
+make :: _ => Sugar.DefinitionBuiltin name i o -> Widget.Id -> f (M.TextWidget o)
 make def myId =
     do
         colors <- Lens.view (has . Theme.textColors)

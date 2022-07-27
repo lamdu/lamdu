@@ -35,7 +35,7 @@ bodyUnfinished =
     & Lens.failing (_BodyLeaf . _LeafGetVar . varRefUnfinished)
     & Lens.failing (_BodyLabeledApply . aFunc . hVal . Lens._Wrapped . varRefUnfinished)
 
-defBodySchemes :: Lens.Traversal' (DefinitionBody v name i o expr) (Scheme name)
+defBodySchemes :: Lens.Traversal' (DefinitionBody v name i o expr) (Scheme name i Proxy)
 defBodySchemes f (DefinitionBodyBuiltin b) =
     b & biType %%~ f
     <&> DefinitionBodyBuiltin
@@ -43,7 +43,7 @@ defBodySchemes f (DefinitionBodyExpression de) =
     de & deType %%~ f
     <&> DefinitionBodyExpression
 
-defSchemes :: Lens.Traversal' (Definition v name i o expr) (Scheme name)
+defSchemes :: Lens.Traversal' (Definition v name i o expr) (Scheme name i Proxy)
 defSchemes = drBody . defBodySchemes
 
 binderResultExpr ::

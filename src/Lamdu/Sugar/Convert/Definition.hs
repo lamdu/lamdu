@@ -73,7 +73,7 @@ convertDefIBuiltin scheme name defI =
     DefinitionBodyBuiltin DefinitionBuiltin
     { _biName = name
     , _biSetName = setName
-    , _biType = typeS
+    , _biType = typeS & undefined -- TODO
     }
     where
         entityId = ExprIRef.globalId defI & EntityId.ofBinder

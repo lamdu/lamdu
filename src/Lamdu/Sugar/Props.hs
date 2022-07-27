@@ -31,7 +31,7 @@ instance SugarExpr (PostfixFunc v name i o)
 instance SugarExpr (HoleOpt v name i o)
 instance SugarExpr (FragOpt v name i o)
 
-instance SugarExpr (Const (GetVar name o)) where isUnfinished = Lens.has (Lens._Wrapped . varRefUnfinished)
+instance SugarExpr (Const (GetVar name i o)) where isUnfinished = Lens.has (Lens._Wrapped . varRefUnfinished)
 instance SugarExpr (Assignment v name i o) where isUnfinished = Lens.anyOf (_BodyPlain . apBody) isUnfinished
 instance SugarExpr (Else v name i o) where isUnfinished = Lens.anyOf _SimpleElse isUnfinished
 
@@ -56,5 +56,5 @@ instance SugarExpr (Term v name i o) where
     isForbiddenInLightLam (BodyLam f) = isForbiddenInLightLam (f ^. lamFunc)
     isForbiddenInLightLam x = isUnfinished x
 
-varRefUnfinished :: Lens.Traversal' (GetVar name m) ()
+varRefUnfinished :: Lens.Traversal' (GetVar name i o) ()
 varRefUnfinished = vForm . _GetDefinition . Lens.failing _DefDeleted (_DefTypeChanged . Lens.united)

@@ -58,7 +58,7 @@ instance HAnnotations a b (Ann (Const (Payload a o))) (Ann (Const (Payload b o))
         <$> (Lens._Wrapped . plAnnotation) f p
         <*> hAnnotations f x
 
-instance HAnnotations a b (Const (GetVar n o)) (Const (GetVar n o)) where hAnnotations _ = Lens._Wrapped pure
+instance HAnnotations a b (Const (GetVar n i o)) (Const (GetVar n i o)) where hAnnotations _ = Lens._Wrapped pure
 instance HAnnotations a b (Const (i (TagChoice n o))) (Const (i (TagChoice n o))) where hAnnotations _ = Lens._Wrapped pure
 instance HAnnotations a b (Const (TagRef n i o)) (Const (TagRef n i o)) where hAnnotations _ = Lens._Wrapped pure
 instance HAnnotations a b (Composite a n i o) (Composite b n i o)

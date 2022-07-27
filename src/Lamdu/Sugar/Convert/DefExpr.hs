@@ -53,7 +53,7 @@ convert defType defExpr defI =
         defTypeS <- ConvertType.convertScheme (EntityId.currentTypeOf entityId) defType
         varInfo <- mkVarInfo (defExpr ^. Definition.expr . hAnn . Input.inferredType)
         DefinitionBodyExpression DefinitionExpression
-            { _deType = defTypeS
+            { _deType = defTypeS & undefined -- TODO
             , _dePresentationMode =
                 lift (presMode ^. Property.mkProperty) <$
                 content ^? hVal . _BodyFunction . fParams . _LhsRecord . tlItems . Lens._Just . tlTail . traverse

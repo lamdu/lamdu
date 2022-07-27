@@ -6,6 +6,7 @@ module Lamdu.Sugar.Convert.GetVar
 
 import qualified Control.Lens as Lens
 import           Control.Lens.Extended ((~~>))
+import           Control.Monad.Once (OnceT)
 import           Control.Monad.Trans.Except.Extended (runMatcherT, justToLeft)
 import           Control.Monad.Trans.Maybe (MaybeT)
 import           Control.Monad.Transaction (MonadTransaction, getP, setP)
@@ -92,7 +93,7 @@ inlineableDefinition ctx var entityId =
 
 convertGlobal ::
     Monad m =>
-    V.Var -> Input.Payload m # V.Term -> MaybeT (ConvertM m) (GetVar InternalName (T m))
+    V.Var -> Input.Payload m # V.Term -> MaybeT (ConvertM m) (GetVar InternalName (OnceT (T m)) (T m))
 convertGlobal var exprPl =
     do
         ctx <- Lens.view id
@@ -123,7 +124,7 @@ convertGlobal var exprPl =
         defI = ExprIRef.defI var
 
 convertParam ::
-    Monad m => V.Var -> Input.Payload m # V.Term -> ConvertM m (GetVar InternalName (T m))
+    Monad m => V.Var -> Input.Payload m # V.Term -> ConvertM m (GetVar InternalName i (T m))
 convertParam param exprPl =
     do
         inline <- Lens.view (ConvertM.scScopeInfo . ConvertM.siLetItems . Lens.at param)

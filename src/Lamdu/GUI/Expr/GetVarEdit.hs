@@ -61,7 +61,7 @@ makeNameRef ::
     _ =>
     Role ->
     Lens.ALens' TextColors M.Color -> Widget.Id ->
-    Sugar.GetVar Name o ->
+    Sugar.GetVar Name i o ->
     GuiM env i o (M.TextWidget o)
 makeNameRef role color myId var =
     do
@@ -107,7 +107,7 @@ makeInlineEventMap env (Sugar.CannotInlineDueToUses (x:_)) =
 makeInlineEventMap _ _ = mempty
 
 definitionTypeChangeBox ::
-    _ => Sugar.DefinitionOutdatedType Name f Sugar.EntityId -> Widget.Id -> m (M.TextWidget f)
+    _ => Sugar.DefinitionOutdatedType Name i o Sugar.EntityId -> Widget.Id -> m (M.TextWidget o)
 definitionTypeChangeBox info getVarId =
     do
         env <- Lens.view id
@@ -139,7 +139,7 @@ definitionTypeChangeBox info getVarId =
         animId = Widget.toAnimId myId
 
 processDefinitionWidget ::
-    _ => Sugar.DefinitionForm Name f -> Widget.Id -> m (M.TextWidget f) -> m (M.TextWidget f)
+    _ => Sugar.DefinitionForm Name i o -> Widget.Id -> m (M.TextWidget o) -> m (M.TextWidget o)
 processDefinitionWidget Sugar.DefUpToDate _myId mkLayout = mkLayout
 processDefinitionWidget Sugar.DefDeleted _myId mkLayout =
     Styled.deletedUse <*> mkLayout
@@ -188,7 +188,7 @@ processDefinitionWidget (Sugar.DefTypeChanged info) myId mkLayout =
 make ::
     _ =>
     Role ->
-    Annotated (ExprGui.Payload i o) # Const (Sugar.GetVar Name o) ->
+    Annotated (ExprGui.Payload i o) # Const (Sugar.GetVar Name i o) ->
     GuiM env i o (Responsive o)
 make role (Ann (Const pl) (Const var)) =
     do
@@ -215,7 +215,7 @@ make role (Ann (Const pl) (Const var)) =
 
 makePunnedVar ::
     _ =>
-    Sugar.PunnedVar Name o # Annotated (ExprGui.Payload i o) ->
+    Sugar.PunnedVar Name i o # Annotated (ExprGui.Payload i o) ->
     GuiM env i o (Responsive o)
 makePunnedVar (Sugar.PunnedVar var tagId) =
     make Normal var
@@ -225,7 +225,7 @@ makePunnedVar (Sugar.PunnedVar var tagId) =
 
 makePunnedVars ::
     _ =>
-    [Sugar.PunnedVar Name o # Annotated (ExprGui.Payload i o)] ->
+    [Sugar.PunnedVar Name i o # Annotated (ExprGui.Payload i o)] ->
     GuiM env i o (Responsive o)
 makePunnedVars args =
     do

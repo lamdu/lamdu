@@ -6,6 +6,7 @@ module Lamdu.Sugar.Convert.DefExpr.OutdatedDefs
 import           Control.Applicative ((<|>))
 import qualified Control.Lens.Extended as Lens
 import           Control.Monad (foldM)
+import           Control.Monad.Once (OnceT)
 import           Control.Monad.Transaction (MonadTransaction(..))
 import qualified Data.Map as Map
 import qualified Data.Monoid as Monoid
@@ -241,7 +242,7 @@ scan ::
     EntityId -> Def.Expr (Ann (HRef n) # V.Term) ->
     (Def.Expr (ValI n) -> T n ()) ->
     T n PostProcess.Result ->
-    m (Map V.Var (Sugar.DefinitionOutdatedType InternalName (T n) ()))
+    m (Map V.Var (Sugar.DefinitionOutdatedType InternalName (OnceT (T n)) (T n) ()))
 scan entityId defExpr setDefExpr typeCheck =
     defExpr ^@.. Def.exprFrozenDeps . depsGlobalTypes . Lens.itraversed
     & traverse (uncurry scanDef) <&> mconcat
@@ -258,8 +259,8 @@ scan entityId defExpr setDefExpr typeCheck =
                     currentTypeS <- ConvertType.convertScheme (EntityId.currentTypeOf entityId) newUsedDefType
                     globalVar Lens.~~>
                         Sugar.DefinitionOutdatedType
-                        { Sugar._defTypeWhenUsed = usedTypeS
-                        , Sugar._defTypeCurrent = currentTypeS
+                        { Sugar._defTypeWhenUsed = usedTypeS & undefined -- TODO
+                        , Sugar._defTypeCurrent = currentTypeS & undefined -- TODO
                         , Sugar._defTypeUseCurrent =
                             updateDefType usedType newUsedDefType globalVar
                             defExpr setDefExpr typeCheck

@@ -90,7 +90,7 @@ data Context m = Context
       -- so that can detach bad edits.
       _scPostProcessRoot :: T m PostProcess.Result
     , _scOutdatedDefinitions ::
-        Map V.Var (Sugar.DefinitionOutdatedType InternalName (T m) ())
+        Map V.Var (Sugar.DefinitionOutdatedType InternalName (OnceT (T m)) (T m) ())
     , _scFrozenDeps :: Property (T m) Deps
     , _scDebugMonitors :: Debug.Monitors
     , _scCacheFunctions :: Cache.Functions

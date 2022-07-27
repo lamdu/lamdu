@@ -79,10 +79,10 @@ data OperatorArgs v name i o k = OperatorArgs
 -- TODO: func + specialArgs into a single sum type so that field order
 -- matches gui order, no need for special traversal code
 data LabeledApply v name i o k = LabeledApply
-    { _aFunc :: k :# Const (GetVar name o)
+    { _aFunc :: k :# Const (GetVar name i o)
     , _aMOpArgs :: Maybe (OperatorArgs v name i o k)
     , _aAnnotatedArgs :: [AnnotatedArg v name i o k]
-    , _aPunnedArgs :: [PunnedVar name o k]
+    , _aPunnedArgs :: [PunnedVar name i o k]
     } deriving Generic
 
 data PostfixApply v name i o k = PostfixApply
@@ -113,7 +113,7 @@ data FragOpt v name i o k
     = FragPostfix [k :# PostfixFunc v name i o] -- a single option can suggest chaining of multiple post-fix applications
     | FragInject (TagRef name i o)
     | FragWrapInRec (TagRef name i o)
-    | FragApplyFunc (GetVar name o)
+    | FragApplyFunc (GetVar name i o)
     | FragOp (FragOperator v name i o k)
     | FragToNom (TId name)
     | FragLam
@@ -123,7 +123,7 @@ data FragOpt v name i o k
     deriving Generic
 
 data FragOperator v name i o k = FragOperator
-    { _oFunc :: k :# Const (GetVar name o)
+    { _oFunc :: k :# Const (GetVar name i o)
     , -- Argument on right-hand-side (LTR) of operator.
       -- (usually a hole, but may be completed to other values)
       _oRightArg :: k :# Term v name i o
@@ -172,7 +172,7 @@ data CompositeTail v name i o k
 data Composite v name i o k = Composite
     { _cList :: TaggedList name i o (k :# Term v name i o)
     , -- Punned items are like Haskell's NamedFieldPuns
-      _cPunnedItems :: [PunnedVar name o k]
+      _cPunnedItems :: [PunnedVar name i o k]
     , _cTail :: CompositeTail v name i o k
     } deriving Generic
 
@@ -190,7 +190,7 @@ data PostfixFunc v name i o k
 data Leaf name i o
     = LeafLiteral (Literal (Property o))
     | LeafHole (Hole name i o)
-    | LeafGetVar (GetVar name o)
+    | LeafGetVar (GetVar name i o)
     | LeafInject (TagRef name i o)
     deriving Generic
 
@@ -297,7 +297,7 @@ instance RNodes (Term v name i o)
 type Dep v (c :: HyperType -> Constraint) name i o =
     ( c (Assignment v name i o)
     , c (Binder v name i o)
-    , c (Const (GetVar name o))
+    , c (Const (GetVar name i o))
     , c (Const (i (TagChoice name o)))
     , c (Const (TagRef name i o))
     , c (Else v name i o)

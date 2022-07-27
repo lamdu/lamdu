@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TemplateHaskell, KindSignatures #-}
 module Lamdu.Sugar.Types
     ( module Exported
     , EntityId
@@ -9,7 +9,6 @@ module Lamdu.Sugar.Types
     , Globals(..), globalDefs, globalNominals, globalTags
     , NameRef(..), nrName, nrId
     , GotoDest(..), _GoToDef, _GoToNom, _GoToTag
-    , ParamKind(..), _TypeParam, _RowParam
     , NominalPane(..), npName, npParams, npNominalId, npEntityId, npBody
     , Definition(..), drName, drBody, drDefI, drGotoNextOutdated
     , DefinitionBody(..), _DefinitionBodyExpression, _DefinitionBodyBuiltin
@@ -41,7 +40,7 @@ import           Lamdu.Sugar.Types.Type as Exported
 import           Lamdu.Prelude
 
 data DefinitionExpression v name i o a = DefinitionExpression
-    { _deType :: Scheme name
+    { _deType :: Scheme name i Proxy
     , _dePresentationMode :: Maybe (i (Property o Meta.PresentationMode))
     , _deContent :: Annotated a # Assignment v name i o
     , _deVarInfo :: VarInfo
@@ -59,15 +58,15 @@ instance Foldable (DefinitionExpression v name i o) where
 instance Traversable (DefinitionExpression v name i o) where
     traverse f = deContent (htraverseFlipped (\_ -> Lens._Wrapped f))
 
-data DefinitionBuiltin name o = DefinitionBuiltin
+data DefinitionBuiltin name i o = DefinitionBuiltin
     { _biName :: Definition.FFIName
     , _biSetName :: Definition.FFIName -> o ()
-    , _biType :: Scheme name
+    , _biType :: Scheme name i Proxy
     } deriving Generic
 
 data DefinitionBody v name i o a
     = DefinitionBodyExpression (DefinitionExpression v name i o a)
-    | DefinitionBodyBuiltin (DefinitionBuiltin name o)
+    | DefinitionBodyBuiltin (DefinitionBuiltin name i o)
     deriving (Functor, Foldable, Traversable, Generic)
 
 data Definition v name i o a = Definition
@@ -87,14 +86,12 @@ data TagPane o = TagPane
     , _tpSetOrder :: Int -> o ()
     } deriving Generic
 
-data ParamKind = TypeParam | RowParam deriving (Eq, Ord, Generic)
-
 data NominalPane name i o = NominalPane
     { _npName :: OptionalTag name i o
     , _npNominalId :: T.NominalId
     , _npEntityId :: EntityId
     , _npParams :: TaggedList name i o (Property o ParamKind)
-    , _npBody :: Maybe (Scheme name)
+    , _npBody :: Maybe (Scheme name i o)
     } deriving Generic
 
 data PaneBody v name i o a
@@ -135,4 +132,4 @@ data WorkArea v name i o a = WorkArea
 traverse Lens.makeLenses
     [''Definition, ''DefinitionBuiltin, ''Pane, ''NameRef, ''TagPane, ''Globals, ''WorkArea, ''NominalPane]
     <&> concat
-traverse Lens.makePrisms [''DefinitionBody, ''PaneBody, ''ParamKind, ''GotoDest] <&> concat
+traverse Lens.makePrisms [''DefinitionBody, ''PaneBody, ''GotoDest] <&> concat

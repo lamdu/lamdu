@@ -5,7 +5,6 @@ module Test.Lamdu.SugarStubs where
 import           Data.Property (Property(..))
 import           Data.String (IsString(..))
 import           Data.UUID.Types (UUID)
-import           Hyper.Syntax.Scheme (QVars(..))
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
 import           Lamdu.Data.Tag (TextsInLang(..), IsOperator(..))
@@ -25,7 +24,7 @@ type Expr =
 litNum :: Double -> Expr
 litNum x = prop x & Sugar.LiteralNum & Sugar.LeafLiteral & Sugar.BodyLeaf & expr
 
-defRef :: String -> T.Tag -> Sugar.GetVar InternalName Proxy
+defRef :: String -> T.Tag -> Sugar.GetVar InternalName Identity Proxy
 defRef var tag =
     Sugar.GetVar
     { Sugar._vName = taggedEntityName (fromString var) tag
@@ -41,15 +40,15 @@ node ::
 node = Const payload & Ann
 
 labeledApplyFunc ::
-    Sugar.GetVar InternalName Proxy ->
+    Sugar.GetVar InternalName Identity Proxy ->
     Annotated (Sugar.Payload (Sugar.Annotation v InternalName) Proxy) #
-    Const (Sugar.GetVar InternalName Proxy)
+    Const (Sugar.GetVar InternalName Identity Proxy)
 labeledApplyFunc = node . Const
 
 type Infix2 = Expr -> Expr -> Expr
 
 infix2Apply ::
-    Sugar.GetVar InternalName Proxy ->
+    Sugar.GetVar InternalName Identity Proxy ->
     Infix2
 infix2Apply varRef l r =
     Sugar.LabeledApply (labeledApplyFunc varRef) (Just (Sugar.OperatorArgs l r Proxy)) [] []
@@ -131,7 +130,7 @@ def var tag body =
         Sugar.DefinitionBodyExpression Sugar.DefinitionExpression
         { Sugar._deType =
             Sugar.Scheme
-            { Sugar._schemeForAll = emptyForalls
+            { Sugar._schemeForAll = Sugar.TaggedList (Identity tagRefReplace) Nothing
             , Sugar._schemeType = ()
             }
         , Sugar._dePresentationMode = Nothing
@@ -140,8 +139,6 @@ def var tag body =
         , Sugar._deResult = pure Nothing
         }
     }
-    where
-        emptyForalls = T.Types (QVars mempty) (QVars mempty)
 
 funcExpr ::
     UUID -> T.Tag -> Expr ->

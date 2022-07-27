@@ -114,8 +114,8 @@ data NullaryInject name i o k = NullaryInject
       _iContent :: k :# Const (i (TagChoice name o))
     } deriving Generic
 
-data PunnedVar name o k = PunnedVar
-    { _pvVar :: k :# Const (GetVar name o)
+data PunnedVar name i o k = PunnedVar
+    { _pvVar :: k :# Const (GetVar name i o)
     , _pvTagEntityId :: EntityId
     } deriving Generic
 
