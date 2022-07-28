@@ -132,7 +132,7 @@ instance Monad i => MonadNameWalk (Pass1PropagateUp i o) where
         p1Name mDisambiguator u nameType p0Name & runcps
     opWithNewTag _ _ = id
 
-instance Monad i => MonadNameWalkInfo (Pass1PropagateUp i o) i where
+instance (Monad i, Monad f) => MonadNameWalkInfo (Pass1PropagateUp i o) f where
     opRun = pure (pure . fst . runPass1PropagateUp)
 
 displayOf :: Has (Texts.Name Text) env => env -> Text -> Text
@@ -410,7 +410,7 @@ instance MonadNameWalk (Pass2MakeNames i o) where
     opWithNewTag tag text = local (p2TagTexts . Lens.at tag ?~ TagText text NoCollision)
     tagSuffixes = Lens.view p2TagSuffixes
 
-instance Monad i => MonadNameWalkInfo (Pass2MakeNames i o) i where
+instance Monad f => MonadNameWalkInfo (Pass2MakeNames i o) f where
     opRun = Lens.view id <&> flip (runReader . runPass2MakeNames) <&> (pure .)
 
 getTag :: Bool -> Annotated.Name -> Pass2MakeNames i o T.Tag
