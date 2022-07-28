@@ -39,7 +39,7 @@ i.e: one may create code without naming all variables.
 But variables would still need to be displayed,
 and when unnamed by the user they will get auto-generated names.
 
-Auto-generated names are often fine for small lambdas like `num → num + 1`, and not having to name those variables is convenient.
+Auto-generated names are often fine for small lambdas like `λnum → num + 1`, and not having to name those variables is convenient.
 
 To clarify that the auto-generated names are not meaningful, ephemeral and could automatically
 change, they are displayed with *italic* fonts at their binding site.
