@@ -1,6 +1,6 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving, TypeFamilies, TemplateHaskell #-}
-{-# LANGUAGE NoMonomorphismRestriction, DerivingVia, NamedFieldPuns #-}
-{-# LANGUAGE MultiParamTypeClasses, FlexibleInstances, TypeApplications #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving, TypeFamilies, TemplateHaskell, DataKinds #-}
+{-# LANGUAGE NoMonomorphismRestriction, DerivingVia, NamedFieldPuns, UndecidableInstances #-}
+{-# LANGUAGE MultiParamTypeClasses, FlexibleInstances, TypeApplications, ScopedTypeVariables #-}
 
 module Lamdu.Sugar.Names.Add
     ( addToWorkArea
@@ -18,6 +18,7 @@ import qualified Control.Monad.Reader as Reader
 import           Control.Monad.State (evalState)
 import qualified Control.Monad.Writer as Writer
 import           Control.Monad.Trans.FastWriter (Writer, runWriter, MonadWriter)
+import           Control.Monad.Unit (Unit(..))
 import qualified Data.Char as Char
 import           Data.Foldable (fold)
 import           Data.Kind (Type)
@@ -43,6 +44,7 @@ import qualified Lamdu.Sugar.Names.Clash as Clash
 import           Lamdu.Sugar.Names.Walk (MonadNameWalk(..), MonadNameWalkInfo(..), Disambiguator)
 import qualified Lamdu.Sugar.Names.Walk as Walk
 import           Lamdu.Sugar.Types hiding (Type)
+import           TypeFun.Data.Eq (Equal)
 
 import           Lamdu.Prelude
 
@@ -74,8 +76,17 @@ instance Monad i => MonadNameWalk (Pass0LoadNames i) where
     opGetName _ _ _ = getP0Name
     opWithNewTag _ _ = id
 
-instance Monad i => MonadNameWalkInfo (Pass0LoadNames i) i where
-    opRun = Reader.ask <&> runPass0LoadNames
+class Pass0Info i (b :: Bool) f where
+    opRunH :: Proxy b -> Pass0LoadNames i (Pass0LoadNames i a -> f a)
+
+instance Applicative i => Pass0Info i 'True Unit where
+    opRunH _ = pure (const Unit)
+
+instance Monad i => Pass0Info i 'False i where
+    opRunH _ = Reader.ask <&> runPass0LoadNames
+
+instance (Monad f, Monad i, Pass0Info i (Equal Unit f) f) => MonadNameWalkInfo (Pass0LoadNames i) f where
+    opRun = opRunH (Proxy @(Equal Unit f))
 
 p0lift :: Monad i => i a -> Pass0LoadNames i a
 p0lift = Pass0LoadNames . lift
@@ -517,6 +528,7 @@ addToWorkArea ::
     , Has (Texts.Name Text) env
     , Has (Texts.Code Text) env
     , Monad i
+    , Pass0Info i (Equal Unit i) i
     ) =>
     env ->
     (T.Tag -> i (Tag.IsOperator, Tag.TextsInLang)) ->
@@ -535,6 +547,7 @@ addToWorkAreaTest ::
     , Has (Texts.Name Text) env
     , Has (Texts.Code Text) env
     , Monad i
+    , Pass0Info i (Equal Unit i) i
     ) =>
     env ->
     (T.Tag -> i (Tag.IsOperator, Tag.TextsInLang)) ->
