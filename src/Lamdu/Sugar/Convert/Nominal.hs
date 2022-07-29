@@ -92,15 +92,6 @@ schemeVars = HyperScheme._QVars . Lens.ifolded . Lens.asIndex . ExprLens.qvarId 
 qvarssIdentifiers :: Lens.Traversal' (T.Types # HyperScheme.QVars) Identifier
 qvarssIdentifiers f = htraverse (Proxy @ExprLens.HasQVar #> ExprLens.qvarsQVarIds f)
 
-editNom :: Lens.Bifunctor p =>
-    (Nominal.NomVarTypes t # HyperScheme.QVars -> Nominal.NomVarTypes t # HyperScheme.QVars) ->
-    (HyperScheme.Scheme (Nominal.NomVarTypes t) t # Pure ->
-        HyperScheme.Scheme (Nominal.NomVarTypes t) t # Pure) ->
-    p (Nominal.NomVarTypes t # HyperScheme.QVars) (Pure # Nominal.NominalDecl t) ->
-    p (Nominal.NomVarTypes t # HyperScheme.QVars) (Pure # Nominal.NominalDecl t)
-editNom params scheme =
-    Lens.bimap params (_Pure %~ (Nominal.nParams %~ params) . (Nominal.nScheme %~ scheme))
-
 filterParams :: forall t. ExprLens.HasQVar t => Identifier -> HyperScheme.QVars # t -> HyperScheme.QVars # t
 filterParams p =
     HyperScheme._QVars %~ Map.filterWithKey (\k _ -> k ^. ExprLens.qvarId (Proxy @t) /= p)
@@ -122,59 +113,67 @@ instance DelTypeVar T.Row where
         T.RVar (T.Var x) | x == v -> T.REmpty
         b -> hmap (Proxy @DelTypeVar #> delTypeVar v) b
 
+nominalParams :: (Monad m, HasCodeAnchors env m) =>
+    env ->
+    T.Types # HyperScheme.QVars ->
+    (T.Types # HyperScheme.QVars ->
+        (HyperScheme.Scheme T.Types T.Type # Pure -> HyperScheme.Scheme T.Types T.Type # Pure) ->
+        T m ()) ->
+    EntityId ->
+    OnceT (T m) (TaggedList InternalName (OnceT (T m)) (T m) (Property (T m) ParamKind))
+nominalParams env params edit entityId =
+    do
+        addParam <-
+            runReaderT
+            (ConvertTag.replace (nameWithContext Nothing entityId) (Set.fromList usedParams) (pure ()) addParamInfo) env
+            & join
+        hfoldMap
+            (Proxy @NominalParamKind #> convertNominalParams writeReplacedTypeVarById delParam setKind addParam entityId tagList)
+            params
+            <&> ConvertTaggedList.convert addParam
+            & (`runReaderT` env)
+    where
+        tagList = hfoldMap (Proxy @NominalParamKind #> (^.. qvars)) params & Set.fromList
+        writeReplacedTypeVarById (T.Tag oldId) (T.Tag newId) =
+            edit (params & qvarssIdentifiers . Lens.filteredBy (Lens.only oldId) .~ newId)
+            (editParamInScheme (replaceQVars newId) oldId)
+        filterParamList t = hmap (Proxy @ExprLens.HasQVar #> filterParams t) params
+        delParamInScheme = editParamInScheme delTypeVar
+        delParam (T.Tag t) = edit (filterParamList t) (delParamInScheme t)
+        setKind (T.Tag t) k =
+            edit (add (filterParamList t)) (delParamInScheme t)
+            where
+                add =
+                    case k of
+                    TypeParam -> T.tType . HyperScheme._QVars . Lens.at (T.Var t) ?~ mempty
+                    RowParam -> T.tRow . HyperScheme._QVars . Lens.at (T.Var t) ?~ mempty
+        addParamInfo () t@(T.Tag i) =
+            edit (params & T.tType . HyperScheme._QVars . Lens.at (T.Var i) ?~ mempty) id
+            & ConvertTag.TagResultInfo (EntityId.ofTag entityId t)
+        usedParams = params ^.. qvarssIdentifiers <&> T.Tag
+
 pane ::
     (Monad m, HasCodeAnchors env m) =>
     env -> NominalId -> OnceT (T m) (PaneBody v InternalName (OnceT (T m)) (T m) a)
 pane env nomId =
     do
         nom <- ExprLoad.nominal nomId & lift
+        let (params, mScheme) =
+                case nom of
+                Left p -> (p, Nothing)
+                Right (Pure (Nominal.NominalDecl p scheme)) -> (p, Just scheme)
+        body <- Lens._Just (ConvertType.convertScheme (EntityId.currentTypeOf entityId) . Pure) mScheme & (`runReaderT` env)
+        let editNom p e =
+                Lens.bimap (const p) (_Pure %~ (Nominal.nParams .~ p) . (Nominal.nScheme %~ e)) nom
+                & ExprLoad.writeNominal nomId
+        paramsS <- nominalParams env params editNom entityId
         tag <- ConvertTag.taggedEntityWith (env ^. Anchors.codeAnchors) Nothing nomId
-        let entityId = EntityId.ofNominalPane nomId
-        (params, body) <-
-            case nom of
-            Left params -> pure (params, Nothing)
-            Right (Pure (Nominal.NominalDecl params scheme)) ->
-                ConvertType.convertScheme (EntityId.currentTypeOf entityId) (Pure scheme)
-                <&> Just
-                <&> (,) params
-                & (`runReaderT` env)
-        let tagList = hfoldMap (Proxy @NominalParamKind #> (^.. qvars)) params & Set.fromList
-        let writeReplacedTypeVarById (T.Tag oldId) (T.Tag newId) =
-                editNom (qvarssIdentifiers . Lens.filteredBy (Lens.only oldId) .~ newId)
-                (editParamInScheme (replaceQVars newId) oldId) nom
-                & ExprLoad.writeNominal nomId
-        let withDeletedParam (T.Tag t) =
-                editNom (hmap (Proxy @ExprLens.HasQVar #> filterParams t))
-                (editParamInScheme delTypeVar t) nom
-        let delParam = ExprLoad.writeNominal nomId . withDeletedParam
-        let setKind (T.Tag t) k =
-                withDeletedParam (T.Tag t)
-                & editNom add id
-                & ExprLoad.writeNominal nomId
-                where
-                    add =
-                        case k of
-                        TypeParam -> T.tType . HyperScheme._QVars . Lens.at (T.Var t) ?~ mempty
-                        RowParam -> T.tRow . HyperScheme._QVars . Lens.at (T.Var t) ?~ mempty
-        let addParamInfo () t@(T.Tag i) =
-                editNom (T.tType . HyperScheme._QVars . Lens.at (T.Var i) ?~ mempty) id nom
-                & ExprLoad.writeNominal nomId
-                & ConvertTag.TagResultInfo (EntityId.ofTag entityId t)
-        let usedParams = params ^.. qvarssIdentifiers <&> T.Tag
-        addParam <-
-            runReaderT
-            (ConvertTag.replace (nameWithContext Nothing nomId) (Set.fromList usedParams) (pure ()) addParamInfo) env
-            & join
-        paramsS <-
-            hfoldMap
-            (Proxy @NominalParamKind #>
-                convertNominalParams writeReplacedTypeVarById delParam setKind addParam entityId tagList)
-            params
-            & (`runReaderT` env)
         PaneNominal NominalPane
             { _npName = tag
-            , _npParams = ConvertTaggedList.convert addParam paramsS
+            , _npParams = paramsS
             , _npEntityId = entityId
             , _npBody = body
             , _npNominalId = nomId
             } & pure
+    where
+        entityId = EntityId.ofNominalPane nomId
