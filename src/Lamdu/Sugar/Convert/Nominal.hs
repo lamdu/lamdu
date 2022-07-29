@@ -128,7 +128,7 @@ pane ::
 pane env nomId =
     do
         nom <- ExprLoad.nominal nomId & lift
-        tag <- ConvertTag.taggedEntityWith (env ^. Anchors.codeAnchors) Nothing nomId & join
+        tag <- ConvertTag.taggedEntityWith (env ^. Anchors.codeAnchors) Nothing nomId
         let entityId = EntityId.ofNominalPane nomId
         (params, body) <-
             case nom of

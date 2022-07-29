@@ -123,15 +123,14 @@ replaceWith name forbiddenTags resultSeed resultInfo tagsProp =
 -- NOTE: Used for panes, outside ConvertM, so has no ConvertM.Context env
 -- | Convert a "Entity" (param, def, TId) via its associated tag
 taggedEntityWith ::
-    (UniqueId.ToUUID a, MonadTransaction n m) =>
+    (UniqueId.ToUUID a, Monad n) =>
     Anchors.CodeAnchors n -> Maybe VarInfo -> a ->
-    m (OnceT (T n) (OptionalTag InternalName (OnceT (T n)) (T n)))
+    OnceT (T n) (OptionalTag InternalName (OnceT (T n)) (T n))
 taggedEntityWith cp mVarInfo entity =
-    getP prop
-    <&>
-    \entityTag ->
-    refWith cp entityTag (nameWithContext mVarInfo entity)
-    mempty (pure ()) resultInfo
+    do
+        entityTag <- getP prop
+        refWith cp entityTag (nameWithContext mVarInfo entity)
+            mempty (pure ()) resultInfo
     <&> (`OptionalTag` toAnon)
     where
         toAnon = mkInstance Anchors.anonTag <$ setP prop Anchors.anonTag
@@ -143,4 +142,4 @@ taggedEntity ::
     (UniqueId.ToUUID a, MonadTransaction n m, MonadReader env m, Anchors.HasCodeAnchors env n) =>
     Maybe VarInfo -> a -> m (OnceT (T n) (OptionalTag InternalName (OnceT (T n)) (T n)))
 taggedEntity mVarInfo entity =
-    Lens.view Anchors.codeAnchors >>= \x -> taggedEntityWith x mVarInfo entity
+    Lens.view Anchors.codeAnchors <&> \x -> taggedEntityWith x mVarInfo entity

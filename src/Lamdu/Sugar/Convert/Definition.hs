@@ -197,7 +197,7 @@ pane ::
     env -> DefI m -> OnceT (T m) (PaneBody EvalPrep InternalName (OnceT (T m)) (T m) ([EntityId], ConvertPayload m))
 pane env defI =
     Definition
-    <$> (ConvertTag.taggedEntityWith (env ^. Anchors.codeAnchors) Nothing defVar & join)
+    <$> ConvertTag.taggedEntityWith (env ^. Anchors.codeAnchors) Nothing defVar
     <*> pure defVar
     <*> (ExprLoad.def defI & lift <&> Definition.defPayload .~ defI >>= convertDefBody env)
     ?? (nextOutdatedDef (env ^. Anchors.codeAnchors) defI
