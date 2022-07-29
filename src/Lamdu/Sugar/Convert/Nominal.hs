@@ -1,37 +1,28 @@
-{-# LANGUAGE GADTs, TypeApplications, ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications, ScopedTypeVariables #-}
 
 module Lamdu.Sugar.Convert.Nominal
-    ( convertToNom, convertFromNom, pane
+    ( pane
     ) where
 
 import qualified Control.Lens as Lens
 import           Control.Monad.Once (OnceT)
 import           Control.Monad.Reader (ReaderT(..))
 import           Control.Monad.Reader.Instances ()
-import           Control.Monad.Trans.Except.Extended (runMatcherT, justToLeft)
 import           Data.Property (Property(..))
 import qualified Data.Map as Map
 import qualified Data.Set as Set
 import           Hyper
-import           Hyper.Syntax.Nominal (ToNom(..))
 import qualified Hyper.Syntax.Nominal as Nominal
 import qualified Hyper.Syntax.Scheme as HyperScheme
 import           Hyper.Unify.QuantifiedVar (QVar)
 import           Lamdu.Calc.Identifier (Identifier(..))
 import qualified Lamdu.Calc.Lens as ExprLens
-import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
 import           Lamdu.Data.Anchors (HasCodeAnchors)
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Expr.Load as ExprLoad
-import qualified Lamdu.Sugar.Convert.Binder as ConvertBinder
-import           Lamdu.Sugar.Convert.Expression.Actions (addActions)
-import qualified Lamdu.Sugar.Convert.Input as Input
-import           Lamdu.Sugar.Convert.Monad (ConvertM, PositionInfo(..))
-import qualified Lamdu.Sugar.Convert.TId as ConvertTId
 import qualified Lamdu.Sugar.Convert.Tag as ConvertTag
 import qualified Lamdu.Sugar.Convert.TaggedList as ConvertTaggedList
-import qualified Lamdu.Sugar.Convert.Text as ConvertText
 import qualified Lamdu.Sugar.Convert.Type as ConvertType
 import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
@@ -41,28 +32,6 @@ import           Revision.Deltum.Transaction (Transaction)
 import           Lamdu.Prelude
 
 type T = Transaction
-
-convertToNom ::
-    Monad m =>
-    ToNom NominalId V.Term # Ann (Input.Payload m) ->
-    Input.Payload m # V.Term ->
-    ConvertM m (ExpressionU EvalPrep m)
-convertToNom t@(ToNom tid x) pl =
-    do
-        ConvertText.text t pl & justToLeft
-        Nominal
-            <$> ConvertTId.convert tid
-            <*> ConvertBinder.convertBinder BinderPos x
-            <&> BodyToNom
-            >>= addActions (Ann pl (V.BToNom t))
-            & lift
-    & runMatcherT
-    <&> annotation . pActions . mApply .~ Nothing
-
-convertFromNom :: Monad m => NominalId -> Input.Payload m # V.Term -> ConvertM m (ExpressionU v m)
-convertFromNom tid pl =
-    ConvertTId.convert tid <&> PfFromNom <&> BodyPostfixFunc
-    >>= addActions (Ann pl (V.BLeaf (V.LFromNom tid)))
 
 class NominalParamKind h where
     qvarIdentifier :: Proxy h -> Lens.AnIso' (QVar h) Identifier
