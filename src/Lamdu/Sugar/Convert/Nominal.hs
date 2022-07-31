@@ -113,7 +113,8 @@ instance DelTypeVar T.Row where
         T.RVar (T.Var x) | x == v -> T.REmpty
         b -> hmap (Proxy @DelTypeVar #> delTypeVar v) b
 
-nominalParams :: (Monad m, HasCodeAnchors env m) =>
+nominalParams ::
+    (Monad m, HasCodeAnchors env m) =>
     env ->
     T.Types # HyperScheme.QVars ->
     (T.Types # HyperScheme.QVars ->
@@ -123,10 +124,7 @@ nominalParams :: (Monad m, HasCodeAnchors env m) =>
     OnceT (T m) (TaggedList InternalName (OnceT (T m)) (T m) (Property (T m) ParamKind))
 nominalParams env params edit entityId =
     do
-        addParam <-
-            runReaderT
-            (ConvertTag.replace (nameWithContext Nothing entityId) (Set.fromList usedParams) (pure ()) addParamInfo) env
-            & join
+        addParam <- ConvertTag.replace (nameWithContext Nothing entityId) (Set.fromList usedParams) (pure ()) addParamInfo env
         hfoldMap
             (Proxy @NominalParamKind #> convertNominalParams writeReplacedTypeVarById delParam setKind addParam entityId tagList)
             params

@@ -88,7 +88,7 @@ refWith cp tag name forbiddenTags resultSeed resultInfo =
         tagsProp = Anchors.tags cp
 
 replace ::
-    (MonadTransaction n m, MonadReader env m, Anchors.HasCodeAnchors env n, Typeable a) =>
+    (MonadReader env m, Monad n, Anchors.HasCodeAnchors env n, Typeable a) =>
     (T.Tag -> name) -> Set T.Tag -> OnceT (T n) a -> (a -> T.Tag -> TagResultInfo (T n)) ->
     m (OnceT (T n) (OnceT (T n) (TagChoice name (T n))))
 replace name forbiddenTags resultSeed resultInfo =
