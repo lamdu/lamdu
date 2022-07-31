@@ -8,7 +8,7 @@ import qualified Control.Lens as Lens
 import           Control.Monad.Once (OnceT)
 import           Control.Monad.Reader (ReaderT(..))
 import           Control.Monad.Reader.Instances ()
-import           Data.Property (Property(..))
+import           Data.Property (Property(..), pVal, pureModify)
 import qualified Data.Map as Map
 import qualified Data.Set as Set
 import           Hyper
@@ -113,6 +113,18 @@ instance DelTypeVar T.Row where
         T.RVar (T.Var x) | x == v -> T.REmpty
         b -> hmap (Proxy @DelTypeVar #> delTypeVar v) b
 
+makeAddParam ::
+    (Monad n, HasCodeAnchors env n) =>
+    Property (T n) (T.Types # HyperScheme.QVars) -> EntityId -> env ->
+    OnceT (T n) (OnceT (T n) (TagChoice InternalName (T n)))
+makeAddParam prop entityId =
+    ConvertTag.replace (nameWithContext Nothing entityId) (Set.fromList usedParams) (pure ()) addParamInfo
+    where
+        usedParams = prop ^.. pVal . qvarssIdentifiers <&> T.Tag
+        addParamInfo () t@(T.Tag i) =
+            pureModify prop (T.tType . HyperScheme._QVars . Lens.at (T.Var i) ?~ mempty)
+            & ConvertTag.TagResultInfo (EntityId.ofTag entityId t)
+
 nominalParams ::
     (Monad m, HasCodeAnchors env m) =>
     env ->
@@ -124,7 +136,7 @@ nominalParams ::
     OnceT (T m) (TaggedList InternalName (OnceT (T m)) (T m) (Property (T m) ParamKind))
 nominalParams env params edit entityId =
     do
-        addParam <- ConvertTag.replace (nameWithContext Nothing entityId) (Set.fromList usedParams) (pure ()) addParamInfo env
+        addParam <- makeAddParam (Property params (`edit` id)) entityId env
         hfoldMap
             (Proxy @NominalParamKind #> convertNominalParams writeReplacedTypeVarById delParam setKind addParam entityId tagList)
             params
@@ -145,10 +157,6 @@ nominalParams env params edit entityId =
                     case k of
                     TypeParam -> T.tType . HyperScheme._QVars . Lens.at (T.Var t) ?~ mempty
                     RowParam -> T.tRow . HyperScheme._QVars . Lens.at (T.Var t) ?~ mempty
-        addParamInfo () t@(T.Tag i) =
-            edit (params & T.tType . HyperScheme._QVars . Lens.at (T.Var i) ?~ mempty) id
-            & ConvertTag.TagResultInfo (EntityId.ofTag entityId t)
-        usedParams = params ^.. qvarssIdentifiers <&> T.Tag
 
 pane ::
     (Monad m, HasCodeAnchors env m) =>
