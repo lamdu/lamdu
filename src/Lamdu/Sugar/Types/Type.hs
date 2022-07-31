@@ -19,7 +19,6 @@ data TId name = TId
     , _tidTId :: T.NominalId
     } deriving (Generic, Eq)
 
-
 data ParamKind = TypeParam | RowParam deriving (Eq, Ord, Generic)
 
 data Scheme name i o = Scheme

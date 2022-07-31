@@ -8,7 +8,7 @@ import qualified Control.Lens as Lens
 import           Control.Monad.Once (OnceT)
 import           Control.Monad.Reader (ReaderT(..))
 import           Control.Monad.Reader.Instances ()
-import           Data.Property (Property(..), pVal, pureModify)
+import           Data.Property (Property(..), pVal, pureModify, composeLens)
 import qualified Data.Map as Map
 import qualified Data.Set as Set
 import           Hyper
@@ -24,7 +24,6 @@ import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Expr.Load as ExprLoad
 import qualified Lamdu.Sugar.Convert.Tag as ConvertTag
 import qualified Lamdu.Sugar.Convert.TaggedList as ConvertTaggedList
-import qualified Lamdu.Sugar.Convert.Type as ConvertType
 import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import           Lamdu.Sugar.Types
@@ -119,12 +118,12 @@ addQVar t = HyperScheme._QVars . Lens.at t ?~ mempty
 
 makeAddParam ::
     (Monad n, HasCodeAnchors env n) =>
+    Set T.Tag ->
     Property (T n) (T.Types # HyperScheme.QVars) -> EntityId -> env ->
     OnceT (T n) (OnceT (T n) (TagChoice InternalName (T n)))
-makeAddParam prop entityId =
-    ConvertTag.replace (nameWithContext Nothing entityId) (Set.fromList usedParams) (pure ()) addParamInfo
+makeAddParam usedParams prop entityId =
+    ConvertTag.replace (nameWithContext Nothing entityId) usedParams (pure ()) addParamInfo
     where
-        usedParams = prop ^.. pVal . qvarssIdentifiers <&> T.Tag
         addParamInfo () t@(T.Tag i) =
             pureModify prop (T.tType %~ addQVar (T.Var i))
             & ConvertTag.TagResultInfo (EntityId.ofTag entityId t)
@@ -138,6 +137,37 @@ setParamKind (T.Tag t) k =
             TypeParam -> T.tType %~ addQVar (T.Var t)
             RowParam -> T.tRow %~ addQVar (T.Var t)
 
+paramTags :: T.Types # HyperScheme.QVars -> Set T.Tag
+paramTags = Set.fromList . hfoldMap (Proxy @NominalParamKind #> (^.. qvars))
+
+schemeForalls ::
+    (Monad m, HasCodeAnchors env m) =>
+    env ->
+    Set T.Tag ->
+    Property (T m) (HyperScheme.Scheme T.Types T.Type # Pure) ->
+    EntityId ->
+    OnceT (T m) (TaggedList InternalName (OnceT (T m)) (T m) (Property (T m) ParamKind))
+schemeForalls env nomParams prop entityId =
+    do
+        addParam <- makeAddParam usedParams (composeLens HyperScheme.sForAlls prop) entityId env
+        hfoldMap
+            (Proxy @NominalParamKind #> convertNominalParams writeReplacedTypeVarById delParam setKind addParam entityId usedParams)
+            params
+            <&> ConvertTaggedList.convert addParam
+            & (`runReaderT` env)
+    where
+        params = prop ^. pVal . HyperScheme.sForAlls
+        usedParams = nomParams <> paramTags params
+        writeReplacedTypeVarById (T.Tag oldId) (T.Tag newId) =
+            pureModify prop
+            ((HyperScheme.sForAlls . qvarssIdentifiers . Lens.filteredBy (Lens.only oldId) .~ newId) .
+                (HyperScheme.sTyp %~ replaceQVars newId oldId))
+        delParam (T.Tag t) =
+            pureModify prop
+            ((HyperScheme.sForAlls %~ hmap (Proxy @ExprLens.HasQVar #> filterParams t)) . (HyperScheme.sTyp %~ delTypeVar t))
+        setKind (T.Tag t) k =
+            pureModify prop ((HyperScheme.sForAlls %~ setParamKind (T.Tag t) k) . (HyperScheme.sTyp %~ delTypeVar t))
+
 nominalParams ::
     (Monad m, HasCodeAnchors env m) =>
     env ->
@@ -149,21 +179,27 @@ nominalParams ::
     OnceT (T m) (TaggedList InternalName (OnceT (T m)) (T m) (Property (T m) ParamKind))
 nominalParams env params edit entityId =
     do
-        addParam <- makeAddParam (Property params (`edit` id)) entityId env
+        addParam <- makeAddParam tagList (Property params (`edit` id)) entityId env
         hfoldMap
             (Proxy @NominalParamKind #> convertNominalParams writeReplacedTypeVarById delParam setKind addParam entityId tagList)
             params
             <&> ConvertTaggedList.convert addParam
             & (`runReaderT` env)
     where
-        tagList = hfoldMap (Proxy @NominalParamKind #> (^.. qvars)) params & Set.fromList
+        tagList = paramTags params
         writeReplacedTypeVarById (T.Tag oldId) (T.Tag newId) =
             edit (params & qvarssIdentifiers . Lens.filteredBy (Lens.only oldId) .~ newId)
             (editParamInScheme (replaceQVars newId) oldId)
         filterParamList t = hmap (Proxy @ExprLens.HasQVar #> filterParams t) params
-        delParamInScheme = editParamInScheme delTypeVar
-        delParam (T.Tag t) = edit (filterParamList t) (delParamInScheme t)
-        setKind (T.Tag t) k = edit (setParamKind (T.Tag t) k params) (delParamInScheme t)
+        delParam (T.Tag t) = edit (filterParamList t) (editParamInScheme delTypeVar t)
+        setKind (T.Tag t) k = edit (setParamKind (T.Tag t) k params) (editParamInScheme delTypeVar t)
+
+convertScheme ::
+    (Monad m, HasCodeAnchors env m) =>
+    env -> Set T.Tag -> EntityId -> Property (T m) (HyperScheme.Scheme T.Types T.Type # Pure) ->
+    OnceT (T m) (Scheme InternalName (OnceT (T m)) (T m))
+convertScheme env nomParams entityId prop =
+    schemeForalls env nomParams prop entityId <&> (`Scheme` ())
 
 pane ::
     (Monad m, HasCodeAnchors env m) =>
@@ -175,7 +211,11 @@ pane env nomId =
                 case nom of
                 Left p -> (p, Nothing)
                 Right (Pure (Nominal.NominalDecl p scheme)) -> (p, Just scheme)
-        body <- Lens._Just (ConvertType.convertScheme (EntityId.currentTypeOf entityId) . Pure) mScheme & (`runReaderT` env)
+        body <-
+            Lens._Just
+            (convertScheme env (paramTags params) entityId .
+                (`Property` ExprLoad.writeNominal nomId . Right . Pure . Nominal.NominalDecl params))
+            mScheme
         let editNom p e =
                 Lens.bimap (const p) (_Pure %~ (Nominal.nParams .~ p) . (Nominal.nScheme %~ e)) nom
                 & ExprLoad.writeNominal nomId

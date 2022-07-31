@@ -1,3 +1,5 @@
+{-# LANGUAGE ScopedTypeVariables, TypeApplications #-}
+
 module Lamdu.GUI.Expr.GetVarEdit
     ( make, makeSimpleView
     , makePunnedVars
@@ -44,6 +46,7 @@ import qualified Lamdu.Name as Name
 import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
+import Lamdu.GUI.View (liftView)
 
 makeSimpleView :: _ => Lens.ALens' TextColors M.Color -> Name -> Widget.Id -> m (M.TextWidget f)
 makeSimpleView color name myId =
@@ -107,7 +110,8 @@ makeInlineEventMap env (Sugar.CannotInlineDueToUses (x:_)) =
 makeInlineEventMap _ _ = mempty
 
 definitionTypeChangeBox ::
-    _ => Sugar.DefinitionOutdatedType Name i o Sugar.EntityId -> Widget.Id -> m (M.TextWidget o)
+    forall env i o.
+    _ => Sugar.DefinitionOutdatedType Name i o Sugar.EntityId -> Widget.Id -> GuiM env i o (M.TextWidget o)
 definitionTypeChangeBox info getVarId =
     do
         env <- Lens.view id
@@ -127,19 +131,21 @@ definitionTypeChangeBox info getVarId =
 
         Grid.make ??
             [ [ Align.fromWithTextPos 0 (oldTypeRow <&> Widget.fromView)
-              , Align.fromWithTextPos 0 (oldTypeView <&> Widget.fromView) ]
+              , Align.fromWithTextPos 0 oldTypeView ]
             , [ Align.fromWithTextPos 0 newTypeRow
-              , Align.fromWithTextPos 0 (newTypeView <&> Widget.fromView) ]
+              , Align.fromWithTextPos 0 newTypeView ]
             ] <&> snd <&> Align.WithTextPos 0
     where
         update = info ^. Sugar.defTypeUseCurrent <&> WidgetIds.fromEntityId
         mkTypeView idSuffix scheme =
-            TypeEdit.makeScheme scheme & local (M.animIdPrefix .~ animId ++ [idSuffix])
+            TypeEdit.makeScheme Proxy (Widget.joinId myId [idSuffix]) scheme & local (M.animIdPrefix .~ animId ++ [idSuffix])
+            & liftView @_ @i
+            <&> (^. Responsive.rWide . Responsive.lWide) . TypeEdit.removeResponsiveEvents
         myId = Widget.joinId getVarId ["type change"]
         animId = Widget.toAnimId myId
 
 processDefinitionWidget ::
-    _ => Sugar.DefinitionForm Name i o -> Widget.Id -> m (M.TextWidget o) -> m (M.TextWidget o)
+    _ => Sugar.DefinitionForm Name i o -> Widget.Id -> GuiM env i o (M.TextWidget o) -> GuiM env i o (M.TextWidget o)
 processDefinitionWidget Sugar.DefUpToDate _myId mkLayout = mkLayout
 processDefinitionWidget Sugar.DefDeleted _myId mkLayout =
     Styled.deletedUse <*> mkLayout

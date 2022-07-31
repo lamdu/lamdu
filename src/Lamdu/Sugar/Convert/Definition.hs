@@ -64,16 +64,16 @@ emptyScopeInfo recursiveRef =
     }
 
 convertDefIBuiltin ::
-    (MonadTransaction n m, Monad f) =>
+    (MonadTransaction n m, Monad f, Applicative i) =>
     Pure # T.Scheme -> Definition.FFIName -> DefI f ->
     m (DefinitionBody v InternalName i (T f) a)
 convertDefIBuiltin scheme name defI =
-    ConvertType.convertScheme (EntityId.currentTypeOf entityId) scheme
-    <&> \typeS ->
+    ConvertType.convertInferredScheme (EntityId.currentTypeOf entityId) scheme <&>
+    \typeS ->
     DefinitionBodyBuiltin DefinitionBuiltin
     { _biName = name
     , _biSetName = setName
-    , _biType = typeS & undefined -- TODO
+    , _biType = typeS
     }
     where
         entityId = ExprIRef.globalId defI & EntityId.ofBinder

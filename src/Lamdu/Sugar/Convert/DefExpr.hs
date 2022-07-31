@@ -50,10 +50,10 @@ convert defType defExpr defI =
                 & (^?! Lens._Right . _1)
         unless (alphaEq defType inferredType) $
             error $ "Def type mismatches its inferred type! " <> show (pPrint (defType, inferredType))
-        defTypeS <- ConvertType.convertScheme (EntityId.currentTypeOf entityId) defType
+        defTypeS <- ConvertType.convertInferredScheme (EntityId.currentTypeOf entityId) defType
         varInfo <- mkVarInfo (defExpr ^. Definition.expr . hAnn . Input.inferredType)
         DefinitionBodyExpression DefinitionExpression
-            { _deType = defTypeS & undefined -- TODO
+            { _deType = defTypeS
             , _dePresentationMode =
                 lift (presMode ^. Property.mkProperty) <$
                 content ^? hVal . _BodyFunction . fParams . _LhsRecord . tlItems . Lens._Just . tlTail . traverse

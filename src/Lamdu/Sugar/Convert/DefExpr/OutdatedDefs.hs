@@ -255,12 +255,12 @@ scan entityId defExpr setDefExpr typeCheck =
             | alphaEq usedType newUsedDefType = pure mempty
             | otherwise =
                 do
-                    usedTypeS <- ConvertType.convertScheme (EntityId.usedTypeOf entityId) usedType
-                    currentTypeS <- ConvertType.convertScheme (EntityId.currentTypeOf entityId) newUsedDefType
+                    usedTypeS <- ConvertType.convertInferredScheme (EntityId.usedTypeOf entityId) usedType
+                    currentTypeS <- ConvertType.convertInferredScheme (EntityId.currentTypeOf entityId) newUsedDefType
                     globalVar Lens.~~>
                         Sugar.DefinitionOutdatedType
-                        { Sugar._defTypeWhenUsed = usedTypeS & undefined -- TODO
-                        , Sugar._defTypeCurrent = currentTypeS & undefined -- TODO
+                        { Sugar._defTypeWhenUsed = usedTypeS
+                        , Sugar._defTypeCurrent = currentTypeS
                         , Sugar._defTypeUseCurrent =
                             updateDefType usedType newUsedDefType globalVar
                             defExpr setDefExpr typeCheck

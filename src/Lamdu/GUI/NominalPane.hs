@@ -35,7 +35,7 @@ make nom =
         bodyEdit <-
             case nom ^. Sugar.npBody of
             Nothing -> Styled.grammar (Styled.focusableLabel Texts.opaque) <&> Responsive.fromWithTextPos
-            Just scheme -> TypeEdit.makeScheme scheme <&> Responsive.fromTextView
+            Just scheme -> TypeEdit.makeScheme (pure nameEditId) myId scheme
         hbox <- ResponsiveOptions.boxSpaced ?? ResponsiveOptions.disambiguationNone
         hbox [hbox ((nameEdit : paramEdits) <> [sep]), bodyEdit]
             & pure

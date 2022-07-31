@@ -1,12 +1,10 @@
 -- | Convert Lamdu.Calc.Type datatypes to sugared counterparts
 
 module Lamdu.Sugar.Convert.Type
-    ( convertScheme
+    ( convertType, convertInferredScheme
     ) where
 
-import           Control.Monad.Once (OnceT)
-import           Control.Monad.Transaction (Transaction)
-import qualified Hyper.Syntax.Scheme as S
+import           Hyper.Syntax.Scheme (sTyp)
 import qualified Lamdu.Calc.Type as T
 import           Lamdu.Sugar.Internal
 import           Lamdu.Sugar.Internal.EntityId
@@ -14,9 +12,18 @@ import           Lamdu.Sugar.Types
 
 import           Lamdu.Prelude
 
-type T = Transaction
+convertType ::
+    Applicative m =>
+    EntityId -> Pure # T.Type -> m ()
+convertType _ (Pure _) = pure ()
 
-convertScheme ::
-    Applicative f =>
-    EntityId -> Pure # T.Scheme -> f (Scheme InternalName (OnceT (T m)) (T m))
-convertScheme _ (Pure (S.Scheme _tvs _)) = Scheme undefined () & pure
+convertInferredScheme ::
+    (Applicative i, Applicative m) =>
+    EntityId -> Pure # T.Scheme -> m (Scheme InternalName i Proxy)
+convertInferredScheme entityId s =
+    convertType entityId (s ^. _Pure . sTyp) <&> Scheme foralls
+    where
+        foralls =
+            TaggedList
+            (pure undefined) -- TODO: Proper tlAddFirst even though no action
+            Nothing -- TODO: Convert foralls so GUI could display them
