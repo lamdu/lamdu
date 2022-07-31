@@ -14,6 +14,7 @@ import qualified Data.Set as Set
 import           Hyper
 import qualified Hyper.Syntax.Nominal as Nominal
 import qualified Hyper.Syntax.Scheme as HyperScheme
+import           Hyper.Unify (TypeConstraintsOf)
 import           Hyper.Unify.QuantifiedVar (QVar)
 import           Lamdu.Calc.Identifier (Identifier(..))
 import qualified Lamdu.Calc.Lens as ExprLens
@@ -113,6 +114,9 @@ instance DelTypeVar T.Row where
         T.RVar (T.Var x) | x == v -> T.REmpty
         b -> hmap (Proxy @DelTypeVar #> delTypeVar v) b
 
+addQVar :: (Monoid (TypeConstraintsOf t), Ord (QVar t)) => QVar t -> HyperScheme.QVars # t -> HyperScheme.QVars # t
+addQVar t = HyperScheme._QVars . Lens.at t ?~ mempty
+
 makeAddParam ::
     (Monad n, HasCodeAnchors env n) =>
     Property (T n) (T.Types # HyperScheme.QVars) -> EntityId -> env ->
@@ -122,8 +126,17 @@ makeAddParam prop entityId =
     where
         usedParams = prop ^.. pVal . qvarssIdentifiers <&> T.Tag
         addParamInfo () t@(T.Tag i) =
-            pureModify prop (T.tType . HyperScheme._QVars . Lens.at (T.Var i) ?~ mempty)
+            pureModify prop (T.tType %~ addQVar (T.Var i))
             & ConvertTag.TagResultInfo (EntityId.ofTag entityId t)
+
+setParamKind :: T.Tag -> ParamKind -> T.Types # HyperScheme.QVars -> T.Types # HyperScheme.QVars
+setParamKind (T.Tag t) k =
+    add . hmap (Proxy @ExprLens.HasQVar #> filterParams t)
+    where
+        add =
+            case k of
+            TypeParam -> T.tType %~ addQVar (T.Var t)
+            RowParam -> T.tRow %~ addQVar (T.Var t)
 
 nominalParams ::
     (Monad m, HasCodeAnchors env m) =>
@@ -150,13 +163,7 @@ nominalParams env params edit entityId =
         filterParamList t = hmap (Proxy @ExprLens.HasQVar #> filterParams t) params
         delParamInScheme = editParamInScheme delTypeVar
         delParam (T.Tag t) = edit (filterParamList t) (delParamInScheme t)
-        setKind (T.Tag t) k =
-            edit (add (filterParamList t)) (delParamInScheme t)
-            where
-                add =
-                    case k of
-                    TypeParam -> T.tType . HyperScheme._QVars . Lens.at (T.Var t) ?~ mempty
-                    RowParam -> T.tRow . HyperScheme._QVars . Lens.at (T.Var t) ?~ mempty
+        setKind (T.Tag t) k = edit (setParamKind (T.Tag t) k params) (delParamInScheme t)
 
 pane ::
     (Monad m, HasCodeAnchors env m) =>
