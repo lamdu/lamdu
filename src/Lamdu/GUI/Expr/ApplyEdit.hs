@@ -11,7 +11,7 @@ import           GUI.Momentu.Responsive (Responsive)
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.Responsive.Expression as ResponsiveExpr
 import qualified GUI.Momentu.Responsive.Options as Options
-import           GUI.Momentu.Responsive.TaggedList (TaggedItem(..), taggedListIndent)
+import           GUI.Momentu.Responsive.TaggedList (TaggedItem(..), taggedListIndent, tagPost)
 import qualified GUI.Momentu.State as GuiState
 import qualified GUI.Momentu.Widget as Widget
 import           GUI.Momentu.Widgets.StdKeys (dirKey)
@@ -30,6 +30,7 @@ import qualified Lamdu.GUI.Types as ExprGui
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.GUI.Wrap (stdWrapParentExpr)
 import qualified Lamdu.GUI.Wrap as Wrap
+import qualified Lamdu.I18N.Code as Texts
 import qualified Lamdu.I18N.CodeUI as Texts
 import qualified Lamdu.I18N.Navigation as Texts
 import           Lamdu.Name (Name(..))
@@ -48,7 +49,7 @@ makeLabeled (Ann (Const pl) apply) =
         argRows <-
             case apply ^. Sugar.aAnnotatedArgs of
             [] -> pure []
-            xs -> taggedListIndent <*> traverse makeArgRow xs <&> (:[])
+            xs -> taggedListIndent <*> (traverse makeArgRow xs <&> Lens._last . tagPost .~ Nothing) <&> (:[])
         punnedArgs <-
             case apply ^. Sugar.aPunnedArgs of
             [] -> pure []
@@ -109,10 +110,13 @@ makeArgRow arg =
     do
         expr <- GuiM.makeSubexpression (arg ^. Sugar.aaExpr)
         pre <- TagEdit.makeArgTag (arg ^. Sugar.aaTag)
+        comma <-
+            Styled.label Texts.recordSep
+            & local (M.animIdPrefix .~ (Widget.toAnimId . WidgetIds.fromEntityId) (arg ^. Sugar.aaTag . Sugar.tagInstance))
         pure TaggedItem
             { _tagPre = pre <&> Widget.fromView & Just
             , _taggedItem = expr
-            , _tagPost = Nothing
+            , _tagPost = comma <&> Widget.fromView & Just
             }
 
 makeSimple ::
