@@ -5,8 +5,8 @@ module Lamdu.GUI.Expr.HoleOptEdit
 import qualified Control.Lens as Lens
 import qualified Data.ByteString.Char8 as SBS8
 import           Hyper
+import           GUI.Momentu (Responsive)
 import qualified GUI.Momentu as M
-import           GUI.Momentu.Responsive (Responsive)
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.Responsive.Options as Options
 import qualified GUI.Momentu.Widget as Widget

@@ -3,13 +3,11 @@ module Lamdu.GUI.Expr.CaseEdit
     ) where
 
 import qualified Control.Lens as Lens
-import           GUI.Momentu (View)
+import           GUI.Momentu (Responsive, EventMap, View)
 import qualified GUI.Momentu as M
-import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.Glue as Glue
 import qualified GUI.Momentu.I18N as MomentuTexts
-import           GUI.Momentu.Responsive (Responsive)
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.Responsive.Options as Options
 import           GUI.Momentu.Responsive.TaggedList (TaggedItem(..), taggedListIndent, tagPost)

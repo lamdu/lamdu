@@ -11,10 +11,9 @@ module Lamdu.GUI.StatusBar.Common
 import qualified Control.Lens as Lens
 import           Control.Lens.Extended (OneOf)
 import           Data.Property (Property(..))
-import           GUI.Momentu (ModKey)
+import           GUI.Momentu (EventMap, ModKey)
 import qualified GUI.Momentu as M
 import           GUI.Momentu.Animation.Id (ElemIds(..))
-import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.FocusDirection (FocusDirection(..))
 import qualified GUI.Momentu.Glue as Glue

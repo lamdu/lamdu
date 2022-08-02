@@ -4,13 +4,12 @@ module Lamdu.GUI.Expr.FragmentEdit
 
 import qualified Control.Lens as Lens
 import qualified GUI.Momentu as M
-import           GUI.Momentu ((/|/), noMods)
+import           GUI.Momentu (Responsive, (/|/), noMods)
 import qualified GUI.Momentu.Animation as Anim
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.I18N as MomentuTexts
 import qualified GUI.Momentu.ModKey as ModKey
-import           GUI.Momentu.Responsive (Responsive(..))
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.Responsive.Expression as ResponsiveExpr
 import qualified GUI.Momentu.Responsive.Options as Options

@@ -3,11 +3,10 @@ module Lamdu.GUI.Expr.InjectEdit
     ) where
 
 import qualified Control.Lens as Lens
-import           GUI.Momentu ((/|/))
+import           GUI.Momentu (Responsive, (/|/))
 import qualified GUI.Momentu as M
 import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.I18N as MomentuTexts
-import           GUI.Momentu.Responsive (Responsive)
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.Responsive.Expression as ResponsiveExpr
 import qualified GUI.Momentu.State as GuiState

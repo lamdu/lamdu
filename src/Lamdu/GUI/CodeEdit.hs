@@ -20,15 +20,13 @@ import           Data.CurAndPrev (CurAndPrev(..))
 import           Data.Functor.Compose (Compose(..))
 import qualified Data.Property as Property
 import           Data.Tuple (swap)
-import           GUI.Momentu (Widget)
+import           GUI.Momentu (Widget, EventMap, Responsive)
 import qualified GUI.Momentu as M
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Element as Element
-import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.I18N as MomentuTexts
 import           GUI.Momentu.Rect (Rect(..))
-import           GUI.Momentu.Responsive (Responsive)
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.State as GuiState
 import qualified GUI.Momentu.Widget as Widget

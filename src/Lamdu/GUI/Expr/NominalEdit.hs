@@ -5,11 +5,11 @@ module Lamdu.GUI.Expr.NominalEdit
     ) where
 
 import qualified Control.Lens as Lens
+import           GUI.Momentu (Responsive)
 import qualified GUI.Momentu as M
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.I18N as MomentuTexts
-import           GUI.Momentu.Responsive (Responsive)
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.Responsive.Expression as ResponsiveExpr
 import qualified GUI.Momentu.Widget as Widget

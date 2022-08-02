@@ -4,10 +4,10 @@ module Lamdu.GUI.Expr.BinderEdit
 
 import qualified Control.Lens as Lens
 import           Hyper (annValue)
+import           GUI.Momentu (Responsive)
 import qualified GUI.Momentu as M
 import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.I18N as MomentuTexts
-import           GUI.Momentu.Responsive (Responsive)
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Spacer as Spacer

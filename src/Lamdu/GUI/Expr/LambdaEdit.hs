@@ -2,9 +2,9 @@ module Lamdu.GUI.Expr.LambdaEdit
     ( make
     ) where
 
+import           GUI.Momentu (Responsive)
 import qualified GUI.Momentu as M
 import qualified GUI.Momentu.I18N as MomentuTexts
-import           GUI.Momentu.Responsive (Responsive)
 import qualified GUI.Momentu.Responsive.Expression as ResponsiveExpr
 import qualified GUI.Momentu.Responsive.Options as Options
 import qualified GUI.Momentu.Widget as Widget

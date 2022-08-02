@@ -28,11 +28,10 @@ import qualified Data.Monoid as Monoid
 import           Data.Property (MkProperty')
 import qualified Data.Property as Property
 import           Data.Vector.Vector2 (Vector2)
-import           GUI.Momentu (View, ModKey, WithTextPos, AnimId, GUIState(..))
+import           GUI.Momentu (Responsive, View, ModKey, WithTextPos, AnimId, GUIState(..))
 import qualified GUI.Momentu.Direction as Dir
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.Hover as Hover
-import           GUI.Momentu.Responsive (Responsive)
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.Responsive.Expression as ResponsiveExpr
 import qualified GUI.Momentu.State as GuiState

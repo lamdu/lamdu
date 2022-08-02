@@ -6,10 +6,9 @@ module Lamdu.GUI.Wrap
     ) where
 
 import qualified Control.Lens as Lens
-import           GUI.Momentu (Widget)
+import           GUI.Momentu (Widget, Responsive)
 import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.I18N as MomentuTexts
-import           GUI.Momentu.Responsive (Responsive(..))
 import qualified GUI.Momentu.State as GuiState
 import qualified GUI.Momentu.Widget as Widget
 import           GUI.Momentu.Widget.Id (subId)

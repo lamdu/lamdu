@@ -4,10 +4,9 @@ module Lamdu.GUI.NominalPane
 
 import qualified Control.Lens as Lens
 import           Data.Property (Property)
+import           GUI.Momentu (Responsive, EventMap)
 import qualified GUI.Momentu as M
 import           GUI.Momentu.Direction (Orientation(..), Order(..))
-import           GUI.Momentu.EventMap (EventMap)
-import           GUI.Momentu.Responsive (Responsive)
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.Responsive.Options as ResponsiveOptions
 import qualified GUI.Momentu.State as GuiState

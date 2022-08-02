@@ -2,8 +2,8 @@ module Lamdu.GUI.Expr
     ( make
     ) where
 
+import           GUI.Momentu (Responsive)
 import qualified GUI.Momentu.Element as Element
-import           GUI.Momentu.Responsive (Responsive)
 import qualified GUI.Momentu.State as GuiState
 import qualified GUI.Momentu.Widget as Widget
 import qualified Lamdu.GUI.Expr.ApplyEdit as ApplyEdit

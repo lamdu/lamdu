@@ -5,13 +5,12 @@ module Lamdu.GUI.Expr.RecordEdit
 import qualified Control.Lens as Lens
 import qualified Data.Char as Char
 import qualified Data.Text as Text
+import           GUI.Momentu (Responsive, EventMap)
 import qualified GUI.Momentu as M
 import qualified GUI.Momentu.Element as Element
-import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.Glue as Glue
 import qualified GUI.Momentu.I18N as MomentuTexts
-import           GUI.Momentu.Responsive (Responsive)
 import qualified GUI.Momentu.Responsive as Responsive
 import           GUI.Momentu.Responsive.TaggedList (TaggedItem(..), taggedListIndent, tagPre, tagPost)
 import qualified GUI.Momentu.State as GuiState

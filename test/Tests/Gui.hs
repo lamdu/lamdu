@@ -9,7 +9,7 @@ import qualified Data.Property as Property
 import qualified Data.Text as Text
 import           Data.Vector.Vector2 (Vector2(..))
 import           Hyper.Syntax.App (appFunc)
-import           GUI.Momentu (ModKey(..), noMods)
+import           GUI.Momentu (Responsive, ModKey(..), noMods)
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (Event(..))
@@ -17,7 +17,6 @@ import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.MetaKey as MetaKey
 import           GUI.Momentu.Rect (Rect(..))
 import qualified GUI.Momentu.Rect as Rect
-import           GUI.Momentu.Responsive (Responsive)
 import qualified GUI.Momentu.Responsive as Responsive
 import           GUI.Momentu.State (HasCursor(..), VirtualCursor(..))
 import qualified GUI.Momentu.State as GuiState

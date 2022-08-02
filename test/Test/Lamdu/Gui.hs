@@ -2,19 +2,12 @@ module Test.Lamdu.Gui where
 
 import           Control.Monad.Once (OnceT)
 import           Control.Monad.Trans.FastWriter (runWriterT)
-import           Data.List (group, sort)
-import           GHC.Stack (prettyCallStack, callStack)
-import           GUI.Momentu.Responsive (Responsive)
-import           GUI.Momentu.State (HasCursor(..), VirtualCursor(..))
-import           Lamdu.Data.Db.Layout (ViewM)
-import           Lamdu.Name (Name)
-import           Revision.Deltum.Transaction (Transaction)
-import           Test.Lamdu.Env (Env)
-import           Test.Lamdu.Instances ()
-import           Test.Lamdu.Sugar (convertWorkArea)
 import qualified Control.Lens as Lens
+import           Data.List (group, sort)
 import qualified Data.Property as Property
 import qualified Graphics.UI.GLFW as GLFW
+import           GHC.Stack (prettyCallStack, callStack)
+import           GUI.Momentu (Responsive)
 import qualified GUI.Momentu as M
 import qualified GUI.Momentu.Animation as Anim
 import qualified GUI.Momentu.Element as Element
@@ -22,10 +15,12 @@ import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Main.Events (KeyEvent(..))
 import           GUI.Momentu.Rect (Rect(..))
 import qualified GUI.Momentu.Responsive as Responsive
+import           GUI.Momentu.State (HasCursor(..), VirtualCursor(..))
 import qualified GUI.Momentu.State as GuiState
 import qualified GUI.Momentu.Widget as Widget
 import qualified Lamdu.Data.Anchors as Anchors
 import qualified Lamdu.Data.Db.Layout as DbLayout
+import           Lamdu.Data.Db.Layout (ViewM)
 import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.GUI.CodeEdit as CodeEdit
 import           Lamdu.GUI.Definition.Result (_DefRes)
@@ -33,7 +28,12 @@ import qualified Lamdu.GUI.Expr as ExpressionEdit
 import qualified Lamdu.GUI.Expr.BinderEdit as BinderEdit
 import qualified Lamdu.GUI.Monad as GuiM
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
+import           Lamdu.Name (Name)
 import qualified Lamdu.Sugar.Types as Sugar
+import           Revision.Deltum.Transaction (Transaction)
+import           Test.Lamdu.Env (Env)
+import           Test.Lamdu.Instances ()
+import           Test.Lamdu.Sugar (convertWorkArea)
 
 import           Test.Lamdu.Prelude
 

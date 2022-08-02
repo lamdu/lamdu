@@ -9,13 +9,13 @@ import qualified Control.Lens as Lens
 import           Control.Lens.Extended (OneOf)
 import           Control.Monad.Writer (MonadWriter(..))
 import           Data.CurAndPrev (CurPrevTag(..), fallbackToPrev, curPrevTag)
+import           GUI.Momentu (Responsive)
 import qualified GUI.Momentu as M
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.Glue as Glue
 import qualified GUI.Momentu.Hover as Hover
 import qualified GUI.Momentu.I18N as MomentuTexts
-import           GUI.Momentu.Responsive (Responsive)
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.Responsive.Options as Options
 import qualified GUI.Momentu.State as GuiState

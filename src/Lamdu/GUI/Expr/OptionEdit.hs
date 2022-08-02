@@ -5,9 +5,9 @@ module Lamdu.GUI.Expr.OptionEdit where
 import qualified Control.Lens as Lens
 import qualified Data.Property as Property
 import           Hyper
+import           GUI.Momentu (EventMap)
 import qualified GUI.Momentu as M
 import qualified GUI.Momentu.EventMap as E
-import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.Glue as Glue
 import qualified GUI.Momentu.I18N as MomentuTexts
 import qualified GUI.Momentu.ModKey as ModKey

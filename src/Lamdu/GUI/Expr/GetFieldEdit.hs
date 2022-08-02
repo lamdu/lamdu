@@ -2,8 +2,7 @@ module Lamdu.GUI.Expr.GetFieldEdit
     ( make
     ) where
 
-import           GUI.Momentu ((/|/))
-import           GUI.Momentu.Responsive (Responsive)
+import           GUI.Momentu (Responsive, (/|/))
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.Widgets.Label as Label
 import qualified Lamdu.GUI.Expr.TagEdit as TagEdit

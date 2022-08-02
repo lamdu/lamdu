@@ -8,9 +8,8 @@ module Lamdu.GUI.TaggedList
 
 import qualified Control.Lens as Lens
 import           Data.List.Extended (withPrevNext)
-import           GUI.Momentu (ModKey)
+import           GUI.Momentu (EventMap, ModKey)
 import qualified GUI.Momentu.EventMap as E
-import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.I18N as MomentuTexts
 import qualified GUI.Momentu.State as GuiState
 import qualified GUI.Momentu.Widget as Widget
