@@ -22,10 +22,10 @@ import           Data.IORef (IORef, newIORef, readIORef, writeIORef)
 import           Data.Property (Property(..), MkProperty', mkProperty)
 import qualified Data.Property as Property
 import           GHC.Stack (SrcLoc(..))
+import           GUI.Momentu (Widget)
 import qualified GUI.Momentu as M
 import           GUI.Momentu.Main (MainLoop, Handlers(..))
 import qualified GUI.Momentu.Main as MainLoop
-import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
 import qualified Graphics.UI.GLFW as GLFW
 import           Graphics.UI.GLFW.Utils (printGLVersion)

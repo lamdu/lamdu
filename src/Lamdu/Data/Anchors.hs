@@ -19,7 +19,7 @@ import qualified Control.Lens as Lens
 import           Data.ByteString.Char8 ()
 import           Data.Property (MkProperty, MkProperty')
 import           Data.UUID.Types (nil)
-import           GUI.Momentu.State (GUIState)
+import           GUI.Momentu (GUIState)
 import qualified GUI.Momentu.Widget.Id as WidgetId
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T

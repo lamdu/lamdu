@@ -5,12 +5,11 @@ module Lamdu.GUI.NameView
     ) where
 
 import qualified Control.Lens as Lens
-import           GUI.Momentu.Align (Aligned(..), WithTextPos(..))
+import           GUI.Momentu (View, Aligned(..), WithTextPos(..))
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Draw as Draw
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.Glue as Glue
-import           GUI.Momentu.View (View)
 import qualified GUI.Momentu.Widgets.Label as Label
 import qualified GUI.Momentu.Widgets.TextView as TextView
 import qualified Lamdu.Config.Theme as Theme

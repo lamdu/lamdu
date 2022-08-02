@@ -10,25 +10,21 @@ module Lamdu.Style.Make
 import qualified Control.Lens as Lens
 import           Data.Property (MkProperty)
 import qualified Data.Property as Property
-import           GUI.Momentu.Animation (AnimId)
+import           GUI.Momentu (AnimId, Font, ModKey, Widget, Zoom)
 import qualified GUI.Momentu.Direction as Dir
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as E
-import           GUI.Momentu.Font (Font)
 import qualified GUI.Momentu.Font as Font
 import qualified GUI.Momentu.Glue as Glue
 import qualified GUI.Momentu.I18N as MomentuTexts
 import qualified GUI.Momentu.Main.Animation as Anim
 import qualified GUI.Momentu.Main.Config as MainConfig
-import           GUI.Momentu.ModKey (ModKey)
-import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Cursor as Cursor
 import           GUI.Momentu.Widgets.EventMapHelp (IsHelpShown(..))
 import qualified GUI.Momentu.Widgets.EventMapHelp as EventMapHelp
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
 import qualified GUI.Momentu.Widgets.TextView as TextView
-import           GUI.Momentu.Zoom (Zoom)
 import           Lamdu.Config (Config)
 import qualified Lamdu.Config as Config
 import           Lamdu.Config.Theme (Theme)

@@ -20,14 +20,12 @@ module Lamdu.Main.Env
 import qualified Control.Lens as Lens
 import           Data.Property (Property)
 import qualified Data.Property as Property
-import           GUI.Momentu.Animation.Id (AnimId)
+import           GUI.Momentu (AnimId, ModKey, GUIState)
 import qualified GUI.Momentu.Direction as Dir
 import           GUI.Momentu.Draw (Sprite)
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.Hover as Hover
 import qualified GUI.Momentu.Main as MainLoop
-import           GUI.Momentu.ModKey (ModKey)
-import           GUI.Momentu.State (GUIState)
 import qualified GUI.Momentu.State as GuiState
 import qualified GUI.Momentu.Widgets.Menu as Menu
 import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu

@@ -3,8 +3,8 @@ module Tests.Wytiwys (test) where
 import           Control.Monad (foldM)
 import           Control.Monad.Once (OnceT, evalOnceT)
 import           Data.Char (isAscii)
+import           GUI.Momentu (noMods, shift)
 import           GUI.Momentu.EventMap (Event(..))
-import           GUI.Momentu.ModKey (noMods, shift)
 import qualified Graphics.UI.GLFW as GLFW
 import           Lamdu.Data.Db.Layout (ViewM, runDbTransaction)
 import qualified Lamdu.Data.Db.Layout as DbLayout

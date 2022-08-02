@@ -10,11 +10,11 @@ import           Data.Property (Property(..))
 import qualified Data.Property as Property
 import qualified Data.Text as Text
 import           Data.Text.Encoding (encodeUtf8)
+import           GUI.Momentu (noMods)
 import qualified GUI.Momentu as M
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.I18N as MomentuTexts
-import           GUI.Momentu.ModKey (noMods)
 import qualified GUI.Momentu.ModKey as ModKey
 import           GUI.Momentu.Responsive (Responsive)
 import qualified GUI.Momentu.Responsive as Responsive

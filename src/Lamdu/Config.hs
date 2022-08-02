@@ -8,7 +8,7 @@ import qualified Data.Aeson.TH.Extended as JsonTH
 import qualified Data.Aeson.Types as Aeson
 import           Data.Char (toLower)
 import           Data.List.Lens (prefixed)
-import           GUI.Momentu.ModKey (ModKey)
+import           GUI.Momentu (ModKey)
 import qualified GUI.Momentu.Widgets.Grid as Grid
 import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import qualified GUI.Momentu.Widgets.StdKeys as StdKeys

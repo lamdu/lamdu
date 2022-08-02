@@ -15,7 +15,7 @@ import           Data.UUID.Types (UUID)
 import qualified Data.UUID.Types as UUID
 import           Data.Vector.Vector2 (Vector2(..))
 import           Generics.Constraints (makeDerivings, makeInstances)
-import           GUI.Momentu.Draw (Color(..))
+import           GUI.Momentu (Color(..))
 import qualified GUI.Momentu.Hover as Hover
 import qualified GUI.Momentu.Responsive.Expression as ResponsiveExpr
 import qualified GUI.Momentu.Widget as Widget

@@ -10,6 +10,7 @@ import qualified Control.Monad.Trans.FastWriter as Writer
 import qualified Data.Aeson.Config as AesonConfig
 import           Data.CurAndPrev (CurAndPrev)
 import           Data.Vector.Vector2 (Vector2)
+import           GUI.Momentu (ModKey)
 import qualified GUI.Momentu.Animation as Anim
 import qualified GUI.Momentu.Direction as Dir
 import           GUI.Momentu.Draw (Color(..), Sprite)
@@ -17,7 +18,6 @@ import qualified GUI.Momentu.Draw as Draw
 import           GUI.Momentu.Element (HasAnimIdPrefix(..))
 import           GUI.Momentu.Font (openFont, LCDSubPixelEnabled(..))
 import qualified GUI.Momentu.MetaKey as MetaKey
-import           GUI.Momentu.ModKey (ModKey)
 import           GUI.Momentu.State (HasCursor, GUIState(..))
 import           GUI.Momentu.Widgets.EventMapHelp (IsHelpShown(..))
 import           GUI.Momentu.Widgets.Spacer (HasStdSpacing(..))

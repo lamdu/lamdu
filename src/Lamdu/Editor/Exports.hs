@@ -3,7 +3,7 @@
 module Lamdu.Editor.Exports (exportActions) where
 
 import           Hyper.Type.Functor (_F)
-import           GUI.Momentu.ModKey (ModKey)
+import           GUI.Momentu (ModKey)
 import qualified GUI.Momentu.State as GuiState
 import qualified Lamdu.Calc.Term as V
 import           Lamdu.Config (Config)

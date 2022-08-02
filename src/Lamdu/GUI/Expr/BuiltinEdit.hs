@@ -5,10 +5,10 @@ module Lamdu.GUI.Expr.BuiltinEdit
 import qualified Control.Lens as Lens
 import           Data.Property (Property(..))
 import qualified Data.Text as Text
+import           GUI.Momentu (noMods)
 import qualified GUI.Momentu as M
 import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.I18N as MomentuTexts
-import           GUI.Momentu.ModKey (noMods)
 import qualified GUI.Momentu.ModKey as ModKey
 import qualified GUI.Momentu.State as GuiState
 import qualified GUI.Momentu.Widget as Widget

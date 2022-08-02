@@ -3,7 +3,7 @@ module Lamdu.GUI.Types
     , mParensId
     ) where
 
-import           GUI.Momentu.Animation (AnimId)
+import           GUI.Momentu (AnimId)
 import qualified GUI.Momentu.Widget.Id as WidgetId
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Name (Name)

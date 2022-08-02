@@ -3,12 +3,11 @@ module Lamdu.GUI.ParamEdit
     ) where
 
 import qualified Control.Lens as Lens
+import           GUI.Momentu (TextWidget, noMods)
 import qualified GUI.Momentu as M
-import           GUI.Momentu.Align (TextWidget)
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.I18N as MomentuTexts
-import           GUI.Momentu.ModKey (noMods)
 import           GUI.Momentu.Responsive (Responsive)
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.State as GuiState

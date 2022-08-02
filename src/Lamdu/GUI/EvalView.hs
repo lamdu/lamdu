@@ -10,15 +10,13 @@ import qualified Data.List as List
 import qualified Data.Text as Text
 import           Data.Vector.Vector2 (Vector2(..))
 import           Hyper (hfolded1)
-import           GUI.Momentu.Align (Aligned(..), WithTextPos(..))
+import           GUI.Momentu (View, Aligned(..), WithTextPos(..), (/-/), (/|/))
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Animation as Anim
 import qualified GUI.Momentu.Direction as Dir
 import qualified GUI.Momentu.Element as Element
-import           GUI.Momentu.Glue ((/-/), (/|/))
 import qualified GUI.Momentu.Glue as Glue
 import qualified GUI.Momentu.Rect as Rect
-import           GUI.Momentu.View (View(..))
 import qualified GUI.Momentu.View as View
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.GridView as GridView

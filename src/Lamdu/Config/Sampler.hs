@@ -16,9 +16,9 @@ import           Control.Monad.Trans.FastWriter (WriterT, runWriterT, tell)
 import           Data.Aeson (FromJSON)
 import qualified Data.Aeson.Config as AesonConfig
 import           Data.Time.Clock (UTCTime)
+import           GUI.Momentu (ModKey)
 import           GUI.Momentu.MetaKey (OSString)
 import qualified GUI.Momentu.MetaKey as MetaKey
-import           GUI.Momentu.ModKey (ModKey)
 import qualified Graphics.DrawingCombinators as Draw
 import           Lamdu.Config (Config)
 import           Lamdu.Config.Folder (Selection(..))

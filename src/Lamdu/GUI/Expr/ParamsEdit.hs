@@ -10,12 +10,12 @@ import           GUI.Momentu.Widgets.StdKeys (dirKey)
 import           Control.Applicative ((<|>))
 import qualified Control.Lens as Lens
 import           Data.CurAndPrev (CurAndPrev, current)
+import           GUI.Momentu (noMods)
 import qualified GUI.Momentu as M
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.Glue as Glue
 import qualified GUI.Momentu.I18N as MomentuTexts
-import           GUI.Momentu.ModKey (noMods)
 import qualified GUI.Momentu.ModKey as ModKey
 import           GUI.Momentu.Responsive (Responsive)
 import qualified GUI.Momentu.Responsive as Responsive

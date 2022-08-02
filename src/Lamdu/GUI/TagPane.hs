@@ -11,17 +11,15 @@ import           Data.Property (Property(..), pVal)
 import qualified Data.Property as Property
 import qualified Data.Set as Set
 import qualified Data.Text as Text
+import           GUI.Momentu (TextWidget, Aligned(..), WithTextPos(..), Widget, (/-/), (/|/), noMods)
 import qualified GUI.Momentu as M
-import           GUI.Momentu.Align (TextWidget, Aligned(..), WithTextPos(..))
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as E
-import           GUI.Momentu.Glue ((/-/), (/|/), hbox)
+import           GUI.Momentu.Glue (hbox)
 import qualified GUI.Momentu.I18N as MomentuTexts
-import           GUI.Momentu.ModKey (noMods)
 import qualified GUI.Momentu.ModKey as ModKey
 import qualified GUI.Momentu.State as GuiState
-import           GUI.Momentu.Widget (Widget)
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.DropDownList as DropDownList
 import qualified GUI.Momentu.Widgets.FocusDelegator as FocusDelegator

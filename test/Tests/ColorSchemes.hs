@@ -6,7 +6,7 @@ import qualified Control.Monad.Trans.FastWriter as Writer
 import           Data.Aeson.Config (load)
 import           Data.Data.Lens (template)
 import qualified Data.Map as Map
-import           GUI.Momentu.Draw (Color(..))
+import           GUI.Momentu (Color(..))
 import qualified Lamdu.Config.Folder as Folder
 import           Lamdu.Config.Theme (Theme)
 import           System.FilePath (takeFileName)

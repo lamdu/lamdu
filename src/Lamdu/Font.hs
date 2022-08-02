@@ -5,7 +5,7 @@ module Lamdu.Font
 
 import qualified Control.Exception as E
 import           Data.Typeable (Typeable)
-import           GUI.Momentu.Font (Font)
+import           GUI.Momentu (Font)
 import qualified GUI.Momentu.Font as Font
 import qualified System.Directory as Directory
 import           Text.Printf (printf)

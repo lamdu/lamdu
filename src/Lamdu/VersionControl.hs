@@ -7,7 +7,7 @@ import           Data.List.Extended (elemIndex, removeAt)
 import           Data.Maybe.Extended (unsafeUnjust)
 import           Data.Property (Property(..))
 import qualified Data.Property as Property
-import           GUI.Momentu.State (GUIState)
+import           GUI.Momentu (GUIState)
 import qualified GUI.Momentu.State as GuiState
 import           Lamdu.Data.Db.Layout (DbM)
 import qualified Lamdu.Data.Db.Layout as DbLayout

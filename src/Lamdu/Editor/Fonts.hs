@@ -5,8 +5,7 @@ module Lamdu.Editor.Fonts
 import qualified Control.Lens as Lens
 import           Data.IORef
 import           Data.MRUMemo (memoIO)
-import           GUI.Momentu.Font (Font)
-import           GUI.Momentu.Zoom (Zoom)
+import           GUI.Momentu (Font, Zoom)
 import qualified GUI.Momentu.Zoom as Zoom
 import           Lamdu.Config.Sampler (Sampler, Sample)
 import qualified Lamdu.Config.Sampler as Sampler

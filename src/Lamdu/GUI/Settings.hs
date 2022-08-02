@@ -8,7 +8,7 @@ module Lamdu.GUI.Settings
 
 import qualified Control.Lens as Lens
 import           Data.Property (Property, composeLens)
-import           GUI.Momentu.Align (WithTextPos(..))
+import           GUI.Momentu (WithTextPos(..))
 import qualified GUI.Momentu.Animation.Id as AnimId
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.I18N as Texts

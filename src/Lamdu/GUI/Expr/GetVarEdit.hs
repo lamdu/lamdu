@@ -5,6 +5,7 @@ module Lamdu.GUI.Expr.GetVarEdit
     ) where
 
 import qualified Control.Lens as Lens
+import           GUI.Momentu (noMods)
 import qualified GUI.Momentu as M
 import qualified GUI.Momentu.Align as Align
 import           GUI.Momentu.EventMap (EventMap)
@@ -12,7 +13,6 @@ import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Font (Underline(..))
 import qualified GUI.Momentu.Hover as Hover
 import qualified GUI.Momentu.I18N as MomentuTexts
-import           GUI.Momentu.ModKey (noMods)
 import qualified GUI.Momentu.ModKey as ModKey
 import           GUI.Momentu.Responsive (Responsive)
 import qualified GUI.Momentu.Responsive as Responsive

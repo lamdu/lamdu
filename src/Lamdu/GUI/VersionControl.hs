@@ -6,12 +6,11 @@ module Lamdu.GUI.VersionControl
 import qualified Control.Lens as Lens
 import qualified Data.List.Extended as List
 import qualified Data.Property as Property
-import           GUI.Momentu.Align (TextWidget)
+import           GUI.Momentu (TextWidget, ModKey, noMods)
 import qualified GUI.Momentu.Align as Align
 import           GUI.Momentu.EventMap (EventMap)
 import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.I18N as MomentuTexts
-import           GUI.Momentu.ModKey (ModKey, noMods)
 import qualified GUI.Momentu.ModKey as ModKey
 import qualified GUI.Momentu.State as GuiState
 import qualified GUI.Momentu.Widget as Widget

@@ -10,6 +10,7 @@ import qualified Control.Lens as Lens
 import           Data.CurAndPrev (CurAndPrev, fallbackToPrev)
 import qualified Data.Map as Map
 import qualified Data.Property as Property
+import           GUI.Momentu (ModKey(..), noMods)
 import qualified GUI.Momentu as M
 import qualified GUI.Momentu.Direction as Dir
 import           GUI.Momentu.Element (subAnimId)
@@ -18,7 +19,6 @@ import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.FocusDirection as Direction
 import qualified GUI.Momentu.Glue as Glue
 import qualified GUI.Momentu.I18N as MomentuTexts
-import           GUI.Momentu.ModKey (ModKey(..), noMods)
 import qualified GUI.Momentu.ModKey as ModKey
 import           GUI.Momentu.Rect (Rect(..))
 import qualified GUI.Momentu.Rect as Rect

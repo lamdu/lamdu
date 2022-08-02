@@ -13,9 +13,9 @@ import qualified Data.ByteString.Lazy.Char8 as LBSChar
 import           Data.List (sort, group)
 import           Data.Proxy (asProxyTypeOf)
 import           Data.Text (unpack)
+import           GUI.Momentu (ModKey)
 import qualified GUI.Momentu.Draw as Draw
 import qualified GUI.Momentu.MetaKey as MetaKey
-import           GUI.Momentu.ModKey (ModKey)
 import           Lamdu.Config (Config)
 import           Lamdu.Config.Folder (HasConfigFolder)
 import qualified Lamdu.Config.Folder as Folder
