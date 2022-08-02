@@ -6,6 +6,7 @@ import qualified Control.Lens as Lens
 import           Data.Property (Property)
 import qualified GUI.Momentu as M
 import           GUI.Momentu.Direction (Orientation(..), Order(..))
+import           GUI.Momentu.EventMap (EventMap)
 import           GUI.Momentu.Responsive (Responsive)
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.Responsive.Options as ResponsiveOptions
@@ -36,26 +37,14 @@ import           Lamdu.Prelude
 make :: _ => Sugar.NominalPane Name i o -> GuiM env i o (Responsive o)
 make nom =
     do
-        hbox <- ResponsiveOptions.boxSpaced ?? ResponsiveOptions.disambiguationNone
-        o <- Lens.view has <&> (`dirKey` Horizontal)
-        keys <-
-            traverse Lens.view TaggedList.Keys
-            { TaggedList._kAdd = has . Config.addNextParamKeys
-            , TaggedList._kOrderBefore = has . Config.orderDirKeys . o Backward
-            , TaggedList._kOrderAfter = has . Config.orderDirKeys . o Forward
-            }
-        (addFirstEventMap, itemsR) <-
-            -- TODO: rhs id
-            TaggedList.make (has . Texts.parameter) keys nameEditId myId (nom ^. Sugar.npParams)
+        (addFirstEventMap, paramEdits) <- makeParamEdits (nom ^. Sugar.npParams) nameEditId myId
         nameEdit <-
             TagEdit.makeBinderTagEdit TextColors.nomColor (nom ^. Sugar.npName)
             <&> Responsive.fromWithTextPos
             <&> M.weakerEvents addFirstEventMap
-        paramEdits <-
-            ParamEdit.mkAddParam (nom ^. Sugar.npParams . Sugar.tlAddFirst) nameEditId
-            <> (traverse makeParam itemsR <&> concat)
         sep <- Styled.grammar (Label.make ":") <&> Responsive.fromTextView
         bodyEdit <- makeNominalPaneBody (nom ^. Sugar.npBody)
+        hbox <- ResponsiveOptions.boxSpaced ?? ResponsiveOptions.disambiguationNone
         hbox [hbox ((nameEdit : paramEdits) <> [sep]), bodyEdit]
             & pure
         & local (M.animIdPrefix .~ Widget.toAnimId myId)
@@ -65,6 +54,26 @@ make nom =
         nameEditId =
             nom ^. Sugar.npName . Sugar.oTag . Sugar.tagRefTag . Sugar.tagInstance
             & WidgetIds.fromEntityId
+
+makeParamEdits ::
+    _ =>
+    Sugar.TaggedList Name i o (Property o Sugar.ParamKind) -> Widget.Id -> Widget.Id ->
+    GuiM env i o (EventMap (o GuiState.Update), [Responsive o])
+makeParamEdits params prevId myId =
+    do
+        o <- Lens.view has <&> (`dirKey` Horizontal)
+        keys <-
+            traverse Lens.view TaggedList.Keys
+            { TaggedList._kAdd = has . Config.addNextParamKeys
+            , TaggedList._kOrderBefore = has . Config.orderDirKeys . o Backward
+            , TaggedList._kOrderAfter = has . Config.orderDirKeys . o Forward
+            }
+        (addFirstEventMap, itemsR) <-
+            -- TODO: rhs id
+            TaggedList.make (has . Texts.parameter) keys prevId myId params
+        ParamEdit.mkAddParam (params ^. Sugar.tlAddFirst) prevId
+            <> (traverse makeParam itemsR <&> concat)
+            <&> (,) addFirstEventMap
 
 paramKindEdit :: _ => Property o Sugar.ParamKind -> Widget.Id -> GuiM env i o (M.TextWidget o)
 paramKindEdit prop myId@(Widget.Id animId) =
