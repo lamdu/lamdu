@@ -4,7 +4,7 @@ module Lamdu.GUI.NominalPane
 
 import qualified Control.Lens as Lens
 import           Data.Property (Property)
-import           GUI.Momentu (Responsive, EventMap)
+import           GUI.Momentu (Responsive, EventMap, Update)
 import qualified GUI.Momentu as M
 import           GUI.Momentu.Direction (Orientation(..), Order(..))
 import qualified GUI.Momentu.Responsive as Responsive
@@ -57,7 +57,7 @@ make nom =
 makeParamEdits ::
     _ =>
     Sugar.TaggedList Name i o (Property o Sugar.ParamKind) -> Widget.Id -> Widget.Id ->
-    GuiM env i o (EventMap (o GuiState.Update), [Responsive o])
+    GuiM env i o (EventMap (o Update), [Responsive o])
 makeParamEdits params prevId myId =
     do
         o <- Lens.view has <&> (`dirKey` Horizontal)

@@ -6,7 +6,7 @@ module Lamdu.GUI.VersionControl
 import qualified Control.Lens as Lens
 import qualified Data.List.Extended as List
 import qualified Data.Property as Property
-import           GUI.Momentu (TextWidget, EventMap, ModKey, noMods)
+import           GUI.Momentu (TextWidget, EventMap, ModKey, noMods, Update)
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.I18N as MomentuTexts
@@ -42,7 +42,7 @@ branchNameFDConfig txt = FocusDelegator.Config
 
 undoEventMap ::
     _ => env -> VersionControl.Config ModKey ->
-    Maybe (m GuiState.Update) -> EventMap (m GuiState.Update)
+    Maybe (m Update) -> EventMap (m Update)
 undoEventMap env config =
     E.keyPresses (config ^. VersionControl.undoKeys)
     (E.toDoc env [has . MomentuTexts.edit, has . Texts.undo])
@@ -50,15 +50,15 @@ undoEventMap env config =
 
 redoEventMap ::
     _ =>
-    env -> VersionControl.Config ModKey -> Maybe (m GuiState.Update) ->
-    EventMap (m GuiState.Update)
+    env -> VersionControl.Config ModKey -> Maybe (m Update) ->
+    EventMap (m Update)
 redoEventMap env config =
     E.keyPresses (config ^. VersionControl.redoKeys)
     (E.toDoc env [has . MomentuTexts.edit, has . Texts.redo])
     & foldMap
 
 eventMap ::
-    _ => m (VersionControl.Config ModKey -> A.Actions t f -> EventMap (f GuiState.Update))
+    _ => m (VersionControl.Config ModKey -> A.Actions t f -> EventMap (f Update))
 eventMap =
     Lens.view id
     <&> \env config actions ->

@@ -10,7 +10,7 @@ import qualified Control.Lens as Lens
 import           Data.CurAndPrev (CurAndPrev, fallbackToPrev)
 import qualified Data.Map as Map
 import qualified Data.Property as Property
-import           GUI.Momentu (Responsive, EventMap, ModKey(..), noMods)
+import           GUI.Momentu (Responsive, EventMap, ModKey(..), noMods, Update)
 import qualified GUI.Momentu as M
 import qualified GUI.Momentu.Direction as Dir
 import           GUI.Momentu.Element (subAnimId)
@@ -248,7 +248,7 @@ layout lhs body =
             <&> Options.tryWideLayout hbox [lhs, space, body]
 
 makePlainLhsEventMap ::
-    _ => o Sugar.EntityId -> Widget.Id -> GuiM env i o (EventMap (o GuiState.Update))
+    _ => o Sugar.EntityId -> Widget.Id -> GuiM env i o (EventMap (o Update))
 makePlainLhsEventMap addFirstParam rhsId =
     do
         env <- Lens.view id

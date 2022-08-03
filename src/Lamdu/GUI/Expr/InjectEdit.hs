@@ -3,7 +3,7 @@ module Lamdu.GUI.Expr.InjectEdit
     ) where
 
 import qualified Control.Lens as Lens
-import           GUI.Momentu (Responsive, (/|/))
+import           GUI.Momentu (Responsive, (/|/), Update)
 import qualified GUI.Momentu as M
 import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.I18N as MomentuTexts
@@ -49,10 +49,10 @@ make (Ann (Const pl) (Const tag)) =
         myId = WidgetIds.fromExprPayload pl
 
 data NullaryRecord o
-    = HiddenNullaryRecord (E.EventMap (o GuiState.Update)) -- enter it
+    = HiddenNullaryRecord (E.EventMap (o Update)) -- enter it
     | FocusedNullaryRecord (Responsive o)
 
-enterSubexpr :: _ => Widget.Id -> f (E.EventMap (o GuiState.Update))
+enterSubexpr :: _ => Widget.Id -> f (E.EventMap (o Update))
 enterSubexpr myId =
     Lens.view id <&>
     \env ->
@@ -61,7 +61,7 @@ enterSubexpr myId =
     (E.toDoc env [has . MomentuTexts.navigation, has . Texts.enterSubexpression])
     (pure myId)
 
-leaveSubexpr :: _ => Widget.Id -> f (E.EventMap (o GuiState.Update))
+leaveSubexpr :: _ => Widget.Id -> f (E.EventMap (o Update))
 leaveSubexpr myId =
     Lens.view id <&>
     \env ->

@@ -3,7 +3,7 @@ module Lamdu.GUI.ParamEdit
     ) where
 
 import qualified Control.Lens as Lens
-import           GUI.Momentu (Responsive, EventMap, TextWidget, noMods)
+import           GUI.Momentu (Responsive, EventMap, TextWidget, noMods, Update)
 import qualified GUI.Momentu as M
 import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.I18N as MomentuTexts
@@ -27,7 +27,7 @@ import qualified Lamdu.Sugar.Types as Sugar
 import           Lamdu.Prelude
 
 eventMapAddNextParamOrPickTag ::
-    _ => Widget.Id -> Sugar.AddParam name i o -> m (EventMap (o GuiState.Update))
+    _ => Widget.Id -> Sugar.AddParam name i o -> m (EventMap (o Update))
 eventMapAddNextParamOrPickTag myId Sugar.AddNext{} =
     Lens.view (has . Config.addNextParamKeys) >>=
     (TaggedList.addNextEventMap (has . Texts.parameter) ?? myId)

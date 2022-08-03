@@ -8,7 +8,7 @@ module Lamdu.GUI.TaggedList
 
 import qualified Control.Lens as Lens
 import           Data.List.Extended (withPrevNext)
-import           GUI.Momentu (EventMap, ModKey)
+import           GUI.Momentu (EventMap, ModKey, Update)
 import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.I18N as MomentuTexts
 import qualified GUI.Momentu.State as GuiState
@@ -24,7 +24,7 @@ import           Lamdu.Prelude
 data Item name i o a = Item
     { _iTag :: Sugar.TagRef name i o
     , _iValue :: a
-    , _iEventMap :: EventMap (o GuiState.Update)
+    , _iEventMap :: EventMap (o Update)
     , _iAddAfter :: i (Sugar.TagChoice name o)
     }
 Lens.makeLenses ''Item
@@ -42,7 +42,7 @@ make ::
     Keys [ModKey] ->
     Widget.Id -> Widget.Id ->
     Sugar.TaggedList name i o a ->
-    m (EventMap (o GuiState.Update), [Item name i o a])
+    m (EventMap (o Update), [Item name i o a])
 make cat keys prevId nextId tl =
     (,)
     <$> addNextEventMap cat (keys ^. kAdd) prevId
@@ -79,7 +79,7 @@ makeBody cat keys prevId nextId items =
             [Nothing]
 
 delEventMap ::
-    _ => Lens.ALens' env Text -> o () -> Widget.Id -> Widget.Id -> m (EventMap (o GuiState.Update))
+    _ => Lens.ALens' env Text -> o () -> Widget.Id -> Widget.Id -> m (EventMap (o Update))
 delEventMap cat fpDel prevId nextId =
     Lens.view id <&>
     \env ->

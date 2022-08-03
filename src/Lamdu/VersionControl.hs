@@ -7,7 +7,7 @@ import           Data.List.Extended (elemIndex, removeAt)
 import           Data.Maybe.Extended (unsafeUnjust)
 import           Data.Property (Property(..))
 import qualified Data.Property as Property
-import           GUI.Momentu (GUIState)
+import           GUI.Momentu (GUIState, Update)
 import qualified GUI.Momentu.State as GuiState
 import           Lamdu.Data.Db.Layout (DbM)
 import qualified Lamdu.Data.Db.Layout as DbLayout
@@ -71,7 +71,7 @@ getVersion =
 
 runEvent ::
     Traversable t =>
-    GUIState -> TV (t GuiState.Update) -> TDB (t GuiState.Update)
+    GUIState -> TV (t Update) -> TDB (t Update)
 runEvent preGuiState eventHandler = do
     (eventResult, isEmpty) <- runAction $ do
         eventResult <- eventHandler

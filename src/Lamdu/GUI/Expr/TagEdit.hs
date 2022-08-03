@@ -12,7 +12,7 @@ import qualified Data.Char as Char
 import           Data.MRUMemo (memo)
 import qualified Data.Property as Property
 import qualified Data.Text as Text
-import           GUI.Momentu (EventMap)
+import           GUI.Momentu (EventMap, Update)
 import qualified GUI.Momentu as M
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as E
@@ -348,7 +348,7 @@ makeVariantTag onPickNext = makeTagRefEdit onPickNext <&> Styled.withColor TextC
 addItemId :: Widget.Id -> Widget.Id
 addItemId = (`Widget.joinId` ["add item"])
 
-makeChooseEventMap :: _ => Widget.Id -> m (EventMap (o GuiState.Update))
+makeChooseEventMap :: _ => Widget.Id -> m (EventMap (o Update))
 makeChooseEventMap tagEditId =
     Lens.view id <&>
     \env ->

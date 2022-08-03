@@ -7,7 +7,7 @@ import           Data.List (group, sort)
 import qualified Data.Property as Property
 import qualified Graphics.UI.GLFW as GLFW
 import           GHC.Stack (prettyCallStack, callStack)
-import           GUI.Momentu (Responsive)
+import           GUI.Momentu (Responsive, Update)
 import qualified GUI.Momentu as M
 import qualified GUI.Momentu.Animation as Anim
 import qualified GUI.Momentu.Element as Element
@@ -83,7 +83,7 @@ makeGui afterDoc env workArea =
 
 focusedWidget ::
     HasCallStack =>
-    String -> Responsive f -> Either String (Widget.Focused (f GuiState.Update))
+    String -> Responsive f -> Either String (Widget.Focused (f Update))
 focusedWidget msg gui =
     widget <$ verifyLayers msg (widget ^. Widget.fLayers)
     where
@@ -91,13 +91,13 @@ focusedWidget msg gui =
 
 makeFocusedWidget ::
     HasCallStack =>
-    String -> Env -> WorkArea -> OnceT (T ViewM) (Widget.Focused (T ViewM GuiState.Update))
+    String -> Env -> WorkArea -> OnceT (T ViewM) (Widget.Focused (T ViewM Update))
 makeFocusedWidget msg env workArea =
     makeGui msg env workArea >>= either error pure . focusedWidget msg
 
 mApplyEvent ::
     HasCallStack =>
-    String -> Env -> VirtualCursor -> E.Event -> WorkArea -> OnceT (T ViewM) (Maybe GuiState.Update)
+    String -> Env -> VirtualCursor -> E.Event -> WorkArea -> OnceT (T ViewM) (Maybe Update)
 mApplyEvent msg env virtCursor event workArea =
     do
         w <- makeFocusedWidget msg env workArea

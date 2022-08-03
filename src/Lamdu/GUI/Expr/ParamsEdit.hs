@@ -10,7 +10,7 @@ import           GUI.Momentu.Widgets.StdKeys (dirKey)
 import           Control.Applicative ((<|>))
 import qualified Control.Lens as Lens
 import           Data.CurAndPrev (CurAndPrev, current)
-import           GUI.Momentu (Responsive, EventMap, noMods)
+import           GUI.Momentu (Responsive, EventMap, noMods, Update)
 import qualified GUI.Momentu as M
 import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.Glue as Glue
@@ -159,7 +159,7 @@ mkLightLambda params myId =
 makeLhs ::
     _ =>
     Bool -> Sugar.LhsNames a i o v ->
-    Responsive o -> Maybe (Widget.Widget o) -> EventMap (o GuiState.Update) -> Widget.Id ->
+    Responsive o -> Maybe (Widget.Widget o) -> EventMap (o Update) -> Widget.Id ->
     m [Responsive o]
 makeLhs _ (Sugar.LhsVar p) paramsEdit mScopeEdit _ _
     | p ^. Sugar.vIsNullParam = mkLhsEdits ?? paramsEdit ?? mScopeEdit
@@ -173,7 +173,7 @@ make ::
     Widget.Id -> Widget.Id ->
     Widget.Id ->
     Sugar.LhsNames Name i o (Sugar.Annotation (Sugar.EvaluationScopes Name i) Name) ->
-    GuiM env i o (EventMap (o GuiState.Update), Responsive o)
+    GuiM env i o (EventMap (o Update), Responsive o)
 make isLet mScopeCursor isScopeNavFocused delVarBackwardsId myId bodyId params =
     makeBody isLet annotationMode delVarBackwardsId myId bodyId params
     & fixScopeId
@@ -201,7 +201,7 @@ makeBody ::
     Annotation.EvalAnnotationOptions ->
     Widget.Id -> Widget.Id -> Widget.Id ->
     Sugar.LhsNames Name i o (Sugar.Annotation (Sugar.EvaluationScopes Name i) Name) ->
-    GuiM env i o (EventMap (o GuiState.Update), Responsive o)
+    GuiM env i o (EventMap (o Update), Responsive o)
 makeBody isLet annotationOpts delVarBackwardsId lhsId rhsId params =
     case params of
     Sugar.LhsRecord items -> makeParams annotationOpts delVarBackwardsId rhsId items
@@ -252,7 +252,7 @@ makeParams ::
     Annotation.EvalAnnotationOptions ->
     Widget.Id -> Widget.Id ->
     Sugar.TaggedList Name i o (Sugar.LhsField Name (Sugar.Annotation (Sugar.EvaluationScopes Name i) Name)) ->
-    GuiM env i o (EventMap (o GuiState.Update), Responsive o)
+    GuiM env i o (EventMap (o Update), Responsive o)
 makeParams annotationOpts prevId nextId items =
     do
         o <- Lens.view has <&> (`dirKey` Horizontal)

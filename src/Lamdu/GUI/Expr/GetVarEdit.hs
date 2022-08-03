@@ -5,7 +5,7 @@ module Lamdu.GUI.Expr.GetVarEdit
     ) where
 
 import qualified Control.Lens as Lens
-import           GUI.Momentu (Responsive, EventMap, noMods)
+import           GUI.Momentu (Responsive, EventMap, noMods, Update)
 import qualified GUI.Momentu as M
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.EventMap as E
@@ -95,7 +95,7 @@ makeNameRef role color myId var =
         name = var ^. Sugar.vName
         nameId = Widget.joinId myId ["name"]
 
-makeInlineEventMap :: _ => env -> Sugar.VarInline f -> EventMap (f GuiState.Update)
+makeInlineEventMap :: _ => env -> Sugar.VarInline f -> EventMap (f Update)
 makeInlineEventMap env (Sugar.InlineVar inline) =
     inline <&> WidgetIds.fromEntityId
     & E.keysEventMapMovesCursor (env ^. has . Config.inlineKeys)

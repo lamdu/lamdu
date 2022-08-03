@@ -20,7 +20,7 @@ import           Data.CurAndPrev (CurAndPrev(..))
 import           Data.Functor.Compose (Compose(..))
 import qualified Data.Property as Property
 import           Data.Tuple (swap)
-import           GUI.Momentu (Widget, EventMap, Responsive)
+import           GUI.Momentu (Widget, EventMap, Responsive, Update)
 import qualified GUI.Momentu as M
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Element as Element
@@ -28,7 +28,6 @@ import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.I18N as MomentuTexts
 import           GUI.Momentu.Rect (Rect(..))
 import qualified GUI.Momentu.Responsive as Responsive
-import qualified GUI.Momentu.State as GuiState
 import qualified GUI.Momentu.Widget as Widget
 import qualified Lamdu.Builtins.Anchors as Builtins
 import qualified Lamdu.Calc.Term as V
@@ -66,12 +65,12 @@ import           Lamdu.Prelude
 type T = Transaction
 
 data ExportActions m = ExportActions
-    { exportAll :: IOTrans m GuiState.Update
-    , exportDef :: V.Var -> IOTrans m GuiState.Update
-    , exportDefToJS :: V.Var -> IOTrans m GuiState.Update
+    { exportAll :: IOTrans m Update
+    , exportDef :: V.Var -> IOTrans m Update
+    , exportDefToJS :: V.Var -> IOTrans m Update
     , executeDef :: V.Var -> IO ()
-    , exportTag :: T.Tag -> IOTrans m GuiState.Update
-    , exportNominal :: T.NominalId -> IOTrans m GuiState.Update
+    , exportTag :: T.Tag -> IOTrans m Update
+    , exportNominal :: T.NominalId -> IOTrans m Update
     , importAll :: FilePath -> IOTrans m ()
     }
 
@@ -132,7 +131,7 @@ make cp gp width mkWorkArea =
 exportPaneEventMap ::
     _ =>
     env -> ExportActions m -> Sugar.PaneBody v name i o dummy ->
-    EventMap (IOTrans m GuiState.Update)
+    EventMap (IOTrans m Update)
 exportPaneEventMap env theExportActions paneBody =
     case paneBody of
     Sugar.PaneDefinition def ->
@@ -300,7 +299,7 @@ jumpBack gp =
 panesEventMap ::
     _ =>
     ExportActions m -> Anchors.CodeAnchors m -> Anchors.GuiAnchors (T m) (T m) ->
-    GuiM env (OnceT (T m)) (T m) (EventMap (IOTrans m GuiState.Update))
+    GuiM env (OnceT (T m)) (T m) (EventMap (IOTrans m Update))
 panesEventMap theExportActions cp gp =
     do
         env <- Lens.view id

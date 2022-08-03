@@ -5,7 +5,7 @@ module Lamdu.GUI.Expr.RecordEdit
 import qualified Control.Lens as Lens
 import qualified Data.Char as Char
 import qualified Data.Text as Text
-import           GUI.Momentu (Responsive, EventMap)
+import           GUI.Momentu (Responsive, EventMap, Update)
 import qualified GUI.Momentu as M
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as E
@@ -48,7 +48,7 @@ doc :: _ => env -> [Lens.ALens' (Texts.CodeUI Text) Text] -> E.Doc
 doc env lens =
     E.toDoc env ([has . MomentuTexts.edit, has . Texts.record] <> (lens <&> (has .)))
 
-addFieldWithSearchTermEventMap :: _ => env -> Widget.Id -> EventMap (o GuiState.Update)
+addFieldWithSearchTermEventMap :: _ => env -> Widget.Id -> EventMap (o Update)
 addFieldWithSearchTermEventMap env myId =
     E.charEventMap "Letter" (doc env [Texts.field, Texts.add]) f
     where
@@ -252,7 +252,7 @@ makeOpenRecord rest fieldsGui =
             ?? (separationBar (theme ^. Theme.textColors) animId <&> (|---| vspace))
             ?? fieldsGui ?? restExpr
 
-closedRecordEventMap :: _ => Sugar.ClosedCompositeActions o -> m (EventMap (o GuiState.Update))
+closedRecordEventMap :: _ => Sugar.ClosedCompositeActions o -> m (EventMap (o Update))
 closedRecordEventMap (Sugar.ClosedCompositeActions open) =
     Lens.view id
     <&>

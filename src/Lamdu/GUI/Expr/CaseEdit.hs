@@ -3,7 +3,7 @@ module Lamdu.GUI.Expr.CaseEdit
     ) where
 
 import qualified Control.Lens as Lens
-import           GUI.Momentu (Responsive, EventMap, View)
+import           GUI.Momentu (Responsive, EventMap, View, Update)
 import qualified GUI.Momentu as M
 import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.Glue as Glue
@@ -107,7 +107,7 @@ makeAltsWidget ::
     Widget.Id ->
     Sugar.TaggedList Name i o (ExprGui.Expr Sugar.Term i o) ->
     [Sugar.PunnedVar Name o # Annotated (ExprGui.Payload i o)] ->
-    GuiM env i o (EventMap (o GuiState.Update), Responsive o)
+    GuiM env i o (EventMap (o Update), Responsive o)
 makeAltsWidget altsId alts punned =
     do
         punnedWidgets <-
@@ -182,7 +182,7 @@ makeOpenCase rest animId altsGui =
             (separationBar (theme ^. Theme.textColors) animId <&> (\x -> vspace |---| x |---| vspace))
             altsGui restExpr & pure
 
-closedCaseEventMap :: _ => env -> Sugar.ClosedCompositeActions o -> EventMap (o GuiState.Update)
+closedCaseEventMap :: _ => env -> Sugar.ClosedCompositeActions o -> EventMap (o Update)
 closedCaseEventMap env (Sugar.ClosedCompositeActions open) =
     open <&> WidgetIds.fromEntityId
     & E.keysEventMapMovesCursor (env ^. has . Config.caseOpenKeys) (doc env [Texts.open])

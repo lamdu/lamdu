@@ -9,7 +9,7 @@ import qualified Data.Property as Property
 import qualified Data.Text as Text
 import           Data.Vector.Vector2 (Vector2(..))
 import           Hyper.Syntax.App (appFunc)
-import           GUI.Momentu (Responsive, ModKey(..), noMods)
+import           GUI.Momentu (Responsive, ModKey(..), Update, noMods)
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.EventMap (Event(..))
@@ -475,7 +475,7 @@ testActionsAndNavigation = testConsistentKeyboardNavigation <> testActions
 
 testProgramGuiAtPos ::
     HasCallStack =>
-    Env.Env -> Widget.EnterResult (T ViewM GuiState.Update) -> OnceT (T ViewM) ()
+    Env.Env -> Widget.EnterResult (T ViewM Update) -> OnceT (T ViewM) ()
 testProgramGuiAtPos baseEnv enter =
     do
         upd <- enter ^. Widget.enterResultEvent & lift
