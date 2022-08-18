@@ -101,8 +101,7 @@ make cp gp width mkWorkArea =
         do
             newDefId <- Element.subAnimId ?? ["New definition"] <&> Widget.Id
             let dsts =
-                    newDefId :
-                    (workArea ^.. Sugar.waPanes . traverse . Sugar.paneEntityId <&> WidgetIds.fromEntityId)
+                    drop 1 (workArea ^.. Sugar.waPanes . traverse . Sugar.paneEntityId <&> WidgetIds.fromEntityId) ++ [newDefId]
             panesEdits <-
                 workArea ^. Sugar.waPanes
                 & zipWithM (makePaneEdit theExportActions) dsts
