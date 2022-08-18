@@ -162,7 +162,8 @@
             "rightToLeftSymbol": "מימין לשמאל",
             "typeOperatorHere": "הזן סימן כאן",
             "opaque": "אטום",
-            "gotoNextOutdated": "עבור להגדרה המוזנחת הבאה"
+            "gotoNextOutdated": "עבור להגדרה המוזנחת הבאה",
+            "enabledSugars": "שוגרים דלוקים"
         },
         "statusBar": {
             "statusBar": "סרגל מצב",

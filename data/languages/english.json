@@ -161,7 +161,8 @@
             "rightToLeftSymbol": "Right to left",
             "typeOperatorHere": "Type operator here",
             "opaque": "Opaque",
-            "gotoNextOutdated": "Go to next outdated definition"
+            "gotoNextOutdated": "Go to next outdated definition",
+            "enabledSugars": "Enabled sugars"
         },
         "name": {
             "unnamed": "Unnamed",

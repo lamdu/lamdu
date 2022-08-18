@@ -5,14 +5,18 @@ module Lamdu.GUI.StatusBar.Sugars
 import qualified Control.Lens as Lens
 import qualified Data.ByteString.Char8 as BS8
 import           Data.Property (Property, pVal, pureModify)
+import           GUI.Momentu (noMods)
 import qualified GUI.Momentu as M
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.Glue as Glue
 import qualified GUI.Momentu.Hover as Hover
+import qualified GUI.Momentu.I18N as MomentuTexts
+import qualified GUI.Momentu.ModKey as ModKey
 import           GUI.Momentu.State (isSubCursor)
 import qualified GUI.Momentu.Widget as Widget
+import qualified GUI.Momentu.Widgets.FocusDelegator as FocusDelegator
 import qualified GUI.Momentu.Widgets.TextView as TextView
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Theme as Theme
@@ -21,15 +25,32 @@ import           Lamdu.GUI.StatusBar.Common (StatusWidget)
 import qualified Lamdu.GUI.StatusBar.Common as StatusBar
 import           Lamdu.GUI.Styled (sprite)
 import qualified Lamdu.I18N.StatusBar as Texts
+import qualified Lamdu.I18N.CodeUI as Texts
 import           Lamdu.Sugar.Config (Sugars)
 
 import           Lamdu.Prelude
 
+sugarFdConfig :: _ => env -> FocusDelegator.Config
+sugarFdConfig env = FocusDelegator.Config
+    { FocusDelegator.focusChildKeys = [noMods ModKey.Key'Enter]
+    , FocusDelegator.focusChildDoc = doc Texts.open
+    , FocusDelegator.focusParentKeys = [noMods ModKey.Key'Escape]
+    , FocusDelegator.focusParentDoc = doc Texts.close
+    }
+    where
+        doc op = E.toDoc env [has . MomentuTexts.edit, has . Texts.enabledSugars, has . op]
+
 make :: _ => Property IO (Sugars Bool) -> m (StatusWidget IO)
 make prop =
+    ( FocusDelegator.make
+    <*> (Lens.view id <&> sugarFdConfig)
+    ?? FocusDelegator.FocusEntryParent
+    ?? sugarsId
+    ) <*>
     do
-        top <- (Widget.makeFocusableView ?? sugarsId <> Widget.Id ["Header"]) <*> sprite Sprites.sugar
-        showMenu <- isSubCursor ?? sugarsId
+        top <-
+            (Widget.makeFocusableView ?? focusedSugarsId <> Widget.Id ["Header"]) <*> sprite Sprites.sugar
+        showMenu <- isSubCursor ?? focusedSugarsId
         if showMenu
             then
                 do
@@ -50,7 +71,10 @@ make prop =
     <&> (`StatusBar.StatusWidget` mempty) . M.WithTextPos 0
 
 sugarsId :: Widget.Id
-sugarsId = Widget.Id ["Sugar"]
+sugarsId = Widget.Id ["Sugars"]
+
+focusedSugarsId :: Widget.Id
+focusedSugarsId = sugarsId `Widget.joinId` ["inner"]
 
 mkSugarToggle :: _ => Property IO (Sugars Bool) -> Int -> (Text, Bool) -> m (M.TextWidget IO)
 mkSugarToggle prop idx (text, val) =
@@ -65,6 +89,6 @@ mkSugarToggle prop idx (text, val) =
             <&> M.tValue %~ M.weakerEvents (E.keysEventMap actionKeys (E.Doc [sbText, text, actionText]) toggle)
     & local (Element.animIdPrefix .~ Widget.toAnimId myId)
     where
-        myId = sugarsId <> Widget.Id [BS8.pack (show idx)]
+        myId = focusedSugarsId <> Widget.Id [BS8.pack (show idx)]
         toggle =
             pureModify prop (Lens.element idx .~ not val)

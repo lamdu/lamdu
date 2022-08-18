@@ -161,7 +161,8 @@
             "rightToLeftSymbol": "Da destra a sinistra",
             "typeOperatorHere": "Operatore tipo qui",
             "opaque": "opaco",
-            "gotoNextOutdated": "Vai alla prossima definizione obsoleta"
+            "gotoNextOutdated": "Vai alla prossima definizione obsoleta",
+            "enabledSugars": "Zuccheri abilitati"
         },
         "name": {
             "unnamed": "Senza nome",
