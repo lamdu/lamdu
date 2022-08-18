@@ -59,30 +59,32 @@ makeToNom (Ann (Const pl) (Sugar.Nominal tid binder)) =
     where
         myId = WidgetIds.fromExprPayload pl
 
-makeFromNom :: _ => Widget.Id -> Sugar.TId Name o -> GuiM env i o (Responsive o)
+makeFromNom :: _ => Widget.Id -> Sugar.TId Name -> GuiM env i o (Responsive o)
 makeFromNom myId nom =
     Styled.grammar (Label.make ".") M./|/ makeTId myId nom <&> Responsive.fromWithTextPos
 
-makeJumpToNomEventMap :: _ => Sugar.TId Name o -> GuiM env i o (E.EventMap (o M.Update))
+makeJumpToNomEventMap :: _ => Sugar.TId Name -> GuiM env i o (E.EventMap (o M.Update))
 makeJumpToNomEventMap tid =
     do
         savePrecursor <- GuiM.mkPrejumpPosSaver
         env <- Lens.view id
+        openPane <- GuiM.openPane
         let keys = env ^. has . Config.jumpToDefinitionKeys
         let doc = E.toDoc env [has . MomentuTexts.navigation, has . Texts.jumpToDef]
         do
             savePrecursor
-            tid ^. Sugar.tidGotoDefinition <&> WidgetIds.fromEntityId
+            tid ^. Sugar.tidTId & Sugar.GoToNom & openPane
+            <&> WidgetIds.fromEntityId
             & E.keysEventMapMovesCursor keys doc
             & pure
 
-makeTIdView :: _ => Sugar.TId Name o -> GuiM env i o (M.WithTextPos M.View)
+makeTIdView :: _ => Sugar.TId Name -> GuiM env i o (M.WithTextPos M.View)
 makeTIdView tid =
     do
         nomColor <- Lens.view (has . Theme.textColors . TextColors.nomColor)
         NameView.make (tid ^. Sugar.tidName) & local (TextView.color .~ nomColor)
 
-makeTId :: _ => Widget.Id -> Sugar.TId Name o -> GuiM env i o (M.TextWidget o)
+makeTId :: _ => Widget.Id -> Sugar.TId Name -> GuiM env i o (M.TextWidget o)
 makeTId myId tid =
     do
         jumpToDefinitionEventMap <- makeJumpToNomEventMap tid

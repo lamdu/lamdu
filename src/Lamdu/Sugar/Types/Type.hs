@@ -5,7 +5,7 @@ module Lamdu.Sugar.Types.Type
     , T.NominalId
     , CompositeFields(..), compositeFields, compositeExtension
     , Type(..), _TVar, _TFun, _TInst, _TRecord, _TVariant
-    , TId(..), tidName, tidTId, tidGotoDefinition
+    , TId(..), tidName, tidTId
     ) where
 
 import qualified Control.Lens as Lens
@@ -18,36 +18,33 @@ import           Lamdu.Sugar.Types.Tag (Tag)
 
 import           Lamdu.Prelude
 
-data CompositeFields name o k = CompositeFields
-    { _compositeFields :: [(Tag name, k :# Type name o)]
+data CompositeFields name k = CompositeFields
+    { _compositeFields :: [(Tag name, k :# Type name)]
     , _compositeExtension :: Maybe name -- TyVar of more possible fields
     } deriving Generic
 
-data TId name o = TId
+data TId name = TId
     { _tidName :: name
     , _tidTId :: T.NominalId
-    , _tidGotoDefinition :: o EntityId
-    } deriving Generic
+    } deriving (Generic, Eq)
 
-deriving instance (Eq name, Eq (o EntityId)) => Eq (TId name o)
-
-data Type name o k
+data Type name k
     = TVar name
       -- ^ A type variable
-    | TFun (FuncType (Type name o) k)
+    | TFun (FuncType (Type name) k)
       -- ^ A (non-dependent) function of the given parameter and result types
-    | TInst (TId name o) [(Tag name, k :# Type name o)]
+    | TInst (TId name) [(Tag name, k :# Type name)]
       -- ^ An instantiation of a nominal type of the given id with the
       -- given keyword type arguments
-    | TRecord (CompositeFields name o k)
+    | TRecord (CompositeFields name k)
       -- ^ Lifts a composite record type
-    | TVariant (CompositeFields name o k)
+    | TVariant (CompositeFields name k)
       -- ^ Lifts a composite variant type
     deriving Generic
 
-data Scheme name o = Scheme
+data Scheme name = Scheme
     { _schemeForAll :: T.Types # QVars
-    , _schemeType :: Annotated EntityId # Type name o
+    , _schemeType :: Annotated EntityId # Type name
     } deriving Generic
 
 traverse Lens.makeLenses [''CompositeFields, ''Scheme, ''TId] <&> concat

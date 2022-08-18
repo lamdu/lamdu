@@ -9,7 +9,6 @@ module Lamdu.Sugar.Types.Lhs
     ) where
 
 import qualified Control.Lens as Lens
-import           Control.Monad.Unit (Unit)
 import qualified Lamdu.Calc.Type as T
 import           Lamdu.Sugar.Internal.EntityId (EntityId)
 import           Lamdu.Sugar.Types.Tag
@@ -55,7 +54,7 @@ data LhsNames name i o v
 -- * Differentiating Mut actions so UI can suggest executing them
 -- * Name pass giving parameters names according to types
 data VarInfo
-    = VarNominal (SugarType.TId T.Tag Unit)
+    = VarNominal (SugarType.TId T.Tag)
     | VarGeneric | VarFunction | VarRecord | VarUnit | VarVariant | VarVoid
     deriving (Generic, Eq)
 

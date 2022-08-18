@@ -120,7 +120,7 @@ mkOptionalTag :: Maybe UUID -> T.Tag -> Sugar.OptionalTag InternalName Identity 
 mkOptionalTag var tag = Sugar.OptionalTag (mkTag var tag) Unit
 
 def ::
-    Annotated Sugar.EntityId # Sugar.Type InternalName Unit ->
+    Annotated Sugar.EntityId # Sugar.Type InternalName ->
     UUID -> T.Tag ->
     Annotated expr # Sugar.Assignment v InternalName Identity Unit ->
     Sugar.Definition v InternalName Identity Unit expr
@@ -169,9 +169,9 @@ expr ::
     Sugar.Expr Sugar.Term (Sugar.Annotation v InternalName) InternalName Identity Unit
 expr = node
 
-numType :: Annotated Sugar.EntityId # Sugar.Type InternalName Unit
+numType :: Annotated Sugar.EntityId # Sugar.Type InternalName
 numType =
-    Sugar.TInst (Sugar.TId (taggedEntityName "numTid" "num") "num" Unit) mempty
+    Sugar.TInst (Sugar.TId (taggedEntityName "numTid" "num") "num") mempty
     & Ann (Const "dummy")
 
 payload :: (Sugar.Payload (Sugar.Annotation v InternalName) Unit)

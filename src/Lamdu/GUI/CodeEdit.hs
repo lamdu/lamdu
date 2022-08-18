@@ -142,7 +142,7 @@ exportPaneEventMap env theExportActions paneBody =
         where
             execEventMap =
                 case def ^? Sugar.drBody . Sugar._DefinitionBodyExpression . Sugar.deVarInfo of
-                Just ( Sugar.VarNominal (Sugar.TId _ tid _)) | tid == Builtins.mutTid ->
+                Just ( Sugar.VarNominal (Sugar.TId _ tid)) | tid == Builtins.mutTid ->
                     E.keysEventMap (env ^. has . Config.export . Config.executeKeys)
                     (E.toDoc (env ^. has) [Texts.execRepl])
                     (IOTrans.liftIO (executeDef theExportActions (def ^. Sugar.drDefI)))

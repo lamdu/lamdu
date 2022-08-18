@@ -27,7 +27,6 @@ module Lamdu.Sugar.Types.Parts
     ) where
 
 import qualified Control.Lens as Lens
-import           Control.Monad.Unit (Unit)
 import           Data.Kind (Type)
 import           Data.UUID.Types (UUID)
 import           GUI.Momentu.Direction (Layout)
@@ -52,7 +51,7 @@ data FuncApplyLimit = UnlimitedFuncApply | AtMostOneFuncApply
     deriving (Eq, Ord, Generic)
 
 data Annotation v name
-    = AnnotationType (Annotated EntityId # SugarType.Type name Unit)
+    = AnnotationType (Annotated EntityId # SugarType.Type name)
     | AnnotationVal v
     | AnnotationNone
     deriving Generic
@@ -87,7 +86,7 @@ data NodeActions o = NodeActions
 -- * Differentiating Mut actions so UI can suggest executing them
 -- * Name pass giving parameters names according to types
 data VarInfo
-    = VarNominal (SugarType.TId T.Tag Unit)
+    = VarNominal (SugarType.TId T.Tag)
     | VarGeneric | VarFunction | VarRecord | VarUnit | VarVariant | VarVoid
     deriving (Generic, Eq)
 

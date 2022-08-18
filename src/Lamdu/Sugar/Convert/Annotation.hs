@@ -2,7 +2,6 @@ module Lamdu.Sugar.Convert.Annotation
     ( makeAnnotation, makeTypeAnnotation
     ) where
 
-import           Control.Monad.Unit (Unit)
 import           Control.Monad.Transaction (MonadTransaction)
 import qualified Lamdu.Annotations as Annotations
 import qualified Lamdu.Calc.Type as T
@@ -35,5 +34,5 @@ typeAnnotationFromEvalRes x =
 
 makeTypeAnnotation ::
     MonadTransaction n m =>
-    EntityId -> Pure # T.Type -> m (Annotated EntityId # Sugar.Type InternalName Unit)
+    EntityId -> Pure # T.Type -> m (Annotated EntityId # Sugar.Type InternalName)
 makeTypeAnnotation e t = convertType (EntityId.ofTypeOf e) t >>= orderType

@@ -60,7 +60,7 @@ resultWidget myId varInfo tag res =
             view <- makeIndicator tag Theme.successColor "✔"
             toDoc <- Lens.view has <&> E.toDoc
             case varInfo of
-                Sugar.VarNominal (Sugar.TId _ tid _) | tid == Builtins.mutTid ->
+                Sugar.VarNominal (Sugar.TId _ tid) | tid == Builtins.mutTid ->
                     do
                         actionKeys <- Lens.view (has . Config.actionKeys)
                         let executeEventMap =
@@ -256,7 +256,7 @@ make def myId =
             <&> M.weakerEvents nextOutdated
     & local (M.animIdPrefix .~ Widget.toAnimId myId)
 
-topLevelSchemeTypeView :: _ => Sugar.Scheme Name m -> GuiM env i o (M.WithTextPos M.View)
+topLevelSchemeTypeView :: _ => Sugar.Scheme Name -> GuiM env i o (M.WithTextPos M.View)
 topLevelSchemeTypeView scheme =
     -- At the definition-level, Schemes can be shown as ordinary
     -- types to avoid confusing forall's:

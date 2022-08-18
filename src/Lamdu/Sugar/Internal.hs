@@ -103,7 +103,7 @@ nameWithContext mVarInfo param tag =
             _ -> (tag, False)
 
 autoName :: VarInfo -> T.Tag
-autoName (VarNominal (TId nomTag _ _)) = nomTag
+autoName (VarNominal (TId nomTag _)) = nomTag
 autoName VarGeneric = Builtins.genericVarTag
 autoName VarFunction = Builtins.functionTag
 autoName VarRecord = Builtins.recordTag

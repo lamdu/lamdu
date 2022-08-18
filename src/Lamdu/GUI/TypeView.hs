@@ -79,8 +79,8 @@ makeTFun ::
     , Spacer.HasStdSpacing env, Has (Texts.Name Text) env, Has (Texts.Code Text) env
     ) =>
     Prec ->
-    Annotated Sugar.EntityId # Sugar.Type Name o ->
-    Annotated Sugar.EntityId # Sugar.Type Name o ->
+    Annotated Sugar.EntityId # Sugar.Type Name ->
+    Annotated Sugar.EntityId # Sugar.Type Name ->
     m (WithTextPos View)
 makeTFun parentPrecedence a b =
     Glue.hbox <*>
@@ -99,8 +99,8 @@ makeTFun parentPrecedence a b =
 
 makeTInst ::
     (MonadReader env m, _) =>
-    Prec -> Sugar.TId Name o ->
-    [(Sugar.Tag Name, Annotated Sugar.EntityId # Sugar.Type Name o)] ->
+    Prec -> Sugar.TId Name ->
+    [(Sugar.Tag Name, Annotated Sugar.EntityId # Sugar.Type Name)] ->
     m (WithTextPos View)
 makeTInst parentPrecedence tid typeParams =
     do
@@ -147,13 +147,13 @@ makeEmptyComposite = grammar "Ø"
 
 makeField ::
     _ =>
-    (Sugar.Tag Name, Annotated Sugar.EntityId # Sugar.Type Name o) ->
+    (Sugar.Tag Name, Annotated Sugar.EntityId # Sugar.Type Name) ->
     m (WithTextPos View, WithTextPos View)
 makeField = bitraverse TagView.make (makeInternal (Prec 0))
 
 makeVariantField ::
     _ =>
-    (Sugar.Tag Name, Annotated Sugar.EntityId # Sugar.Type Name o) ->
+    (Sugar.Tag Name, Annotated Sugar.EntityId # Sugar.Type Name) ->
     m (WithTextPos View, WithTextPos View)
 makeVariantField (tag, Ann _ (Sugar.TRecord (Sugar.CompositeFields [] Nothing))) =
     TagView.make tag <&> (, Element.empty)
@@ -171,9 +171,9 @@ gridViewTopLeftAlign =
 makeComposite ::
     _ =>
     m (WithTextPos View) -> m (WithTextPos View) -> m (WithTextPos View) ->
-    ((Sugar.Tag Name, Annotated Sugar.EntityId # Sugar.Type Name o) ->
+    ((Sugar.Tag Name, Annotated Sugar.EntityId # Sugar.Type Name) ->
          m (WithTextPos View, WithTextPos View)) ->
-    Sugar.CompositeFields Name o # Annotated Sugar.EntityId ->
+    Sugar.CompositeFields Name # Annotated Sugar.EntityId ->
     m (WithTextPos View)
 makeComposite mkOpener mkPre mkPost mkField composite =
     case composite of
@@ -218,7 +218,7 @@ makeComposite mkOpener mkPre mkPost mkField composite =
                     | v ^. Align.tValue . Element.width == 0 = pure Element.empty
                     | otherwise = Spacer.stdHSpace <&> WithTextPos 0
 
-makeInternal :: _ => Prec -> Annotated Sugar.EntityId # Sugar.Type Name o -> m (WithTextPos View)
+makeInternal :: _ => Prec -> Annotated Sugar.EntityId # Sugar.Type Name -> m (WithTextPos View)
 makeInternal parentPrecedence (Ann (Const entityId) tbody) =
     case tbody of
     Sugar.TVar var -> NameView.make var
@@ -236,8 +236,8 @@ makeInternal parentPrecedence (Ann (Const entityId) tbody) =
     where
         animId = WidgetIds.fromEntityId entityId & Widget.toAnimId
 
-make :: _ => Annotated Sugar.EntityId # Sugar.Type Name o -> m (WithTextPos View)
+make :: _ => Annotated Sugar.EntityId # Sugar.Type Name -> m (WithTextPos View)
 make t = makeInternal (Prec 0) t & Styled.withColor TextColors.typeTextColor
 
-makeScheme :: _ => Sugar.Scheme Name o -> m (WithTextPos View)
+makeScheme :: _ => Sugar.Scheme Name -> m (WithTextPos View)
 makeScheme s = make (s ^. Sugar.schemeType)

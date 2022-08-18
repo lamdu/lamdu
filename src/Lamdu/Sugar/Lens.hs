@@ -12,7 +12,6 @@ module Lamdu.Sugar.Lens
 
 import           Control.Lens (Traversal)
 import qualified Control.Lens as Lens
-import           Control.Monad.Unit (Unit)
 import           Hyper
 import           Lamdu.Sugar.Props (SugarExpr(..), varRefUnfinished)
 import           Lamdu.Sugar.Types
@@ -36,7 +35,7 @@ bodyUnfinished =
     & Lens.failing (_BodyLeaf . _LeafGetVar . varRefUnfinished)
     & Lens.failing (_BodyLabeledApply . aFunc . hVal . Lens._Wrapped . varRefUnfinished)
 
-defBodySchemes :: Lens.Traversal' (DefinitionBody v name i o expr) (Scheme name Unit)
+defBodySchemes :: Lens.Traversal' (DefinitionBody v name i o expr) (Scheme name)
 defBodySchemes f (DefinitionBodyBuiltin b) =
     b & biType %%~ f
     <&> DefinitionBodyBuiltin
@@ -44,7 +43,7 @@ defBodySchemes f (DefinitionBodyExpression de) =
     de & deType %%~ f
     <&> DefinitionBodyExpression
 
-defSchemes :: Lens.Traversal' (Definition v name i o expr) (Scheme name Unit)
+defSchemes :: Lens.Traversal' (Definition v name i o expr) (Scheme name)
 defSchemes = drBody . defBodySchemes
 
 binderResultExpr ::

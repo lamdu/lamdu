@@ -46,7 +46,6 @@ module Lamdu.Sugar.Types.Expression
     ) where
 
 import qualified Control.Lens as Lens
-import           Control.Monad.Unit (Unit)
 import           Data.Property (Property)
 import           Data.Kind (Type)
 import           Hyper
@@ -103,7 +102,7 @@ data Lambda v name i o f = Lambda
 data Fragment v name i o k = Fragment
     { _fExpr :: k :# Term v name i o
     , _fHeal :: o EntityId
-    , _fTypeMismatch :: Maybe (Annotated EntityId # T.Type name Unit)
+    , _fTypeMismatch :: Maybe (Annotated EntityId # T.Type name)
     , _fOptions :: i (Query -> i [Option FragOpt name i o])
     , _fOptApply :: i (Option FragOpt name i o)
         -- An option to apply (with a hole).
@@ -117,7 +116,7 @@ data FragOpt v name i o k
     | FragWrapInRec (TagRef name i o)
     | FragApplyFunc (GetVar name o)
     | FragOp (FragOperator v name i o k)
-    | FragToNom (TId name o)
+    | FragToNom (TId name)
     | FragLam
     | FragDefer
     | FragIf (k :# Term v name i o)
@@ -179,13 +178,13 @@ data Composite v name i o k = Composite
     } deriving Generic
 
 data Nominal v name i o k = Nominal
-    { _nTId :: TId name o
+    { _nTId :: TId name
     , _nVal :: k :# Binder v name i o
     } deriving Generic
 
 data PostfixFunc v name i o k
     = PfCase (Composite v name i o k)
-    | PfFromNom (TId name o)
+    | PfFromNom (TId name)
     | PfGetField (TagRef name i o)
     deriving Generic
 

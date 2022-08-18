@@ -77,16 +77,16 @@ binderVarType :: VarForm name m -> NameType
 binderVarType (GetDefinition _) = GlobalDef
 binderVarType _ = TaggedVar
 
-instance (a ~ OldName m, b ~ NewName m) => Walk m (CompositeFields a o # Annotated p) (CompositeFields b o # Annotated p) where
+instance (a ~ OldName m, b ~ NewName m) => Walk m (CompositeFields a # Annotated p) (CompositeFields b # Annotated p) where
     walk (CompositeFields fields mExt) =
         CompositeFields
         <$> traverse (bitraverse (toTagOf Tag) walk) fields
         <*> Lens._Just (opGetName Nothing MayBeAmbiguous TypeVar) mExt
 
-instance (a ~ OldName m, b ~ NewName m) => Walk m (TId a o) (TId b o) where
+instance (a ~ OldName m, b ~ NewName m) => Walk m (TId a) (TId b) where
     walk = tidName %%~ opGetName Nothing MayBeAmbiguous TaggedNominal
 
-instance (a ~ OldName m, b ~ NewName m) => Walk m (Sugar.Type a o # Annotated p) (Sugar.Type b o # Annotated p) where
+instance (a ~ OldName m, b ~ NewName m) => Walk m (Sugar.Type a # Annotated p) (Sugar.Type b # Annotated p) where
     walk (TVar tv) = opGetName Nothing MayBeAmbiguous TypeVar tv <&> TVar
     walk (TFun (FuncType a b)) = FuncType <$> walk a <*> walk b <&> TFun
     walk (TRecord composite) = TRecord <$> walk composite
@@ -96,10 +96,10 @@ instance (a ~ OldName m, b ~ NewName m) => Walk m (Sugar.Type a o # Annotated p)
         <$> walk tid
         <*> traverse (bitraverse (toTagOf Tag) walk) params
 
-instance (a ~ OldName m, b ~ NewName m) => Walk m (Annotated p # Sugar.Type a o) (Annotated p # Sugar.Type b o) where
+instance (a ~ OldName m, b ~ NewName m) => Walk m (Annotated p # Sugar.Type a) (Annotated p # Sugar.Type b) where
     walk (Ann (Const pl) x) = walk x <&> Ann (Const pl)
 
-instance (a ~ OldName m, b ~ NewName m) => Walk m (Scheme a o) (Scheme b o) where
+instance (a ~ OldName m, b ~ NewName m) => Walk m (Scheme a) (Scheme b) where
     walk (Scheme tvs typ) = Scheme tvs <$> walk typ
 
 instance (a ~ OldName m, b ~ NewName m) => Walk m (DefinitionOutdatedType a o p) (DefinitionOutdatedType b o p) where

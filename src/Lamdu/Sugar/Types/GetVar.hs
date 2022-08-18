@@ -8,7 +8,6 @@ module Lamdu.Sugar.Types.GetVar
     ) where
 
 import qualified Control.Lens as Lens
-import           Control.Monad.Unit (Unit)
 import qualified Lamdu.Calc.Term as V
 import           Lamdu.Sugar.Internal.EntityId (EntityId)
 import           Lamdu.Sugar.Types.Type
@@ -16,8 +15,8 @@ import           Lamdu.Sugar.Types.Type
 import           Lamdu.Prelude
 
 data DefinitionOutdatedType name o a = DefinitionOutdatedType
-    { _defTypeWhenUsed :: Scheme name Unit
-    , _defTypeCurrent :: Scheme name Unit
+    { _defTypeWhenUsed :: Scheme name
+    , _defTypeCurrent :: Scheme name
     , _defTypeUseCurrent :: o a
     } deriving (Functor, Foldable, Traversable, Generic)
 

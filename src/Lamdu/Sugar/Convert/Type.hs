@@ -23,12 +23,11 @@ import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import           Lamdu.Sugar.Types
 
 import           Lamdu.Prelude
-import qualified Lamdu.Sugar.Convert.TId as ConvertTid
 
 convertComposite ::
-    (MonadTransaction n m, ConvertTid.JumpToNominal m o) =>
+    MonadTransaction n m =>
     EntityId -> Pure # T.Row ->
-    m (CompositeFields InternalName o # Annotated EntityId)
+    m (CompositeFields InternalName # Annotated EntityId)
 convertComposite entityId (Pure (T.RExtend (RowExtend tag typ rest))) =
     do
         typS <- convertType (EntityId.ofTypeOf entityId) typ
@@ -41,8 +40,8 @@ convertComposite _ (Pure (T.RVar v)) =
 convertComposite _ (Pure T.REmpty) = CompositeFields mempty Nothing & pure
 
 convertType ::
-    (MonadTransaction n m, ConvertTid.JumpToNominal m o) =>
-    EntityId -> Pure # T.Type -> m (Annotated EntityId # Type InternalName o)
+    MonadTransaction n m =>
+    EntityId -> Pure # T.Type -> m (Annotated EntityId # Type InternalName)
 convertType entityId typ =
     case typ ^. _Pure of
     T.TVar tv
@@ -74,7 +73,7 @@ convertType entityId typ =
     <&> Ann (Const entityId)
 
 convertScheme ::
-    (MonadTransaction n m, ConvertTid.JumpToNominal m o) =>
-    EntityId -> Pure # T.Scheme -> m (Scheme InternalName o)
+    MonadTransaction n m =>
+    EntityId -> Pure # T.Scheme -> m (Scheme InternalName)
 convertScheme entityId (Pure (S.Scheme tvs typ)) =
     Scheme tvs <$> convertType entityId typ
