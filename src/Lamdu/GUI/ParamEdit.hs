@@ -13,9 +13,10 @@ import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Menu as Menu
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Theme.TextColors as TextColors
+import qualified Lamdu.GUI.Classes as C
 import qualified Lamdu.GUI.Expr.TagEdit as TagEdit
 import qualified Lamdu.GUI.Annotation as Annotation
-import           Lamdu.GUI.Monad (GuiM, im)
+import           Lamdu.GUI.Monad (GuiM)
 import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.GUI.TaggedList as TaggedList
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
@@ -83,13 +84,13 @@ addAnnotationAndEvents annotationOpts param myId widget =
         addAnnotation annotationOpts param myId widget
             <&> M.weakerEvents eventMap
 
-mkAddParam :: _ => i (Sugar.TagChoice Name a) -> Widget.Id -> GuiM env i a [Responsive a]
+mkAddParam :: _ => i (Sugar.TagChoice Name o) -> Widget.Id -> m [Responsive o]
 mkAddParam addParam myId =
     GuiState.isSubCursor ?? addId >>=
     \case
     False -> pure []
     True ->
-        addParam & im
+        addParam & C.liftInfo
         >>= TagEdit.makeTagHoleEdit mkParamPickResult addId
         & local (has . Menu.configKeysPickOptionAndGotoNext <>~ [noMods M.Key'Space])
         & Styled.withColor TextColors.variableColor

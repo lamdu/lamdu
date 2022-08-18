@@ -14,7 +14,7 @@ module Lamdu.GUI.Monad
     , im
 
     , makeSubexpression, makeBinder
-    , assocTagName, openPane
+    , openPane
 
     , GuiM, _GuiM, run
     ) where
@@ -36,6 +36,7 @@ import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Data.Anchors as Anchors
 import           Lamdu.Eval.Results (ScopeId, topLevelScopeId)
+import qualified Lamdu.GUI.Classes as C
 import qualified Lamdu.GUI.Types as ExprGui
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.Sugar.Types as Sugar
@@ -68,14 +69,16 @@ instance Monad i => MonadReader env (GuiM env i o) where
     ask = GuiM (Lens.view aEnv)
     local = (_GuiM %~) . Lens.locally aEnv
 
+instance Monad i => C.InfoMonad (GuiM env i o) i where liftInfo = im
+
+instance (Monad i, Monad o) => C.SetTagName (GuiM env i o) o where
+    setTagName = GuiM (Lens.view aAssocTagName) <&> Lens.mapped %~ Property.setP
+
 im :: Monad i => i a -> GuiM env i o a
 im = GuiM . lift
 
 readGuiAnchors :: Monad i => GuiM env i o (Anchors.GuiAnchors i o)
 readGuiAnchors = GuiM (Lens.view aGuiAnchors)
-
-assocTagName :: Monad i => GuiM env i o (T.Tag -> MkProperty' o Text)
-assocTagName = GuiM (Lens.view aAssocTagName)
 
 openPane :: Monad i => GuiM env i o (Sugar.GotoDest -> o Sugar.EntityId)
 openPane = GuiM (Lens.view aGoto)

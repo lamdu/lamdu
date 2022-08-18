@@ -3,7 +3,6 @@
 module Lamdu.GUI.Expr.OptionEdit where
 
 import qualified Control.Lens as Lens
-import qualified Data.Property as Property
 import           Hyper
 import           GUI.Momentu (EventMap)
 import qualified GUI.Momentu as M
@@ -18,8 +17,7 @@ import qualified GUI.Momentu.Widgets.Menu as Menu
 import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified Lamdu.Config as Config
-import           Lamdu.GUI.Monad (GuiM)
-import qualified Lamdu.GUI.Monad as GuiM
+import qualified Lamdu.GUI.Classes as C
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.I18N.CodeUI as Texts
@@ -53,15 +51,15 @@ removeUnwanted =
     & E.deleteKeys
 
 makeResult ::
-    forall env i o t.
+    forall m i o t.
     _ =>
     (Annotated (Sugar.Payload (Sugar.Annotation (Sugar.EvaluationScopes Name i) Name) o) #
         t (Sugar.Annotation (Sugar.EvaluationScopes Name i) Name) Name i o ->
-        GuiM env i o (Responsive.Responsive o)
+        m (Responsive.Responsive o)
     ) ->
     SearchMenu.ResultsContext ->
     Sugar.Option t Name i o ->
-    Menu.Option (GuiM env i o) o
+    Menu.Option m o
 makeResult mkGui ctx res =
     Menu.Option
     { Menu._oId = resId
@@ -76,10 +74,10 @@ makeResult mkGui ctx res =
                         label <- Styled.label Texts.createNew <&> (^. M.tValue)
                         space <- Spacer.stdHSpace
                         (|||) <- Glue.mkGlue ?? Glue.Horizontal
-                        assocTagName <- GuiM.assocTagName
+                        setName <- C.setTagName
                         pure
                             ( \x -> x ||| space ||| label
-                            , Property.setP (assocTagName tag) (newTagName (ctx ^. SearchMenu.rSearchTerm))
+                            , ctx ^. SearchMenu.rSearchTerm & newTagName & setName tag
                             )
             remUnwanted <- removeUnwanted
             res ^. Sugar.optionExpr

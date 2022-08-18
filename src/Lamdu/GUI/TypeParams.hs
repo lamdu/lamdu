@@ -17,7 +17,6 @@ import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.Config.Theme.ValAnnotation as ValAnnotation
 import qualified Lamdu.GUI.Expr.TagEdit as TagEdit
 import qualified Lamdu.GUI.ParamEdit as ParamEdit
-import           Lamdu.GUI.Monad (GuiM)
 import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.GUI.TaggedList as TaggedList
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
@@ -31,7 +30,7 @@ import           Lamdu.Prelude
 make ::
     _ =>
     Sugar.TaggedList Name i o (Property o Sugar.ParamKind) -> Widget.Id -> Widget.Id ->
-    GuiM env i o (EventMap (o Update), [Responsive o])
+    m (EventMap (o Update), [Responsive o])
 make params prevId myId =
     do
         o <- Lens.view has <&> (`dirKey` Horizontal)
@@ -48,7 +47,7 @@ make params prevId myId =
             <> (traverse makeParam itemsR <&> concat)
             <&> (,) addFirstEventMap
 
-paramKindEdit :: _ => Property o Sugar.ParamKind -> Widget.Id -> GuiM env i o (M.TextWidget o)
+paramKindEdit :: _ => Property o Sugar.ParamKind -> Widget.Id -> m (M.TextWidget o)
 paramKindEdit prop myId@(Widget.Id animId) =
     (DropDownList.make ?? prop)
     <*> Lens.sequenceOf (traverse . _2)
@@ -57,7 +56,7 @@ paramKindEdit prop myId@(Widget.Id animId) =
     ?? myId
     & local (M.animIdPrefix .~ animId)
 
-makeParam :: _ => TaggedList.Item Name i o (Property o Sugar.ParamKind) -> GuiM env i o [Responsive o]
+makeParam :: _ => TaggedList.Item Name i o (Property o Sugar.ParamKind) -> m [Responsive o]
 makeParam item =
     (:)
     <$> ( TagEdit.makeParamTag Nothing (item ^. TaggedList.iTag)

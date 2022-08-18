@@ -10,7 +10,6 @@ module Lamdu.GUI.Expr.TagEdit
 import qualified Control.Lens as Lens
 import qualified Data.Char as Char
 import           Data.MRUMemo (memo)
-import qualified Data.Property as Property
 import qualified Data.Text as Text
 import           GUI.Momentu (EventMap, Update)
 import qualified GUI.Momentu as M
@@ -31,8 +30,7 @@ import           Lamdu.Config.Theme.TextColors (TextColors)
 import qualified Lamdu.Config.Theme.TextColors as TextColors
 import           Lamdu.Fuzzy (Fuzzy)
 import qualified Lamdu.Fuzzy as Fuzzy
-import           Lamdu.GUI.Monad (GuiM)
-import qualified Lamdu.GUI.Monad as GuiM
+import qualified Lamdu.GUI.Classes as C
 import qualified Lamdu.GUI.NameView as NameView
 import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.GUI.TagView as TagView
@@ -71,21 +69,21 @@ makePickEventMap action =
         )
 
 makeNewTag ::
-    (Monad i, Monad o) =>
+    _ =>
     Sugar.TagOption Name o ->
-    GuiM env i o (Text -> (EntityId -> r) -> o r)
+    m (Text -> (EntityId -> r) -> o r)
 makeNewTag tagOpt =
-    GuiM.assocTagName <&>
-    \assocTagName searchTerm mkPickResult ->
+    C.setTagName <&>
+    \setName searchTerm mkPickResult ->
     mkPickResult (tagOpt ^. Sugar.toInfo . Sugar.tagInstance) <$
     do
-        Property.setP (assocTagName (tagOpt ^. Sugar.toInfo . Sugar.tagVal)) searchTerm
+        setName (tagOpt ^. Sugar.toInfo . Sugar.tagVal) searchTerm
         tagOpt ^. Sugar.toPick
 
 makeNewTagPreEvent ::
     _ =>
     Sugar.TagOption Name o ->
-    GuiM env i o (Text -> (EntityId -> r) -> Maybe (Widget.PreEvent (o r)))
+    m (Text -> (EntityId -> r) -> Maybe (Widget.PreEvent (o r)))
 makeNewTagPreEvent tagOpt =
     (,) <$> Lens.view (has . Texts.newName) <*> makeNewTag tagOpt
     <&>
@@ -102,10 +100,7 @@ makeNewTagPreEvent tagOpt =
 makeAddNewTag ::
     _ =>
     Sugar.TagOption Name o ->
-    GuiM menv i o
-    ( (EntityId -> Menu.PickResult) ->
-        SearchMenu.ResultsContext -> Maybe (Menu.Option f o)
-    )
+    m ((EntityId -> Menu.PickResult) -> SearchMenu.ResultsContext -> Maybe (Menu.Option m o))
 makeAddNewTag tagOpt =
     makeNewTagPreEvent tagOpt <&>
     \newTagPreEvent mkPickResult ctx ->
@@ -137,7 +132,7 @@ makeOptions ::
     Sugar.TagOption Name o ->
     (EntityId -> Menu.PickResult) ->
     SearchMenu.ResultsContext ->
-    GuiM env i o (Menu.OptionList (Menu.Option m o))
+    m (Menu.OptionList (Menu.Option m o))
 makeOptions tagRefReplace newTagOpt mkPickResult ctx
     | Text.null searchTerm = pure Menu.OptionList { Menu._olIsTruncated = True, Menu._olOptions = [] }
     | otherwise =
@@ -199,7 +194,7 @@ makeHoleSearchTerm ::
     _ =>
     Sugar.TagOption Name o ->
     (EntityId -> Menu.PickResult) -> Widget.Id ->
-    GuiM env i o (SearchMenu.Term o)
+    m (SearchMenu.Term o)
 makeHoleSearchTerm newTagOption mkPickResult holeId =
     do
         searchTerm <- SearchMenu.readSearchTerm holeId
@@ -257,7 +252,7 @@ makeTagHoleEdit ::
     (EntityId -> Menu.PickResult) ->
     Widget.Id ->
     Sugar.TagChoice Name o ->
-    GuiM env i o (M.TextWidget o)
+    m (M.TextWidget o)
 makeTagHoleEdit mkPickResult holeId tagRefReplace =
     SearchMenu.make
     (const (makeHoleSearchTerm newTagOption mkPickResult holeId))
@@ -266,7 +261,7 @@ makeTagHoleEdit mkPickResult holeId tagRefReplace =
     where
         newTagOption = tagRefReplace ^. Sugar.tcNewTag
 
-makeTagRefEdit :: _ => (Sugar.EntityId -> Maybe Widget.Id) -> Sugar.TagRef Name i o -> GuiM env i o (M.TextWidget o)
+makeTagRefEdit :: _ => (Sugar.EntityId -> Maybe Widget.Id) -> Sugar.TagRef Name i o -> m (M.TextWidget o)
 makeTagRefEdit onPickNext = makeTagRefEditWith id onPickNext Nothing <&> fmap snd
 
 data TagRefEditType
@@ -289,12 +284,11 @@ makeJumpToTagEventMap =
 
 makeTagRefEditWith ::
     _ =>
-    (n (M.TextWidget o) ->
-     GuiM env i o (M.TextWidget o)) ->
+    (m (M.TextWidget o) -> m (M.TextWidget o)) ->
     (Sugar.EntityId -> Maybe Widget.Id) ->
     Maybe (o EntityId) ->
     Sugar.TagRef Name i o ->
-    GuiM env i o (TagRefEditType, M.TextWidget o)
+    m (TagRefEditType, M.TextWidget o)
 makeTagRefEditWith onView onPickNext mSetToAnon tag =
     do
         isHole <- GuiState.isSubCursor ?? holeId
@@ -318,7 +312,7 @@ makeTagRefEditWith onView onPickNext mSetToAnon tag =
             & onView
         if isHole
             then
-                tag ^. Sugar.tagRefReplace & GuiM.im
+                tag ^. Sugar.tagRefReplace & C.liftInfo
                 >>= makeTagHoleEdit mkPickResult holeId
                 <&> (,) TagHole
             else pure (SimpleView, nameView)
@@ -339,10 +333,10 @@ makeTagRefEditWith onView onPickNext mSetToAnon tag =
             Just setAnon -> setAnon <&> WidgetIds.fromEntityId
             <&> WidgetIds.tagHoleId
 
-makeRecordTag :: _ => (EntityId -> Maybe Widget.Id) -> Sugar.TagRef Name i o -> GuiM env i o (M.TextWidget o)
+makeRecordTag :: _ => (EntityId -> Maybe Widget.Id) -> Sugar.TagRef Name i o -> m (M.TextWidget o)
 makeRecordTag onPickNext = makeTagRefEdit onPickNext <&> Styled.withColor TextColors.recordTagColor
 
-makeVariantTag :: _ => (EntityId -> Maybe Widget.Id) -> Sugar.TagRef Name i o -> GuiM env i o (M.TextWidget o)
+makeVariantTag :: _ => (EntityId -> Maybe Widget.Id) -> Sugar.TagRef Name i o -> m (M.TextWidget o)
 makeVariantTag onPickNext = makeTagRefEdit onPickNext <&> Styled.withColor TextColors.caseTagColor
 
 addItemId :: Widget.Id -> Widget.Id
@@ -366,11 +360,16 @@ makeLHSTag ::
     (Sugar.EntityId -> Maybe Widget.Id) ->
     Lens.ALens' TextColors M.Color ->
     Maybe (o EntityId) -> Sugar.TagRef Name i o ->
-    GuiM env i o (M.TextWidget o)
+    m (M.TextWidget o)
 makeLHSTag onPickNext color mSetToAnon tag =
     do
         (tagEditType, tagEdit) <-
-            makeTagRefEditWith onView onPickNext mSetToAnon tag
+            makeTagRefEditWith
+            -- Apply the name style only when the tag is a view. If it is
+            -- a tag hole, the name style (indicating auto-name) makes no sense
+            -- onView =
+            (Styled.nameAtBinder (tag ^. Sugar.tagRefTag . Sugar.tagName) . Styled.withColor color)
+            onPickNext mSetToAnon tag
             & Styled.withColor color
             & local (\env -> env & has .~ env ^. has . Style.nameAtBinder)
         chooseEventMap <- makeChooseEventMap (WidgetIds.tagHoleId myId)
@@ -381,13 +380,8 @@ makeLHSTag onPickNext color mSetToAnon tag =
         tagEdit <&> Widget.weakerEvents eventMap & pure
     where
         myId = tag ^. Sugar.tagRefTag . Sugar.tagInstance & WidgetIds.fromEntityId
-        -- Apply the name style only when the tag is a view. If it is
-        -- a tag hole, the name style (indicating auto-name) makes no sense
-        onView =
-            Styled.nameAtBinder (tag ^. Sugar.tagRefTag . Sugar.tagName) .
-            Styled.withColor color
 
-makeParamTag :: _ => Maybe (o EntityId) -> Sugar.TagRef Name i o -> GuiM env i o (M.TextWidget o)
+makeParamTag :: _ => Maybe (o EntityId) -> Sugar.TagRef Name i o -> m (M.TextWidget o)
 makeParamTag =
     makeLHSTag onPickNext TextColors.variableColor
     where
@@ -405,7 +399,7 @@ makeArgTag tag =
 makeBinderTagEdit ::
     _ =>
     Lens.ALens' TextColors M.Color -> Sugar.OptionalTag Name i o ->
-    GuiM env i o (M.TextWidget o)
+    m (M.TextWidget o)
 makeBinderTagEdit color (Sugar.OptionalTag tag setToAnon) =
     makeLHSTag (const Nothing) color (Just setToAnon) tag
     & local (has . Menu.configKeysPickOptionAndGotoNext .~ ([] :: [M.ModKey]))
