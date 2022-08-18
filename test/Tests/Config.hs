@@ -28,7 +28,7 @@ import qualified System.Info as SysInfo
 
 import           Test.Lamdu.Prelude
 
-test :: Test
+test :: TestTree
 test =
     testGroup "config-tests"
     [ testCase "config-parse" (verifyJson (Proxy @(Config Text)) metaKeyRoundTrip "config.json")
@@ -92,7 +92,7 @@ loadJsonPath path =
             then pure json
             else fail ("config file not its own dependency " <> path <> " not in " <> show deps)
 
-languagesDupTest :: Test
+languagesDupTest :: TestTree
 languagesDupTest =
     Folder.getSelections (Proxy @Language)
     >>= traverse (Folder.selectionToPath (Proxy @Language))

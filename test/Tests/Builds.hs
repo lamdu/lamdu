@@ -28,10 +28,10 @@ import           Test.Lamdu.Prelude
 -- TODO: Consider using Cabal & nix format parsers
 -- instead of quick & dirty string manipulations
 
-test :: Test
+test :: TestTree
 test = testGroup "Builds" [stackDepsTest, cabalDepsTest, nixGhcVersionTest, ciGhcVersionTest]
 
-stackDepsTest :: Test
+stackDepsTest :: TestTree
 stackDepsTest =
     do
         stackYaml <-
@@ -78,7 +78,7 @@ verifyStackDep dep =
 packageNameFromGitUrl :: String -> String
 packageNameFromGitUrl = last . splitOn "/"
 
-cabalDepsTest :: Test
+cabalDepsTest :: TestTree
 cabalDepsTest =
     do
         cabalDeps <- readFile "Lamdu.cabal" <&> parseCabalDeps
@@ -132,7 +132,7 @@ parseCabalDeps cabal =
         -- Specifically check for one indentation level, to avoid conditional "build-depends: ekg".
         buildDepsPrefix = "  build-depends:"
 
-nixGhcVersionTest :: Test
+nixGhcVersionTest :: TestTree
 nixGhcVersionTest =
     do
         nixFile <- readFile "default.nix"
@@ -143,7 +143,7 @@ nixGhcVersionTest =
         ghcVer :: Int
         ghcVer = __GLASGOW_HASKELL__ `div` 10 + __GLASGOW_HASKELL__ `mod` 10
 
-ciGhcVersionTest :: Test
+ciGhcVersionTest :: TestTree
 ciGhcVersionTest =
     do
         ciFile <- readFile ".github/workflows/ci.yml"

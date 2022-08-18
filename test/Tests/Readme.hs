@@ -9,7 +9,7 @@ import qualified Data.Yaml as Yaml
 
 import           Test.Lamdu.Prelude
 
-test :: Test
+test :: TestTree
 test =
     do
         travisYaml <-

@@ -208,8 +208,8 @@ tests:
     - process
     - random
     - split
-    - test-framework
-    - test-framework-hunit
+    - tasty
+    - tasty-hunit
     - text
     - uuid-types
     - yaml

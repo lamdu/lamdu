@@ -7,7 +7,7 @@
 , language-ecmascript, lens, lens-aeson, rocksdb-haskell, List, mtl
 , inline-js-core, optparse-applicative, ordered-containers, pretty, process
 , random, split, stb-image, hypertypes
-, template-haskell, temporary, test-framework, test-framework-hunit
+, template-haskell, temporary, tasty, tasty-hunit
 , text, time, timeit, transformers, generic-constraints
 , uuid, uuid-types, vector, yaml
 , zip-archive, lib, gitMinimal, nodejs
@@ -60,8 +60,8 @@ mkDerivation {
     aeson aeson-diff aeson-pretty base bytestring Cabal
     containers deepseq directory filepath
     GLFW-b HUnit lamdu-calculus momentu lens lens-aeson List mtl
-    inline-js-core pretty process random split hypertypes test-framework
-    test-framework-hunit text uuid-types
+    inline-js-core pretty process random split hypertypes tasty
+    tasty-hunit text uuid-types
     yaml
   ];
   homepage = "http://www.lamdu.org";

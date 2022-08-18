@@ -11,7 +11,7 @@ import           Test.Lamdu.Prelude
 fuzzyMaker :: [(Text, Int)] -> Fuzzy (Set Int)
 fuzzyMaker = memo Fuzzy.make
 
-test :: Test
+test :: TestTree
 test =
     assertEqual "unexpected fuzzy search result" (match 0) (match 1)
     & testCase "fuzzy"

@@ -30,7 +30,7 @@ import           Test.Lamdu.FreshDb (readFreshDb)
 
 import           Test.Lamdu.Prelude
 
-test :: Test
+test :: TestTree
 test =
     testGroup "Stdlib"
     [ testCase "sensible-tags" verifyTagsTest

@@ -4,7 +4,7 @@ import Data.List (isPrefixOf)
 
 import Test.Lamdu.Prelude
 
-test :: Test
+test :: TestTree
 test =
     do
         ver <-

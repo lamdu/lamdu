@@ -23,25 +23,26 @@ import           Test.Lamdu.Prelude
 
 main :: IO ()
 main =
-    defaultMain tests
-    where
-        tests =
-            [ Tests.AnimIdClash.test
-            , Tests.Builds.test
-            , Tests.Codec.test
-            , Tests.ColorSchemes.test
-            , Tests.Config.test
-            , Tests.DataFiles.test
-            , Tests.EventMap.test
-            , Tests.FuzzySearch.test
-            , Tests.Gui.test
-            , Tests.JsExport.test
-            , Tests.JsRtsTags.test
-            , Tests.Names.test
-            , Tests.Precedence.test
-            , Tests.Readme.test
-            , Tests.Stdlib.test
-            , Tests.Sugar.test
-            , Tests.Version.test
-            , Tests.Wytiwys.test
-            ]
+    (:
+        [ Tests.AnimIdClash.test
+        , Tests.Builds.test
+        , Tests.Codec.test
+        , Tests.ColorSchemes.test
+        , Tests.Config.test
+        , Tests.DataFiles.test
+        , Tests.EventMap.test
+        , Tests.FuzzySearch.test
+        , Tests.JsExport.test
+        , Tests.JsRtsTags.test
+        , Tests.Names.test
+        , Tests.Precedence.test
+        , Tests.Readme.test
+        , Tests.Stdlib.test
+        , Tests.Sugar.test
+        , Tests.Version.test
+        , Tests.Wytiwys.test
+        ]
+    )
+    <$> Tests.Gui.test
+    <&> testGroup "Tests"
+    >>= defaultMain

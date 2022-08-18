@@ -13,7 +13,7 @@ import           System.FilePath (takeFileName)
 
 import           Test.Lamdu.Prelude
 
-test :: Test
+test :: TestTree
 test =
     Folder.getSelections (Proxy @Theme)
     >>= traverse (Folder.selectionToPath (Proxy @Theme))

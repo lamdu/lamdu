@@ -11,7 +11,7 @@ eventMap =
     , charEventMap "C" (Doc ["D"]) (const (Just 1))
     ]
 
-test :: Test
+test :: TestTree
 test =
     assertEqual "Lookup" (Just (Doc ["D"])) (res <&> (^. dhDoc))
     & testCase "event-map-lookup for char handlers"

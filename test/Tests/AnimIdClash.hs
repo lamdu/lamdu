@@ -12,13 +12,13 @@ import           Test.Lamdu.Instances ()
 
 import           Test.Lamdu.Prelude
 
-test :: Test
+test :: TestTree
 test =
     testGroup "animid-clash"
     [ testTypeView
     ]
 
-testTypeView :: Test
+testTypeView :: TestTree
 testTypeView =
     do
         env <- Env.make

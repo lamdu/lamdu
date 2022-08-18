@@ -13,7 +13,7 @@ import qualified Test.Lamdu.SugarStubs as Stub
 
 import           Test.Lamdu.Prelude
 
-test :: Test
+test :: TestTree
 test =
     testGroup "precedence"
     [ testMinOpPrecOperator
@@ -27,7 +27,7 @@ test =
 
 -- | Test for issue #471
 -- https://trello.com/c/fQmgXuRE/471-operators-on-punned-args-dont-work-require-fragmenting-first
-testPunnedArgOp :: Test
+testPunnedArgOp :: TestTree
 testPunnedArgOp =
     expr ^?
     hVal . Sugar._BodyLabeledApply . Sugar.aPunnedArgs . traverse .
@@ -44,7 +44,7 @@ testPunnedArgOp =
             } & Stub.node
             & Parens.addToTopLevel 0
 
-testGetFieldOfApply :: Test
+testGetFieldOfApply :: TestTree
 testGetFieldOfApply =
     expr ^?!
     hVal . Sugar._BodySimpleApply . V.appArg . annotation . _1 . Sugar.piNeedParens
@@ -53,7 +53,7 @@ testGetFieldOfApply =
     where
         expr = Stub.identity $$ (Stub.hole $. "a") & Parens.addToTopLevel 0
 
-testInjectInRec :: Test
+testInjectInRec :: TestTree
 testInjectInRec =
     expr ^?!
     hVal . Sugar._BodyRecord . Sugar.cList . Sugar.tlItems . Lens._Just . Sugar.tlHead . Sugar.tiValue .
@@ -80,7 +80,7 @@ testInjectInRec =
             } & Stub.node
             & Parens.addToTopLevel 0
 
-testMinOpPrecOperator :: Test
+testMinOpPrecOperator :: TestTree
 testMinOpPrecOperator =
     do
         assertBool "Plus in mul need no paren?!" needsParens
@@ -93,7 +93,7 @@ testMinOpPrecOperator =
         i = Stub.litNum
 
 -- Test for https://trello.com/c/OuaLvwiJ/445-wrong-parenthesis
-test445 :: Test
+test445 :: TestTree
 test445 =
     assertBool "Expected paren" (problemPos ^. annotation . _1 . Sugar.piNeedParens)
     & testCase "445-wrong-parenthesis"
@@ -108,7 +108,7 @@ test445 =
         i = Stub.litNum
 
 -- Test for https://trello.com/c/xLzHmxpZ/513-disambiguate-applied-get-field-from-operator-function
-test513 :: Test
+test513 :: TestTree
 test513 =
     assertBool "Expected paren" (problemPos ^. annotation . _1 . Sugar.piNeedParens)
     & testCase "513-applied-getfield"
@@ -118,7 +118,7 @@ test513 =
         h = Stub.hole
 
 -- Test for https://trello.com/c/BGSSndJi/514-disambiguate-fragments-on-lambdas-vs-in-lambdas
-test514 :: Test
+test514 :: TestTree
 test514 =
     assertBool "Expected paren" (problemPos ^. annotation . _1 . Sugar.piNeedParens)
     & testCase "514-lambda-in-fragment"

@@ -13,7 +13,7 @@ import           Test.Lamdu.FreshDb (readFreshDb)
 
 import           Test.Lamdu.Prelude
 
-test :: Test
+test :: TestTree
 test =
     do
         freshDbTags <-

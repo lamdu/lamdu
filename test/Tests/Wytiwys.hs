@@ -8,8 +8,8 @@ import           GUI.Momentu.EventMap (Event(..))
 import qualified Graphics.UI.GLFW as GLFW
 import           Lamdu.Data.Db.Layout (ViewM, runDbTransaction)
 import qualified Lamdu.Data.Db.Layout as DbLayout
-import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Data.Export.JS as ExportJS
+import qualified Lamdu.Data.Ops as DataOps
 import           Lamdu.Expr.IRef (globalId)
 import           Lamdu.VersionControl (runAction)
 import qualified Revision.Deltum.Transaction as Transaction
@@ -18,6 +18,7 @@ import qualified Test.Lamdu.Env as Env
 import           Test.Lamdu.Exec (runJS)
 import           Test.Lamdu.Gui
 import           Test.Lamdu.Instances ()
+import qualified Test.Tasty as Tasty
 
 import           Test.Lamdu.Prelude
 
@@ -39,7 +40,7 @@ applyActions env xs =
     zip [0..] xs
     & foldM (flip (\(i, x) -> applyEventWith (take (i+1) xs) dummyVirt (charEvent x))) env
 
-wytiwysDb :: HasCallStack => IO (Transaction.Store DbLayout.DbM) -> String -> ByteString -> Test
+wytiwysDb :: HasCallStack => IO (Transaction.Store DbLayout.DbM) -> String -> ByteString -> TestTree
 wytiwysDb mkDb src result =
     do
         env <- Env.make
@@ -55,48 +56,48 @@ wytiwysDb mkDb src result =
     >>= assertEqual "Expected output" (result <> "\n")
     & testCase (filter isAscii src)
 
-test :: HasCallStack => Test
+test :: HasCallStack => TestTree
 test =
-    do
-        mkDb <- ramDB ["data/freshdb.json"]
-        let wytiwys = wytiwysDb mkDb
-        testGroup "WYTIWYS"
-            [ wytiwys "1+1" "2"
+    Tasty.withResource (ramDB ["data/freshdb.json"]) mempty $
+    \mkDb ->
+    let wytiwys = wytiwysDb (join mkDb)
+    in
+    testGroup "WYTIWYS"
+    [ wytiwys "1+1" "2"
 
-            , wytiwys "2*3+4" "10"
-            , wytiwys "2*(3+4)" "14"
-            , wytiwys "2*(3+4" "14" -- Don't have to close paren
+    , wytiwys "2*3+4" "10"
+    , wytiwys "2*(3+4)" "14"
+    , wytiwys "2*(3+4" "14" -- Don't have to close paren
 
-            , wytiwys "sum (1..10)" "45" -- Debatable issue: Space is necessary here!
-            , wytiwys "sum 1..10" "45" -- An Ergonomic WYTIWIS violation: types cause fragment
-            , wytiwys "sum 1..10.map n*2" "90"
-            , wytiwys "sum 1..10.map 2*num\n" "90" -- TODO: Would be better without requiring the enter at the end
-            , wytiwys "sum 1..10.map 2*(num+1)" "108"
-            , wytiwys "sum 1..10.map 2*(num+1" "108"
+    , wytiwys "sum (1..10)" "45" -- Debatable issue: Space is necessary here!
+    , wytiwys "sum 1..10" "45" -- An Ergonomic WYTIWIS violation: types cause fragment
+    , wytiwys "sum 1..10.map n*2" "90"
+    , wytiwys "sum 1..10.map 2*num\n" "90" -- TODO: Would be better without requiring the enter at the end
+    , wytiwys "sum 1..10.map 2*(num+1)" "108"
+    , wytiwys "sum 1..10.map 2*(num+1" "108"
 
-            , wytiwys "if 1=2:3\t4" "4" -- Type if-expressions without "else:"
+    , wytiwys "if 1=2:3\t4" "4" -- Type if-expressions without "else:"
 
-            , wytiwys "sum 1..10.filter nu>5" "30"
-            , wytiwys "sum 1..10.filter n>5" "30"
-            , wytiwys "sum 1..10.filter 12<(num+1)*12" "45"
+    , wytiwys "sum 1..10.filter nu>5" "30"
+    , wytiwys "sum 1..10.filter n>5" "30"
+    , wytiwys "sum 1..10.filter 12<(num+1)*12" "45"
 
-            , wytiwys "if {={:1\t2" "1" -- "{" expands to "{}"
-            , wytiwys "let {val 1\trec.val\n" "1" -- "let " jumps straight to value of let
+    , wytiwys "if {={:1\t2" "1" -- "{" expands to "{}"
+    , wytiwys "let {val 1\trec.val\n" "1" -- "let " jumps straight to value of let
 
-            , wytiwys "1..10.sort lhs>rhs))@ 2" "7" -- Close parens get out of lambda
+    , wytiwys "1..10.sort lhs>rhs))@ 2" "7" -- Close parens get out of lambda
 
-            , wytiwys "{a 7,b 5}.a\n" "7"
-            , wytiwys "{a 7,b 5}.a+2" "9"
+    , wytiwys "{a 7,b 5}.a\n" "7"
+    , wytiwys "{a 7,b 5}.a+2" "9"
 
-            , wytiwys "if ⌫1+2" "3" -- Backspace after "if " deletes it
+    , wytiwys "if ⌫1+2" "3" -- Backspace after "if " deletes it
 
-            , wytiwys "7+negate\n→4" "3"
-            , wytiwys "1==2««if 3\t4" "4"
+    , wytiwys "7+negate\n→4" "3"
+    , wytiwys "1==2««if 3\t4" "4"
 
-            , wytiwys "if 'a'=='b'\t1\t2" "2"
+    , wytiwys "if 'a'=='b'\t1\t2" "2"
 
-            , wytiwys "===↑↓⌫⌫⌫1" "1"
+    , wytiwys "===↑↓⌫⌫⌫1" "1"
 
-            , wytiwys "if 'a=='a\n←←id\t3\t4" "3"
-            ] & pure
-        & buildTest
+    , wytiwys "if 'a=='a\n←←id\t3\t4" "3"
+    ]

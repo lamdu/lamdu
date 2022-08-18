@@ -32,7 +32,7 @@ instance Walk.MonadNameWalk (CollectNames name) where
     opRun = pure (pure . fst . runWriter . runCollectNames)
     opWithNewTag _ _ = id
 
-test :: Test
+test :: TestTree
 test =
     testGroup "Disambiguation"
     [ testCase "globals collide" workAreaGlobals

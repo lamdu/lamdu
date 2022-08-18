@@ -8,7 +8,6 @@ import           Data.Containers.ListUtils (nubOrdOn)
 import qualified Data.Property as Property
 import qualified Data.Text as Text
 import           Data.Vector.Vector2 (Vector2(..))
-import           Hyper.Syntax.App (appFunc)
 import           GUI.Momentu (Responsive, ModKey(..), Update, noMods)
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Element as Element
@@ -23,6 +22,7 @@ import qualified GUI.Momentu.State as GuiState
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widget.Id as WidgetId
 import qualified Graphics.UI.GLFW as GLFW
+import           Hyper.Syntax.App (appFunc)
 import           Lamdu.Data.Db.Layout (ViewM)
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Name (Name)
@@ -42,24 +42,26 @@ import           Unsafe.Coerce (unsafeCoerce)
 
 import           Test.Lamdu.Prelude
 
-test :: Test
+test :: IO TestTree
 test =
-    testGroup "gui-tests"
-    [ testOpPrec
-    , testFragmentSize
-    , testLambdaDelete
-    , testNewTag
-    , testPunCursor
-    , testPrograms
-    , testTagPanes
-    , testPunnedRecordAddField
-    , testRecordPunAndAdd
-    , testChooseTagAndAddNext
-    , testTwoDeletedDefs
-    , testDelArg
-    , testRecordIndentClash
-    , testJumpToInjectTag
-    ]
+    (:
+        [ testOpPrec
+        , testFragmentSize
+        , testLambdaDelete
+        , testNewTag
+        , testPunCursor
+        , testTagPanes
+        , testPunnedRecordAddField
+        , testRecordPunAndAdd
+        , testChooseTagAndAddNext
+        , testTwoDeletedDefs
+        , testDelArg
+        , testRecordIndentClash
+        , testJumpToInjectTag
+        ]
+    )
+    <$> testPrograms
+    <&> testGroup "gui-tests"
 
 defExprs :: Lens.Traversal' (Sugar.WorkArea v name i o a) (Annotated a # Sugar.Assignment v name i o)
 defExprs =
@@ -96,7 +98,7 @@ fromWorkArea env path =
     convertWorkArea "" env
     <&> (^?! Lens.cloneTraversal path)
 
-testJumpToInjectTag :: Test
+testJumpToInjectTag :: TestTree
 testJumpToInjectTag =
     testCase "jump-to-inject-tag" $
     Env.make >>=
@@ -112,7 +114,7 @@ testJumpToInjectTag =
             & void
     & testProgram "inject.json"
 
-testTwoDeletedDefs :: Test
+testTwoDeletedDefs :: TestTree
 testTwoDeletedDefs =
     testCase "two-deleted-defs" $
     Env.make >>=
@@ -124,7 +126,7 @@ testTwoDeletedDefs =
         convertWorkArea "" baseEnv >>= makeFocusedWidget "" baseEnv & void
     & testProgram "two-repls.json"
 
-testRecordIndentClash :: Test
+testRecordIndentClash :: TestTree
 testRecordIndentClash =
     testCase "record-indent-clash" $
     Env.make >>=
@@ -139,7 +141,7 @@ testRecordIndentClash =
     & testProgram "record.json"
     >>= either assertFailure pure
 
-testTagPanes :: Test
+testTagPanes :: TestTree
 testTagPanes =
     testCase "tag-panes" $
     Env.make >>=
@@ -153,7 +155,7 @@ testTagPanes =
 
 -- | Test for issue #411
 -- https://trello.com/c/IF6kY9AZ/411-deleting-lambda-parameter-red-cursor
-testLambdaDelete :: HasCallStack => Test
+testLambdaDelete :: HasCallStack => TestTree
 testLambdaDelete =
     testCase "delete-lambda" $
     Env.make >>=
@@ -169,7 +171,7 @@ testLambdaDelete =
 
 -- | Test for regression in creating new tags when there are tags matching the search string.
 -- (regression introduced at 2020.11.12 in 7bf691ce675f897)
-testNewTag :: HasCallStack => Test
+testNewTag :: HasCallStack => TestTree
 testNewTag =
     testCase "new-tag" $
     Env.make >>=
@@ -191,7 +193,7 @@ topLevelLamParamCursor env =
 
 -- | Test for issue #410
 -- https://trello.com/c/00mxkLRG/410-navigating-to-fragment-affects-layout
-testFragmentSize :: Test
+testFragmentSize :: TestTree
 testFragmentSize =
     testCase "fragment-size" $
     Env.make >>=
@@ -210,7 +212,7 @@ testFragmentSize =
 
 -- | Test for issue #375
 -- https://trello.com/c/KFLJPNmO/375-operator-precedence-crosses-lambda-boundaries-add-test
-testOpPrec :: HasCallStack => Test
+testOpPrec :: HasCallStack => TestTree
 testOpPrec =
     testCase "apply-operator" $
     Env.make >>=
@@ -233,7 +235,7 @@ letBody = Sugar.bBody . Sugar._BinderLet . Sugar.lBody
 binderRec :: Lens.Traversal' (Ann a # Sugar.Binder v n i o) (Sugar.Composite v n i o # Ann a)
 binderRec = hVal . Sugar.bBody . Sugar._BinderTerm . Sugar._BodyRecord
 
-testPunnedRecordAddField :: HasCallStack => Test
+testPunnedRecordAddField :: HasCallStack => TestTree
 testPunnedRecordAddField =
     testCase "punned-record-add-field" $
     Env.make >>=
@@ -249,7 +251,7 @@ testPunnedRecordAddField =
             & void
     & testProgram "punned-fields.json"
 
-testRecordPunAndAdd :: HasCallStack => Test
+testRecordPunAndAdd :: HasCallStack => TestTree
 testRecordPunAndAdd =
     testCase "record-pun-and-add" $
     Env.make >>=
@@ -268,7 +270,7 @@ testRecordPunAndAdd =
             & void
     & testProgram "before-punned-field.json"
 
-testChooseTagAndAddNext :: HasCallStack => Test
+testChooseTagAndAddNext :: HasCallStack => TestTree
 testChooseTagAndAddNext =
     testCase "choose-tag-and-add-next" $
     Env.make >>=
@@ -285,7 +287,7 @@ testChooseTagAndAddNext =
             >>= convertAndMakeGui "" & void
     & testProgram "record.json"
 
-testDelArg :: HasCallStack => Test
+testDelArg :: HasCallStack => TestTree
 testDelArg =
     testCase "del-arg" $
     Env.make >>=
@@ -305,7 +307,7 @@ testDelArg =
 
 -- | Test for
 -- https://trello.com/c/uLlMpi5g/509-when-picking-record-tag-makes-the-field-pun-it-causes-red-cursor
-testPunCursor :: HasCallStack => Test
+testPunCursor :: HasCallStack => TestTree
 testPunCursor =
     testCase "pun-cursor" $
     Env.make >>=
@@ -505,7 +507,7 @@ programTest baseEnv filename =
                 & nubOrdOn (^. Widget.enterResultRect)
                 & traverse_ (testProgramGuiAtPos baseEnv)
 
-testPrograms :: Test
+testPrograms :: IO TestTree
 testPrograms =
     do
         baseEnv <- Env.make
@@ -514,7 +516,6 @@ testPrograms =
             <&> filter (`notElem` skipped)
             <&> Lens.mapped %~ testProg
             <&> testGroup "program-tests"
-        & buildTest
     where
         skipped =
             [ -- The tests import a program without first importing freshdb.

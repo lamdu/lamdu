@@ -21,7 +21,7 @@ recursiveListFiles prefix path =
                     then recursiveListFiles (prefix </> file) childPath
                     else pure [prefix </> file]
 
-test :: Test
+test :: TestTree
 test =
     do
         (_warnings, Right spec) <- BS.readFile "Lamdu.cabal"

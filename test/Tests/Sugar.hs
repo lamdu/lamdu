@@ -22,7 +22,7 @@ import           Test.Lamdu.Prelude
 
 type T = Transaction
 
-test :: Test
+test :: TestTree
 test =
     testGroup "sugar-tests"
     [ delDefParam
@@ -100,7 +100,7 @@ replBody = replBinder . _BinderTerm
 replLet :: Lens.Traversal' (WorkArea v name i o a) (Let v name i o # Annotated a)
 replLet = replBinder . _BinderLet
 
-testNoInjectValAnn :: Test
+testNoInjectValAnn :: TestTree
 testNoInjectValAnn =
     testSugarActions "inject.json" [verify]
     & testCase "no-inject-val-ann"
@@ -110,7 +110,7 @@ testNoInjectValAnn =
                 error "redundant value annotation"
             | otherwise = pure ()
 
-testCaseNav :: Test
+testCaseNav :: TestTree
 testCaseNav =
     testSugarActions "lambda-case.json" [verify]
     & testCase "case-scope-nav"
@@ -123,7 +123,7 @@ testCaseNav =
                     workArea ^? replBody . _BodyPostfixFunc . _PfCase . cList . SugarLens.taggedListItems . tiValue .
                     hVal . _BodyLam & fromMaybe (error "Expected a case lambda")
 
-testUnnamed :: Test
+testUnnamed :: TestTree
 testUnnamed =
     testSugarActions "unnamed.json" [verify]
     & testCase "name-of-unnamed"
@@ -135,7 +135,7 @@ testUnnamed =
 
 -- | Test for issue #374
 -- https://trello.com/c/CDLdSlj7/374-changing-tag-results-in-inference-error
-testChangeParam :: Test
+testChangeParam :: TestTree
 testChangeParam =
     testSugarActions "apply-id-of-lambda.json" [action]
     & testCase "change-param"
@@ -150,7 +150,7 @@ testChangeParam =
 
 -- | Test for issue #373
 -- https://trello.com/c/1kP4By8j/373-re-ordering-let-items-results-in-inference-error
-testReorderLets :: Test
+testReorderLets :: TestTree
 testReorderLets =
     testGroup "reorder-lets"
     [ f "let-items-extract.json"
@@ -169,14 +169,14 @@ testReorderLets =
 
 -- Test for issue #395
 -- https://trello.com/c/UvBdhzzl/395-extract-of-binder-body-with-let-items-may-cause-inference-failure
-testExtract :: Test
+testExtract :: TestTree
 testExtract =
     testSugarActions "extract-lambda-with-let.json" [lift . (^?! action)]
     & testCase "extract"
     where
         action = defExprs . hVal . _BodyFunction . fBody . annotation . plActions . extract
 
-addParamToLet :: Test
+addParamToLet :: TestTree
 addParamToLet =
     testSugarActions "let-used-twice.json" [lift . (^?! action)]
     & testCase "add-param-to-let"
@@ -184,7 +184,7 @@ addParamToLet =
         action =
             replLet . lValue . hVal . _BodyPlain . apAddFirstParam
 
-testCannotInline :: Test
+testCannotInline :: TestTree
 testCannotInline =
     testSugarActions "let-used-twice.json" [verify]
     & testCase "cannot-inline"
@@ -204,7 +204,7 @@ testCannotInline =
 
 -- Test for issue #402
 -- https://trello.com/c/ClDnsGQi/402-wrong-result-when-inlining-from-hole-results
-testInline :: Test
+testInline :: TestTree
 testInline =
     do
         queryLangInfo <- Env.make <&> hasQueryLangInfo
@@ -231,7 +231,7 @@ testInline =
             defExprs . hVal . _BodyFunction . fBody .
             hVal . bBody . _BinderTerm . _BodyLeaf . _LeafLiteral . _LiteralNum
 
-testSkolemScope :: Test
+testSkolemScope :: TestTree
 testSkolemScope =
     do
         queryLangInfo <- Env.make <&> hasQueryLangInfo
@@ -246,7 +246,7 @@ testSkolemScope =
         testSugarActions "skolem.json" [res]
     & testCase "skolem-scope"
 
-lightConst :: Test
+lightConst :: TestTree
 lightConst =
     testSugarActions "const-five.json" [verify]
     & testCase "param-annotations"
@@ -255,7 +255,7 @@ lightConst =
             | Lens.has (replBody . _BodyFragment . fExpr . hVal . _BodyLam . lamLightweight . Lens.only True) workArea = pure ()
             | otherwise = error "Expected light lambda"
 
-paramAnnotations :: Test
+paramAnnotations :: TestTree
 paramAnnotations =
     Env.make <&> has .~ Annotations.None
     >>= testSugarActionsWith "const-five.json" [verify]
@@ -268,7 +268,7 @@ paramAnnotations =
                 (Lens.has _AnnotationNone) workArea)
             (error "parameter should not have type annotation")
 
-delParam :: Test
+delParam :: TestTree
 delParam =
     testSugarActions "const-five.json" [lift . (^?! action), verify]
     & testCase "del-param"
@@ -279,7 +279,7 @@ delParam =
             | otherwise = error "Expected 5"
         afterDel = replBody . _BodyFragment . fExpr . hVal . _BodyLeaf . _LeafLiteral . _LiteralNum
 
-delInfixArg :: Test
+delInfixArg :: TestTree
 delInfixArg =
     testSugarActions "one-plus-one.json" [argDel, holeDel, verify]
     & testCase "del-infix-arg"
@@ -296,7 +296,7 @@ delInfixArg =
             | otherwise = error "Expected 1"
         afterDel = replBody . _BodyLeaf . _LeafLiteral . _LiteralNum
 
-delLet :: Test
+delLet :: TestTree
 delLet =
     testSugarActions "simple-let.json" [lift . void . (^?! letDel), verify]
     & testCase "del-let"
@@ -306,7 +306,7 @@ delLet =
             | Lens.has (replBody . _BodyLeaf . _LeafLiteral . _LiteralNum) workArea = pure ()
             | otherwise = error "Expected 1"
 
-testExtractForRecursion :: Test
+testExtractForRecursion :: TestTree
 testExtractForRecursion =
     testSugarActions "fold.json"
     [ lift . void . openDef
@@ -322,7 +322,7 @@ testExtractForRecursion =
             waPanes . traverse . SugarLens.paneBinder .
             annotation . plActions . extract
 
-testInsistFactorial :: Test
+testInsistFactorial :: TestTree
 testInsistFactorial =
     testSugarActions "factorial-mismatch.json"
     [ lift . void . openDef
@@ -352,7 +352,7 @@ testInsistFactorial =
             hVal . bBody . _BinderTerm . _BodySimpleApply . appFunc .
             hVal . _BodyFragment
 
-testInsistEq :: Test
+testInsistEq :: TestTree
 testInsistEq =
     testSugarActions "compare-int-and-text.json"
     [ lift . void . (^?! insist)
@@ -370,7 +370,7 @@ testInsistEq =
             replBody . _BodyLabeledApply . aMOpArgs . Lens._Just . oaLhs .
             hVal . _BodyFragment
 
-testInsistIf :: Test
+testInsistIf :: TestTree
 testInsistIf =
     testSugarActions "if-with-mismatch.json"
     [ lift . void . (^?! insist)
@@ -390,7 +390,7 @@ testInsistIf =
             hVal . _SimpleElse . _BodyLam . lamFunc . fBody .
             hVal . bBody . _BinderTerm . _BodyFragment
 
-testInsistSubsets :: Test
+testInsistSubsets :: TestTree
 testInsistSubsets =
     testSugarActions "subsets.json"
     [ openTopLevelDef
@@ -419,7 +419,7 @@ testInsistSubsets =
             | otherwise = error "fragment not created at expected position"
         expected = Lens.cloneTraversal consArgs . oaLhs . hVal . _BodyFragment
 
-testLightLambda :: Test
+testLightLambda :: TestTree
 testLightLambda =
     testSugarActions "fold.json" [verify]
     & testCase "light-lambda"
@@ -431,7 +431,7 @@ testLightLambda =
             replBody . _BodyLabeledApply . aAnnotatedArgs . traverse . aaExpr .
             hVal . _BodyLam . lamLightweight . Lens.only True
 
-testNotALightLambda :: Test
+testNotALightLambda :: TestTree
 testNotALightLambda =
     testSugarActions "lam-in-lam.json" [verify]
     & testCase "not-a-light-lambda"
@@ -448,7 +448,7 @@ openTopLevelDef x =
     & x ^. waOpenPane
     & void & lift
 
-delDefParam :: Test
+delDefParam :: TestTree
 delDefParam =
     testSugarActions "def-with-params.json"
     [openTopLevelDef, lift . void . (^?! action)]
@@ -459,7 +459,7 @@ delDefParam =
             hVal . _BodyFunction .
             fParams . _LhsRecord . tlItems . Lens._Just . tlHead . tiDelete
 
-updateDef :: Test
+updateDef :: TestTree
 updateDef =
     testSugarActions "update-def-type.json"
     [openTopLevelDef, lift . void . (^?! action)]
@@ -471,7 +471,7 @@ updateDef =
             hVal . bBody . _BinderTerm . _BodyLabeledApply . aFunc .
             hVal . Lens._Wrapped . vForm . _GetDefinition . _DefTypeChanged . defTypeUseCurrent
 
-testReplaceParent :: Test
+testReplaceParent :: TestTree
 testReplaceParent =
     testSugarActions "let-item-inline.json" [lift . (^?! action)]
     & testCase "replace-parent"
@@ -480,7 +480,7 @@ testReplaceParent =
             defExprs . hVal . _BodyFunction . fBody .
             annotation . plActions . mReplaceParent . Lens._Just
 
-testReplaceParentFragment :: Test
+testReplaceParentFragment :: TestTree
 testReplaceParentFragment =
     testSugarActions "multiply-list.json" [void . lift . (^?! action), verify]
     & testCase "replace-parent-fragment"
@@ -495,14 +495,14 @@ testReplaceParentFragment =
                 error "replace-parent did not remove fragment"
             | otherwise = pure ()
 
-floatLetWithGlobalRef :: Test
+floatLetWithGlobalRef :: TestTree
 floatLetWithGlobalRef =
     testSugarActions "let-with-global-reference.json"
     [ lift . (^?! replLet . lBody . hVal . bBody . _BinderLet . lValue . annotation . plActions . extract)
     ]
     & testCase "float-let-with-global-ref"
 
-setHoleToHole :: Test
+setHoleToHole :: TestTree
 setHoleToHole =
     testSugarActions "let-item-inline.json" [action, verify]
     & testCase "set-hole-to-hole"
@@ -527,7 +527,7 @@ assertEq msg expected got
           "\n  but was:        " ++ show got
           & error
 
-testFloatToRepl :: Test
+testFloatToRepl :: TestTree
 testFloatToRepl =
     testCase "float-to-repl" $
     do
@@ -554,7 +554,7 @@ testFloatToRepl =
             hVal . _BodyPlain . apBody . bBody . _BinderTerm .
             _BodyLeaf . _LeafLiteral . _LiteralNum . Property.pVal
 
-testCreateLetInLetVal :: Test
+testCreateLetInLetVal :: TestTree
 testCreateLetInLetVal =
     testCase "create-let-in-let-val" $
     do
@@ -578,7 +578,7 @@ testCreateLetInLetVal =
             defExprs . hVal . _BodyFunction . fBody .
             hVal . bBody . _BinderLet . lValue . hVal . _BodyPlain . apBody
 
-testHoleTypeShown :: Test
+testHoleTypeShown :: TestTree
 testHoleTypeShown =
     testCase "hole-type-shown" $
     do
@@ -593,7 +593,7 @@ testHoleTypeShown =
             & assertBool "Expected to have type"
 
 -- Test for https://trello.com/c/Dzp5vgos/510-not-punning-auto-named-variables
-testPunnedIso :: Test
+testPunnedIso :: TestTree
 testPunnedIso =
     testCase "punned-iso" $
     Env.make >>= testProgram "punned-fields.json" . convertWorkArea ""
@@ -603,7 +603,7 @@ testPunnedIso =
         (\x -> (x ^. tiTag . tagRefTag . tagName, x ^? tiValue . hVal . _BodyLeaf . _LeafGetVar . vName))
     >>= assertEqual "Record items expected to be punned" []
 
-testNullParamUnused :: Test
+testNullParamUnused :: TestTree
 testNullParamUnused =
     testCase "null-param-unused" $
     Env.make >>= testProgram "null-param-cond.json" . convertWorkArea ""
@@ -613,7 +613,7 @@ testNullParamUnused =
     >>= assertBool "Null param only if unused"
 
 -- Test for https://github.com/lamdu/lamdu/issues/123
-testPunnedLightParam :: Test
+testPunnedLightParam :: TestTree
 testPunnedLightParam =
     testCase "punned-light-param" $
     Env.make >>= testProgram "punned-light-param.json" . convertWorkArea ""
@@ -625,7 +625,7 @@ testPunnedLightParam =
     >>= assertBool "Null param only if unused"
 
 -- Test for https://github.com/lamdu/lamdu/issues/124
-testParamsOrder :: Test
+testParamsOrder :: TestTree
 testParamsOrder =
     testCase "params-order" $
     do
@@ -655,7 +655,7 @@ testParamsOrder =
             replBinder . _BinderLet . lValue .
             hVal . _BodyFunction . fParams . _LhsRecord . tlItems . Lens._Just
 
-testAddToInferredParamList :: Test
+testAddToInferredParamList :: TestTree
 testAddToInferredParamList =
     testCase "add-to-inferred-param-list" $
     do
@@ -679,7 +679,7 @@ testAddToInferredParamList =
         lamBodyParams :: Lens.Traversal' (Term v n i o # k) (TaggedItem n i o (LhsField n v))
         lamBodyParams = _BodyLam . lamFunc . fParams . _LhsRecord . SugarLens.taggedListItems
 
-testNoParenForPrefixInInfix :: Test
+testNoParenForPrefixInInfix :: TestTree
 testNoParenForPrefixInInfix =
     testSugarActions "from-array-map.json" [verify]
     & testCase "perfix-in-infix-no-parens"
@@ -691,14 +691,14 @@ testNoParenForPrefixInInfix =
             replBody . _BodyLabeledApply . aMOpArgs . Lens._Just . oaLhs .
             annotation . plParenInfo . piNeedParens . Lens.only False
 
-testInfixWithArgParens :: Test
+testInfixWithArgParens :: TestTree
 testInfixWithArgParens =
     testCase "infix-with-arg-parens" $
     Env.make >>= testProgram "infix-with-args-needs-paren.json" . convertWorkArea ""
     <&> (^?! replBinder . _BinderTerm . _BodySimpleApply . appArg . annotation . plParenInfo . piNeedParens)
     >>= assertBool "Expected paren"
 
-testDisambig :: Test
+testDisambig :: TestTree
 testDisambig =
     testCase "disambig-operator" $
     Env.make >>= testProgram "disambig.json" . convertWorkArea ""
@@ -710,7 +710,7 @@ testDisambig =
             hVal . _BodyLabeledApply . aFunc .
             hVal . Lens._Wrapped . vName . _NameTag . tnTagCollision . _Collision
 
-testAddRecursiveFuncParam :: Test
+testAddRecursiveFuncParam :: TestTree
 testAddRecursiveFuncParam =
     testSugarActions "recursive-func.json"
     [ lift . void . openDef
@@ -747,7 +747,7 @@ getHoleResults progName traversal =
             >>= fromMaybe (error "getHoleResults: Not a hole")
             >>= ($ Query (hasQueryLangInfo env) mempty "")
 
-testSuspendedHoleResultSimple :: Test
+testSuspendedHoleResultSimple :: TestTree
 testSuspendedHoleResultSimple =
     testCase "suspended-hole-result-simple" $
     do
@@ -762,7 +762,7 @@ testSuspendedHoleResultSimple =
     where
         replHole = replBinder . _BinderTerm . _BodyIfElse . iThen . hVal
 
-testSuspendedHoleResult :: Test
+testSuspendedHoleResult :: TestTree
 testSuspendedHoleResult =
     testCase "suspended-hole-result" $
     do

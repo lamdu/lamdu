@@ -18,7 +18,7 @@ import           Test.Lamdu.Exec (runJS)
 
 import           Test.Lamdu.Prelude
 
-test :: Test
+test :: TestTree
 test =
     testGroup "js-export"
     [ testOnePlusOne
@@ -34,17 +34,17 @@ compile program =
 run :: FilePath -> IO ByteString
 run = compile >=> runJS
 
-testProgram :: String -> ByteString -> Test
+testProgram :: String -> ByteString -> TestTree
 testProgram program expectedOutput =
     do
         result <- program <> ".json" & run
         assertEqual "Expected output" expectedOutput result
     & testCase program
 
-testOnePlusOne :: Test
+testOnePlusOne :: TestTree
 testOnePlusOne = testProgram "one-plus-one" "2\n"
 
-testFieldAndParamUseSameTag :: Test
+testFieldAndParamUseSameTag :: TestTree
 testFieldAndParamUseSameTag =
     testProgram "field-and-param-use-same-tag"
     "{ socket: [Function: socket] }\n"
