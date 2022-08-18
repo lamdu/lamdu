@@ -500,7 +500,7 @@ programTest baseEnv filename =
                 VirtualCursor (w ^?! Widget.fFocalAreas . Lens.ix 0)
                 & testActionsAndNavigation baseEnv
             Just enterPoint ->
-                Vector2 <$> [0, 0.1 .. 1] <*> [0, 0.3 .. 1] <&> (* size)
+                Vector2 <$> [0, 0.5 .. 1] <*> [0, 0.5 .. 1] <&> (* size)
                 <&> enterPoint
                 & nubOrdOn (^. Widget.enterResultRect)
                 & traverse_ (testProgramGuiAtPos baseEnv)
