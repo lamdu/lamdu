@@ -128,7 +128,7 @@ makeResults ::
     GuiM env i o (Menu.OptionList (Menu.Option (GuiM env i o) o))
 makeResults opts tagSuffixes ctx =
     do
-        c <- Lens.view (has . Config.completion . Config.completionResultCount)
+        c <- Lens.view (Config.hasConfig . Config.completion . Config.completionResultCount)
         GuiM.im opts <*>
             makeQuery tagSuffixes ctx
             >>= GuiM.im

@@ -1,5 +1,4 @@
-{-# LANGUAGE IncoherentInstances, TypeFamilies #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving, TemplateHaskell #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving, TemplateHaskell, TypeFamilies #-}
 {-# LANGUAGE MultiParamTypeClasses, FlexibleInstances, DerivingVia #-}
 {-# LANGUAGE UndecidableInstances, PolymorphicComponents #-}
 

@@ -70,7 +70,7 @@ setPickAndAddNextKeys =
     local
     (\env ->
         env
-        & has . Menu.configKeysPickOptionAndGotoNext .~ env ^. has . Config.caseAddAltKeys
+        & has . Menu.configKeysPickOptionAndGotoNext .~ (env ^. has . Config.caseAddAltKeys :: [M.ModKey])
         & has . Menu.configKeysPickOption <>~
             env ^. has . Menu.configKeysPickOptionAndGotoNext <> [M.noMods M.Key'Space]
     )

@@ -408,4 +408,4 @@ makeBinderTagEdit ::
     GuiM env i o (M.TextWidget o)
 makeBinderTagEdit color (Sugar.OptionalTag tag setToAnon) =
     makeLHSTag (const Nothing) color (Just setToAnon) tag
-    & local (has . Menu.configKeysPickOptionAndGotoNext .~ [])
+    & local (has . Menu.configKeysPickOptionAndGotoNext .~ ([] :: [M.ModKey]))

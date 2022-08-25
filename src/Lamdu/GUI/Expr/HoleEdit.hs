@@ -81,7 +81,7 @@ makeResults ::
     GuiM env i o (Menu.OptionList (Menu.Option (GuiM env i o) o))
 makeResults (Ann (Const pl) (Const hole)) ctx =
     do
-        c <- Lens.view (has . Config.completion . Config.completionResultCount)
+        c <- Lens.view (Config.hasConfig . Config.completion . Config.completionResultCount)
         GuiM.im (hole ^. Sugar.holeOptions) <*>
             makeQuery (hole ^. Sugar.holeTagSuffixes) ctx
             >>= GuiM.im
