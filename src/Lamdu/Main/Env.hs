@@ -27,12 +27,14 @@ import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.Hover as Hover
 import qualified GUI.Momentu.Main as MainLoop
 import qualified GUI.Momentu.State as GuiState
+import qualified GUI.Momentu.Widgets.Grid as Grid
 import qualified GUI.Momentu.Widgets.Menu as Menu
 import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified GUI.Momentu.Widgets.StdKeys as StdKeys
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
 import qualified GUI.Momentu.Widgets.TextView as TextView
+import qualified GUI.Momentu.Responsive.Expression as ResponsiveExpr
 import qualified Lamdu.Annotations as Annotations
 import qualified Lamdu.Cache as Cache
 import           Lamdu.Config (Config)
@@ -99,9 +101,11 @@ instance Has TextView.Style Env where has = has @TextEdit.Style . has
 instance Has Theme Env where has = theme
 instance Has VCConfig.Theme Env where has = has . Theme.versionControl
 instance Spacer.HasStdSpacing Env where stdSpacing = has . Theme.stdSpacing
+instance Has ResponsiveExpr.Style Env where has = theme . has
 instance key ~ ModKey => Has (Config key) Env where has = config
 instance key ~ ModKey => Has (Menu.Config key) Env where has = has . SearchMenu.configMenu
 instance key ~ ModKey => Has (SearchMenu.Config key) Env where has = Config.hasConfig . Config.searchMenu
 instance key ~ ModKey => Has (StdKeys.DirKeys key) Env where has = config . Config.dirKeys
 instance key ~ ModKey => Has (TextEdit.Keys key) Env where has = config . Config.textEdit
 instance key ~ ModKey => Has (VCConfig.Config key) Env where has = Config.hasConfig . Config.versionControl
+instance key ~ ModKey => Has (Grid.Keys key) Env where has = Config.hasConfig . Config.grid

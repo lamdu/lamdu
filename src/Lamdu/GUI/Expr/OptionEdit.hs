@@ -18,6 +18,7 @@ import qualified GUI.Momentu.Widgets.Menu as Menu
 import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified Lamdu.Config as Config
+import           Lamdu.GUI.Monad (GuiM)
 import qualified Lamdu.GUI.Monad as GuiM
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.GUI.Styled as Styled
@@ -52,21 +53,21 @@ removeUnwanted =
     & E.deleteKeys
 
 makeResult ::
-    forall i o t m.
+    forall env i o t.
     _ =>
     (Annotated (Sugar.Payload (Sugar.Annotation (Sugar.EvaluationScopes Name i) Name) o) #
         t (Sugar.Annotation (Sugar.EvaluationScopes Name i) Name) Name i o ->
-        m (Responsive.Responsive o)
+        GuiM env i o (Responsive.Responsive o)
     ) ->
     SearchMenu.ResultsContext ->
     Sugar.Option t Name i o ->
-    Menu.Option m o
+    Menu.Option (GuiM env i o) o
 makeResult mkGui ctx res =
     Menu.Option
     { Menu._oId = resId
     , Menu._oRender =
         do
-            chooseText <- Lens.view (has . MomentuTexts.choose)
+            chooseText :: Text <- Lens.view (has . MomentuTexts.choose)
             (mCreateNew, pickAction) <-
                 case res ^. Sugar.optionMNewTag of
                 Nothing -> pure (id, mempty)

@@ -51,10 +51,7 @@ defaultOptions =
     { addOperatorSetHoleState = Nothing
     }
 
-exprInfoFromPl ::
-    Monad i =>
-    GuiM env i o
-    (Sugar.Payload v o0 -> ExprInfo o0)
+exprInfoFromPl :: _ => GuiM env i o (Sugar.Payload v o0 -> ExprInfo o0)
 exprInfoFromPl =
     GuiState.isSubCursor <&>
     \isSubCursor pl ->

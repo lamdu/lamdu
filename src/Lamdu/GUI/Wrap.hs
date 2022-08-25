@@ -57,10 +57,7 @@ stdWrapParentExpr :: _ => ExprGui.Payload i o -> GuiM env i o (Responsive o) -> 
 stdWrapParentExpr pl act =
     parentDelegator (WidgetIds.fromExprPayload pl) <*> act & stdWrap pl
 
-takeFocusIfNeeded ::
-    Monad i =>
-    Sugar.Payload v o ->
-    GuiM env i o (Widget o -> Widget o)
+takeFocusIfNeeded :: _ => Sugar.Payload v o -> GuiM env i o (Widget o -> Widget o)
 takeFocusIfNeeded pl =
     Lens.view GuiState.cursor
     <&>

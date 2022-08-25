@@ -17,15 +17,22 @@ import           GUI.Momentu.Draw (Color(..), Sprite)
 import qualified GUI.Momentu.Draw as Draw
 import           GUI.Momentu.Element (HasAnimIdPrefix(..))
 import           GUI.Momentu.Font (openFont, LCDSubPixelEnabled(..))
+import qualified GUI.Momentu.Hover as Hover
 import qualified GUI.Momentu.MetaKey as MetaKey
 import           GUI.Momentu.State (HasCursor, GUIState(..))
 import           GUI.Momentu.Widgets.EventMapHelp (IsHelpShown(..))
+import qualified GUI.Momentu.Widgets.Grid as Grid
+import qualified GUI.Momentu.Widgets.Menu as Menu
+import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import           GUI.Momentu.Widgets.Spacer (HasStdSpacing(..))
+import qualified GUI.Momentu.Widgets.StdKeys as StdKeys
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
 import qualified GUI.Momentu.Widgets.TextView as TextView
+import qualified GUI.Momentu.Responsive.Expression as ResponsiveExpr
 import qualified Lamdu.Annotations as Annotations
 import qualified Lamdu.Cache as Cache
 import           Lamdu.Config (Config)
+import qualified Lamdu.Config as Config
 import           Lamdu.Config.Folder (Selection(..))
 import qualified Lamdu.Config.Folder as Folder
 import           Lamdu.Config.Theme (Theme, baseTextSize, fonts)
@@ -74,6 +81,7 @@ data Env =
     }
 Lens.makeLenses ''Env
 
+-- TODO: Consider using Lamdu.Main.Env.Env to avoid these repeating instances?
 instance Anchors.HasCodeAnchors Env DbLayout.ViewM where codeAnchors = eCodeAnchors
 instance Has Theme Env where has = eTheme
 instance HasStdSpacing Env where stdSpacing = eSpacing
@@ -81,7 +89,6 @@ instance Has TextView.Style Env where has = has @TextEdit.Style . has
 instance HasAnimIdPrefix Env where animIdPrefix = eAnimIdPrefix
 instance HasCursor Env
 instance Has GUIState Env where has = eState
-instance key ~ ModKey => Has (Config key) Env where has = eConfig
 instance Has Settings Env where has = eSettings
 instance Has TextEdit.Style Env where has = eTextEditStyle
 instance Has Style Env where has = eStyle
@@ -95,6 +102,16 @@ instance Has EvalResults Env where has = eResults
 instance Has Annotations.Mode Env where has = has . sAnnotationMode
 instance Has (Sprites Sprite) Env where has = eSprites
 instance Has (t Text) (Texts Text) => Has (t Text) Env where has = eLanguage . has
+instance Has ResponsiveExpr.Style Env where has = eTheme . has
+instance Has Menu.Style Env where has = eTheme . Theme.menu
+instance Has SearchMenu.TermStyle Env where has = eTheme . Theme.searchTerm
+instance Has Hover.Style Env where has = eTheme . has
+instance key ~ ModKey => Has (Config key) Env where has = eConfig
+instance key ~ ModKey => Has (SearchMenu.Config key) Env where has = Config.hasConfig . Config.searchMenu
+instance key ~ ModKey => Has (Menu.Config key) Env where has = has . SearchMenu.configMenu
+instance key ~ ModKey => Has (Grid.Keys key) Env where has = Config.hasConfig . Config.grid
+instance key ~ ModKey => Has (TextEdit.Keys key) Env where has = Config.hasConfig . Config.textEdit
+instance key ~ ModKey => Has (StdKeys.DirKeys key) Env where has = Config.hasConfig . Config.dirKeys
 
 makeLang :: IO Language
 makeLang = TestConfig.loadConfigObject Proxy (Selection "english")

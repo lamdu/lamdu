@@ -244,8 +244,7 @@ makeOpenRecord rest fieldsGui =
     do
         theme <- Lens.view has
         vspace <- Spacer.stdVSpace
-        restExpr <-
-            Styled.addValPadding <*> GuiM.makeSubexpression rest
+        restExpr <- Styled.addValPadding <*> GuiM.makeSubexpression rest
         animId <- Lens.view M.animIdPrefix
         (|---|) <- Glue.mkGlue ?? Glue.Vertical
         Responsive.vboxWithSeparator ?? False

@@ -269,8 +269,7 @@ makePaneEdit theExportActions prevId pane =
             traverse_ (executeDef theExportActions)
             (pane ^? Sugar.paneBody . Sugar._PaneDefinition . Sugar.drDefI)
 
-makeNewDefinition ::
-    Monad m => Anchors.CodeAnchors m -> GuiM env (OnceT (T m)) (T m) (T m Widget.Id)
+makeNewDefinition :: _ => Anchors.CodeAnchors m -> GuiM env (OnceT (T m)) (T m) (T m Widget.Id)
 makeNewDefinition cp =
     GuiM.mkPrejumpPosSaver <&> (*> DataOps.newEmptyPublicDefinitionWithPane cp)
     <&> Lens.mapped %~ WidgetIds.fromIRef
