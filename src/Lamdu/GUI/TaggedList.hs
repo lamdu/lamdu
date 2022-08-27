@@ -92,7 +92,7 @@ delEventMap cat fpDel prevId nextId =
     dir Config.delBackwardKeys SearchMenu.textDeleteBackwards prevId <>
     dir Config.delForwardKeys MomentuTexts.delete nextId
 
-addNextEventMap :: _ => Lens.ALens' env Text -> [ModKey] -> Widget.Id -> m _
+addNextEventMap :: _ => Lens.ALens' env Text -> [ModKey] -> Widget.Id -> m (EventMap (o Update))
 addNextEventMap cat addKeys myId =
     Lens.view id <&>
     \env ->

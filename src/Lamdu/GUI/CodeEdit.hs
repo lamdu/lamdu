@@ -18,6 +18,7 @@ import           Control.Monad.Trans.FastWriter (runWriterT)
 import           Control.Monad.Transaction (MonadTransaction(..))
 import           Data.CurAndPrev (CurAndPrev(..))
 import           Data.Functor.Compose (Compose(..))
+import           Data.Property (Property)
 import qualified Data.Property as Property
 import           Data.Tuple (swap)
 import           GUI.Momentu (Widget, EventMap, Responsive, Update)
@@ -160,8 +161,8 @@ exportPaneEventMap env theExportActions paneBody =
 deleteAndClosePaneEventMap ::
     _ =>
     Widget.Id ->
-    Sugar.Pane v name i0 o a -> _ ->
-    GuiM env i1 o (EventMap _)
+    Sugar.Pane v name i0 o a -> Property o Sugar.DefinitionState ->
+    GuiM env i1 o (EventMap (o Update))
 deleteAndClosePaneEventMap prevId pane defState =
     Lens.view id
     <&> \env ->
