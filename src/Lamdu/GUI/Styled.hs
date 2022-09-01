@@ -75,7 +75,7 @@ mkFocusableLabel =
         in  lbl (OneOf lens) & Align.tValue %~ toFocusable widgetId
 
 label :: _ => OneOf t -> m (M.WithTextPos M.View)
-label lens = mkLabel ?? OneOf lens
+label lens = mkLabel ?? OneOf (Lens.cloneLens lens)
 
 focusableLabel :: _ => OneOf t -> m (M.TextWidget f)
 focusableLabel lens = mkFocusableLabel ?? OneOf lens
