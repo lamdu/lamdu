@@ -226,7 +226,7 @@ makeInternal parentPrecedence (Ann (Const entityId) tbody) =
     Sugar.TInst typeId typeParams -> makeTInst parentPrecedence typeId typeParams
     Sugar.TRecord composite ->
         makeComposite (Styled.label Texts.recordOpener)
-        (pure Element.empty) (Styled.grammar (Styled.label Texts.recordSep))
+        (pure Element.empty) (Styled.grammar (Styled.label Texts.compositeSeparator))
         makeField composite
     Sugar.TVariant composite ->
         makeComposite (Styled.label Texts.variantTypeOpener)

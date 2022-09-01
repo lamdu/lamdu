@@ -33,7 +33,7 @@ data Code a = Code
     , _textCloser :: a
     , -- Record:
       _recordOpener :: a
-    , _recordSep :: a
+    , _compositeSeparator :: a
     , _recordCloser :: a
       -- Types
     , _variantTypeOpener :: a

@@ -6,7 +6,7 @@
             "injectSymbol": "'",
             "defer": "|",
             "lam": "λ",
-            "recordSep": ","
+            "compositeSeparator": ","
         },
         "codeUI": {
             "hidden": "◎",

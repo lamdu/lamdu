@@ -90,7 +90,7 @@ makeAltRow item =
             & local (M.animIdPrefix .~ Widget.toAnimId myId)
             & setPickAndAddNextKeys
         post <-
-            label Texts.recordSep & grammar <&> Lens.mapped %~ Widget.fromView
+            label Texts.compositeSeparator & grammar <&> Lens.mapped %~ Widget.fromView
             & local (M.animIdPrefix .~ Widget.toAnimId myId)
         let row =
                 TaggedItem
@@ -153,7 +153,7 @@ makeAddAltRow myId addAlt =
         & setPickAndAddNextKeys
         <&> Responsive.fromWithTextPos
     ) <*>
-    ( label Texts.recordSep & grammar <&> Lens.mapped %~ Widget.fromView
+    ( label Texts.compositeSeparator & grammar <&> Lens.mapped %~ Widget.fromView
         & local (M.animIdPrefix .~ Widget.toAnimId myId) <&> Just
     )
     where

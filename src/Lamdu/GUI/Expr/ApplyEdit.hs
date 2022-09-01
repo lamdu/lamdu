@@ -111,7 +111,7 @@ makeArgRow arg =
         expr <- GuiM.makeSubexpression (arg ^. Sugar.aaExpr)
         pre <- TagEdit.makeArgTag (arg ^. Sugar.aaTag)
         comma <-
-            Styled.label Texts.recordSep
+            Styled.label Texts.compositeSeparator
             & local (M.animIdPrefix .~ (Widget.toAnimId . WidgetIds.fromEntityId) (arg ^. Sugar.aaTag . Sugar.tagInstance))
         pure TaggedItem
             { _tagPre = pre <&> Widget.fromView & Just

@@ -151,7 +151,7 @@ addPostTags :: _ => [TaggedItem o] -> m [TaggedItem o]
 addPostTags items =
     do
         let f idx item =
-                label (if isComma then Texts.recordSep else Texts.recordCloser)
+                label (if isComma then Texts.compositeSeparator else Texts.recordCloser)
                 & grammar
                 & (if isComma then Element.locallyAugmented idx else id)
                 <&> \lbl -> item & tagPost ?~ (lbl <&> Widget.fromView)
