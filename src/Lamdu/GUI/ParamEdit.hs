@@ -30,8 +30,11 @@ import           Lamdu.Prelude
 eventMapAddNextParamOrPickTag ::
     _ => Widget.Id -> Sugar.AddParam name i o -> m (EventMap (o Update))
 eventMapAddNextParamOrPickTag myId Sugar.AddNext{} =
-    Lens.view (has . Config.addNextParamKeys) >>=
-    (TaggedList.addNextEventMap [has . Texts.parameter] ?? pure myId)
+    do
+        env <- Lens.view id
+        TaggedList.addNextEventMap
+            [env ^. has . Texts.parameter]
+            (env ^. has . Config.addNextParamKeys) (pure myId)
 eventMapAddNextParamOrPickTag _ (Sugar.NeedToPickTagToAddNext x) =
     Lens.view id <&>
     \env ->

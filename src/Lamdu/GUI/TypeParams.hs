@@ -33,7 +33,8 @@ make ::
     m (EventMap (o Update), [Responsive o])
 make params prevId myId =
     do
-        o <- Lens.view has <&> (`dirKey` Horizontal)
+        env <- Lens.view id
+        let o = dirKey (env ^. has) Horizontal
         keys <-
             traverse Lens.view TaggedList.Keys
             { TaggedList._kAdd = has . Config.addNextParamKeys
@@ -42,7 +43,7 @@ make params prevId myId =
             }
         (addFirstEventMap, itemsR) <-
             -- TODO: rhs id
-            TaggedList.make [has . Texts.parameter] keys (pure prevId) (pure myId) params
+            TaggedList.make [env ^. has . Texts.parameter] keys (pure prevId) (pure myId) params
         ParamEdit.mkAddParam (params ^. Sugar.tlAddFirst) prevId
             <> (traverse makeParam itemsR <&> concat)
             <&> (,) addFirstEventMap

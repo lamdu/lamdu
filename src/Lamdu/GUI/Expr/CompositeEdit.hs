@@ -46,25 +46,25 @@ import qualified Lamdu.Sugar.Types as Sugar
 import           Lamdu.Prelude
 
 data Config = Config
-    { _name :: Lens.ALens' (Texts.CodeUI Text) Text -- "record" | "case"
-    , _itemName :: Lens.ALens' (Texts.CodeUI Text) Text -- "field" | "alternative"
+    { _name :: !Text -- "record" | "case"
+    , _itemName :: !Text -- "field" | "alternative"
     , _opener :: forall a. Lens.ALens' (Texts.Code a) a -- "{" | "["
     , _closer :: forall a. Lens.ALens' (Texts.Code a) a -- "}" | "]"
-    , _tailColor :: Lens.ALens' TextColors M.Color
-    , _tagColor :: Lens.ALens' TextColors M.Color
+    , _tailColor :: !(Lens.ALens' TextColors M.Color)
+    , _tagColor :: !(Lens.ALens' TextColors M.Color)
     }
 Lens.makeLenses ''Config
 
-doc :: _ => env -> [Lens.ALens' (Texts.CodeUI Text) Text] -> E.Doc
-doc env lens =
-    E.toDoc env ([has . MomentuTexts.edit] <> (lens <&> (has .)))
+editDoc :: Has (MomentuTexts.Texts Text) env => env -> [Text] -> E.Doc
+editDoc env texts =
+    env ^. has . MomentuTexts.edit : texts & E.Doc
 
-itemDocPrefix :: Config -> [Lens.ALens' (Texts.CodeUI Text) Text]
+itemDocPrefix :: Config -> [Text]
 itemDocPrefix conf = [conf ^. name, conf ^. itemName]
 
 addItemWithSearchTermEventMap :: _ => Config -> env -> Widget.Id -> EventMap (o Update)
 addItemWithSearchTermEventMap conf env myId =
-    E.charEventMap "Letter" (doc env (itemDocPrefix conf ++ [Texts.add])) f
+    E.charEventMap "Letter" (editDoc env (itemDocPrefix conf ++ [env ^. has . Texts.add])) f
     where
         f c
             | Char.isAlpha c =
@@ -81,7 +81,7 @@ makeUnit conf pl =
         env <- Lens.view id
         let addItemEventMap =
                 E.keysEventMapMovesCursor (env ^. has . Config.compositeAddItemKeys)
-                (doc env (itemDocPrefix conf ++ [Texts.add]))
+                (editDoc env (itemDocPrefix conf ++ [env ^. has . Texts.add]))
                 (pure (TagEdit.addItemId myId))
         grammar (label (conf ^. opener))
             M./|/ grammar (label (conf ^. closer))
@@ -127,7 +127,7 @@ make conf (Ann (Const pl) (Sugar.Composite (Sugar.TaggedList addItem mTlBody) pu
         items <-
             mconcat
             [ makeAddItem conf addItem myId <&> (^.. traverse)
-            , foldMap (TaggedList.makeBody docPrefixLenses keys (pure myId) (pure myId)) mTlBody
+            , foldMap (TaggedList.makeBody (itemDocPrefix conf) keys (pure myId) (pure myId)) mTlBody
                 >>= traverse (makeItemRow conf)
                 <&> concat
                 <&> Lens.ix 0 . tagPre . Lens._Just . M.tValue %~ M.weakerEvents prependEventMap
@@ -136,7 +136,7 @@ make conf (Ann (Const pl) (Sugar.Composite (Sugar.TaggedList addItem mTlBody) pu
                 _ ->
                     M.weakerEvents
                     <$> TaggedList.addNextEventMap
-                        docPrefixLenses (keys ^. TaggedList.kAdd) (pure punAddId)
+                        (itemDocPrefix conf) (keys ^. TaggedList.kAdd) (pure punAddId)
                     <*> GetVarEdit.makePunnedVars punned
                     <&> (:[]) . (TaggedItem Nothing ?? Nothing)
                 ]
@@ -150,7 +150,6 @@ make conf (Ann (Const pl) (Sugar.Composite (Sugar.TaggedList addItem mTlBody) pu
                 & stdWrapParentExpr pl
         & (foldl assignPunned ?? punned)
     where
-        docPrefixLenses = itemDocPrefix conf <&> (has .)
         assignPunned w p =
             M.assignCursorPrefix
             (WidgetIds.fromEntityId (p ^. Sugar.pvTagEntityId)) (Widget.joinId punAddId) w
@@ -261,4 +260,4 @@ closedCompositeEventMap conf (Sugar.ClosedCompositeActions open) =
     \env ->
     open <&> WidgetIds.fromEntityId
     & E.keysEventMapMovesCursor (env ^. has . Config.compositeOpenKeys)
-    (doc env [conf ^. name, Texts.open])
+    (editDoc env [conf ^. name, env ^. has . Texts.open])
