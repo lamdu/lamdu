@@ -15,7 +15,9 @@ import           System.Random (randomIO)
 import           Test.Lamdu.Prelude
 
 initFreshDb :: [FilePath] -> Transaction.Store DbM -> IO ()
-initFreshDb paths db = traverse fileImportAll paths <&> (^. traverse . Lens._2) >>= DbInit.initDb db
+initFreshDb paths db =
+    traverse (fileImportAll mempty) paths <&> (^. traverse . Lens._2)
+    >>= DbInit.initDb db
 
 -- | Make an action to efficiently generate a fresh RAM DB
 ramDB :: [FilePath] -> IO (IO (Transaction.Store DbM))

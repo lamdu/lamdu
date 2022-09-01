@@ -32,7 +32,7 @@ main =
             Right value ->
                 do
                     putStrLn $ "Migrating: " <> path
-                    (_, migratedJson) <- migrateAsNeeded value
+                    (_, migratedJson) <- migrateAsNeeded putStrLn value
                     AesonPretty.encodePretty migratedJson
                         & BSL.writeFile migratedPath
                     renameFile path (path <.> "bk")

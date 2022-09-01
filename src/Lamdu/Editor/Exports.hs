@@ -40,7 +40,7 @@ exportActions config evalResults executeIOProcess =
             >>= either goToError (pure . (, mempty))
             & IOTrans.liftTIO
         fileExport = exportRes . (exportPath &)
-        importAll path = Import.fileImportAll path <&> snd & IOTrans.liftIOT
+        importAll path = Import.fileImportAll putStrLn path <&> snd & IOTrans.liftIOT
         goToError err =
             ( pure ()
             , err ^. Export.deletedDefUseTerm . _F & uuid & WidgetIds.fromUUID & GuiState.updateCursor

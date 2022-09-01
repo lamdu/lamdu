@@ -62,14 +62,14 @@ versionMigrations =
 currentVersion :: Codec.Version
 currentVersion = Codec.Version (length versionMigrations)
 
-toIO :: Either Text a -> IO a
-toIO = either (fail . unpack) pure
+liftEither :: MonadFail m => Either Text a -> m a
+liftEither = either (fail . unpack) pure
 
 applyMigration :: Codec.Version -> Aeson.Value -> Either Text Aeson.Value
 applyMigration (Codec.Version ver) = versionMigrations !! ver
 
-applyMigrations :: Aeson.Value -> Codec.Version -> IO Aeson.Value
-applyMigrations doc ver@(Codec.Version verNum)
+applyMigrations :: MonadFail m => (String -> m ()) -> Aeson.Value -> Codec.Version -> m Aeson.Value
+applyMigrations info doc ver@(Codec.Version verNum)
     | ver == currentVersion = pure doc
     | ver > currentVersion =
         unwords
@@ -79,13 +79,12 @@ applyMigrations doc ver@(Codec.Version verNum)
     | otherwise =
         do
             let nextVer = Codec.Version (verNum + 1)
-            putStrLn $ "Migrating version " ++ show ver ++ " -> " ++ show nextVer
-            newDoc <- applyMigration ver doc & toIO
-            applyMigrations newDoc nextVer
+            info ("Migrating version " <> show ver <> " -> " <> show nextVer)
+            newDoc <- applyMigration ver doc & liftEither
+            applyMigrations info newDoc nextVer
 
-migrateAsNeeded :: Aeson.Value -> IO (Codec.Version, Aeson.Value)
-migrateAsNeeded doc =
+migrateAsNeeded :: MonadFail m => (String -> m ()) -> Aeson.Value -> m (Codec.Version, Aeson.Value)
+migrateAsNeeded info doc =
     do
-        origVersion <- getVersion doc & toIO
-        newDoc <- applyMigrations doc origVersion
-        pure (origVersion, newDoc)
+        origVersion <- getVersion doc & liftEither
+        applyMigrations info doc origVersion <&> (,) origVersion

@@ -24,7 +24,7 @@ importFreshDb :: ImplicitFreshDb -> IO (T ViewM ())
 importFreshDb NoImplicitFreshDb = pure (pure ())
 importFreshDb (FailIfFresh msg) = fail msg
 importFreshDb ImplicitFreshDb =
-    Paths.getDataFileName "freshdb.json" >>= fileImportAll <&> snd
+    Paths.getDataFileName "freshdb.json" >>= fileImportAll putStrLn <&> snd
 
 withDB :: FilePath -> ImplicitFreshDb -> (Transaction.Store DbM -> IO a) -> IO a
 withDB lamduDir implicitFreshDb body =

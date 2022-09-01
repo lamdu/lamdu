@@ -103,13 +103,13 @@ importEntities (Codec.EntitySchemaVersion ver : entities) =
     else "Unsupported schema version: " ++ show ver & error
 importEntities _ = error "Missing schema version"
 
-fileImportAll :: FilePath -> IO (Version, T ViewM ())
-fileImportAll importPath =
+fileImportAll :: (String -> IO ()) -> FilePath -> IO (Version, T ViewM ())
+fileImportAll info importPath =
     do
         (origVersion, migrated) <-
             LBS.readFile importPath <&> Aeson.eitherDecode
             >>= either fail pure
-            >>= Migration.migrateAsNeeded
+            >>= Migration.migrateAsNeeded info
         case Aeson.fromJSON migrated of
             Aeson.Error str -> fail str
             Aeson.Success entities

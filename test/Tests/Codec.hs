@@ -6,6 +6,7 @@ import qualified Data.Aeson.Diff as AesonDiff
 import qualified Data.Aeson.Encode.Pretty as AesonPretty
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.ByteString.Lazy.Char8 as LBSChar
+import           Lamdu.Calc.Identifier (identFromHex)
 import qualified Lamdu.Calc.Term as V
 import           Lamdu.Data.Db.Layout (runDbTransaction)
 import qualified Lamdu.Data.Export.JSON as JsonFormat
@@ -16,7 +17,6 @@ import           Lamdu.VersionControl (runAction)
 import           Test.Lamdu.Db (ramDB)
 
 import           Test.Lamdu.Prelude
-import Lamdu.Calc.Identifier (identFromHex)
 
 test :: TestTree
 test =
@@ -29,7 +29,7 @@ migrationTest :: TestTree
 migrationTest =
     do
         (origVersion, _importEntities) <-
-            JsonFormat.fileImportAll "test/programs/old-codec-factorial.json"
+            JsonFormat.fileImportAll mempty "test/programs/old-codec-factorial.json"
         assertEqual "old-codec-factorial is supposed to be at version 0" origVersion (Codec.Version 0)
     & testCase "migration"
 
