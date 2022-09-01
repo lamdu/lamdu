@@ -3,11 +3,18 @@ module Lamdu.GUI.Expr.CaseEdit
     ) where
 
 import qualified Control.Lens as Lens
-import           GUI.Momentu (Responsive)
+import           GUI.Momentu (Responsive, (/|/))
+import qualified GUI.Momentu as M
+import qualified GUI.Momentu.Responsive as Responsive
+import qualified GUI.Momentu.Responsive.Options as Options
+import qualified GUI.Momentu.Widget as Widget
+import qualified GUI.Momentu.Widgets.Label as Label
 import qualified Lamdu.Config.Theme.TextColors as TextColors
 import qualified Lamdu.GUI.Expr.CompositeEdit as CompositeEdit
 import           Lamdu.GUI.Monad (GuiM)
+import           Lamdu.GUI.Styled (label, grammar)
 import qualified Lamdu.GUI.Types as ExprGui
+import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.I18N.Code as Texts
 import qualified Lamdu.I18N.CodeUI as Texts
 import qualified Lamdu.Sugar.Types as Sugar
@@ -27,4 +34,18 @@ caseConf =
     }
 
 make :: _ => ExprGui.Expr Sugar.Composite i o -> GuiM env i o (Responsive o)
-make expr = caseConf >>= (CompositeEdit.make ?? expr)
+make expr =
+    do
+        header <- grammar (Label.make ".") /|/ makeCaseLabel
+        conf <- caseConf
+        hbox <- Options.boxSpaced
+        let prependCase altsGui = hbox Options.disambiguationNone [header, altsGui]
+        CompositeEdit.make (Just prependCase) bodyId conf expr
+    where
+        myId = expr ^. annotation & WidgetIds.fromExprPayload
+        headerId = Widget.joinId myId ["header"]
+        bodyId = Widget.joinId myId ["body"]
+        makeCaseLabel =
+            (Widget.makeFocusableView ?? headerId <&> (M.tValue %~))
+            <*> grammar (label Texts.case_)
+            <&> Responsive.fromWithTextPos

@@ -8,6 +8,7 @@ import qualified Lamdu.Config.Theme.TextColors as TextColors
 import qualified Lamdu.GUI.Expr.CompositeEdit as CompositeEdit
 import           Lamdu.GUI.Monad (GuiM)
 import qualified Lamdu.GUI.Types as ExprGui
+import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.I18N.Code as Texts
 import qualified Lamdu.I18N.CodeUI as Texts
 import qualified Lamdu.Sugar.Types as Sugar
@@ -28,4 +29,7 @@ recordConf =
     }
 
 make :: _ => ExprGui.Expr Sugar.Composite i o -> GuiM env i o (Responsive o)
-make expr = recordConf >>= (CompositeEdit.make ?? expr)
+make expr =
+    recordConf >>= (CompositeEdit.make Nothing myId ?? expr)
+    where
+        myId = expr ^. annotation & WidgetIds.fromExprPayload

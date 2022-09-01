@@ -74,8 +74,10 @@ addItemWithSearchTermEventMap conf env myId =
                 & Just
             | otherwise = Nothing
 
-makeUnit :: _ => Config -> ExprGui.Payload i o -> GuiM env i o (Responsive o)
-makeUnit conf pl =
+makeUnit ::
+    _ =>
+    Maybe (Responsive o -> Responsive o) -> Widget.Id -> Config -> ExprGui.Payload i o -> GuiM env i o (Responsive o)
+makeUnit prependKeywords myId conf pl =
     do
         makeFocusable <- Widget.makeFocusableView ?? myId <&> (M.tValue %~)
         env <- Lens.view id
@@ -89,9 +91,9 @@ makeUnit conf pl =
             <&> M.tValue %~ Widget.weakerEvents
                 (addItemEventMap <> addItemWithSearchTermEventMap conf env myId)
             <&> Responsive.fromWithTextPos
-            & stdWrap pl
-    where
-        myId = WidgetIds.fromExprPayload pl
+            & case prependKeywords of
+            Nothing -> stdWrap pl
+            Just prepend -> stdWrapParentExpr pl . fmap prepend
 
 makeAddItem ::
     _ =>
@@ -102,8 +104,11 @@ makeAddItem conf addItem baseId =
     where
         myId = TagEdit.addItemId baseId
 
-make :: _ => Config -> ExprGui.Expr Sugar.Composite i o -> GuiM env i o (Responsive o)
-make conf (Ann (Const pl) (Sugar.Composite (Sugar.TaggedList addItem mTlBody) punned compositeTail)) =
+make ::
+    _ =>
+    Maybe (Responsive o -> Responsive o) ->
+    Widget.Id -> Config -> ExprGui.Expr Sugar.Composite i o -> GuiM env i o (Responsive o)
+make prependKeywords myId conf (Ann (Const pl) (Sugar.Composite (Sugar.TaggedList addItem mTlBody) punned compositeTail)) =
     do
         tailEventMap <-
             case compositeTail of
@@ -141,19 +146,19 @@ make conf (Ann (Const pl) (Sugar.Composite (Sugar.TaggedList addItem mTlBody) pu
                     <&> (:[]) . (TaggedItem Nothing ?? Nothing)
                 ]
         case items of
-            [] -> makeUnit conf pl
+            [] -> makeUnit prependKeywords myId conf pl
             _ ->
                 Styled.addValFrame <*>
                 ( grammar (label (conf ^. opener))
                     M./|/ (taggedListIndent <*> addPostTags conf items >>= postProcess)
                 ) <&> Widget.weakerEvents (goToParentEventMap <> tailEventMap)
+                <&> fromMaybe id prependKeywords
                 & stdWrapParentExpr pl
         & (foldl assignPunned ?? punned)
     where
         assignPunned w p =
             M.assignCursorPrefix
             (WidgetIds.fromEntityId (p ^. Sugar.pvTagEntityId)) (Widget.joinId punAddId) w
-        myId = WidgetIds.fromExprPayload pl
         punAddId =
             mTlBody >>= Lens.lastOf (SugarLens.taggedListBodyItems . Sugar.tiTag)
             & maybe myId TaggedList.itemId
