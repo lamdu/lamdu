@@ -3,6 +3,7 @@ module Lamdu.GUI.Expr.InjectEdit
     ) where
 
 import qualified Control.Lens as Lens
+import           Hyper (annValue)
 import           GUI.Momentu (Responsive, (/|/), Update)
 import qualified GUI.Momentu as M
 import qualified GUI.Momentu.EventMap as E
@@ -78,7 +79,14 @@ nullaryRecord x =
     do
         isActive <- GuiState.isSubCursor ?? myId
         if isActive
-            then RecordEdit.makeEmpty x <&> FocusedNullaryRecord
+            then
+                RecordEdit.make
+                (x & annValue %~ \(Const add) ->
+                    Sugar.Composite (Sugar.TaggedList add Nothing) []
+                    -- Hack: Create dummy unnecessary closed-composite tail
+                    (Sugar.ClosedCompositeTail
+                        (Sugar.ClosedCompositeActions (pure (x ^. annotation . Sugar.plEntityId))))
+                ) <&> FocusedNullaryRecord
             else enterSubexpr myId <&> HiddenNullaryRecord
     where
         myId = x ^. annotation & WidgetIds.fromExprPayload

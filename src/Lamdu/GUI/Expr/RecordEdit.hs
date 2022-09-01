@@ -1,5 +1,5 @@
 module Lamdu.GUI.Expr.RecordEdit
-    ( make, makeEmpty
+    ( make
     ) where
 
 import qualified Control.Lens as Lens
@@ -88,19 +88,7 @@ makeAddField addField baseId =
     where
         myId = TagEdit.addItemId baseId
 
-makeEmpty ::
-    _ =>
-    Annotated (ExprGui.Payload i o) # Const (i (Sugar.TagChoice Name o)) ->
-    GuiM env i o (Responsive o)
-makeEmpty (Ann (Const pl) (Const addField)) =
-    makeAddField addField (WidgetIds.fromExprPayload pl) >>=
-    maybe (makeUnit pl) (stdWrapParentExpr pl . makeRecord pure . (:[]))
-
 make :: _ => ExprGui.Expr Sugar.Composite i o -> GuiM env i o (Responsive o)
-make (Ann (Const pl) (Sugar.Composite (Sugar.TaggedList addField Nothing) [] Sugar.ClosedCompositeTail{})) =
-    -- Ignore the ClosedComposite actions - it only has the open
-    -- action which is equivalent ot deletion on the unit record
-    makeEmpty (Ann (Const pl) (Const addField))
 make (Ann (Const pl) (Sugar.Composite (Sugar.TaggedList addField mTlBody) punned recordTail)) =
     do
         tailEventMap <-
@@ -122,7 +110,7 @@ make (Ann (Const pl) (Sugar.Composite (Sugar.TaggedList addField mTlBody) punned
             , TaggedList._kOrderAfter = has . Config.orderDirKeys . StdKeys.keysDown
             }
         let prependEventMap = addFieldWithSearchTermEventMap env myId
-        mconcat
+        items <- mconcat
             [ makeAddField addField myId <&> (^.. traverse)
             , foldMap (TaggedList.makeBody (has . Texts.field) keys (pure myId) (pure myId)) mTlBody
                 >>= traverse makeFieldRow
@@ -137,9 +125,14 @@ make (Ann (Const pl) (Sugar.Composite (Sugar.TaggedList addField mTlBody) punned
                     <*> GetVarEdit.makePunnedVars punned
                     <&> (:[]) . (TaggedItem Nothing ?? Nothing)
                 ]
-            >>= makeRecord postProcess
-            <&> Widget.weakerEvents (goToRecordEventMap <> tailEventMap)
-            & stdWrapParentExpr pl
+        case items of
+            [] -> makeUnit pl
+            _ ->
+                Styled.addValFrame <*>
+                ( grammar (label Texts.recordOpener)
+                    M./|/ (taggedListIndent <*> addPostTags items >>= postProcess)
+                ) <&> Widget.weakerEvents (goToRecordEventMap <> tailEventMap)
+                & stdWrapParentExpr pl
     & (foldl assignPunned ?? punned)
     where
         assignPunned w p =
@@ -153,14 +146,6 @@ make (Ann (Const pl) (Sugar.Composite (Sugar.TaggedList addField mTlBody) punned
             case recordTail of
             Sugar.OpenCompositeTail restExpr -> makeOpenRecord restExpr
             _ -> pure
-
-makeRecord :: _ => (Responsive o -> m (Responsive o)) -> [TaggedItem o] -> m (Responsive o)
-makeRecord _ [] = error "makeRecord with no fields"
-makeRecord postProcess fieldGuis =
-    Styled.addValFrame <*>
-    ( grammar (label Texts.recordOpener)
-        M./|/ (taggedListIndent <*> addPostTags fieldGuis >>= postProcess)
-    )
 
 addPostTags :: _ => [TaggedItem o] -> m [TaggedItem o]
 addPostTags items =
