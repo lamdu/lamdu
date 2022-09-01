@@ -63,16 +63,23 @@ newtype OneOfT a = OneOf (OneOf a)
 
 mkLabel :: _ => m (OneOfT t -> M.WithTextPos M.View)
 mkLabel =
-    (,,) <$> TextView.make <*> Element.subAnimId <*> Lens.view has
-    <&> \(textView, subAnimId, texts) (OneOf lens) ->
-    textView (texts ^# lens) (subAnimId (elemIds ^# lens))
+    do
+        textView <- TextView.make
+        subAnimId <- Element.subAnimId
+        texts <- Lens.view has
+        pure (\(OneOf lens) -> textView (texts ^# lens) (subAnimId (elemIds ^# lens)))
 
 mkFocusableLabel :: _ => m (OneOfT t -> M.TextWidget f)
 mkFocusableLabel =
-    (,,) <$> Widget.makeFocusableView <*> Lens.view Element.animIdPrefix <*> mkLabel
-    <&> \(toFocusable, animIdPrefix, lbl) (OneOf lens) ->
-        let widgetId = animIdPrefix <> elemIds ^# lens & Widget.Id
-        in  lbl (OneOf lens) & Align.tValue %~ toFocusable widgetId
+    do
+        toFocusable <- Widget.makeFocusableView
+        animIdPrefix <- Lens.view Element.animIdPrefix
+        lbl <- mkLabel
+        pure (
+            \(OneOf lens) ->
+            let widgetId = animIdPrefix <> elemIds ^# lens & Widget.Id
+            in  lbl (OneOf lens) & Align.tValue %~ toFocusable widgetId
+            )
 
 label :: _ => OneOf t -> m (M.WithTextPos M.View)
 label lens = mkLabel ?? OneOf (Lens.cloneLens lens)
