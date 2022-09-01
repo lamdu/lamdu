@@ -2,7 +2,6 @@ module Tests.Wytiwys (test) where
 
 import           Control.Monad (foldM)
 import           Control.Monad.Once (OnceT, evalOnceT)
-import           Data.Char (isAscii)
 import           GUI.Momentu (noMods, shift)
 import           GUI.Momentu.EventMap (Event(..))
 import qualified Graphics.UI.GLFW as GLFW
@@ -54,7 +53,7 @@ wytiwysDb mkDb src result =
             & runDbTransaction db
     >>= runJS
     >>= assertEqual "Expected output" (result <> "\n")
-    & testCase (filter isAscii src)
+    & testCase (show src)
 
 test :: HasCallStack => TestTree
 test =
