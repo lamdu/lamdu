@@ -60,7 +60,7 @@ makeDropDownList :: _ => OneOf t -> Property f a -> [(a, M.TextWidget f)] -> m (
 makeDropDownList headerText prop choices =
     do
         defConf <- DropDownList.defaultConfig
-        text <- Lens.view (has . headerText)
+        text <- Lens.view (has . Lens.cloneLens headerText)
         DropDownList.make ?? prop ?? choices ?? defConf text ?? myId
     where
         myId = Widget.Id ("status" : elemIds ^# headerText)

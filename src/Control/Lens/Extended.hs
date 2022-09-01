@@ -25,4 +25,4 @@ filteredByIndex fold f =
 (~~>) :: (At a, Monoid a) => Index a -> IxValue a -> a
 k ~~> v = mempty & at k ?~ v
 
-type OneOf f = forall a. Lens' (f a) a
+type OneOf f = forall a. ALens' (f a) a

@@ -153,7 +153,7 @@ actionable myId txtLens doc action =
                 }
         actionKeys <- Lens.view (has . Config.actionKeys)
         let eventMap = E.keysEventMapMovesCursor actionKeys doc action
-        Lens.view (has . txtLens)
+        Lens.view (has . Lens.cloneLens txtLens)
             >>= Clickable.makeText myId (Clickable.Config action doc actionKeys)
             & local (TextView.color .~ color)
             & local (TextView.underline ?~ underline)
