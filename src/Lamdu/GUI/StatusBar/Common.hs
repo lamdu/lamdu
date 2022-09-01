@@ -1,5 +1,5 @@
 -- | Common utilities for status bar widgets
-{-# LANGUAGE TemplateHaskell, RankNTypes, TypeFamilies, ScopedTypeVariables #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module Lamdu.GUI.StatusBar.Common
     ( StatusWidget(..), widget, globalEventMap
@@ -8,8 +8,8 @@ module Lamdu.GUI.StatusBar.Common
     , fromWidget, combineEdges
     ) where
 
+import           Control.Lens.Extended (AnItemLens)
 import qualified Control.Lens as Lens
-import           Control.Lens.Extended (OneOf)
 import           Data.Property (Property(..))
 import           GUI.Momentu (EventMap, ModKey)
 import qualified GUI.Momentu as M
@@ -56,28 +56,34 @@ fromWidget :: M.TextWidget f -> StatusWidget f
 fromWidget w =
     StatusWidget { _widget = w, _globalEventMap = mempty }
 
-makeDropDownList :: _ => OneOf t -> Property f a -> [(a, M.TextWidget f)] -> m (M.TextWidget f)
+makeDropDownList ::
+    _ =>
+    AnItemLens t (Text, M.AnimId) -> Property f a -> [(a, M.TextWidget f)] -> m (M.TextWidget f)
 makeDropDownList headerText prop choices =
     do
         defConf <- DropDownList.defaultConfig
-        text <- Lens.view (has . Lens.cloneLens headerText)
+        texts <- Lens.view has
+        let (text, animId) = ((,) <$> texts <*> elemIds) ^# headerText
+        let myId = Widget.Id ("status" : animId)
         DropDownList.make ?? prop ?? choices ?? defConf text ?? myId
-    where
-        myId = Widget.Id ("status" : elemIds ^# headerText)
 
 labeledDropDownList ::
-    _ => OneOf t -> Property f a -> [(a, M.TextWidget f)] -> M.WithTextPos M.View -> m (M.TextWidget f)
+    _ =>
+    AnItemLens t (Text, M.AnimId) -> Property f a -> [(a, M.TextWidget f)] -> M.WithTextPos M.View -> m (M.TextWidget f)
 labeledDropDownList categoryTextLens prop choices headerView =
     pure headerView M./|/ makeDropDownList categoryTextLens prop choices
 
 makeSwitchStatusWidget ::
     _ =>
-    m (M.WithTextPos M.View) -> OneOf t -> OneOf Texts.StatusBar -> Lens' (Config ModKey) [ModKey] -> Property f a ->
+    m (M.WithTextPos M.View) ->
+    AnItemLens t (Text, M.AnimId) ->
+    AnItemLens Texts.StatusBar Text ->
+    Lens.ALens' (Config ModKey) [ModKey] -> Property f a ->
     [(a, M.TextWidget f)] -> m (StatusWidget f)
 makeSwitchStatusWidget mkHeaderWidget categoryTextLens switchTextLens keysGetter prop choiceVals =
     do
         w <- mkHeaderWidget >>= labeledDropDownList categoryTextLens prop choiceVals
-        keys <- Lens.view (has . keysGetter)
+        keys <- Lens.view (has . Lens.cloneLens keysGetter)
         txt <- Lens.view has
         let e =
                 setVal newVal

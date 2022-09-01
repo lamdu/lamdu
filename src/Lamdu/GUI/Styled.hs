@@ -1,10 +1,9 @@
-{-# LANGUAGE RankNTypes #-}
 -- | Styled widgets
 -- Apply the Lamdu theme to various widgets and guis
 module Lamdu.GUI.Styled
     ( grammar, info
     , text
-    , mkLabel, mkFocusableLabel, OneOfT(..)
+    , mkLabel, mkFocusableLabel
     , label, focusableLabel
     , addValBG, addBgColor
     , addValPadding, addValFrame
@@ -16,7 +15,7 @@ module Lamdu.GUI.Styled
     ) where
 
 import qualified Control.Lens as Lens
-import           Control.Lens.Extended (OneOf)
+import           Control.Lens.Extended (AnItemLens)
 import qualified GUI.Momentu as M
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Animation as Anim
@@ -34,7 +33,6 @@ import qualified Graphics.DrawingCombinators.Extended as GLDraw
 import qualified Lamdu.Config as Config
 import           Lamdu.Config.Theme (Theme)
 import qualified Lamdu.Config.Theme as Theme
-import           Lamdu.Config.Theme.Sprites (Sprites)
 import           Lamdu.Config.Theme.TextColors (TextColors)
 import qualified Lamdu.Config.Theme.TextColors as TextColors
 import           Lamdu.Name (Name(..))
@@ -53,39 +51,43 @@ rawText :: _ => M.AnimId -> Text -> f (M.WithTextPos M.View)
 rawText animIdSuffix txt =
     (TextView.make ?? txt) <*> (Element.subAnimId ?? animIdSuffix)
 
-text :: _ => M.AnimId -> OneOf t -> f (M.WithTextPos M.View)
+text :: _ => M.AnimId -> Lens.ALens' (t Text) Text -> f (M.WithTextPos M.View)
 text animIdSuffix txtLens =
     Lens.view (has . Lens.cloneLens txtLens)
     >>= rawText animIdSuffix
 
--- work around lack of impredicative types
-newtype OneOfT a = OneOf (OneOf a)
-
-mkLabel :: _ => m (OneOfT t -> M.WithTextPos M.View)
+mkLabel :: _ => m (AnItemLens t (Text, M.AnimId) -> M.WithTextPos M.View)
 mkLabel =
     do
         textView <- TextView.make
         subAnimId <- Element.subAnimId
         texts <- Lens.view has
-        pure (\(OneOf lens) -> textView (texts ^# lens) (subAnimId (elemIds ^# lens)))
+        pure (
+            \lens ->
+            let (txt, animId) = ((,) <$> texts <*> elemIds) ^# lens
+            in
+            textView txt (subAnimId animId)
+            )
 
-mkFocusableLabel :: _ => m (OneOfT t -> M.TextWidget f)
+mkFocusableLabel :: _ => m (AnItemLens t (Text, M.AnimId) -> M.TextWidget f)
 mkFocusableLabel =
     do
         toFocusable <- Widget.makeFocusableView
         animIdPrefix <- Lens.view Element.animIdPrefix
         lbl <- mkLabel
         pure (
-            \(OneOf lens) ->
-            let widgetId = animIdPrefix <> elemIds ^# lens & Widget.Id
-            in  lbl (OneOf lens) & Align.tValue %~ toFocusable widgetId
+            \lens ->
+            let widgetId =
+                    animIdPrefix <>
+                    (elemIds <&> (,) "") ^. Lens.cloneLens lens . Lens._2 & Widget.Id
+            in  lbl lens & Align.tValue %~ toFocusable widgetId
             )
 
-label :: _ => OneOf t -> m (M.WithTextPos M.View)
-label lens = mkLabel ?? OneOf (Lens.cloneLens lens)
+label :: _ => AnItemLens t (Text, M.AnimId) -> m (M.WithTextPos M.View)
+label lens = mkLabel ?? lens
 
-focusableLabel :: _ => OneOf t -> m (M.TextWidget f)
-focusableLabel lens = mkFocusableLabel ?? OneOf lens
+focusableLabel :: _ => AnItemLens t (Text, M.AnimId) -> m (M.TextWidget f)
+focusableLabel lens = mkFocusableLabel ?? lens
 
 addValBG :: _ => m (a -> a)
 addValBG = addBgColor Theme.valFrameBGColor
@@ -148,7 +150,7 @@ withColor textColor act =
         color <- Lens.view (has . Theme.textColors . Lens.cloneLens textColor)
         local (TextView.color .~ color) act
 
-actionable :: _ => Widget.Id -> OneOf t -> E.Doc -> f Widget.Id -> m (M.TextWidget f)
+actionable :: _ => Widget.Id -> Lens.ALens' (t Text) Text -> E.Doc -> f Widget.Id -> m (M.TextWidget f)
 actionable myId txtLens doc action =
     do
         color <- Lens.view (has . Theme.textColors . TextColors.actionTextColor)
@@ -180,11 +182,13 @@ nameAtBinder name act =
             _ -> Style.autoNameOrigin
 
 -- Sprite the size of unit (1 pixel)
-unitSprite :: _ => OneOf Sprites -> m M.View
+unitSprite :: _ => AnItemLens t (GLDraw.Sprite, M.AnimId) -> m M.View
 unitSprite lens =
-    Lens.view id
-    <&> \env ->
-    Draw.sprite (env ^. has . Lens.cloneLens lens)
+    Lens.view id <&>
+    \env ->
+    let (s, animId) = ((,) <$> env ^. has <*> elemIds) ^# lens
+    in
+    Draw.sprite s
     & void
     -- Y goes up by default in DrawingCombinators, switch that
     & (GLDraw.scaleV (M.Vector2 1 (-1)) %%)
@@ -192,10 +196,10 @@ unitSprite lens =
     & (GLDraw.translateV 1 %%)
     -- (0..2) -> (0..1)
     & (GLDraw.scaleV (M.Vector2 0.5 0.5) %%)
-    & Anim.singletonFrame 1 (env ^. Element.animIdPrefix <> elemIds ^# lens)
+    & Anim.singletonFrame 1 (env ^. Element.animIdPrefix <> animId)
     & View.make 1
 
-sprite :: _ => OneOf Sprites -> m M.View
+sprite :: _ => AnItemLens t (GLDraw.Sprite, M.AnimId) -> m M.View
 sprite lens =
     do
         height <- Lens.view has <&> TextView.lineHeight

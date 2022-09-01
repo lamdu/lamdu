@@ -1,5 +1,5 @@
 -- | Widget to edit the settings
-{-# LANGUAGE TemplateHaskell, RankNTypes, TypeFamilies #-}
+{-# LANGUAGE TemplateHaskell #-}
 module Lamdu.GUI.Settings
     ( StatusWidgets(..), annotationWidget, themeWidget, languageWidget, helpWidget
     , TitledSelection(..), title, selection
@@ -24,7 +24,6 @@ import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.Config.Theme.Sprites as Sprites
 import           Lamdu.GUI.StatusBar.Common (StatusWidget)
 import qualified Lamdu.GUI.StatusBar.Common as StatusBar
-import           Lamdu.GUI.Styled (OneOfT(..))
 import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.I18N.CodeUI as Texts
 import qualified Lamdu.I18N.StatusBar as Texts
@@ -52,9 +51,9 @@ makeAnnotationsSwitcher annotationModeProp =
     do
         mk0 <- Styled.mkFocusableLabel
         mk1 <- Styled.mkFocusableLabel
-        [ (Ann.Evaluation, mk0 (OneOf Texts.evaluation))
-            , (Ann.Types, mk1 (OneOf Texts.sbTypes))
-            , (Ann.None, mk1 (OneOf Texts.sbNone))
+        [ (Ann.Evaluation, mk0 Texts.evaluation)
+            , (Ann.Types, mk1 Texts.sbTypes)
+            , (Ann.None, mk1 Texts.sbNone)
             ]
             & StatusBar.makeSwitchStatusWidget
                 (Styled.sprite Sprites.pencilLine <&> WithTextPos 0)

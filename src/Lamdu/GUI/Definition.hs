@@ -1,12 +1,9 @@
-{-# LANGUAGE RankNTypes #-}
-
 module Lamdu.GUI.Definition
     ( make
     , module Lamdu.GUI.Definition.Result
     ) where
 
 import qualified Control.Lens as Lens
-import           Control.Lens.Extended (OneOf)
 import           Control.Monad.Writer (MonadWriter(..))
 import           Data.CurAndPrev (CurPrevTag(..), fallbackToPrev, curPrevTag)
 import           GUI.Momentu (Responsive)
@@ -84,7 +81,7 @@ makeIndicator tag enabledColor text =
         color <- indicatorColor tag enabledColor
         Label.make text & local (TextView.color .~ color)
 
-compiledErrorDesc :: Sugar.CompiledErrorType -> OneOf Texts.CodeUI
+compiledErrorDesc :: Sugar.CompiledErrorType -> Lens.ALens' (Texts.CodeUI a) a
 compiledErrorDesc Sugar.ReachedHole = Texts.jsReachedAHole
 compiledErrorDesc Sugar.DependencyTypeOutOfDate = Texts.jsStaleDep
 compiledErrorDesc Sugar.UnhandledCase = Texts.jsUnhandledCase

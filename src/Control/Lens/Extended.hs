@@ -1,18 +1,19 @@
-{-# LANGUAGE RankNTypes #-}
 module Control.Lens.Extended
     ( module Control.Lens
+    , AnItemLens
     , (~~>)
     , filteredByIndex
-    , OneOf
     ) where
 
-import Control.Lens
+import           Control.Lens
+import qualified Data.Monoid as Monoid
 
-import Prelude
+import           Prelude
 
 filteredByIndex ::
     (Applicative f, Indexable j p) =>
-    Fold i j -> p a (f a) -> Indexed i a (f a)
+    ((j -> Const (Monoid.First j) j) -> i -> Const (Monoid.First j) i) ->
+    p a (f a) -> Indexed i a (f a)
 filteredByIndex fold f =
     Indexed $
     \idx val ->
@@ -25,4 +26,4 @@ filteredByIndex fold f =
 (~~>) :: (At a, Monoid a) => Index a -> IxValue a -> a
 k ~~> v = mempty & at k ?~ v
 
-type OneOf f = forall a. ALens' (f a) a
+type AnItemLens t a = ALens' (t a) a
