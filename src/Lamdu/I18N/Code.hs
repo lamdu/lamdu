@@ -17,7 +17,6 @@ data Code a = Code
     , _repl :: a
     , -- Case
       _case_ :: a
-    , _absurd :: a
     , -- If:
       _if_ :: a
     , _else_ :: a
@@ -33,8 +32,10 @@ data Code a = Code
     , _textCloser :: a
     , -- Record:
       _recordOpener :: a
+    , _caseOpener :: a
     , _compositeSeparator :: a
     , _recordCloser :: a
+    , _caseCloser :: a
       -- Types
     , _variantTypeOpener :: a
     , _variantTypeSep :: a

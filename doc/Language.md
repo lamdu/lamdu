@@ -98,7 +98,7 @@ These are the terms of the language
 * Variants
   * `'alt injected` - Inject a value to a variant type
   * `.case { alt: handler, rest }` - Pattern match a single variant constructor, "peeling off" the variant type
-  * `Ø` - The "absurd" (empty variant type) handler (used as "rest" in pattern match when no more cases remain to match)
+  * `.case {}` - The "absurd" (empty variant type) handler (used as "rest" in pattern match when no more cases remain to match)
 * Nominal types
   * `Nom value` - Wrap a value in a nominal type
   * `value.Nom` - Unwrap a value from a nominal type

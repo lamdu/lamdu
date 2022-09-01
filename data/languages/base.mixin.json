@@ -2,7 +2,6 @@
     "texts": {
         "code": {
             "assign": "=",
-            "absurd": "Ø",
             "injectSymbol": "'",
             "defer": "|",
             "lam": "λ",

@@ -11,6 +11,8 @@
             "textCloser": "„",
             "recordOpener": "{",
             "recordCloser": "}",
+            "caseOpener": "[",
+            "caseCloser": "]",
             "variantTypeOpener": "+{"
         },
         "navigationTexts": {
