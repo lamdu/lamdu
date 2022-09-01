@@ -66,7 +66,7 @@ makeUnit pl =
         makeFocusable <- Widget.makeFocusableView ?? myId <&> (M.tValue %~)
         env <- Lens.view id
         let addFieldEventMap =
-                E.keysEventMapMovesCursor (env ^. has . Config.recordAddFieldKeys)
+                E.keysEventMapMovesCursor (env ^. has . Config.compositeAddItemKeys)
                 (doc env [Texts.field, Texts.add])
                 (pure (TagEdit.addItemId myId))
         grammar (label Texts.recordOpener)
@@ -117,7 +117,7 @@ make (Ann (Const pl) (Sugar.Composite (Sugar.TaggedList addField mTlBody) punned
                     ]) "}"
         keys <-
             traverse Lens.view TaggedList.Keys
-            { TaggedList._kAdd = has . Config.recordAddFieldKeys
+            { TaggedList._kAdd = has . Config.compositeAddItemKeys
             , TaggedList._kOrderBefore = has . Config.orderDirKeys . StdKeys.keysUp
             , TaggedList._kOrderAfter = has . Config.orderDirKeys . StdKeys.keysDown
             }
@@ -203,7 +203,7 @@ setPickAndAddNextKeys =
     local
     (\env ->
         env
-        & has . Menu.configKeysPickOptionAndGotoNext .~ (env ^. has . Config.recordAddFieldKeys :: [M.ModKey])
+        & has . Menu.configKeysPickOptionAndGotoNext .~ (env ^. has . Config.compositeAddItemKeys :: [M.ModKey])
         & has . Menu.configKeysPickOption <>~
             env ^. has . Menu.configKeysPickOptionAndGotoNext <> [M.noMods M.Key'Space]
     )
@@ -257,5 +257,5 @@ closedRecordEventMap (Sugar.ClosedCompositeActions open) =
     <&>
     \env ->
     open <&> WidgetIds.fromEntityId
-    & E.keysEventMapMovesCursor (env ^. has . Config.recordOpenKeys)
+    & E.keysEventMapMovesCursor (env ^. has . Config.compositeOpenKeys)
     (doc env [Texts.open])

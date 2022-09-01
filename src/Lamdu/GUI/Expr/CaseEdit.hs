@@ -70,7 +70,7 @@ setPickAndAddNextKeys =
     local
     (\env ->
         env
-        & has . Menu.configKeysPickOptionAndGotoNext .~ (env ^. has . Config.caseAddAltKeys :: [M.ModKey])
+        & has . Menu.configKeysPickOptionAndGotoNext .~ (env ^. has . Config.compositeAddItemKeys :: [M.ModKey])
         & has . Menu.configKeysPickOption <>~
             env ^. has . Menu.configKeysPickOptionAndGotoNext <> [M.noMods M.Key'Space]
     )
@@ -118,7 +118,7 @@ makeAltsWidget altsId alts punned =
                 <&> (\x -> [TaggedItem Nothing x Nothing])
         keys <-
             traverse Lens.view TaggedList.Keys
-            { TaggedList._kAdd = has . Config.caseAddAltKeys
+            { TaggedList._kAdd = has . Config.compositeAddItemKeys
             , TaggedList._kOrderBefore = has . Config.orderDirKeys . StdKeys.keysUp
             , TaggedList._kOrderAfter = has . Config.orderDirKeys . StdKeys.keysDown
             }
@@ -185,4 +185,4 @@ makeOpenCase rest animId altsGui =
 closedCaseEventMap :: _ => env -> Sugar.ClosedCompositeActions o -> EventMap (o Update)
 closedCaseEventMap env (Sugar.ClosedCompositeActions open) =
     open <&> WidgetIds.fromEntityId
-    & E.keysEventMapMovesCursor (env ^. has . Config.caseOpenKeys) (doc env [Texts.open])
+    & E.keysEventMapMovesCursor (env ^. has . Config.compositeOpenKeys) (doc env [Texts.open])

@@ -131,12 +131,9 @@ data Config key = Config
     , _enterSubexpressionKeys :: [key]
     , _leaveSubexpressionKeys :: [key]
 
-    , _recordOpenKeys :: [key]
-    , _recordCloseKeys :: [key]
-    , _recordAddFieldKeys :: [key]
-
-    , _caseOpenKeys :: [key]
-    , _caseAddAltKeys :: [key]
+    , _compositeOpenKeys :: [key]
+    , _compositeCloseKeys :: [key]
+    , _compositeAddItemKeys :: [key]
 
     , _injectValueKeys :: [key]
     } deriving (Eq, Show, Functor, Foldable, Traversable, Generic)
