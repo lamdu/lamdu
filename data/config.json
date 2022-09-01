@@ -116,7 +116,7 @@
     "inlineKeys"               : [ "Cmd+V" ],
     "nextAnnotationModeKeys"   : [ "F7" ],
     "leaveSubexpressionKeys"   : [ "Shift+Left" ],
-    "compositeAddItemKeys"     : [ "Cmd+A", "Comma" ],
+    "compositeAddItemKeys"     : [ "Comma" ],
     "delForwardKeys"           : [ "Delete", "Alt+Delete" ],
     "replaceParentKeys"        : [ "Cmd+Delete", "Cmd+Backspace" ],
     "letAddItemKeys"           : [ "Alt+L" ],
