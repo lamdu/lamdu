@@ -585,10 +585,6 @@ testHoleTypeShown =
         env <- Env.make <&> has .~ Annotations.None
         workArea <- testProgram "to-nom.json" (convertWorkArea "" env)
         let x = workArea ^?! replBody . _BodyToNom . nVal
-        putStrLn $ case x ^. annotation . plAnnotation of
-            AnnotationType {} -> "Type"
-            AnnotationVal {} -> "Val"
-            AnnotationNone {} -> "None"
         Lens.has (annotation . plAnnotation . _AnnotationType) x
             & assertBool "Expected to have type"
 

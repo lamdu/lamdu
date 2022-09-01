@@ -106,7 +106,6 @@ importEntities _ = error "Missing schema version"
 fileImportAll :: FilePath -> IO (Version, T ViewM ())
 fileImportAll importPath =
     do
-        putStrLn $ "importing from: " ++ show importPath
         (origVersion, migrated) <-
             LBS.readFile importPath <&> Aeson.eitherDecode
             >>= either fail pure
