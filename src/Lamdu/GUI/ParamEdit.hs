@@ -31,7 +31,7 @@ eventMapAddNextParamOrPickTag ::
     _ => Widget.Id -> Sugar.AddParam name i o -> m (EventMap (o Update))
 eventMapAddNextParamOrPickTag myId Sugar.AddNext{} =
     Lens.view (has . Config.addNextParamKeys) >>=
-    (TaggedList.addNextEventMap (has . Texts.parameter) ?? pure myId)
+    (TaggedList.addNextEventMap [has . Texts.parameter] ?? pure myId)
 eventMapAddNextParamOrPickTag _ (Sugar.NeedToPickTagToAddNext x) =
     Lens.view id <&>
     \env ->

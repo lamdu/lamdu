@@ -127,7 +127,7 @@ make conf (Ann (Const pl) (Sugar.Composite (Sugar.TaggedList addItem mTlBody) pu
         items <-
             mconcat
             [ makeAddItem conf addItem myId <&> (^.. traverse)
-            , foldMap (TaggedList.makeBody (has . (conf ^. itemName)) keys (pure myId) (pure myId)) mTlBody
+            , foldMap (TaggedList.makeBody docPrefixLenses keys (pure myId) (pure myId)) mTlBody
                 >>= traverse (makeItemRow conf)
                 <&> concat
                 <&> Lens.ix 0 . tagPre . Lens._Just . M.tValue %~ M.weakerEvents prependEventMap
@@ -136,7 +136,7 @@ make conf (Ann (Const pl) (Sugar.Composite (Sugar.TaggedList addItem mTlBody) pu
                 _ ->
                     M.weakerEvents
                     <$> TaggedList.addNextEventMap
-                        (has . (conf ^. itemName)) (keys ^. TaggedList.kAdd) (pure punAddId)
+                        docPrefixLenses (keys ^. TaggedList.kAdd) (pure punAddId)
                     <*> GetVarEdit.makePunnedVars punned
                     <&> (:[]) . (TaggedItem Nothing ?? Nothing)
                 ]
@@ -148,8 +148,9 @@ make conf (Ann (Const pl) (Sugar.Composite (Sugar.TaggedList addItem mTlBody) pu
                     M./|/ (taggedListIndent <*> addPostTags conf items >>= postProcess)
                 ) <&> Widget.weakerEvents (goToParentEventMap <> tailEventMap)
                 & stdWrapParentExpr pl
-    & (foldl assignPunned ?? punned)
+        & (foldl assignPunned ?? punned)
     where
+        docPrefixLenses = itemDocPrefix conf <&> (has .)
         assignPunned w p =
             M.assignCursorPrefix
             (WidgetIds.fromEntityId (p ^. Sugar.pvTagEntityId)) (Widget.joinId punAddId) w

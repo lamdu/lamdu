@@ -38,7 +38,7 @@ Lens.makeLenses ''Keys
 
 make ::
     _ =>
-    Lens.ALens' env Text ->
+    [Lens.ALens' env Text] ->
     Keys [ModKey] ->
     o Widget.Id -> o Widget.Id ->
     Sugar.TaggedList name i o a ->
@@ -50,7 +50,7 @@ make cat keys prevId nextId tl =
 
 makeBody ::
     _ =>
-    Lens.ALens' env Text ->
+    [Lens.ALens' env Text] ->
     Keys [ModKey] ->
     o Widget.Id -> o Widget.Id ->
     Sugar.TaggedListBody name i o a ->
@@ -62,7 +62,7 @@ makeBody cat keys prevId nextId items =
             addOrderAfter (Just orderAfter) =
                 iEventMap <>~
                 E.keysEventMap (keys ^. kOrderAfter)
-                (E.toDoc env [has . MomentuTexts.edit, cat, has . Texts.moveAfter])
+                (E.toDoc env (mconcat [[has . MomentuTexts.edit], cat, [has . Texts.moveAfter]]))
                 orderAfter
         let addDel (p, n, item) =
                 item
@@ -79,30 +79,30 @@ makeBody cat keys prevId nextId items =
             [Nothing]
 
 delEventMap ::
-    _ => Lens.ALens' env Text -> o () -> o Widget.Id -> o Widget.Id -> m (EventMap (o Update))
+    _ => [Lens.ALens' env Text] -> o () -> o Widget.Id -> o Widget.Id -> m (EventMap (o Update))
 delEventMap cat fpDel prevId nextId =
     Lens.view id <&>
     \env ->
     let dir keys delText dstPosId =
             E.keyPresses (env ^. has . keys)
-            (E.toDoc env [has . MomentuTexts.edit, cat, has . delText])
+            (E.toDoc env (mconcat [[has . MomentuTexts.edit], cat, [has . delText]]))
             (fpDel *> dstPosId <&> GuiState.updateCursor)
     in
     -- TODO: Imports SearchMenu just for deleteBackwards text?
     dir Config.delBackwardKeys SearchMenu.textDeleteBackwards prevId <>
     dir Config.delForwardKeys MomentuTexts.delete nextId
 
-addNextEventMap :: _ => Lens.ALens' env Text -> [ModKey] -> o Widget.Id -> m (EventMap (o Update))
+addNextEventMap :: _ => [Lens.ALens' env Text] -> [ModKey] -> o Widget.Id -> m (EventMap (o Update))
 addNextEventMap cat addKeys myId =
     Lens.view id <&>
     \env ->
     E.keysEventMapMovesCursor addKeys
-    (E.toDoc env [has . MomentuTexts.edit, cat, has . Texts.add])
+    (E.toDoc env (mconcat [[has . MomentuTexts.edit], cat, [has . Texts.add]]))
     (myId <&> TagEdit.addItemId)
 
 makeItem ::
     _ =>
-    Lens.ALens' env Text -> [ModKey] ->
+    [Lens.ALens' env Text] -> [ModKey] ->
     Sugar.TaggedItem name i o a -> m (Item name i o (o (), a))
 makeItem cat addKeys item =
     addNextEventMap cat addKeys ((pure . itemId) (item ^. Sugar.tiTag)) <&>
@@ -116,7 +116,7 @@ makeItem cat addKeys item =
 
 makeSwappableItem ::
     _ =>
-    Lens.ALens' env Text -> Keys [ModKey] ->
+    [Lens.ALens' env Text] -> Keys [ModKey] ->
     Sugar.TaggedSwappableItem name i o a -> m (Item name i o (o (), a))
 makeSwappableItem cat keys item =
     do

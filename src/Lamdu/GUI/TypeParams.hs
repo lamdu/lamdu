@@ -42,7 +42,7 @@ make params prevId myId =
             }
         (addFirstEventMap, itemsR) <-
             -- TODO: rhs id
-            TaggedList.make (has . Texts.parameter) keys (pure prevId) (pure myId) params
+            TaggedList.make [has . Texts.parameter] keys (pure prevId) (pure myId) params
         ParamEdit.mkAddParam (params ^. Sugar.tlAddFirst) prevId
             <> (traverse makeParam itemsR <&> concat)
             <&> (,) addFirstEventMap
