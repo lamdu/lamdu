@@ -1,0 +1,40 @@
+[
+    {
+        "schemaVersion": 16
+    },
+    {
+        "def": "151c7e8e115d409d9f682ea9d0b537db",
+        "defPresentationMode": "Verbose",
+        "tag": null,
+        "typ": {
+            "schemeType": {
+                "typeVar": "7430"
+            },
+            "typeVars": [
+                "7430"
+            ]
+        },
+        "val": {
+            "applyArg": {
+                "id": "947fe9f8-6ee6-4b8f-b464-65d9b1726c1a",
+                "primBytes": "0101000000000000000700000000000018ffffffffffffffcd",
+                "primId": "42493a666c6f61740000000000000000"
+            },
+            "applyFunc": {
+                "applyArg": {
+                    "absurd": {},
+                    "id": "e564610c-0787-4eb3-a9a4-4001f00bd74b"
+                },
+                "applyFunc": {
+                    "hole": {},
+                    "id": "e161b564-a9a7-4f0d-8cf9-461af51e0970"
+                },
+                "id": "fd99199c-a4b5-4632-beb7-1b00f60b267b"
+            },
+            "id": "f714b9a2-7dd9-4f5f-83b8-faf282829df5"
+        }
+    },
+    {
+        "openDefPane": "151c7e8e115d409d9f682ea9d0b537db"
+    }
+]
