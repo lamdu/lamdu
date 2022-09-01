@@ -1,5 +1,5 @@
 module Lamdu.GUI.Expr.TagEdit
-    ( makeRecordTag, makeVariantTag
+    ( makeColoredTag
     , makeParamTag, addItemId, makeLHSTag
     , makeArgTag
     , makeTagHoleEdit
@@ -333,11 +333,9 @@ makeTagRefEditWith onView onPickNext mSetToAnon tag =
             Just setAnon -> setAnon <&> WidgetIds.fromEntityId
             <&> WidgetIds.tagHoleId
 
-makeRecordTag :: _ => (EntityId -> Maybe Widget.Id) -> Sugar.TagRef Name i o -> m (M.TextWidget o)
-makeRecordTag onPickNext = makeTagRefEdit onPickNext <&> Styled.withColor TextColors.recordTagColor
-
-makeVariantTag :: _ => (EntityId -> Maybe Widget.Id) -> Sugar.TagRef Name i o -> m (M.TextWidget o)
-makeVariantTag onPickNext = makeTagRefEdit onPickNext <&> Styled.withColor TextColors.caseTagColor
+makeColoredTag ::
+    _ => _ -> (EntityId -> Maybe Widget.Id) -> Sugar.TagRef Name i o -> m (M.TextWidget o)
+makeColoredTag color onPickNext = makeTagRefEdit onPickNext <&> Styled.withColor color
 
 addItemId :: Widget.Id -> Widget.Id
 addItemId = (`Widget.joinId` ["add item"])

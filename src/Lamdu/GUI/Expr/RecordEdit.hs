@@ -205,7 +205,8 @@ makeFieldRow item =
             & M.assignCursor (WidgetIds.ofTagValue fieldId)
                 (item ^. TaggedList.iValue . annotation & WidgetIds.fromExprPayload)
         pre <-
-            TagEdit.makeRecordTag (Just . TagEdit.addItemId . WidgetIds.fromEntityId) (item ^. TaggedList.iTag)
+            TagEdit.makeColoredTag TextColors.recordTagColor
+            (Just . TagEdit.addItemId . WidgetIds.fromEntityId) (item ^. TaggedList.iTag)
             <&> M.tValue %~ Widget.weakerEvents (item ^. TaggedList.iEventMap)
             & setPickAndAddNextKeys
         let row =
