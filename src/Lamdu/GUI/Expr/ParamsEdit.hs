@@ -226,7 +226,8 @@ makeBody isLet annotationOpts delVarBackwardsId lhsId rhsId params =
             let eventMap
                     | isLet = mempty
                     | otherwise =
-                        TaggedList.delEventMap (has . Texts.parameter) (p ^. Sugar.vDelete) delVarBackwardsId rhsId env <>
+                        TaggedList.delEventMap (has . Texts.parameter) (p ^. Sugar.vDelete)
+                        (pure delVarBackwardsId) (pure rhsId) env <>
                         ParamEdit.eventMapAddNextParamOrPickTag widgetId (p ^. Sugar.vAddNext) env
             (Options.boxSpaced ?? Options.disambiguationNone) <*>
                 mconcat
@@ -262,7 +263,8 @@ makeParams annotationOpts prevId nextId items =
             , TaggedList._kOrderBefore = has . Config.orderDirKeys . o Backward
             , TaggedList._kOrderAfter = has . Config.orderDirKeys . o Forward
             }
-        (addFirstEventMap, itemsR) <- TaggedList.make (has . Texts.parameter) keys prevId nextId items
+        (addFirstEventMap, itemsR) <-
+            TaggedList.make (has . Texts.parameter) keys (pure prevId) (pure nextId) items
         (Options.box ?? Options.disambiguationNone) <*>
             sequenceA
             [ mkLabel (label Texts.recordOpener)

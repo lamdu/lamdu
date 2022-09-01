@@ -122,7 +122,8 @@ makeAltsWidget altsId alts punned =
             , TaggedList._kOrderBefore = has . Config.orderDirKeys . StdKeys.keysUp
             , TaggedList._kOrderAfter = has . Config.orderDirKeys . StdKeys.keysDown
             }
-        (addAltEventMap, altItems) <- TaggedList.make (has . Texts.alternative) keys altsId altsId alts
+        (addAltEventMap, altItems) <-
+            TaggedList.make (has . Texts.alternative) keys (pure altsId) (pure altsId) alts
         existingAltWidgets <- traverse makeAltRow altItems <&> concat
         prepend <- makeAddAlt (alts ^. Sugar.tlAddFirst) altsId <&> (^.. traverse)
         case prepend <> existingAltWidgets <> punnedWidgets of
