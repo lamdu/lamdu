@@ -2,7 +2,6 @@
 
 module Test.Lamdu.SugarStubs where
 
-import           Control.Monad.Unit (Unit(..))
 import           Data.Property (Property(..))
 import           Data.String (IsString(..))
 import           Data.UUID.Types (UUID)
@@ -16,17 +15,17 @@ import qualified Lamdu.Sugar.Types as Sugar
 
 import           Test.Lamdu.Prelude
 
-prop :: a -> Property Unit a
-prop x = Property x (const Unit)
+prop :: a -> Property Proxy a
+prop x = Property x (const Proxy)
 
 type Expr =
     Sugar.Expr Sugar.Term (Sugar.Annotation (Sugar.EvaluationScopes InternalName Identity) InternalName)
-    InternalName Identity Unit
+    InternalName Identity Proxy
 
 litNum :: Double -> Expr
 litNum x = prop x & Sugar.LiteralNum & Sugar.LeafLiteral & Sugar.BodyLeaf & expr
 
-defRef :: String -> T.Tag -> Sugar.GetVar InternalName Unit
+defRef :: String -> T.Tag -> Sugar.GetVar InternalName Proxy
 defRef var tag =
     Sugar.GetVar
     { Sugar._vName = taggedEntityName (fromString var) tag
@@ -37,23 +36,23 @@ defRef var tag =
     }
 
 node ::
-    h # Annotated (Sugar.Payload (Sugar.Annotation v InternalName) Unit) ->
-    Annotated (Sugar.Payload (Sugar.Annotation v InternalName) Unit) # h
+    h # Annotated (Sugar.Payload (Sugar.Annotation v InternalName) Proxy) ->
+    Annotated (Sugar.Payload (Sugar.Annotation v InternalName) Proxy) # h
 node = Const payload & Ann
 
 labeledApplyFunc ::
-    Sugar.GetVar InternalName Unit ->
-    Annotated (Sugar.Payload (Sugar.Annotation v InternalName) Unit) #
-    Const (Sugar.GetVar InternalName Unit)
+    Sugar.GetVar InternalName Proxy ->
+    Annotated (Sugar.Payload (Sugar.Annotation v InternalName) Proxy) #
+    Const (Sugar.GetVar InternalName Proxy)
 labeledApplyFunc = node . Const
 
 type Infix2 = Expr -> Expr -> Expr
 
 infix2Apply ::
-    Sugar.GetVar InternalName Unit ->
+    Sugar.GetVar InternalName Proxy ->
     Infix2
 infix2Apply varRef l r =
-    Sugar.LabeledApply (labeledApplyFunc varRef) (Just (Sugar.OperatorArgs l r Unit)) [] []
+    Sugar.LabeledApply (labeledApplyFunc varRef) (Just (Sugar.OperatorArgs l r Proxy)) [] []
     & Sugar.BodyLabeledApply
     & expr
 
@@ -88,14 +87,14 @@ mul :: Infix2
 mul = arithmeticInfix2 "*"
 
 pane ::
-    Sugar.Definition v name i Unit a ->
-    Sugar.Pane v name i Unit a
+    Sugar.Definition v name i Proxy a ->
+    Sugar.Pane v name i Proxy a
 pane body =
     Sugar.Pane
     { Sugar._paneBody = Sugar.PaneDefinition body
     , Sugar._paneEntityId = "dummy"
     , Sugar._paneDefinitionState = prop Sugar.LiveDefinition
-    , Sugar._paneClose = Unit
+    , Sugar._paneClose = Proxy
     , Sugar._paneMoveDown = Nothing
     , Sugar._paneMoveUp = Nothing
     }
@@ -108,7 +107,7 @@ tagRefTag var tag =
     , Sugar._tagVal = tag
     }
 
-mkTag :: Maybe UUID -> T.Tag -> Sugar.TagRef InternalName Identity Unit
+mkTag :: Maybe UUID -> T.Tag -> Sugar.TagRef InternalName Identity Proxy
 mkTag var tag =
     Sugar.TagRef
     { Sugar._tagRefReplace = Identity tagRefReplace
@@ -116,19 +115,19 @@ mkTag var tag =
     , Sugar._tagRefJumpTo = Nothing
     }
 
-mkOptionalTag :: Maybe UUID -> T.Tag -> Sugar.OptionalTag InternalName Identity Unit
-mkOptionalTag var tag = Sugar.OptionalTag (mkTag var tag) Unit
+mkOptionalTag :: Maybe UUID -> T.Tag -> Sugar.OptionalTag InternalName Identity Proxy
+mkOptionalTag var tag = Sugar.OptionalTag (mkTag var tag) Proxy
 
 def ::
     Annotated Sugar.EntityId # Sugar.Type InternalName ->
     UUID -> T.Tag ->
-    Annotated expr # Sugar.Assignment v InternalName Identity Unit ->
-    Sugar.Definition v InternalName Identity Unit expr
+    Annotated expr # Sugar.Assignment v InternalName Identity Proxy ->
+    Sugar.Definition v InternalName Identity Proxy expr
 def typ var tag body =
     Sugar.Definition
     { Sugar._drName = mkOptionalTag (Just var) tag
     , Sugar._drDefI = "def"
-    , Sugar._drGotoNextOutdated = Unit
+    , Sugar._drGotoNextOutdated = Proxy
     , Sugar._drBody =
         Sugar.DefinitionBodyExpression Sugar.DefinitionExpression
         { Sugar._deType =
@@ -147,7 +146,7 @@ def typ var tag body =
 
 funcExpr ::
     UUID -> T.Tag -> Expr ->
-    Sugar.Body Sugar.Function (Sugar.Annotation (Sugar.EvaluationScopes InternalName Identity) InternalName) InternalName Identity Unit
+    Sugar.Body Sugar.Function (Sugar.Annotation (Sugar.EvaluationScopes InternalName Identity) InternalName) InternalName Identity Proxy
 funcExpr paramVar paramTag (Ann (Const ba) bx) =
     Sugar.Function
     { Sugar._fChosenScopeProp = prop Nothing & pure
@@ -155,18 +154,18 @@ funcExpr paramVar paramTag (Ann (Const ba) bx) =
     , Sugar._fParams =
         Sugar.LhsVar Sugar.Var
         { Sugar._vParam = Sugar.FuncParam Sugar.AnnotationNone [] Sugar.VarGeneric
-        , Sugar._vTag = Sugar.OptionalTag (mkTag (Just paramVar) paramTag) Unit
+        , Sugar._vTag = Sugar.OptionalTag (mkTag (Just paramVar) paramTag) Proxy
         , Sugar._vAddPrev = Sugar.AddNext (Identity tagRefReplace)
         , Sugar._vAddNext = Sugar.AddNext (Identity tagRefReplace)
-        , Sugar._vDelete = Unit
+        , Sugar._vDelete = Proxy
         , Sugar._vIsNullParam = False
         }
-    , Sugar._fBody = Ann (Const ba) (Sugar.Binder Unit (Sugar.BinderTerm bx))
+    , Sugar._fBody = Ann (Const ba) (Sugar.Binder Proxy (Sugar.BinderTerm bx))
     }
 
 expr ::
-    Sugar.Body Sugar.Term (Sugar.Annotation v InternalName) InternalName Identity Unit ->
-    Sugar.Expr Sugar.Term (Sugar.Annotation v InternalName) InternalName Identity Unit
+    Sugar.Body Sugar.Term (Sugar.Annotation v InternalName) InternalName Identity Proxy ->
+    Sugar.Expr Sugar.Term (Sugar.Annotation v InternalName) InternalName Identity Proxy
 expr = node
 
 numType :: Annotated Sugar.EntityId # Sugar.Type InternalName
@@ -174,7 +173,7 @@ numType =
     Sugar.TInst (Sugar.TId (taggedEntityName "numTid" "num") "num") mempty
     & Ann (Const "dummy")
 
-payload :: (Sugar.Payload (Sugar.Annotation v InternalName) Unit)
+payload :: (Sugar.Payload (Sugar.Annotation v InternalName) Proxy)
 payload =
     Sugar.Payload
     { Sugar._plAnnotation = Sugar.AnnotationNone
@@ -184,13 +183,13 @@ payload =
     , Sugar._plParenInfo = Sugar.ParenInfo 0 False
     }
 
-nodeActions :: Sugar.NodeActions Unit
+nodeActions :: Sugar.NodeActions Proxy
 nodeActions =
     Sugar.NodeActions
-    { Sugar._detach = Sugar.DetachAction Unit
+    { Sugar._detach = Sugar.DetachAction Proxy
     , Sugar._delete = Sugar.CannotDelete
-    , Sugar._setToLiteral = pure Unit
-    , Sugar._extract = Unit
+    , Sugar._setToLiteral = pure Proxy
+    , Sugar._extract = Proxy
     , Sugar._mReplaceParent = Nothing
     , Sugar._mApply = Nothing
     }
@@ -203,7 +202,7 @@ taggedEntityName ctx tag =
     , _inIsAutoName = False
     }
 
-tagRefReplace :: Sugar.TagChoice InternalName Unit
+tagRefReplace :: Sugar.TagChoice InternalName Proxy
 tagRefReplace =
     Sugar.TagChoice
     { Sugar._tcOptions = []
@@ -214,7 +213,7 @@ tagRefReplace =
             , Sugar._tagInstance = "newTag"
             , Sugar._tagVal = "newTag"
             }
-        , Sugar._toPick = Unit
+        , Sugar._toPick = Proxy
         }
     }
 

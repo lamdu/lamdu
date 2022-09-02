@@ -5,7 +5,6 @@
 module Tests.Names (test) where
 
 import           Control.Monad.Trans.FastWriter (Writer, runWriter)
-import           Control.Monad.Unit (Unit(..))
 import           Control.Monad.Writer (MonadWriter(..))
 import           Lamdu.Data.Anchors (anonTag)
 import qualified Lamdu.I18N.Name as Texts
@@ -50,8 +49,8 @@ testWorkArea ::
     (Name -> IO b) ->
     Sugar.WorkArea
         (Sugar.Annotation (Sugar.EvaluationScopes InternalName Identity) InternalName)
-        InternalName Identity Unit
-        (Sugar.Payload (Sugar.Annotation (Sugar.EvaluationScopes InternalName Identity) InternalName) Unit) ->
+        InternalName Identity Proxy
+        (Sugar.Payload (Sugar.Annotation (Sugar.EvaluationScopes InternalName Identity) InternalName) Proxy) ->
     IO ()
 testWorkArea verifyName inputWorkArea =
     do
@@ -83,7 +82,7 @@ workAreaGlobals =
         , Stub.def Stub.numType "def2" "def" trivialBinder & Stub.pane
         ]
     , Sugar._waGlobals = Sugar.Globals (pure []) (pure []) (pure [])
-    , Sugar._waOpenPane = const Unit
+    , Sugar._waOpenPane = const Proxy
     } & testWorkArea verifyName
     where
         verifyName name =
@@ -97,13 +96,13 @@ workAreaGlobals =
                 ] & assertString
 
 trivialBinder ::
-    Annotated (Sugar.Payload (Sugar.Annotation v InternalName) Unit) #
+    Annotated (Sugar.Payload (Sugar.Annotation v InternalName) Proxy) #
     Sugar.Assignment
         (Sugar.Annotation (Sugar.EvaluationScopes InternalName Identity) InternalName)
-        InternalName Identity Unit
+        InternalName Identity Proxy
 trivialBinder =
     Sugar.Hole mempty mempty & Sugar.LeafHole & Sugar.BodyLeaf & Sugar.BinderTerm
-    & Sugar.Binder Unit & Sugar.AssignPlain Unit
+    & Sugar.Binder Proxy & Sugar.AssignPlain Proxy
     & Sugar.BodyPlain
     & Ann (Const Stub.payload)
 
@@ -117,5 +116,5 @@ anonGlobals =
         , Stub.def Stub.numType "def2" anonTag trivialBinder & Stub.pane
         ]
     , Sugar._waGlobals = Sugar.Globals (pure []) (pure []) (pure [])
-    , Sugar._waOpenPane = const Unit
+    , Sugar._waOpenPane = const Proxy
     } & testWorkArea (\x -> length (show x) `seq` pure ())

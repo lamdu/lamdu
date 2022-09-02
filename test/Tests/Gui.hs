@@ -3,7 +3,6 @@ module Tests.Gui (test) where
 import qualified Control.Lens as Lens
 import           Control.Monad.Once (OnceT, _OnceT)
 import           Control.Monad.State (mapStateT)
-import           Control.Monad.Unit (Unit(..))
 import           Data.Containers.ListUtils (nubOrdOn)
 import qualified Data.Property as Property
 import qualified Data.Text as Text
@@ -337,7 +336,7 @@ workAreaEq ::
 workAreaEq x y =
     x' == unsafeCoerce y
     where
-        x' = unsafeCoerce x :: Sugar.WorkArea () Name Unit Unit (Sugar.Payload () Unit)
+        x' = unsafeCoerce x :: Sugar.WorkArea () Name Proxy Proxy (Sugar.Payload () Proxy)
 
 testKeyboardDirAndBack ::
     HasCallStack =>

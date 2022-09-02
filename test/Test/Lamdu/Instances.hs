@@ -5,7 +5,6 @@ module Test.Lamdu.Instances () where
 
 import           Control.DeepSeq (NFData(..))
 import           Control.Monad.Once (OnceT)
-import           Control.Monad.Unit (Unit(..))
 import qualified Data.ByteString.Char8 as BS8
 import           Data.CurAndPrev (CurAndPrev(..))
 import           Data.Data (Data)
@@ -92,9 +91,8 @@ instance NFData (OnceT (Transaction m) a) where rnf = pure () -- Cheating
 instance NFData (Transaction m a) where rnf = pure () -- Cheating
 instance NFData a => NFData (Property m a) where rnf (Property x _) = rnf x -- Cheating
 
-instance Eq (a -> Unit b) where _ == _ = True
-instance Eq a => Eq (Property Unit a) where
-    Property x _ == Property y _ = x == y
+instance Eq (a -> Proxy b) where _ == _ = True
+instance Eq a => Eq (Property Proxy a) where Property x _ == Property y _ = x == y
 instance Eq (Sugar.TagPane f) where
     x == y = x ^. Sugar.tpTag == y ^. Sugar.tpTag
 
@@ -131,5 +129,5 @@ makeInstances [''NFData]
     , ''Sugar.CompiledErrorType, ''ShowAnnotation, ''LangId, ''EntityId, ''Sugar.ParamKind
     , ''Name, ''Name.Collision, ''Name.TagName, ''Name.TagText
     , ''Tag.TextsInLang, ''Def.FFIName, ''Tag.DirOp, ''Tag.Symbol, ''Tag.Tag, ''CurAndPrev
-    , ''Unit, ''Sugar.TaggedVarId
+    , ''Sugar.TaggedVarId
     ]

@@ -2,7 +2,6 @@
 -- | Test precedences
 module Tests.Precedence (test) where
 
-import           Control.Monad.Unit (Unit(..))
 import qualified Control.Lens as Lens
 import           Control.Lens.Tuple
 import qualified Lamdu.Calc.Term as V
@@ -71,12 +70,12 @@ testInjectInRec =
                     { Sugar._tlHead =
                         Stub.mkTag Nothing "x"
                         & Sugar.LeafInject & Sugar.BodyLeaf & Stub.node
-                        & Sugar.TaggedItem (Stub.mkTag Nothing "x") Unit (Identity Stub.tagRefReplace)
+                        & Sugar.TaggedItem (Stub.mkTag Nothing "x") Proxy (Identity Stub.tagRefReplace)
                     , Sugar._tlTail = []
                     }
                 }
             , Sugar._cPunnedItems = []
-            , Sugar._cTail = Sugar.ClosedCompositeTail (Sugar.ClosedCompositeActions Unit)
+            , Sugar._cTail = Sugar.ClosedCompositeTail (Sugar.ClosedCompositeActions Proxy)
             } & Stub.node
             & Parens.addToTopLevel 0
 
@@ -136,7 +135,7 @@ test514 =
                     $$ Stub.hole
                     & Stub.funcExpr "x" "x"
                 } & Stub.node
-            , Sugar._fHeal = Unit
+            , Sugar._fHeal = Proxy
             , Sugar._fTypeMismatch = Nothing
             , Sugar._fOptions = mempty
             , Sugar._fOptApply = pure (error "shouldn't affect test")
