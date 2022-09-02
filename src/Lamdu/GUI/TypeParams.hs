@@ -29,7 +29,7 @@ import           Lamdu.Prelude
 
 make ::
     _ =>
-    Sugar.TaggedList Name i o (Property o Sugar.ParamKind) -> Widget.Id -> Widget.Id ->
+    Sugar.TaggedList Name i o (Property o Sugar.ParamKind) -> o Widget.Id -> Widget.Id ->
     m (EventMap (o Update), [Responsive o])
 make params prevId myId =
     do
@@ -43,8 +43,8 @@ make params prevId myId =
             }
         (addFirstEventMap, itemsR) <-
             -- TODO: rhs id
-            TaggedList.make [env ^. has . Texts.parameter] keys (pure prevId) (pure myId) params
-        ParamEdit.mkAddParam (params ^. Sugar.tlAddFirst) prevId
+            TaggedList.make [env ^. has . Texts.parameter] keys prevId (pure myId) params
+        ParamEdit.mkAddParam (params ^. Sugar.tlAddFirst) myId
             <> (traverse makeParam itemsR <&> concat)
             <&> (,) addFirstEventMap
 

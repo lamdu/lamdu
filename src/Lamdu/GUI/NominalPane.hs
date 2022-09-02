@@ -25,7 +25,8 @@ import           Lamdu.Prelude
 make :: _ => Sugar.NominalPane Name i o -> GuiM env i o (Responsive o)
 make nom =
     do
-        (addFirstEventMap, paramEdits) <- TypeParams.make (nom ^. Sugar.npParams) nameEditId myId
+        (addFirstEventMap, paramEdits) <-
+            TypeParams.make (nom ^. Sugar.npParams) (pure nameEditId) myId
         nameEdit <-
             TagEdit.makeBinderTagEdit TextColors.nomColor (nom ^. Sugar.npName)
             <&> Responsive.fromWithTextPos
