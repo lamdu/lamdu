@@ -102,6 +102,7 @@ library:
   - hypertypes
   - temporary
   - text
+  - text-trie
   - time >= 1.2
   - timeit
   - transformers >= 0.4.3

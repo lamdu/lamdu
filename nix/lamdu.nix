@@ -8,7 +8,7 @@
 , inline-js-core, optparse-applicative, ordered-containers, pretty, process
 , random, split, stb-image, hypertypes
 , template-haskell, temporary, tasty, tasty-hunit
-, text, time, timeit, transformers, generic-constraints
+, text, text-trie, time, timeit, transformers, generic-constraints
 , uuid, uuid-types, vector, yaml
 , zip-archive, lib, gitMinimal, nodejs
 }:
@@ -48,7 +48,7 @@ mkDerivation {
     graphics-drawingcombinators hashable lamdu-calculus momentu
     language-ecmascript lens lens-aeson rocksdb-haskell List mtl
     inline-js-core optparse-applicative ordered-containers pretty process random
-    split stb-image hypertypes temporary text time timeit
+    split stb-image hypertypes temporary text text-trie time timeit
     transformers uuid uuid-types vector
     zip-archive generic-constraints
   ];
