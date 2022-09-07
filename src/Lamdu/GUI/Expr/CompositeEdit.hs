@@ -105,7 +105,7 @@ makeAddItem conf addItem baseId =
         myId = TagEdit.addItemId baseId
 
 make ::
-    _ =>
+    (HasCallStack, _) =>
     Maybe (Responsive o -> Responsive o) ->
     Widget.Id -> Config -> ExprGui.Expr Sugar.Composite i o -> GuiM env i o (Responsive o)
 make prependKeywords myId conf (Ann (Const pl) (Sugar.Composite (Sugar.TaggedList addItem mTlBody) punned compositeTail)) =

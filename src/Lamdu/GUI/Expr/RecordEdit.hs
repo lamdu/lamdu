@@ -28,7 +28,7 @@ recordConf =
     , CompositeEdit._tagColor  = TextColors.recordTagColor
     }
 
-make :: _ => ExprGui.Expr Sugar.Composite i o -> GuiM env i o (Responsive o)
+make :: (HasCallStack, _) => ExprGui.Expr Sugar.Composite i o -> GuiM env i o (Responsive o)
 make expr =
     recordConf >>= (CompositeEdit.make Nothing myId ?? expr)
     where

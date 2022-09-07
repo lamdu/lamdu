@@ -57,7 +57,7 @@ editDoc env cat finalDocs =
     & E.Doc
 
 makeBody ::
-    _ =>
+    (HasCallStack, _) =>
     [Text] ->
     Keys [ModKey] ->
     o Widget.Id -> o Widget.Id ->
@@ -87,7 +87,7 @@ makeBody cat keys prevId nextId items =
             [Nothing]
 
 delEventMap ::
-    _ => [Text] -> o () -> o Widget.Id -> o Widget.Id -> m (EventMap (o Update))
+    (HasCallStack, _) => [Text] -> o () -> o Widget.Id -> o Widget.Id -> m (EventMap (o Update))
 delEventMap cat delAction prevId nextId =
     Lens.view id <&>
     \env ->
