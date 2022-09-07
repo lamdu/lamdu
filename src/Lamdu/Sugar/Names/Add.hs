@@ -239,12 +239,9 @@ makeTagTexts env p1texts =
             & MMap.fromList
         abbreviations =
             abbreviationTags
-            ^@.. Lens.itraversed <. Lens.to singleTag . Lens._Just
+            ^@.. Lens.itraversed <. Lens.filtered ((== 1) . Set.size) . Lens.folded
             <&> Tuple.swap
             & Map.fromList
-        singleTag tags
-            | Set.size tags > 1 = Nothing
-            | otherwise = Set.lookupMin tags
 
 isReserved ::
     ( Has (Texts.Name Text) env
