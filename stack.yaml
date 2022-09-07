@@ -30,7 +30,7 @@ extra-deps:
   subdirs:
     - inline-js-core
 
-resolver: lts-19.16
+resolver: lts-19.22
 
 allow-newer: true
 
