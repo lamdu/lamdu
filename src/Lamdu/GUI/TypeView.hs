@@ -7,14 +7,12 @@ import qualified Control.Lens as Lens
 import           Data.Bitraversable (Bitraversable(..))
 import qualified Data.ByteString.Char8 as BS8
 import qualified Data.Text as Text
-import           Data.Vector.Vector2 (Vector2(..))
-import           GUI.Momentu (Aligned(..), WithTextPos(..), View, (/-/), (/|/))
+import           GUI.Momentu (Aligned(..), WithTextPos(..), View, (/|/))
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Direction as Dir
 import qualified GUI.Momentu.Draw as MDraw
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.Glue as Glue
-import qualified GUI.Momentu.View as View
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.GridView as GridView
 import qualified GUI.Momentu.Widgets.Label as Label
@@ -181,34 +179,26 @@ makeComposite mkOpener mkPre mkPost mkField composite =
     Sugar.CompositeFields fields extension ->
         Styled.addValFrame <*>
         do
-            opener <- Styled.grammar mkOpener
-            closer <- Styled.label Texts.recordCloser & Styled.grammar
-            fieldsView <-
-                gridViewTopLeftAlign <*>
+            Styled.addValPadding <*> (gridViewTopLeftAlign <*>
                 ( traverse mkField fields
-                <&> map toRow
-                <&> Lens.ix 0 . crPre .~ pure opener
-                <&> Lens._last . crPost .~ pure closer
-                <&> Lens.imap addAnimIdPrefix
-                >>= traverse sequenceA
-                <&> map horizSetCompositeRow )
-                <&> Align.alignmentRatio . _1 .~ 0.5
-            let barWidth
-                    | null fields = 150
-                    | otherwise = fieldsView ^. Element.width
-            extView <-
+                    <&> map toRow
+                    <&> Lens.ix 0 . crPre .~ Styled.grammar mkOpener
+                    <&> addExt
+                    <&> Lens._last . crPost .~ Styled.grammar (Styled.label Texts.recordCloser)
+                    <&> Lens.imap addAnimIdPrefix
+                    >>= traverse sequenceA
+                    <&> map horizSetCompositeRow
+                ) <&> Align.alignmentRatio . _1 .~ 0.5)
+        <&> Align.toWithTextPos
+        where
+            addExt =
                 case extension of
-                Nothing -> pure Element.empty
+                Nothing -> id
                 Just var ->
-                    do
-                        sqrId <- Element.subAnimId ?? ["square"]
-                        let sqr =
-                                View.unitSquare sqrId
-                                & Element.scale (Vector2 barWidth 10)
-                        lastLine <- mkPre /|/ NameView.make var <&> (^. Align.tValue)
-                        pure (Aligned 0.5 sqr) /-/ pure (Aligned 0.5 lastLine)
-            Styled.addValPadding
-                <*> (pure fieldsView /-/ pure extView <&> Align.toWithTextPos)
+                    (<> [CompositeRow
+                            (pure Element.empty) (Styled.grammar (Styled.label Texts.compositeExtendTail))
+                            (pure Element.empty) (NameView.make var) (pure Element.empty)]) .
+                    (Lens._last . crPost .~ pure Element.empty)
     where
         addAnimIdPrefix i row = row <&> Element.locallyAugmented i
         toRow (t, v) =
