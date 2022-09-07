@@ -20,6 +20,7 @@ import qualified Lamdu.Config as Config
 import qualified Lamdu.GUI.Classes as C
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.GUI.Styled as Styled
+import qualified Lamdu.GUI.Types as ExprGui
 import qualified Lamdu.I18N.CodeUI as Texts
 import           Lamdu.Name (Name)
 import qualified Lamdu.Sugar.Lens as SugarLens
@@ -53,10 +54,7 @@ removeUnwanted =
 makeResult ::
     forall m i o t.
     _ =>
-    (Annotated (Sugar.Payload (Sugar.Annotation (Sugar.EvaluationScopes Name i) Name) o) #
-        t (Sugar.Annotation (Sugar.EvaluationScopes Name i) Name) Name i o ->
-        m (Responsive.Responsive o)
-    ) ->
+    (ExprGui.Expr t i o -> m (Responsive.Responsive o)) ->
     SearchMenu.ResultsContext ->
     Sugar.Option t Name i o ->
     Menu.Option m o
