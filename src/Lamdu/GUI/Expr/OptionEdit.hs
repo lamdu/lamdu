@@ -11,11 +11,13 @@ import qualified GUI.Momentu.Glue as Glue
 import qualified GUI.Momentu.I18N as MomentuTexts
 import qualified GUI.Momentu.ModKey as ModKey
 import qualified GUI.Momentu.Responsive as Responsive
+import qualified GUI.Momentu.Responsive.Options as ResponsiveOptions
 import qualified GUI.Momentu.State as GuiState
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Menu as Menu
 import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
+import qualified GUI.Momentu.Widgets.TextView as TextView
 import qualified Lamdu.Config as Config
 import qualified Lamdu.GUI.Classes as C
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
@@ -63,7 +65,7 @@ makeResult mkGui ctx res =
     { Menu._oId = resId
     , Menu._oRender =
         do
-            chooseText :: Text <- Lens.view (has . MomentuTexts.choose)
+            chooseText <- Lens.view (has . MomentuTexts.choose)
             (mCreateNew, pickAction) <-
                 case res ^. Sugar.optionMNewTag of
                 Nothing -> pure (id, mempty)
@@ -78,18 +80,22 @@ makeResult mkGui ctx res =
                             , ctx ^. SearchMenu.rSearchTerm & newTagName & setName tag
                             )
             remUnwanted <- removeUnwanted
-            res ^. Sugar.optionExpr
+            optExpr <-
+                res ^. Sugar.optionExpr
                 & SugarLens.hAnnotations
                     @(Sugar.Annotation () Name)
                     @(Sugar.Annotation (Sugar.EvaluationScopes Name i) Name)
                     . Sugar._AnnotationVal .~ mempty
                 & mkGui
                 & GuiState.assignCursor resId dstId
-                <&>
-                \w ->
-                Menu.RenderedOption
+            indicator <-
+                res ^.. Sugar.optionTypeMatch . Lens.only False
+                & traverse (const (TextView.make ?? "?" ?? indicatorAnimId))
+                <&> Lens.mapped %~ Responsive.fromTextView
+            r <- ResponsiveOptions.boxSpaced ?? ResponsiveOptions.disambiguationNone ?? optExpr : indicator
+            pure Menu.RenderedOption
                 { Menu._rWidget =
-                    w ^. Responsive.rWide . Responsive.lWide & M.tValue . Widget.enterResultCursor .~ resId
+                    r ^. Responsive.rWide . Responsive.lWide & M.tValue . Widget.enterResultCursor .~ resId
                     <&> mCreateNew
                     <&> Widget.widget . Widget.eventMapMaker . Lens.mapped %~ remUnwanted
                     <&> -- Disable strolling between hole results
@@ -107,3 +113,7 @@ makeResult mkGui ctx res =
         dstId = fromMaybe (WidgetIds.fromExprPayload (res ^. Sugar.optionExpr . annotation)) innerHole
         resId = ctx ^. SearchMenu.rResultIdPrefix <> dstId
         innerHole = res ^? Sugar.optionExpr . SugarLens.unfinishedPayloads <&> WidgetIds.fromExprPayload
+        indicatorAnimId =
+            -- TODO: Animate nicely into the fragment's question mark.
+            -- Would require the sugar to expose the id of the fragment to be generated
+            Widget.toAnimId resId <> ["indicator"]
