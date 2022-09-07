@@ -168,12 +168,12 @@ gridViewTopLeftAlign =
 
 makeComposite ::
     _ =>
-    m (WithTextPos View) -> m (WithTextPos View) -> m (WithTextPos View) ->
+    m (WithTextPos View) -> m (WithTextPos View) ->
     ((Sugar.Tag Name, Annotated Sugar.EntityId # Sugar.Type Name) ->
          m (WithTextPos View, WithTextPos View)) ->
     Sugar.CompositeFields Name # Annotated Sugar.EntityId ->
     m (WithTextPos View)
-makeComposite mkOpener mkPre mkPost mkField composite =
+makeComposite mkOpener mkCloser mkField composite =
     case composite of
     Sugar.CompositeFields [] Nothing -> makeEmptyComposite
     Sugar.CompositeFields fields extension ->
@@ -184,7 +184,7 @@ makeComposite mkOpener mkPre mkPost mkField composite =
                     <&> map toRow
                     <&> Lens.ix 0 . crPre .~ Styled.grammar mkOpener
                     <&> addExt
-                    <&> Lens._last . crPost .~ Styled.grammar (Styled.label Texts.recordCloser)
+                    <&> Lens._last . crPost .~ Styled.grammar mkCloser
                     <&> Lens.imap addAnimIdPrefix
                     >>= traverse sequenceA
                     <&> map horizSetCompositeRow
@@ -202,7 +202,8 @@ makeComposite mkOpener mkPre mkPost mkField composite =
     where
         addAnimIdPrefix i row = row <&> Element.locallyAugmented i
         toRow (t, v) =
-            CompositeRow mkPre (pure t) space (pure v) mkPost
+            CompositeRow (pure Element.empty) (pure t) space (pure v)
+            (Styled.grammar (Styled.label Texts.compositeSeparator))
             where
                 space
                     | v ^. Align.tValue . Element.width == 0 = pure Element.empty
@@ -215,12 +216,10 @@ makeInternal parentPrecedence (Ann (Const entityId) tbody) =
     Sugar.TFun (FuncType a b) -> makeTFun parentPrecedence a b
     Sugar.TInst typeId typeParams -> makeTInst parentPrecedence typeId typeParams
     Sugar.TRecord composite ->
-        makeComposite (Styled.label Texts.recordOpener)
-        (pure Element.empty) (Styled.grammar (Styled.label Texts.compositeSeparator))
+        makeComposite (Styled.label Texts.recordOpener) (Styled.label Texts.recordCloser)
         makeField composite
     Sugar.TVariant composite ->
-        makeComposite (Styled.label Texts.variantTypeOpener)
-        (Styled.grammar (Styled.label Texts.variantTypeSep)) (pure Element.empty)
+        makeComposite (Styled.label Texts.caseOpener) (Styled.label Texts.caseCloser)
         makeVariantField composite
     & local (Element.animIdPrefix .~ animId)
     where

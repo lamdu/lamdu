@@ -37,9 +37,6 @@ data Code a = Code
     , _compositeExtendTail :: a
     , _recordCloser :: a
     , _caseCloser :: a
-      -- Types
-    , _variantTypeOpener :: a
-    , _variantTypeSep :: a
       -- Kinds
     , _typ :: a
     , _row :: a
