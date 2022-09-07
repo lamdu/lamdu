@@ -24,7 +24,6 @@ data Export key = Export
     , _exportFancyKeys :: [key]
     , _exportAllKeys :: [key]
     , _executeKeys :: [key]
-    , _importKeys :: [key]
     } deriving (Eq, Show, Functor, Foldable, Traversable, Generic)
 JsonTH.derivePrefixed "_" ''Export
 
@@ -47,11 +46,9 @@ deriveJSON Aeson.defaultOptions
 
 Lens.makeLenses ''Pane
 
-data Completion key = Completion
-    { _completionJumpToNextKeys :: [key]
-    , _completionJumpToPrevKeys :: [key]
-    , _completionResultCount :: Int
-    } deriving (Eq, Show, Functor, Foldable, Traversable, Generic)
+newtype Completion key = Completion
+    { _completionResultCount :: Int
+    } deriving stock (Eq, Show, Functor, Foldable, Traversable, Generic)
 JsonTH.derivePrefixed "_completion" ''Completion
 
 Lens.makeLenses ''Completion
@@ -132,7 +129,6 @@ data Config key = Config
     , _leaveSubexpressionKeys :: [key]
 
     , _compositeOpenKeys :: [key]
-    , _compositeCloseKeys :: [key]
     , _compositeAddItemKeys :: [key]
 
     , _injectValueKeys :: [key]

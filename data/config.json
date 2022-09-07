@@ -25,8 +25,7 @@
         "exportKeys"      : [ "Alt+E" ],
         "exportFancyKeys" : [ "Cmd+J" ],
         "exportAllKeys"   : [ "Alt+Shift+E" ],
-        "executeKeys"     : [ "Cmd+Alt+Shift+R" ],
-        "importKeys"      : [ "Alt+I" ]
+        "executeKeys"     : [ "Cmd+Alt+Shift+R" ]
     },
     "pane": {
         "newDefinitionKeys" : [ "Alt+N", "Alt+L" ],
@@ -43,9 +42,7 @@
         "jumpToBranchesKeys" : [ "Cmd+F11" ]
     },
     "completion": {
-        "jumpToNextKeys"  : [ "Tab" ],
-        "resultCount"     : 5,
-        "jumpToPrevKeys"  : [ "Shift+Tab" ]
+        "resultCount": 5
     },
     "literal": {
         "startEditingKeys" : [ "Enter", "Shift+Right" ],
@@ -110,7 +107,6 @@
     "addNextParamKeys"         : [ "Space" ],
     "healKeys"                 : [ "Space", "Enter" ],
     "compositeOpenKeys"        : [ "Alt+O" ],
-    "compositeCloseKeys"       : [ "Alt+O" ],
     "extractKeys"              : [ "Cmd+X", "Cmd+Up" ],
     "moveLetInwardKeys"        : [ "Cmd+Down" ],
     "inlineKeys"               : [ "Cmd+V" ],
