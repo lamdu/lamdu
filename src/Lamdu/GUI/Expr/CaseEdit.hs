@@ -29,7 +29,6 @@ caseConf =
     , CompositeEdit._itemName  = env ^. has . Texts.alternative
     , CompositeEdit._opener    = Texts.caseOpener
     , CompositeEdit._closer    = Texts.caseCloser
-    , CompositeEdit._tailColor = TextColors.caseTailColor
     , CompositeEdit._tagColor  = TextColors.caseTagColor
     }
 

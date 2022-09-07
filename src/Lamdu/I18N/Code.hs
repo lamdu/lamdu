@@ -34,6 +34,7 @@ data Code a = Code
       _recordOpener :: a
     , _caseOpener :: a
     , _compositeSeparator :: a
+    , _compositeExtendTail :: a
     , _recordCloser :: a
     , _caseCloser :: a
       -- Types

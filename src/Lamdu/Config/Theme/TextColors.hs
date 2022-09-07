@@ -15,8 +15,6 @@ data TextColors = TextColors
     , _nomColor :: Draw.Color
     , _literalColor :: Draw.Color
     , _grammarColor :: Draw.Color
-    , _caseTailColor :: Draw.Color
-    , _recordTailColor :: Draw.Color
     , _lightLambdaUnderlineColor :: Draw.Color
     , _foreignModuleColor :: Draw.Color
     , _foreignVarColor :: Draw.Color

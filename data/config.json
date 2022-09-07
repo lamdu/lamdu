@@ -106,7 +106,7 @@
     "changeLanguageKeys"       : [],
     "addNextParamKeys"         : [ "Space" ],
     "healKeys"                 : [ "Space", "Enter" ],
-    "compositeOpenKeys"        : [ "Alt+O" ],
+    "compositeOpenKeys"        : [ "GraveAccent" ],
     "extractKeys"              : [ "Cmd+X", "Cmd+Up" ],
     "moveLetInwardKeys"        : [ "Cmd+Down" ],
     "inlineKeys"               : [ "Cmd+V" ],

@@ -13,20 +13,16 @@ import           GUI.Momentu (Responsive, EventMap, Update)
 import qualified GUI.Momentu as M
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as E
-import qualified GUI.Momentu.Glue as Glue
 import qualified GUI.Momentu.I18N as MomentuTexts
 import qualified GUI.Momentu.Responsive as Responsive
 import           GUI.Momentu.Responsive.TaggedList (TaggedItem(..), taggedListIndent, tagPre, tagPost)
 import qualified GUI.Momentu.State as GuiState
 import qualified GUI.Momentu.State as M
-import qualified GUI.Momentu.View as View
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Menu as Menu
 import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
-import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified GUI.Momentu.Widgets.StdKeys as StdKeys
 import qualified Lamdu.Config as Config
-import qualified Lamdu.Config.Theme as Theme
 import           Lamdu.Config.Theme.TextColors (TextColors)
 import qualified Lamdu.GUI.Expr.GetVarEdit as GetVarEdit
 import qualified Lamdu.GUI.Expr.TagEdit as TagEdit
@@ -52,7 +48,6 @@ data Config = Config
     , _itemName :: !Text -- "field" | "alternative"
     , _opener :: forall a. Lens.ALens' (Texts.Code a) a -- "{" | "["
     , _closer :: forall a. Lens.ALens' (Texts.Code a) a -- "}" | "]"
-    , _tailColor :: !(Lens.ALens' TextColors M.Color)
     , _tagColor :: !(Lens.ALens' TextColors M.Color)
     }
 Lens.makeLenses ''Config
@@ -157,7 +152,7 @@ make prependKeywords myId conf (Ann (Const pl) (Sugar.Composite tl punned compos
             _ ->
                 Styled.addValFrame <*>
                 ( grammar (label (conf ^. opener))
-                    M./|/ (taggedListIndent <*> addPostTags conf items >>= postProcess)
+                    M./|/ (taggedListIndent <*> (addPostTags conf items >>= postProcess))
                 ) <&> Widget.weakerEvents (goToParentEventMap <> tailEventMap)
                 <&> fromMaybe id prependKeywords
                 & stdWrapParentExpr pl
@@ -170,10 +165,20 @@ make prependKeywords myId conf (Ann (Const pl) (Sugar.Composite tl punned compos
             tl ^. Sugar.tlItems
             >>= Lens.lastOf (SugarLens.taggedListBodyItems . Sugar.tiTag)
             & maybe myId TaggedList.itemId
-        postProcess =
+        postProcess items =
             case compositeTail of
-            Sugar.OpenCompositeTail restExpr -> makeOpenComposite conf restExpr
-            _ -> pure
+            Sugar.ClosedCompositeTail{} -> pure items
+            Sugar.OpenCompositeTail restExpr ->
+                do
+                    rest <- GuiM.makeSubexpression restExpr
+                    ext <- label Texts.compositeExtendTail & grammar
+                    (items & Lens._last . tagPost .~ Nothing) <>
+                        [ TaggedItem
+                            { _tagPre = Just (ext <&> Widget.fromView)
+                            , _taggedItem = rest
+                            , _tagPost = items ^? Lens._last . tagPost . Lens._Just
+                            }
+                        ] & pure
 
 addPostTags :: _ => Config -> [TaggedItem o] -> m [TaggedItem o]
 addPostTags conf items =
@@ -258,24 +263,6 @@ makeItemRow conf mNextId item =
             ^? Lens._last
             & fromMaybe (error "no subexpressions for expr")
             & WidgetIds.fromExprPayload
-
-separationBar :: Config -> TextColors -> M.AnimId -> Widget.R -> M.View
-separationBar conf theme animId width =
-    View.unitSquare (animId <> ["tailsep"])
-    & M.tint (theme ^# (conf ^. tailColor))
-    & M.scale (M.Vector2 width 10)
-
-makeOpenComposite :: _ => Config -> ExprGui.Expr Sugar.Term i o -> Responsive o -> GuiM env i o (Responsive o)
-makeOpenComposite conf rest itemsGui =
-    do
-        theme <- Lens.view has
-        vspace <- Spacer.stdVSpace
-        restExpr <- Styled.addValPadding <*> GuiM.makeSubexpression rest
-        animId <- Lens.view M.animIdPrefix
-        (|---|) <- Glue.mkGlue ?? Glue.Vertical
-        Responsive.vboxWithSeparator ?? False
-            ?? (separationBar conf (theme ^. Theme.textColors) animId <&> (|---| vspace))
-            ?? itemsGui ?? restExpr
 
 closedCompositeEventMap :: _ => Config -> Sugar.ClosedCompositeActions o -> m (EventMap (o Update))
 closedCompositeEventMap conf (Sugar.ClosedCompositeActions open) =

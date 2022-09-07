@@ -71,8 +71,6 @@
         "grammarColor": [1.0, 1.0, 1.0, 1.0],
         "literalColor": [0.5, 1.0, 0.5, 1.0],
         "nomColor": [1.0, 1.0, 0.5, 1.0],
-        "recordTailColor": [0.5, 0.5, 0.5, 1.0],
-        "caseTailColor": [0.5, 1.0, 0.5, 1.0],
         "lightLambdaUnderlineColor": [1.0, 1.0, 1.0, 0.5],
         "foreignModuleColor": [1.0, 0, 0, 1.0],
         "foreignVarColor": [1.0, 0.5, 0, 1.0],

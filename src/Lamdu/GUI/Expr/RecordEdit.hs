@@ -24,7 +24,6 @@ recordConf =
     , CompositeEdit._itemName  = env ^. has . Texts.field
     , CompositeEdit._opener    = Texts.recordOpener
     , CompositeEdit._closer    = Texts.recordCloser
-    , CompositeEdit._tailColor = TextColors.recordTailColor
     , CompositeEdit._tagColor  = TextColors.recordTagColor
     }
 
