@@ -3,7 +3,7 @@
 module Lamdu.GUI.TaggedList
     ( Item(..), iTag, iValue, iEventMap, iAddAfter
     , Keys(..), kAdd, kOrderBefore, kOrderAfter
-    , make, makeBody, itemId, delEventMap, addNextEventMap
+    , make, itemId, delEventMap, addNextEventMap
     ) where
 
 import qualified Control.Lens as Lens

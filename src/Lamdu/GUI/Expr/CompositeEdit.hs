@@ -108,7 +108,7 @@ make ::
     (HasCallStack, _) =>
     Maybe (Responsive o -> Responsive o) ->
     Widget.Id -> Config -> ExprGui.Expr Sugar.Composite i o -> GuiM env i o (Responsive o)
-make prependKeywords myId conf (Ann (Const pl) (Sugar.Composite (Sugar.TaggedList addItem mTlBody) punned compositeTail)) =
+make prependKeywords myId conf (Ann (Const pl) (Sugar.Composite tl punned compositeTail)) =
     do
         tailEventMap <-
             case compositeTail of
@@ -129,20 +129,18 @@ make prependKeywords myId conf (Ann (Const pl) (Sugar.Composite (Sugar.TaggedLis
             , TaggedList._kOrderAfter = has . Config.orderDirKeys . StdKeys.keysDown
             }
         let prependEventMap = addItemWithSearchTermEventMap conf env myId
+        (addNextEventMap, body) <- TaggedList.make (itemDocPrefix conf) keys (pure myId) (pure myId) tl
         items <-
             mconcat
-            [ makeAddItem conf addItem myId <&> (^.. traverse)
-            , foldMap (TaggedList.makeBody (itemDocPrefix conf) keys (pure myId) (pure myId)) mTlBody
-                >>= traverse (makeItemRow conf)
+            [ makeAddItem conf (tl ^. Sugar.tlAddFirst) myId <&> (^.. traverse)
+            , traverse (makeItemRow conf) body
                 <&> concat
                 <&> Lens.ix 0 . tagPre . Lens._Just . M.tValue %~ M.weakerEvents prependEventMap
             , case punned of
                 [] -> pure []
                 _ ->
-                    M.weakerEvents
-                    <$> TaggedList.addNextEventMap
-                        (itemDocPrefix conf) (keys ^. TaggedList.kAdd) (pure punAddId)
-                    <*> GetVarEdit.makePunnedVars punned
+                    GetVarEdit.makePunnedVars punned
+                    <&> M.weakerEvents addNextEventMap
                     <&> (:[]) . (TaggedItem Nothing ?? Nothing)
                 ]
         case items of
@@ -160,7 +158,8 @@ make prependKeywords myId conf (Ann (Const pl) (Sugar.Composite (Sugar.TaggedLis
             M.assignCursorPrefix
             (WidgetIds.fromEntityId (p ^. Sugar.pvTagEntityId)) (Widget.joinId punAddId) w
         punAddId =
-            mTlBody >>= Lens.lastOf (SugarLens.taggedListBodyItems . Sugar.tiTag)
+            tl ^. Sugar.tlItems
+            >>= Lens.lastOf (SugarLens.taggedListBodyItems . Sugar.tiTag)
             & maybe myId TaggedList.itemId
         postProcess =
             case compositeTail of
