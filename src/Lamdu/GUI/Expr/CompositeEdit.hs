@@ -5,8 +5,10 @@ module Lamdu.GUI.Expr.CompositeEdit
     ) where
 
 import qualified Control.Lens as Lens
+import           Control.Monad (zipWithM)
 import qualified Data.Char as Char
 import qualified Data.Text as Text
+import           Hyper (HFoldable(..), hflipped)
 import           GUI.Momentu (Responsive, EventMap, Update)
 import qualified GUI.Momentu as M
 import qualified GUI.Momentu.Element as Element
@@ -97,10 +99,12 @@ makeUnit prependKeywords myId conf pl =
 
 makeAddItem ::
     _ =>
-    Config -> i (Sugar.TagChoice Name o) -> Widget.Id -> GuiM env i o (Maybe (TaggedItem o))
-makeAddItem conf addItem baseId =
+    Config -> i (Sugar.TagChoice Name o) ->
+    o Widget.Id -> o Widget.Id ->
+    Widget.Id -> GuiM env i o (Maybe (TaggedItem o))
+makeAddItem conf addItem prevId nextId baseId =
     GuiState.isSubCursor ?? myId <&> guard
-    >>= (Lens._Just . const) (GuiM.im addItem >>= makeAddItemRow conf myId)
+    >>= (Lens._Just . const) (GuiM.im addItem >>= makeAddItemRow conf prevId nextId myId)
     where
         myId = TagEdit.addItemId baseId
 
@@ -130,10 +134,15 @@ make prependKeywords myId conf (Ann (Const pl) (Sugar.Composite tl punned compos
             }
         let prependEventMap = addItemWithSearchTermEventMap conf env myId
         (addNextEventMap, body) <- TaggedList.make (itemDocPrefix conf) keys (pure myId) (pure myId) tl
+        let prevs =
+                ( drop 1 body
+                    <&> (^. TaggedList.iTag . Sugar.tagRefTag . Sugar.tagInstance)
+                    <&> Just . pure . WidgetIds.fromEntityId
+                ) <> [Nothing]
         items <-
             mconcat
-            [ makeAddItem conf (tl ^. Sugar.tlAddFirst) myId <&> (^.. traverse)
-            , traverse (makeItemRow conf) body
+            [ makeAddItem conf (tl ^. Sugar.tlAddFirst) (pure myId) (pure myId) myId <&> (^.. traverse)
+            , zipWithM (makeItemRow conf) prevs body
                 <&> concat
                 <&> Lens.ix 0 . tagPre . Lens._Just . M.tValue %~ M.weakerEvents prependEventMap
             , case punned of
@@ -182,20 +191,24 @@ addPostTags conf items =
 
 makeAddItemRow ::
     _ =>
-    Config -> Widget.Id ->
+    Config -> o Widget.Id -> o Widget.Id -> Widget.Id ->
     Sugar.TagChoice Name o ->
     GuiM env i o (TaggedItem o)
-makeAddItemRow conf tagHoleId addItem =
-    TagEdit.makeTagHoleEdit mkPickResult tagHoleId addItem
-    & Styled.withColor (conf ^. tagColor)
-    & setPickAndAddNextKeys
-    <&>
-    \tagHole ->
-    TaggedItem
-    { _tagPre = Nothing
-    , _taggedItem = Responsive.fromWithTextPos tagHole
-    , _tagPost = Just M.empty
-    }
+makeAddItemRow conf prevId nextId tagHoleId addItem =
+    do
+        tagHole <-
+            TagEdit.makeTagHoleEdit mkPickResult tagHoleId addItem
+            & Styled.withColor (conf ^. tagColor)
+            & setPickAndAddNextKeys
+        delEvent <- TaggedList.delEventMap (itemDocPrefix conf) (pure ()) prevId nextId
+        pure TaggedItem
+            { _tagPre = Nothing
+            , _taggedItem =
+                tagHole
+                <&> M.weakerEvents delEvent
+                & Responsive.fromWithTextPos
+            , _tagPost = Just M.empty
+            }
     where
         mkPickResult dst =
             Menu.PickResult
@@ -215,9 +228,9 @@ setPickAndAddNextKeys =
 
 makeItemRow ::
     _ =>
-    Config -> TaggedList.Item Name i o (ExprGui.Expr Sugar.Term i o) ->
+    Config -> Maybe (o Widget.Id) -> TaggedList.Item Name i o (ExprGui.Expr Sugar.Term i o) ->
     GuiM env i o [TaggedItem o]
-makeItemRow conf item =
+makeItemRow conf mNextId item =
     do
         itemGui <-
             GuiM.makeSubexpression (item ^. TaggedList.iValue)
@@ -234,10 +247,17 @@ makeItemRow conf item =
                 , _taggedItem = M.weakerEvents (item ^. TaggedList.iEventMap) itemGui
                 , _tagPost = Just M.empty
                 }
-        makeAddItem conf (item ^. TaggedList.iAddAfter) myId <&> (^.. traverse) <&> (row:)
+        makeAddItem conf (item ^. TaggedList.iAddAfter)
+            (pure lastSubExprId) (fromMaybe (pure lastSubExprId) mNextId) myId
+            <&> (^.. traverse) <&> (row:)
     where
         itemId = item ^. TaggedList.iTag . Sugar.tagRefTag . Sugar.tagInstance
         myId = WidgetIds.fromEntityId itemId
+        lastSubExprId =
+            reverse (hfoldMap (const (^.. Lens._Wrapped)) (item ^. TaggedList.iValue . hflipped))
+            ^? Lens.ix 0
+            & fromMaybe (error "no subexpressions for expr")
+            & WidgetIds.fromExprPayload
 
 separationBar :: Config -> TextColors -> M.AnimId -> Widget.R -> M.View
 separationBar conf theme animId width =
