@@ -1,0 +1,56 @@
+[
+    {
+        "schemaVersion": 16
+    },
+    {
+        "names": {
+            "english": "a",
+            "hebrew": "א",
+            "italian": "a",
+            "spanish": "a"
+        },
+        "tag": "64077ff41e0a8ee59e103f93023ad302",
+        "tagOrder": 0
+    },
+    {
+        "def": "f1a44750ea9e49b8b787b8d9fceab92d",
+        "defPresentationMode": "Verbose",
+        "tag": null,
+        "typ": {
+            "rowVars": {
+                "7230": [
+                    "64077ff41e0a8ee59e103f93023ad302"
+                ]
+            },
+            "schemeType": {
+                "record": [
+                    {
+                        "rowTag": "64077ff41e0a8ee59e103f93023ad302",
+                        "typeVar": "7430"
+                    },
+                    {
+                        "rowVar": "7230"
+                    }
+                ]
+            },
+            "typeVars": [
+                "7430"
+            ]
+        },
+        "val": {
+            "extendRest": {
+                "hole": {},
+                "id": "53826a0b-682e-4199-bf5a-937b3d2e6e17"
+            },
+            "extendTag": "64077ff41e0a8ee59e103f93023ad302",
+            "extendVal": {
+                "hole": {},
+                "id": "2753ae2c-5f23-4cb3-a74c-c24b0f295455"
+            },
+            "id": "a47a9638-9c12-43bd-aaa2-a5bc108d89b6"
+        }
+    },
+    {
+        "openDefPane": "f1a44750ea9e49b8b787b8d9fceab92d"
+    }
+]
