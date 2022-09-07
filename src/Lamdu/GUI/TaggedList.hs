@@ -37,7 +37,7 @@ data Keys a = Keys
 Lens.makeLenses ''Keys
 
 make ::
-    _ =>
+    (HasCallStack, _) =>
     [Text] ->
     Keys [ModKey] ->
     o Widget.Id -> o Widget.Id ->
