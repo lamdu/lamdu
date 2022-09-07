@@ -88,13 +88,13 @@ makeBody cat keys prevId nextId items =
 
 delEventMap ::
     _ => [Text] -> o () -> o Widget.Id -> o Widget.Id -> m (EventMap (o Update))
-delEventMap cat fpDel prevId nextId =
+delEventMap cat delAction prevId nextId =
     Lens.view id <&>
     \env ->
     let dir keys delText dstPosId =
             E.keyPresses (env ^. has . keys)
             (editDoc env cat [delText])
-            (fpDel *> dstPosId <&> GuiState.updateCursor)
+            (delAction *> dstPosId <&> GuiState.updateCursor)
     in
     -- TODO: Imports SearchMenu just for deleteBackwards text?
     dir Config.delBackwardKeys SearchMenu.textDeleteBackwards prevId <>
