@@ -188,7 +188,7 @@ makeComposite mkOpener mkPre mkPost mkField composite =
                 ( traverse mkField fields
                 <&> map toRow
                 <&> Lens.ix 0 . crPre .~ pure opener
-                <&> Lens.reversed . Lens.ix 0 . crPost .~ pure closer
+                <&> Lens._last . crPost .~ pure closer
                 <&> Lens.imap addAnimIdPrefix
                 >>= traverse sequenceA
                 <&> map horizSetCompositeRow )

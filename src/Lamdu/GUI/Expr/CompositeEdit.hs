@@ -254,8 +254,8 @@ makeItemRow conf mNextId item =
         itemId = item ^. TaggedList.iTag . Sugar.tagRefTag . Sugar.tagInstance
         myId = WidgetIds.fromEntityId itemId
         lastSubExprId =
-            reverse (hfoldMap (const (^.. Lens._Wrapped)) (item ^. TaggedList.iValue . hflipped))
-            ^? Lens.ix 0
+            hfoldMap (const (^.. Lens._Wrapped)) (item ^. TaggedList.iValue . hflipped)
+            ^? Lens._last
             & fromMaybe (error "no subexpressions for expr")
             & WidgetIds.fromExprPayload
 

@@ -59,7 +59,7 @@ scopeCursor mChosenScope scopes =
         (prevs, it:nexts) <- break (== chosenScope) scopes & Just
         Just ScopeCursor
             { sBinderScope = it
-            , sMPrevParamScope = reverse prevs ^? Lens.traversed
+            , sMPrevParamScope = prevs ^? Lens._last
             , sMNextParamScope = nexts ^? Lens.traversed
             }
     <|> (scopes ^? Lens.traversed <&> def)
