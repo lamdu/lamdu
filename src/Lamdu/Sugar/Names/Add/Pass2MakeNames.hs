@@ -19,7 +19,6 @@ import qualified Data.Map as Map
 import qualified Data.Set as Set
 import           Data.Set.Ordered (OSet, Bias(..), L)
 import qualified Data.Text as Text
-import qualified Data.Tuple as Tuple
 import           Data.UUID.Types (UUID)
 import qualified Lamdu.Calc.Type as T
 import           Lamdu.Data.Anchors (anonTag)
@@ -28,6 +27,7 @@ import qualified Lamdu.I18N.Code as Texts
 import qualified Lamdu.I18N.Name as Texts
 import           Lamdu.Name
 import           Lamdu.Sugar.Internal
+import           Lamdu.Sugar.Names.Add.Abbreviations (abbreviations)
 import           Lamdu.Sugar.Names.Add.Pass1PropagateUp
 import qualified Lamdu.Sugar.Names.Annotated as Annotated
 import           Lamdu.Sugar.Names.CPS (CPS(..), liftCPS)
@@ -77,21 +77,8 @@ makeTagTexts env p1texts =
                     mkTagText tag _ =
                         tagText env text NoCollision
                         where
-                            text =
-                                abbreviations ^? Lens.ix tag
-                                & fromMaybe fullText
-        fullTexts = p1texts ^.. traverse . Tag.name & Set.fromList
-        abbreviationTags =
-            p1texts
-            ^@.. Lens.itraversed <. Tag.abbreviation . Lens._Just
-            <&> (\(tag, abr) -> (abr, Set.singleton tag))
-            & filter (not . (`Set.member` fullTexts) . fst)
-            & MMap.fromList
-        abbreviations =
-            abbreviationTags
-            ^@.. Lens.itraversed <. Lens.filtered ((== 1) . Set.size) . Lens.folded
-            <&> Tuple.swap
-            & Map.fromList
+                            text = abbrevs ^? Lens.ix tag & fromMaybe fullText
+        abbrevs = abbreviations p1texts
 
 isReserved ::
     ( Has (Texts.Name Text) env
@@ -133,7 +120,7 @@ toSuffixMap lang tagTexts contexts top =
                     (TaggedVarId uuid tag, idx) <$ (Lens.contains (addSuf idx) .= True)
         collisions =
             MMap.filter (Lens.has (Clash._Collider . Clash._Clash)) top
-            & Lens.imapped %@~ \tag _ -> toContexts tag
+            & Lens.imapped %@~ const . toContexts
         nonCollisionTexts =
             MMap.filter (Lens.has (Clash._Collider . Clash._NoClash)) top ^.. Lens.ifolded . Lens.asIndex
             & foldMap (\t -> tagTexts ^.. Lens.ix t . ttText)
