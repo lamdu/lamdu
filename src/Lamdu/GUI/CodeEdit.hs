@@ -121,12 +121,16 @@ make cp gp width mkWorkArea =
             <&> (^. Align.tValue)
             <&> (,) gotoDefinition
     where
-        render gui =
-            (gui ^. Responsive.rNarrow)
+        narrowParams =
             Responsive.NarrowLayoutParams
             { _layoutWidth = width
             , _layoutNeedDisambiguation = False
             }
+        render gui
+            | wide ^. Element.width <= width = wide
+            | otherwise = narrowParams & gui ^. Responsive.rNarrow
+            where
+                wide = gui ^. Responsive.rWide . Responsive.lWide
 
 exportPaneEventMap ::
     _ =>
