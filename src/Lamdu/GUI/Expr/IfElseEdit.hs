@@ -153,11 +153,7 @@ make (Ann (Const pl) ifElse) =
                 where
                     r = if_ ^.. traverse <> [s, else_ ^. rKeyword, else_ ^. rPredicate, s, else_ ^. rResult] & hbox & frame
             oneLinerLayout _ _ = Nothing
-        let oneLiner =
-                Options.WideLayoutOption
-                { Options._wContexts = traverse . Options.wideUnambiguous
-                , Options._wLayout = oneLinerLayout
-                }
+        let oneLiner = Options.wideLayoutUnambiguousOption oneLinerLayout
         Options.tryWideLayout oneLiner (Compose rows) res & pure
     & stdWrapParentExpr pl
     where
