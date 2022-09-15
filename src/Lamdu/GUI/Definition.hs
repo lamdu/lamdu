@@ -145,12 +145,12 @@ makeAddResultWidget myId bodyExpr =
             & fallbackToPrev
             & fromMaybe (Widget.respondToCursorPrefix ?? indicatorId ?? M.empty <&> M.WithTextPos 0)
             & local (M.animIdPrefix <>~ ["result widget"])
-        g <- Glue.mkGlue
-        let addResToWidget o w = g o w resWidget
+        glue <- Glue.mkGlue
         ( Responsive.rWide %~
-            (Responsive.lWide %~ addResToWidget Glue.Vertical) .
-            (Responsive.lWideDisambig %~ addResToWidget Glue.Vertical)
-            ) . (Responsive.rNarrow . Lens.mapped %~ addResToWidget Glue.Horizontal)
+            (Responsive.lWide %~ (glue Glue.Vertical ?? resWidget)) .
+            (Responsive.lWideDisambig %~ (glue Glue.Vertical ?? resWidget))
+            ) .
+            (Responsive.rNarrow . Lens.mapped %~ (glue Glue.Horizontal ?? resWidget))
             & pure
     where
         indicatorId = Widget.joinId myId ["result indicator"]
