@@ -117,7 +117,7 @@ make cp gp width mkWorkArea =
             & GuiM.run (workArea ^. Sugar.waOpenPane) assocTagName ExpressionEdit.make BinderEdit.make
                 (Anchors.onGui (Property.mkProperty %~ lift) gp) env
             & lift
-            <&> render
+            <&> Responsive.render narrowParams
             <&> (^. Align.tValue)
             <&> (,) gotoDefinition
     where
@@ -126,11 +126,6 @@ make cp gp width mkWorkArea =
             { _layoutWidth = width
             , _layoutNeedDisambiguation = False
             }
-        render gui
-            | wide ^. Element.width <= width = wide
-            | otherwise = narrowParams & gui ^. Responsive.rNarrow
-            where
-                wide = gui ^. Responsive.rWide . Responsive.lWide
 
 exportPaneEventMap ::
     _ =>
