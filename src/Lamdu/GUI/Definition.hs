@@ -139,19 +139,11 @@ errorIndicator myId tag (Sugar.EvalException errorType jumpToErr) =
 makeAddResultWidget ::
     _ => Widget.Id -> Sugar.DefinitionExpression v name i o a -> m (Responsive (DefRes o) -> Responsive (DefRes o))
 makeAddResultWidget myId bodyExpr =
-    do
-        resWidget <-
-            (resultWidget indicatorId (bodyExpr ^. Sugar.deVarInfo) <$> curPrevTag <&> fmap) <*> bodyExpr ^. Sugar.deResult
-            & fallbackToPrev
-            & fromMaybe (Widget.respondToCursorPrefix ?? indicatorId ?? M.empty <&> M.WithTextPos 0)
-            & local (M.animIdPrefix <>~ ["result widget"])
-        glue <- Glue.mkGlue
-        ( Responsive.rWide %~
-            (Responsive.lWide %~ (glue Glue.Vertical ?? resWidget)) .
-            (Responsive.lWideDisambig %~ (glue Glue.Vertical ?? resWidget))
-            ) .
-            (Responsive.rNarrow . Lens.mapped %~ (glue Glue.Horizontal ?? resWidget))
-            & pure
+    (Glue.mkGlue ?? Glue.Horizontal) <*>
+    ( (resultWidget indicatorId (bodyExpr ^. Sugar.deVarInfo) <$> curPrevTag <&> fmap) <*> bodyExpr ^. Sugar.deResult
+        & fallbackToPrev
+        & fromMaybe (Widget.respondToCursorPrefix ?? indicatorId ?? M.empty <&> M.WithTextPos 0)
+    ) & local (M.animIdPrefix <>~ ["result widget"])
     where
         indicatorId = Widget.joinId myId ["result indicator"]
 
