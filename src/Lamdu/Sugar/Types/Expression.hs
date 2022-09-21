@@ -156,6 +156,9 @@ data Else v name i o f
 
 data ElseIfBody v name i o k = ElseIfBody
     { _eAddLet :: o EntityId
+        -- The inner if-expression that turned into an else-if,
+        -- was a possible binder for let-items.
+        -- The user should be able to add let-items in there (and turn it into a normal else).
     , _eIfElse :: IfElse v name i o k
     } deriving Generic
 
