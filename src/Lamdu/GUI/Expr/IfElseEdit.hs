@@ -41,13 +41,11 @@ data Row a = Row
     } deriving (Functor, Foldable, Traversable)
 Lens.makeLenses ''Row
 
-data IfKind = If | ElseIf
-
 makeIfThen ::
     _ =>
-    IfKind -> M.AnimId -> ExprGui.Body Sugar.IfElse i o ->
+    M.WithTextPos M.View -> M.AnimId -> ExprGui.Body Sugar.IfElse i o ->
     GuiM env i o (Row (Responsive o))
-makeIfThen ifKind animId ifElse =
+makeIfThen ifKeyword animId ifElse =
     do
         env <- Lens.view id
         let jumpToThen =
@@ -61,15 +59,10 @@ makeIfThen ifKind animId ifElse =
             <&> M.weakerEvents jumpToThen
         thenGui <- GuiM.makeSubexpression (ifElse ^. Sugar.iThen)
         keyword <-
-            grammar ifKeyword
+            pure ifKeyword
             M./|/ Spacer.stdHSpace
             <&> Responsive.fromTextView
         Row animId keyword ifGui thenGui & pure
-    where
-        ifKeyword =
-            case ifKind of
-            If -> label Texts.if_
-            ElseIf -> label Texts.elseIf
 
 makeElse :: _ => M.AnimId -> ExprGui.Expr Sugar.Else i o -> GuiM env i o [Row (Responsive o)]
 makeElse parentAnimId (Ann (Const pl) (Sugar.SimpleElse expr)) =
@@ -86,12 +79,13 @@ makeElse _ (Ann (Const pl) (Sugar.ElseIf (Sugar.ElseIfBody addLet content))) =
     do
         -- TODO: green evaluation backgrounds, "◗"?
         letEventMap <- ExprEventMap.addLetEventMap addLet
+        elseIfKeyword <- label Texts.elseIf & grammar
         (:)
-            <$> ( makeIfThen ElseIf animId content
+            <$> ( makeIfThen elseIfKeyword animId content
                   <&> Lens.mapped %~ M.weakerEvents letEventMap
                 )
             <*> makeElse animId (content ^. Sugar.iElse)
-            & local (M.animIdPrefix .~ animId)
+    & local (M.animIdPrefix .~ animId)
     where
         animId = WidgetIds.fromEntityId entityId & Widget.toAnimId
         entityId = pl ^. Sugar.plEntityId
@@ -139,9 +133,10 @@ renderRows mParensId =
 make :: _ => ExprGui.Expr Sugar.IfElse i o -> GuiM env i o (Responsive o)
 make (Ann (Const pl) ifElse) =
     do
+        ifKeyword <- label Texts.if_ & grammar
         rows <-
             (:)
-            <$> makeIfThen If animId ifElse
+            <$> makeIfThen ifKeyword animId ifElse
             <*> makeElse animId (ifElse ^. Sugar.iElse)
         res <- renderRows (ExprGui.mParensId pl) ?? rows
         frame <- addValFrame
