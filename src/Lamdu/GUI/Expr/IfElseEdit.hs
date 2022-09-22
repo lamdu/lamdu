@@ -43,7 +43,7 @@ Lens.makeLenses ''Row
 
 makeIfThen ::
     _ =>
-    M.WithTextPos M.View -> M.AnimId -> ExprGui.Body Sugar.IfElse i o ->
+    M.TextWidget o -> M.AnimId -> ExprGui.Body Sugar.IfElse i o ->
     GuiM env i o (Row (Responsive o))
 makeIfThen ifKeyword animId ifElse =
     do
@@ -61,7 +61,7 @@ makeIfThen ifKeyword animId ifElse =
         keyword <-
             pure ifKeyword
             M./|/ Spacer.stdHSpace
-            <&> Responsive.fromTextView
+            <&> Responsive.fromWithTextPos
         Row animId keyword ifGui thenGui & pure
 
 makeElse :: _ => M.AnimId -> ExprGui.Expr Sugar.Else i o -> GuiM env i o [Row (Responsive o)]
@@ -79,7 +79,7 @@ makeElse _ (Ann (Const pl) (Sugar.ElseIf (Sugar.ElseIfBody addLet content))) =
     do
         -- TODO: green evaluation backgrounds, "◗"?
         letEventMap <- ExprEventMap.addLetEventMap addLet
-        elseIfKeyword <- label Texts.elseIf & grammar
+        elseIfKeyword <- (Widget.makeFocusableView ?? myId <&> (M.tValue %~)) <*> label Texts.elseIf & grammar
         (:)
             <$> ( makeIfThen elseIfKeyword animId content
                   <&> Lens.mapped %~ M.weakerEvents letEventMap
@@ -87,7 +87,8 @@ makeElse _ (Ann (Const pl) (Sugar.ElseIf (Sugar.ElseIfBody addLet content))) =
             <*> makeElse animId (content ^. Sugar.iElse)
     & local (M.animIdPrefix .~ animId)
     where
-        animId = WidgetIds.fromEntityId entityId & Widget.toAnimId
+        myId = WidgetIds.fromEntityId entityId
+        animId = Widget.toAnimId myId
         entityId = pl ^. Sugar.plEntityId
 
 verticalRowRender :: _ => f (Row (Responsive o) -> Responsive o)
@@ -133,7 +134,7 @@ renderRows mParensId =
 make :: _ => ExprGui.Expr Sugar.IfElse i o -> GuiM env i o (Responsive o)
 make (Ann (Const pl) ifElse) =
     do
-        ifKeyword <- label Texts.if_ & grammar
+        ifKeyword <- label Texts.if_ & grammar <&> M.tValue %~ Widget.fromView
         rows <-
             (:)
             <$> makeIfThen ifKeyword animId ifElse
