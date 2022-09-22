@@ -79,7 +79,11 @@ makeElse _ (Ann (Const pl) (Sugar.ElseIf (Sugar.ElseIfBody addLet content))) =
     do
         -- TODO: green evaluation backgrounds, "◗"?
         letEventMap <- ExprEventMap.addLetEventMap addLet
-        elseIfKeyword <- (Widget.makeFocusableView ?? myId <&> (M.tValue %~)) <*> label Texts.elseIf & grammar
+        elseIfKeyword <-
+            ( (.) <$> ExprEventMap.add ExprEventMap.defaultOptions pl <*> (Widget.makeFocusableView ?? myId)
+                <&> (M.tValue %~)
+            ) <*> label Texts.elseIf
+            & grammar
         (:)
             <$> ( makeIfThen elseIfKeyword animId content
                   <&> Lens.mapped %~ M.weakerEvents letEventMap
