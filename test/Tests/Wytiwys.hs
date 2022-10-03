@@ -99,4 +99,6 @@ test =
     , wytiwys "===↑↓⌫⌫⌫1" "1"
 
     , wytiwys "if 'a=='a\n←←id\t3\t4" "3"
+
+    , wytiwys "toArr repli 3000\t0««.len\n" "3000"
     ]
