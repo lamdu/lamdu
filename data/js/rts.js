@@ -99,6 +99,19 @@ var rerun = function (result) {
     }
 };
 
+var rerunAction = function (result) {
+    while(1) {
+        if (typeof result === 'undefined') {
+            return;
+        }
+        var trampoline = result.trampolineTo;
+        if (typeof trampoline === 'undefined') {
+            return result;
+        }
+        result = trampoline();
+    }
+};
+
 class UnicodeError extends Error {}
 
 module.exports = {
@@ -111,6 +124,7 @@ module.exports = {
         UnhandledCase: curried_error("UnhandledCase"),
     },
     rerun: rerun,
+    rerunAction: rerunAction,
     memo: function (thunk) {
         var done = false;
         var memo;
@@ -211,7 +225,9 @@ module.exports = {
             return: mutFunc(x => x),
             bind: function(x) {
                 return function (cont) {
-                    return x[tags.infixl](res => rerun(x[tags.infixr](res))(cont));
+                    return {trampolineTo: function () {
+                        return x[tags.infixl](res => rerun(x[tags.infixr](res))(cont));
+                    }};
                 };
             },
             run: function(st) { return st(x => x); },

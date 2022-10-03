@@ -381,15 +381,16 @@ asyncStart depsMVar executeReplMVar resultsRef repls actions =
                                     flushedOutput stdin msg
                                     traverse_ (`flushedOutput` msg)
                                         (jsHandles ^. jsDebugInteractivePath)
-                        "'use strict';\n" ++
-                            "var repl = require(" ++ show lamduOutputPath ++ ");"
+                        "'use strict';\n" <>
+                            "var rts = require(\"rts.js\");\n" <>
+                            "var repl = require(" <> show lamduOutputPath <> ");"
                             & outputInteractive
                         takeMVar executeReplMVar
                             <&> (`elemIndex` repls)
                             >>= Lens._Just (outputInteractive . runRepl)
                             & forever
     where
-        runRepl idx = "repl[" <> show idx <> "](x => undefined);"
+        runRepl idx = "rts.rerunAction(repl[" <> show idx <> "](x => undefined));"
 
 -- | Pause the evaluator, yielding all dependencies of evaluation so
 -- far. If any dependency changed, this evaluation is stale.
