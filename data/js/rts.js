@@ -244,7 +244,7 @@ module.exports = {
                 new: cont => cont([]),
                 copy: mutFunc(x => x.map(v => v)),
                 run: function(st) {
-                    var result = st(x => x);
+                    var result = rerunAction(st(x => x));
                     if (result.hasOwnProperty("cacheId")) {
                         delete result.cacheId;
                     }
