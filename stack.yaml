@@ -1,3 +1,5 @@
+resolver: lts-19.33
+
 packages:
 - '.'
 extra-deps:
@@ -30,8 +32,6 @@ extra-deps:
   commit: 8512b09d2c0533a41d5d2aef182b11a58c420c10
   subdirs:
     - inline-js-core
-
-resolver: lts-19.22
 
 allow-newer: true
 
