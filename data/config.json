@@ -1,5 +1,5 @@
 {
-    "maxExprDepth": 40,
+    "maxExprDepth": 100,
     "debug": {
         "showFPS": false,
         "virtualCursorShown": false,
