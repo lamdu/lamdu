@@ -63,6 +63,7 @@ make hole@(Ann (Const pl) _) =
             <&> Responsive.fromWithTextPos
             <&> M.weakerEvents innerHoleEventMap
             <&> Widget.strongerEvents (negativeNumberEventMap <> charEventMap)
+    & GuiM.resetDepth
     where
         blockChars =
             E.emAllCharsHandler . traverse . E.chDocHandler . E.dhHandler . Lens.mapped

@@ -5,7 +5,7 @@
 module Lamdu.GUI.Monad
     ( StoredEntityIds(..)
     --
-    , advanceDepth
+    , advanceDepth, resetDepth
     --
     , mkPrejumpPosSaver
     --
@@ -100,6 +100,12 @@ advanceDepth f action =
             else action & _GuiM %~ local (aDepthLeft -~ 1)
     where
         mkErrorWidget = Label.make "..."
+
+resetDepth :: _ => GuiM env i o r -> GuiM env i o r
+resetDepth action =
+    do
+        depth <- Lens.view (Config.hasConfig . Config.maxExprDepth)
+        action & _GuiM %~ local (aDepthLeft .~ depth)
 
 readMScopeId :: Monad i => GuiM env i o (CurAndPrev (Maybe ScopeId))
 readMScopeId = GuiM (Lens.view aMScopeId)
