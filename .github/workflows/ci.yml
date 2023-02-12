@@ -88,7 +88,7 @@ jobs:
 
     - name: Run HLint
       env:
-         HLINT_VERSION: "3.3.6"
+         HLINT_VERSION: "3.5"
       run: |
         curl -L https://github.com/ndmitchell/hlint/releases/download/v${HLINT_VERSION}/hlint-${HLINT_VERSION}-x86_64-linux.tar.gz --output hlint.tar.gz
         tar -xvf hlint.tar.gz
