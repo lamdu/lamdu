@@ -1,4 +1,4 @@
-resolver: lts-19.33
+resolver: lts-20.11
 
 packages:
 - '.'
@@ -11,7 +11,8 @@ extra-deps:
 - ekg-core-0.1.1.7
 - aeson-diff-1.1.0.12
 - lens-aeson-1.2
-- text-trie-0.2.5.0
+- github: lamdu/text-trie
+  commit: 072256fb4884d40536c9a31e15fa60d3330d7c58
 - github: lamdu/rocksdb-haskell
   commit: b0016acefbb38b1fbe148163f226f4cae15c03c7
 - github: lamdu/bindings-freetype-gl
