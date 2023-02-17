@@ -34,7 +34,7 @@ import qualified Lamdu.Sugar.Types as Sugar
 import           Lamdu.Prelude
 
 data Row a = Row
-    { _rIndentId :: M.AnimId
+    { _rIndentId :: M.ElemId
     , _rKeyword :: a
     , _rPredicate :: a
     , _rResult :: a
@@ -43,9 +43,9 @@ Lens.makeLenses ''Row
 
 makeIfThen ::
     _ =>
-    M.TextWidget o -> M.AnimId -> ExprGui.Body Sugar.IfElse i o ->
+    M.TextWidget o -> M.ElemId -> ExprGui.Body Sugar.IfElse i o ->
     GuiM env i o (Row (Responsive o))
-makeIfThen ifKeyword animId ifElse =
+makeIfThen ifKeyword elemId ifElse =
     do
         env <- Lens.view id
         let jumpToThen =
@@ -62,19 +62,19 @@ makeIfThen ifKeyword animId ifElse =
             pure ifKeyword
             M./|/ Spacer.stdHSpace
             <&> Responsive.fromWithTextPos
-        Row animId keyword ifGui thenGui & pure
+        Row elemId keyword ifGui thenGui & pure
 
-makeElse :: _ => M.AnimId -> ExprGui.Expr Sugar.Else i o -> GuiM env i o [Row (Responsive o)]
-makeElse parentAnimId (Ann (Const pl) (Sugar.SimpleElse expr)) =
-    Row elseAnimId
+makeElse :: _ => M.ElemId -> ExprGui.Expr Sugar.Else i o -> GuiM env i o [Row (Responsive o)]
+makeElse parentElemId (Ann (Const pl) (Sugar.SimpleElse expr)) =
+    Row elseElemId
     <$> (grammar (label Texts.else_) <&> Responsive.fromTextView)
     <*> (grammar (Label.make ":")
-            & local (M.animIdPrefix .~ elseAnimId)
+            & local (M.elemIdPrefix .~ elseElemId)
             <&> Responsive.fromTextView)
     <*> GuiM.makeSubexpression (Ann (Const pl) expr)
     <&> pure
     where
-        elseAnimId = parentAnimId <> ["else"]
+        elseElemId = parentElemId <> "else"
 makeElse _ (Ann (Const pl) (Sugar.ElseIf (Sugar.ElseIfBody addLet content))) =
     do
         -- TODO: green evaluation backgrounds, "◗"?
@@ -85,14 +85,14 @@ makeElse _ (Ann (Const pl) (Sugar.ElseIf (Sugar.ElseIfBody addLet content))) =
             ) <*> label Texts.elseIf
             & grammar
         (:)
-            <$> ( makeIfThen elseIfKeyword animId content
+            <$> ( makeIfThen elseIfKeyword elemId content
                   <&> Lens.mapped %~ M.weakerEvents letEventMap
                 )
-            <*> makeElse animId (content ^. Sugar.iElse)
-    & local (M.animIdPrefix .~ animId)
+            <*> makeElse elemId (content ^. Sugar.iElse)
+    & local (M.elemIdPrefix .~ elemId)
     where
         myId = WidgetIds.fromEntityId entityId
-        animId = Widget.toAnimId myId
+        elemId = M.asElemId myId
         entityId = pl ^. Sugar.plEntityId
 
 verticalRowRender :: _ => f (Row (Responsive o) -> Responsive o)
@@ -108,7 +108,7 @@ verticalRowRender =
             , indent (row ^. rIndentId) (row ^. rResult)
             ]
 
-renderRows :: _ => Maybe M.AnimId -> f ([Row (Responsive o)] -> Responsive o)
+renderRows :: _ => Maybe M.ElemId -> f ([Row (Responsive o)] -> Responsive o)
 renderRows mParensId =
     do
         vspace <- Spacer.getSpaceSize <&> (^._2)
@@ -141,8 +141,8 @@ make (Ann (Const pl) ifElse) =
         ifKeyword <- label Texts.if_ & grammar <&> M.tValue %~ Widget.fromView
         rows <-
             (:)
-            <$> makeIfThen ifKeyword animId ifElse
-            <*> makeElse animId (ifElse ^. Sugar.iElse)
+            <$> makeIfThen ifKeyword elemId ifElse
+            <*> makeElse elemId (ifElse ^. Sugar.iElse)
         res <- renderRows (ExprGui.mParensId pl) ?? rows
         frame <- addValFrame
         s <- Spacer.stdHSpace <&> Widget.fromView <&> M.WithTextPos 0
@@ -157,4 +157,4 @@ make (Ann (Const pl) ifElse) =
         Options.tryWideLayout oneLiner (Compose rows) res & pure
     & stdWrapParentExpr pl
     where
-        animId = WidgetIds.fromExprPayload pl & Widget.toAnimId
+        elemId = WidgetIds.fromExprPayload pl & M.asElemId

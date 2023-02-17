@@ -15,6 +15,7 @@ import qualified Control.Lens as Lens
 import qualified Data.Char as Char
 import qualified Data.Text as Text
 import           GUI.Momentu (EventMap, noMods, Update)
+import           GUI.Momentu.Element.Id (ElemId)
 import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.I18N as MomentuTexts
 import qualified GUI.Momentu.ModKey as ModKey
@@ -78,7 +79,7 @@ add options pl =
 makeBaseEvents :: _ => Sugar.Payload v o -> GuiM env i o (EventMap (o Update))
 makeBaseEvents pl = exprInfoFromPl ?? pl >>= baseEvents
 
-extractCursor :: Sugar.ExtractDestination -> Widget.Id
+extractCursor :: Sugar.ExtractDestination -> ElemId
 extractCursor (Sugar.ExtractToLet letId) = WidgetIds.fromEntityId letId
 extractCursor (Sugar.ExtractToDef defId) = WidgetIds.fromEntityId defId
 
@@ -242,7 +243,7 @@ replaceEventMap x =
     Sugar.Delete action -> mk action MomentuTexts.delete
     Sugar.CannotDelete -> mempty
 
-goToLiteral :: Widget.Id -> Update
+goToLiteral :: ElemId -> Update
 goToLiteral = GuiState.updateCursor . WidgetIds.literalEditOf
 
 makeLiteralNumberEventMap ::
@@ -269,7 +270,7 @@ makeLiteralCommon ::
     Maybe Text -> String ->
     Lens.ALens' (Texts.CodeUI Text) Text ->
     m ((Char -> Sugar.Literal Identity) ->
-          (Sugar.Literal Identity -> o Sugar.EntityId) -> EventMap (o Widget.Id))
+          (Sugar.Literal Identity -> o Sugar.EntityId) -> EventMap (o ElemId))
 makeLiteralCommon mGroupDesc chars help =
     Lens.view id <&> E.toDoc
     <&> \toDoc f makeLiteral ->
@@ -319,7 +320,7 @@ isAlphaNumericName suffix =
 
 closeParenEvent ::
     (MonadReader env m, Functor f) =>
-    [Lens.ALens' env Text] -> f Widget.Id -> m (EventMap (f Update))
+    [Lens.ALens' env Text] -> f ElemId -> m (EventMap (f Update))
 closeParenEvent doc action =
     E.charGroup (Just "Close Paren")
     <$> (Lens.view id <&> (`E.toDoc` doc))

@@ -1,6 +1,6 @@
 module Main where
 
-import qualified Tests.AnimIdClash
+import qualified Tests.ElemIdClash
 import qualified Tests.Builds
 import qualified Tests.Codec
 import qualified Tests.ColorSchemes
@@ -24,7 +24,7 @@ import           Test.Lamdu.Prelude
 main :: IO ()
 main =
     (:
-        [ Tests.AnimIdClash.test
+        [ Tests.ElemIdClash.test
         , Tests.Builds.test
         , Tests.Codec.test
         , Tests.ColorSchemes.test

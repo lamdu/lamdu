@@ -8,6 +8,7 @@ import qualified Control.Lens as Lens
 import           GUI.Momentu (Responsive, EventMap, noMods, Update)
 import qualified GUI.Momentu as M
 import qualified GUI.Momentu.Align as Align
+import           GUI.Momentu.Element.Id (ElemId)
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Font (Underline(..))
 import qualified GUI.Momentu.Hover as Hover
@@ -45,7 +46,7 @@ import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
 
-makeSimpleView :: _ => Lens.ALens' TextColors M.Color -> Name -> Widget.Id -> m (M.TextWidget f)
+makeSimpleView :: _ => Lens.ALens' TextColors M.Color -> Name -> ElemId -> m (M.TextWidget f)
 makeSimpleView color name myId =
     (Widget.makeFocusableView ?? myId <&> (Align.tValue %~))
     <*> NameView.make name
@@ -60,7 +61,7 @@ navDoc env lens =
 makeNameRef ::
     _ =>
     Role ->
-    Lens.ALens' TextColors M.Color -> Widget.Id ->
+    Lens.ALens' TextColors M.Color -> ElemId ->
     Sugar.GetVar Name o ->
     GuiM env i o (M.TextWidget o)
 makeNameRef role color myId var =
@@ -89,11 +90,11 @@ makeNameRef role color myId var =
         makeSimpleView color name nameId
             & mAddMarker
             <&> Align.tValue %~ Widget.weakerEvents jumpToDefinitionEventMap
-    & local (M.animIdPrefix .~ Widget.toAnimId nameId)
+    & local (M.elemIdPrefix .~ M.asElemId nameId)
     & GuiState.assignCursor myId nameId
     where
         name = var ^. Sugar.vName
-        nameId = Widget.joinId myId ["name"]
+        nameId = myId <> "name"
 
 makeInlineEventMap :: _ => env -> Sugar.VarInline f -> EventMap (f Update)
 makeInlineEventMap env (Sugar.InlineVar inline) =
@@ -107,7 +108,7 @@ makeInlineEventMap env (Sugar.CannotInlineDueToUses (x:_)) =
 makeInlineEventMap _ _ = mempty
 
 definitionTypeChangeBox ::
-    _ => Sugar.DefinitionOutdatedType Name f Sugar.EntityId -> Widget.Id -> m (M.TextWidget f)
+    _ => Sugar.DefinitionOutdatedType Name f Sugar.EntityId -> ElemId -> m (M.TextWidget f)
 definitionTypeChangeBox info getVarId =
     do
         env <- Lens.view id
@@ -134,12 +135,12 @@ definitionTypeChangeBox info getVarId =
     where
         update = info ^. Sugar.defTypeUseCurrent <&> WidgetIds.fromEntityId
         mkTypeView idSuffix scheme =
-            TypeView.makeScheme scheme & local (M.animIdPrefix .~ animId ++ [idSuffix])
-        myId = Widget.joinId getVarId ["type change"]
-        animId = Widget.toAnimId myId
+            TypeView.makeScheme scheme & local (M.elemIdPrefix .~ elemId <> idSuffix)
+        myId = getVarId <> "type change"
+        elemId = M.asElemId myId
 
 processDefinitionWidget ::
-    _ => Sugar.DefinitionForm Name f -> Widget.Id -> m (M.TextWidget f) -> m (M.TextWidget f)
+    _ => Sugar.DefinitionForm Name f -> ElemId -> m (M.TextWidget f) -> m (M.TextWidget f)
 processDefinitionWidget Sugar.DefUpToDate _myId mkLayout = mkLayout
 processDefinitionWidget Sugar.DefDeleted _myId mkLayout =
     Styled.deletedUse <*> mkLayout
@@ -183,7 +184,7 @@ processDefinitionWidget (Sugar.DefTypeChanged info) myId mkLayout =
                 <&> fmap (Widget.weakerEventsWithoutPreevents hideDialogEventMap)
             (False, False) -> pure layout
     where
-        hiddenId = myId `Widget.joinId` ["hidden"]
+        hiddenId = myId <> "hidden"
 
 make ::
     _ =>

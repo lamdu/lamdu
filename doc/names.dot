@@ -9,7 +9,7 @@ digraph {
     GetParam                 [label="Get parameter"];
     Nominal                  [label="Nominal"];
     Tag, Def, Var, Composites, TId [style=filled, fillcolor=yellow];
-    TId                      [label="Type Id"];
+    TId                      [label="Type ElemId"];
     Def                      [label="Definition"];
     Var                      [label="Variable"];
     Composites               [label="Composite types (records / variants)"];

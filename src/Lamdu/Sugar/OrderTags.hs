@@ -130,14 +130,16 @@ addReorders tl =
         tags = tl ^.. SugarLens.taggedListItems . Sugar.tiTag . Sugar.tagRefTag . Sugar.tagVal
         fixPrepend tag = (fixOrders (tag : tags) *>)
         fixItem idx =
-            (Sugar.tiTag . Sugar.tagRefReplace . Lens.mapped . tagChoicePick %@~ \n -> (fixOrders (pre <> (n : post)) *>)) .
-            (Sugar.tiAddAfter . Lens.mapped . tagChoicePick %@~ \n -> (fixOrders (pre <> (cur : n : post)) *>))
-            where
-                (pre, cur : post) = splitAt idx tags
+            case splitAt idx tags of
+            (pre, cur : post) ->
+                (Sugar.tiTag . Sugar.tagRefReplace . Lens.mapped . tagChoicePick %@~
+                    \n -> (fixOrders (pre <> (n : post)) *>)) .
+                (Sugar.tiAddAfter . Lens.mapped . tagChoicePick %@~ \n -> (fixOrders (pre <> (cur : n : post)) *>))
+            _ -> error (show idx <> " out of bounds for " <> show tags)
         mkSwap idx =
-            fixOrders (pre <> (y : x : post))
-            where
-                (pre, x : y : post) = splitAt idx tags
+            case splitAt idx tags of
+            (pre, x : y : post) -> fixOrders (pre <> (y : x : post))
+            _ -> error ("Too few elements after " <> show idx <> " in " <> show tags)
 
 -- Change sequence so that each item will be larger than previous.
 fixRisingSequence :: [Int] -> [Int]

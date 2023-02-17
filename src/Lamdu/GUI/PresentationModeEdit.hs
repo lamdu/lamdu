@@ -8,7 +8,7 @@ import qualified Control.Lens as Lens
 import           Data.Property (Property, pVal)
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Element as Element
-import qualified GUI.Momentu.Widget as Widget
+import           GUI.Momentu.Element.Id (ElemId)
 import qualified GUI.Momentu.Widgets.DropDownList as DropDownList
 import qualified GUI.Momentu.Widgets.TextView as TextView
 import qualified Lamdu.Config.Theme as Theme
@@ -30,7 +30,7 @@ lens mode =
 {-# ANN make ("HLint: ignore Use head"::String) #-}
 make ::
     _ =>
-    Widget.Id ->
+    ElemId ->
     Sugar.LhsNames v name i o ->
     Property f Sugar.PresentationMode ->
     m (Align.TextWidget f)

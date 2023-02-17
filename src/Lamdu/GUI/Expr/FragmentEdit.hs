@@ -92,12 +92,12 @@ make (Ann (Const pl) fragment) =
             Just mismatchedType ->
                 do
                     color <- Lens.view (has . Theme.errorColor)
-                    animId <- Element.subAnimId ?? ["err-line"]
+                    elemId <- Element.subElemId ?? "err-line"
                     spacing <- Lens.view
                         (has . Theme.valAnnotation . ValAnnotation.valAnnotationSpacing)
                     stdFontHeight <- Spacer.stdFontHeight
                     addInferredType mismatchedType shrinkValAnnotationsIfNeeded
-                        <&> (lineBelow color animId (spacing * stdFontHeight) .)
+                        <&> (lineBelow color elemId (spacing * stdFontHeight) .)
             & Element.locallyAugmented ("inner type"::Text)
 
         hbox
@@ -111,12 +111,12 @@ make (Ann (Const pl) fragment) =
         editFragmentHeal = [has . MomentuTexts.edit, has . Texts.fragment, has . Texts.heal]
         healAction = fragment ^. Sugar.fHeal <&> WidgetIds.fromEntityId
         menuId = WidgetIds.fromExprPayload pl & WidgetIds.fragmentHoleId
-        lineBelow color animId spacing ann =
+        lineBelow color elemId spacing ann =
             ann
             & Element.setLayeredImage . Element.layers . Lens.ix 0 %~ (<> line)
             where
                 line =
-                    Anim.coloredRectangle animId color
+                    Anim.coloredRectangle elemId color
                     & Anim.scale (M.Vector2 (ann ^. Element.width) spacing)
                     & Anim.translate (M.Vector2 0 (ann ^. Element.height))
 
@@ -158,7 +158,7 @@ makeFragOpt (Ann (Const a) b) =
         grammar (label Texts.recordOpener) /|/ TagView.make (x ^. Sugar.tagRefTag) & fromView
     -- Reproduction of behaviour from Lamdu.GUI.Expr.make,
     -- otherwise fragment editors would have clashing anim ids
-    & local (M.animIdPrefix .~ Widget.toAnimId myId)
+    & local (M.elemIdPrefix .~ M.asElemId myId)
     where
         myId = WidgetIds.fromExprPayload a
         fromView act = (Widget.makeFocusableWidget ?? myId <&> (Widget.widget %~)) <*> (act <&> Responsive.fromTextView) & stdWrap a

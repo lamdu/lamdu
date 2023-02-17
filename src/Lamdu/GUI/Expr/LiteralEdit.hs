@@ -85,7 +85,7 @@ charEdit (Property char setChar) pl =
         edit <-
             TextView.makeFocusable ?? Text.singleton char ?? innerId
             <&> M.tValue %~ Widget.weakerEvents setCharEventMap
-        let quote animId = (TextView.make ?? "'") <*> (Element.subAnimId ?? [animId])
+        let quote elemId = (TextView.make ?? "'") <*> (Element.subElemId ?? elemId)
         quote "opener"
             M./|/ pure edit
             M./|/ quote "closer"

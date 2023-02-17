@@ -7,7 +7,6 @@ import qualified GUI.Momentu as M
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.Responsive.Options as ResponsiveOptions
 import qualified GUI.Momentu.State as GuiState
-import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Label as Label
 import qualified Lamdu.Config.Theme.TextColors as TextColors
 import qualified Lamdu.GUI.Expr.TagEdit as TagEdit
@@ -39,7 +38,7 @@ make nom =
         hbox <- ResponsiveOptions.boxSpaced ?? ResponsiveOptions.disambiguationNone
         hbox [hbox ((nameEdit : paramEdits) <> [sep]), bodyEdit]
             & pure
-        & local (M.animIdPrefix .~ Widget.toAnimId myId)
+        & local (M.elemIdPrefix .~ M.asElemId myId)
         & GuiState.assignCursor myId nameEditId
     where
         myId = nom ^. Sugar.npEntityId & WidgetIds.fromEntityId

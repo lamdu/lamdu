@@ -20,7 +20,7 @@ import           Data.ByteString.Char8 ()
 import           Data.Property (MkProperty, MkProperty')
 import           Data.UUID.Types (nil)
 import           GUI.Momentu (GUIState)
-import qualified GUI.Momentu.Widget.Id as WidgetId
+import           GUI.Momentu.Element.Id (ElemId)
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
 import           Lamdu.Data.Meta (DefinitionState(..), SpecialArgs(..), PresentationMode)
@@ -45,7 +45,7 @@ data Pane m
     deriving anyclass Binary
 
 data Gui f = Gui
-    { preJumps :: f [WidgetId.Id]
+    { preJumps :: f [ElemId]
     , preGuiState :: f GUIState
     , postGuiState :: f GUIState
     }

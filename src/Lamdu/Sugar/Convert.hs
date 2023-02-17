@@ -86,10 +86,11 @@ convertPane env (Property panes setPanes) i pane =
     where
         myEntityId = mkPaneEntityId pane
         movePane oldIndex newIndex =
-            insertAt newIndex item (before ++ after)
+            case splitAt oldIndex panes of
+            (before, item:after) ->
+                insertAt newIndex item (before ++ after)
+            _ -> error (show oldIndex <> " out of bounds for " <> show panes)
             & setPanes
-            where
-                (before, item:after) = splitAt oldIndex panes
         mkMMovePaneDown
             | i+1 < length panes = Just $ movePane i (i+1)
             | otherwise = Nothing

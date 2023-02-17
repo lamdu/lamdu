@@ -9,14 +9,14 @@ module Lamdu.GUI.WidgetIdIRef
 import qualified Data.ByteString.Extended as BS
 import           Data.UUID.Types (UUID)
 import qualified Data.UUID.Types as UUID
-import           GUI.Momentu.Widget.Id (Id(..))
+import           GUI.Momentu.Element.Id (ElemId(..))
 import           Revision.Deltum.IRef (IRef)
 import qualified Revision.Deltum.IRef as IRef
 
 import           Lamdu.Prelude
 
-fromUUID :: UUID -> Id
-fromUUID = Id . (: []) . BS.strictify . UUID.toByteString
+fromUUID :: UUID -> ElemId
+fromUUID = ElemId . (: []) . BS.strictify . UUID.toByteString
 
-fromIRef :: IRef m a -> Id
+fromIRef :: IRef m a -> ElemId
 fromIRef = fromUUID . IRef.uuid

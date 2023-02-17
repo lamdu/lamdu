@@ -8,6 +8,7 @@ import qualified Data.List.Extended as List
 import qualified Data.Property as Property
 import           GUI.Momentu (TextWidget, EventMap, ModKey, noMods, Update)
 import qualified GUI.Momentu.Align as Align
+import           GUI.Momentu.Element.Id (ElemId)
 import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.I18N as MomentuTexts
 import qualified GUI.Momentu.ModKey as ModKey
@@ -76,11 +77,11 @@ eventMap =
     , A.mRedo actions <&> fmap GuiState.fullUpdate & redoEventMap env config
     ]
 
-branchDelegatorId :: Branch t -> Widget.Id
+branchDelegatorId :: Branch t -> ElemId
 branchDelegatorId = WidgetIds.fromUUID . Branch.uuid
 
-branchTextEditId :: Branch t -> Widget.Id
-branchTextEditId = (`Widget.joinId` ["textedit"]) . branchDelegatorId
+branchTextEditId :: Branch t -> ElemId
+branchTextEditId = (<> "textedit") . branchDelegatorId
 
 makeBranchSelector ::
     _ =>

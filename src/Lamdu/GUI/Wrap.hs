@@ -7,15 +7,16 @@ module Lamdu.GUI.Wrap
 
 import qualified Control.Lens as Lens
 import           GUI.Momentu (Widget, Responsive)
+import           GUI.Momentu.Element.Id (ElemId)
+import           GUI.Momentu.Element.Id (subId)
 import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.I18N as MomentuTexts
 import qualified GUI.Momentu.State as GuiState
 import qualified GUI.Momentu.Widget as Widget
-import           GUI.Momentu.Widget.Id (subId)
 import qualified GUI.Momentu.Widgets.FocusDelegator as FocusDelegator
 import qualified Lamdu.Config as Config
-import qualified Lamdu.GUI.Expr.EventMap as ExprEventMap
 import           Lamdu.GUI.Annotation (maybeAddAnnotationPl)
+import qualified Lamdu.GUI.Expr.EventMap as ExprEventMap
 import           Lamdu.GUI.Monad (GuiM)
 import qualified Lamdu.GUI.Types as ExprGui
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
@@ -48,7 +49,7 @@ stdWrap pl act =
     where
         a >>> f = f <*> a
 
-parentDelegator :: _ => Widget.Id -> m (Responsive o -> Responsive o)
+parentDelegator :: _ => ElemId -> m (Responsive o -> Responsive o)
 parentDelegator myId =
     FocusDelegator.make <*> parentExprFDConfig
     ?? FocusDelegator.FocusEntryChild ?? myId

@@ -9,17 +9,17 @@ module Lamdu.GUI.TaggedList
 import qualified Control.Lens as Lens
 import           Data.List.Extended (withPrevNext)
 import           GUI.Momentu (EventMap, ModKey, Update)
+import           GUI.Momentu.Element.Id (ElemId)
 import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.I18N as MomentuTexts
 import qualified GUI.Momentu.State as GuiState
-import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import qualified Lamdu.Config as Config
 import qualified Lamdu.GUI.Expr.TagEdit as TagEdit
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.I18N.CodeUI as Texts
-import qualified Lamdu.Sugar.Types as Sugar
 import           Lamdu.Prelude
+import qualified Lamdu.Sugar.Types as Sugar
 
 data Item name i o a = Item
     { _iTag :: Sugar.TagRef name i o
@@ -40,7 +40,7 @@ make ::
     (HasCallStack, _) =>
     [Text] ->
     Keys [ModKey] ->
-    o Widget.Id -> o Widget.Id ->
+    o ElemId -> o ElemId ->
     Sugar.TaggedList name i o a ->
     m (EventMap (o Update), [Item name i o a])
 make cat keys prevId nextId tl =
@@ -60,7 +60,7 @@ makeBody ::
     (HasCallStack, _) =>
     [Text] ->
     Keys [ModKey] ->
-    o Widget.Id -> o Widget.Id ->
+    o ElemId -> o ElemId ->
     Sugar.TaggedListBody name i o a ->
     m [Item name i o a]
 makeBody cat keys prevId nextId items =
@@ -87,7 +87,7 @@ makeBody cat keys prevId nextId items =
             [Nothing]
 
 delEventMap ::
-    (HasCallStack, _) => [Text] -> o () -> o Widget.Id -> o Widget.Id -> m (EventMap (o Update))
+    (HasCallStack, _) => [Text] -> o () -> o ElemId -> o ElemId -> m (EventMap (o Update))
 delEventMap cat delAction prevId nextId =
     Lens.view id <&>
     \env ->
@@ -100,7 +100,7 @@ delEventMap cat delAction prevId nextId =
     dir Config.delBackwardKeys SearchMenu.textDeleteBackwards prevId <>
     dir Config.delForwardKeys MomentuTexts.delete nextId
 
-addNextEventMap :: _ => [Text] -> [ModKey] -> o Widget.Id -> m (EventMap (o Update))
+addNextEventMap :: _ => [Text] -> [ModKey] -> o ElemId -> m (EventMap (o Update))
 addNextEventMap cat addKeys myId =
     Lens.view id <&>
     \env ->
@@ -137,5 +137,5 @@ makeSwappableItem cat keys item =
         makeItem cat (keys ^. kAdd) (item ^. Sugar.tsiItem)
             <&> iEventMap <>~ eventMap
 
-itemId :: Sugar.TagRef name i o -> Widget.Id
+itemId :: Sugar.TagRef name i o -> ElemId
 itemId item = item ^. Sugar.tagRefTag . Sugar.tagInstance & WidgetIds.fromEntityId

@@ -5,7 +5,6 @@ module Lamdu.GUI.TagPane
     ) where
 
 import qualified Control.Lens as Lens
-import           Data.Binary.Extended (encodeS)
 import qualified Data.Char as Char
 import           Data.Property (Property(..), pVal)
 import qualified Data.Property as Property
@@ -15,6 +14,7 @@ import           GUI.Momentu (TextWidget, Aligned(..), WithTextPos(..), Widget, 
 import qualified GUI.Momentu as M
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Element as Element
+import           GUI.Momentu.Element.Id (ElemId)
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.Glue (hbox)
 import qualified GUI.Momentu.I18N as MomentuTexts
@@ -41,13 +41,13 @@ import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
 
-tagRenameId :: Widget.Id -> Widget.Id
-tagRenameId = (`Widget.joinId` ["rename"])
+tagRenameId :: ElemId -> ElemId
+tagRenameId = (<> "rename")
 
 disallowedNameChars :: Set Char
 disallowedNameChars = Set.fromList ",[]\\`()"
 
-makeTagNameEdit :: _ => Property f Text -> Widget.Id -> m (TextWidget f)
+makeTagNameEdit :: _ => Property f Text -> ElemId -> m (TextWidget f)
 makeTagNameEdit prop myId =
     TextEdits.makeWordEdit
     ?? pure "  "
@@ -55,7 +55,7 @@ makeTagNameEdit prop myId =
     ?? tagRenameId myId
     <&> Align.tValue . Widget.eventMapMaker . Lens.mapped %~ E.filterChars (`Set.notMember` disallowedNameChars)
 
-makeSymbolNameEdit :: _ => Property f Text -> Widget.Id -> m (TextWidget f)
+makeSymbolNameEdit :: _ => Property f Text -> ElemId -> m (TextWidget f)
 makeSymbolNameEdit prop myId =
     TextEdits.makeWordEdit
     <*> (Lens.view (has . Texts.typeOperatorHere) <&> pure)
@@ -67,7 +67,7 @@ makeSymbolNameEdit prop myId =
             Set.member
             ?? Set.fromList Chars.operator `Set.difference` disallowedNameChars
 
-makeFocusableTagNameEdit :: _ => Widget.Id -> Property o Text -> m (TextWidget o)
+makeFocusableTagNameEdit :: _ => ElemId -> Property o Text -> m (TextWidget o)
 makeFocusableTagNameEdit myId prop =
     do
         env <- Lens.view id
@@ -95,11 +95,11 @@ makeFocusableTagNameEdit myId prop =
             <&> (Align.tValue %~))
             <*> makeTagNameEdit prop myId
 
-makeLanguageTitle :: _ => Widget.Id -> LangId -> m (TextWidget o)
+makeLanguageTitle :: _ => ElemId -> LangId -> m (TextWidget o)
 makeLanguageTitle myId lang =
     TextView.make
     <*> (Lens.view has <&> getLang)
-    <*> pure (Widget.toAnimId myId <> ["lang-title"])
+    <*> pure (myId <> "lang-title")
     <&> Align.tValue %~ Widget.fromView
     where
         getLang :: Map LangId Text -> Text
@@ -117,12 +117,11 @@ data TextsRow a = TextsRow
     , _disambig :: a
     } deriving (Functor, Foldable, Traversable)
 
-langWidgetId :: Widget.Id -> LangId -> Widget.Id
-langWidgetId parentId lang =
-    parentId `Widget.joinId` [encodeS lang]
+langElemId :: ElemId -> LangId -> ElemId
+langElemId parentId lang = parentId <> M.asElemId lang
 
-nameId :: Widget.Id -> Widget.Id
-nameId = (`Widget.joinId` ["name"])
+nameId :: ElemId -> ElemId
+nameId = (<> "name")
 
 hspace :: _ => m (TextWidget f)
 hspace = Spacer.stdHSpace <&> Widget.fromView <&> WithTextPos 0
@@ -144,7 +143,7 @@ textsRow lang name abbrev disambig =
 
 makeLangRow ::
     _ =>
-    Widget.Id -> (LangId -> TextsInLang -> o ()) -> LangId -> TextsInLang ->
+    ElemId -> (LangId -> TextsInLang -> o ()) -> LangId -> TextsInLang ->
     m (TextsRow (Aligned (Widget o)))
 makeLangRow parentId setName lang langNames =
     textsRow
@@ -153,8 +152,8 @@ makeLangRow parentId setName lang langNames =
     (mkProp Tag.abbreviation & makeFocusableTagNameEdit (mkId "abbr"))
     (mkProp Tag.disambiguationText & makeFocusableTagNameEdit (mkId "disamb"))
     where
-        mkId suffix = langId `Widget.joinId` [suffix]
-        langId = langWidgetId parentId lang
+        mkId suffix = langId <> suffix
+        langId = langElemId parentId lang
         nameProp =
             setName lang . (\x -> langNames & Tag.name .~ x)
             & Property (langNames ^. Tag.name)
@@ -165,7 +164,7 @@ makeLangRow parentId setName lang langNames =
 
 makeMissingLangRow ::
     _ =>
-    Widget.Id -> (LangId -> TextsInLang -> o ()) -> LangId ->
+    ElemId -> (LangId -> TextsInLang -> o ()) -> LangId ->
     m (TextsRow (Aligned (Widget o)))
 makeMissingLangRow parentId setName lang =
     textsRow
@@ -174,14 +173,14 @@ makeMissingLangRow parentId setName lang =
     (pure Element.empty)
     (pure Element.empty)
     where
-        langId = langWidgetId parentId lang
+        langId = langElemId parentId lang
         nameProp =
             setName lang . (\x -> TextsInLang x Nothing Nothing)
             & Property ""
 
 makeLangsTable ::
     (MonadReader env m, _) =>
-    Widget.Id -> Map LangId TextsInLang ->
+    ElemId -> Map LangId TextsInLang ->
     (LangId -> TextsInLang -> o ()) -> m (Widget o)
 makeLangsTable myId tagTexts setName =
     do
@@ -214,7 +213,7 @@ data SymType = NoSymbol | UniversalSymbol | DirectionalSymbol
     deriving Eq
 
 makeSymbol ::
-    _ => Widget.Id -> Property o Tag.Symbol -> m (TextWidget o, TextWidget o)
+    _ => ElemId -> Property o Tag.Symbol -> m (TextWidget o, TextWidget o)
 makeSymbol myId symProp =
     case symProp ^. pVal of
     Tag.NoSymbol ->
@@ -241,7 +240,7 @@ makeSymbol myId symProp =
         toSym ltr _ UniversalSymbol = Tag.UniversalSymbol ltr
         toSym ltr rtl DirectionalSymbol = Tag.DirectionalSymbol (Tag.DirOp ltr rtl)
 
-        mkId suffix = myId `Widget.joinId` [suffix]
+        mkId suffix = myId <> suffix
         nameEdit prop = makeSymbolNameEdit prop . mkId
         focusableLabel l suffix =
             TextView.makeFocusable <*> Lens.view (has . l) ?? mkId suffix
@@ -266,7 +265,7 @@ parseInt newText
     | newText == "" = Just 0
     | otherwise = tryParse newText
 
-makeIntEdit :: _ => Widget.Id -> Property o Int -> m (TextWidget o)
+makeIntEdit :: _ => ElemId -> Property o Int -> m (TextWidget o)
 makeIntEdit myId prop =
     do
         text <-
@@ -287,15 +286,15 @@ makeIntEdit myId prop =
         prevVal = Property.value prop
         prevValStr = show prevVal & Text.pack
 
-makeOrderEdit :: _ => Widget.Id -> Property o Int -> m (TextWidget o)
+makeOrderEdit :: _ => ElemId -> Property o Int -> m (TextWidget o)
 makeOrderEdit tagPaneId prop =
     info (label Texts.order) /|/ hspace /|/
     makeIntEdit orderEditId prop
     where
-        orderEditId = tagPaneId `Widget.joinId` ["tagOrder"]
+        orderEditId = tagPaneId <> "tagOrder"
 
 
-make :: _ => Sugar.TagPane o -> M.WidgetId -> m (Widget o)
+make :: _ => Sugar.TagPane o -> ElemId -> m (Widget o)
 make tagPane myId =
     Lens.view has >>=
     \lang ->
@@ -312,8 +311,8 @@ make tagPane myId =
         pure langsTable
             /-/ (hbox ?? [symbol, hspaceOf gap, orderEdit] <&> (^. Align.tValue))
             /-/ pure (nextLine ^. Align.tValue)
-    & local (Element.animIdPrefix .~ Widget.toAnimId myId)
-    & GuiState.assignCursor myId (nameId (langWidgetId myId lang))
+    & local (Element.elemIdPrefix .~ M.asElemId myId)
+    & GuiState.assignCursor myId (nameId (langElemId myId lang))
     where
         orderProp =
             Property

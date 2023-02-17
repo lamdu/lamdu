@@ -43,7 +43,7 @@ make gotoDefinition themeNames langNames settingsProp sugarsProp width vcActions
             M./|/ VersionControlGUI.makeBranchSelector IOTrans.liftTrans
                 transaction vcActions
             <&> StatusBar.fromWidget
-            & local (Element.animIdPrefix <>~ ["Branch Selector"])
+            & local (Element.elemIdPrefix <>~ "Branch Selector")
 
         statusWidgets <-
             SettingsGui.makeStatusWidgets themeNames langNames settingsProp

@@ -19,9 +19,9 @@ import           Control.Lens.Extended (AnItemLens)
 import qualified GUI.Momentu as M
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Animation as Anim
-import           GUI.Momentu.Animation.Id (ElemIds(..))
 import qualified GUI.Momentu.Draw as Draw
 import qualified GUI.Momentu.Element as Element
+import           GUI.Momentu.Element.Id (ElemId(..), ElemIds(..))
 import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.Font as Font
 import qualified GUI.Momentu.View as View
@@ -47,46 +47,46 @@ info = withColor TextColors.infoTextColor
 grammar :: _ => m a -> m a
 grammar = withColor TextColors.grammarColor
 
-rawText :: _ => M.AnimId -> Text -> f (M.WithTextPos M.View)
-rawText animIdSuffix txt =
-    (TextView.make ?? txt) <*> (Element.subAnimId ?? animIdSuffix)
+rawText :: _ => M.ElemId -> Text -> f (M.WithTextPos M.View)
+rawText elemIdSuffix txt =
+    (TextView.make ?? txt) <*> (Element.subElemId ?? elemIdSuffix)
 
-text :: _ => M.AnimId -> Lens.ALens' (t Text) Text -> f (M.WithTextPos M.View)
-text animIdSuffix txtLens =
+text :: _ => M.ElemId -> Lens.ALens' (t Text) Text -> f (M.WithTextPos M.View)
+text elemIdSuffix txtLens =
     Lens.view (has . Lens.cloneLens txtLens)
-    >>= rawText animIdSuffix
+    >>= rawText elemIdSuffix
 
-mkLabel :: _ => m (AnItemLens t (Text, M.AnimId) -> M.WithTextPos M.View)
+mkLabel :: _ => m (AnItemLens t (Text, M.ElemId) -> M.WithTextPos M.View)
 mkLabel =
     do
         textView <- TextView.make
-        subAnimId <- Element.subAnimId
+        subElemId <- Element.subElemId
         texts <- Lens.view has
         pure (
             \lens ->
-            let (txt, animId) = ((,) <$> texts <*> elemIds) ^# lens
+            let (txt, elemId) = ((,) <$> texts <*> elemIds) ^# lens
             in
-            textView txt (subAnimId animId)
+            textView txt (subElemId elemId)
             )
 
-mkFocusableLabel :: _ => m (AnItemLens t (Text, M.AnimId) -> M.TextWidget f)
+mkFocusableLabel :: _ => m (AnItemLens t (Text, M.ElemId) -> M.TextWidget f)
 mkFocusableLabel =
     do
         toFocusable <- Widget.makeFocusableView
-        animIdPrefix <- Lens.view Element.animIdPrefix
+        elemIdPrefix <- Lens.view Element.elemIdPrefix
         lbl <- mkLabel
         pure (
             \lens ->
             let widgetId =
-                    animIdPrefix <>
-                    (elemIds <&> (,) "") ^. Lens.cloneLens lens . Lens._2 & Widget.Id
+                    elemIdPrefix <>
+                    (elemIds <&> (,) "") ^. Lens.cloneLens lens . Lens._2
             in  lbl lens & Align.tValue %~ toFocusable widgetId
             )
 
-label :: _ => AnItemLens t (Text, M.AnimId) -> m (M.WithTextPos M.View)
+label :: _ => AnItemLens t (Text, M.ElemId) -> m (M.WithTextPos M.View)
 label lens = mkLabel ?? lens
 
-focusableLabel :: _ => AnItemLens t (Text, M.AnimId) -> m (M.TextWidget f)
+focusableLabel :: _ => AnItemLens t (Text, M.ElemId) -> m (M.TextWidget f)
 focusableLabel lens = mkFocusableLabel ?? lens
 
 addValBG :: _ => m (a -> a)
@@ -105,13 +105,13 @@ addValFrame =
     (.)
     <$> addValBG
     <*> addValPadding
-    & local (Element.animIdPrefix <>~ ["val"])
+    & local (Element.elemIdPrefix <>~ "val")
 
 -- | Add a diagonal line (top-left to right-bottom).
 addDiagonal :: _ => m (Draw.Color -> Draw.R -> a -> a)
 addDiagonal =
-    Element.subAnimId ?? ["diagonal"] <&>
-    \animId color thickness ->
+    Element.subElemId ?? "diagonal" <&>
+    \elemId color thickness ->
         let mkFrame sz =
                 Draw.convexPoly
                 [ (0, thickness)
@@ -123,7 +123,7 @@ addDiagonal =
                 ]
                 & Draw.tint color
                 & void
-                & Anim.singletonFrame 1 (animId ++ ["diagonal"])
+                & Anim.singletonFrame 1 (elemId <> "diagonal")
                 & Anim.scale sz
         in  Element.setLayeredImage <. Element.layers %@~ snoc . mkFrame
     where
@@ -150,7 +150,7 @@ withColor textColor act =
         color <- Lens.view (has . Theme.textColors . Lens.cloneLens textColor)
         local (TextView.color .~ color) act
 
-actionable :: _ => Widget.Id -> Lens.ALens' (t Text) Text -> E.Doc -> f Widget.Id -> m (M.TextWidget f)
+actionable :: _ => ElemId -> Lens.ALens' (t Text) Text -> E.Doc -> f ElemId -> m (M.TextWidget f)
 actionable myId txtLens doc action =
     do
         color <- Lens.view (has . Theme.textColors . TextColors.actionTextColor)
@@ -182,11 +182,11 @@ nameAtBinder name act =
             _ -> Style.autoNameOrigin
 
 -- Sprite the size of unit (1 pixel)
-unitSprite :: _ => AnItemLens t (GLDraw.Sprite, M.AnimId) -> m M.View
+unitSprite :: _ => AnItemLens t (GLDraw.Sprite, M.ElemId) -> m M.View
 unitSprite lens =
     Lens.view id <&>
     \env ->
-    let (s, animId) = ((,) <$> env ^. has <*> elemIds) ^# lens
+    let (s, elemId) = ((,) <$> env ^. has <*> elemIds) ^# lens
     in
     Draw.sprite s
     & void
@@ -196,10 +196,10 @@ unitSprite lens =
     & (GLDraw.translateV 1 %%)
     -- (0..2) -> (0..1)
     & (GLDraw.scaleV (M.Vector2 0.5 0.5) %%)
-    & Anim.singletonFrame 1 (env ^. Element.animIdPrefix <> animId)
+    & Anim.singletonFrame 1 (env ^. Element.elemIdPrefix <> elemId)
     & View.make 1
 
-sprite :: _ => AnItemLens t (GLDraw.Sprite, M.AnimId) -> m M.View
+sprite :: _ => AnItemLens t (GLDraw.Sprite, M.ElemId) -> m M.View
 sprite lens =
     do
         height <- Lens.view has <&> TextView.lineHeight

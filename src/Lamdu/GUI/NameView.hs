@@ -42,12 +42,12 @@ make name =
             <*> makeCollisionSuffixLabel textCollision
             & Styled.withColor TextColors.collisionSuffixTextColor
             <&> Lens._Just %~ Aligned 0.5 . Element.scale (nameTheme ^. NameTheme.collisionSuffixScaleFactor) . (^. Align.tValue)
-            & local (Element.animIdPrefix <>~ ["text-suffix"])
+            & local (Element.elemIdPrefix <>~ "text-suffix")
         mTagSuffixLabel <-
             makeCollisionSuffixLabel tagCollision
-            & local (Element.animIdPrefix <>~ ["tag-suffix"])
-        animId <- Lens.view Element.animIdPrefix
-        TextView.make ?? visibleName ?? animId
+            & local (Element.elemIdPrefix <>~ "tag-suffix")
+        elemId <- Lens.view Element.elemIdPrefix
+        TextView.make ?? visibleName ?? elemId
             <&> Aligned 0.5
             >>= mGlueRight mTextSuffixLabel
             <&> (^. Align.value)

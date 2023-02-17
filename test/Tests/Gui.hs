@@ -10,6 +10,7 @@ import           Data.Vector.Vector2 (Vector2(..))
 import           GUI.Momentu (Responsive, ModKey(..), Update, noMods)
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Element as Element
+import           GUI.Momentu.Element.Id (ElemId, isSubId)
 import           GUI.Momentu.EventMap (Event(..))
 import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.MetaKey as MetaKey
@@ -19,7 +20,6 @@ import qualified GUI.Momentu.Responsive as Responsive
 import           GUI.Momentu.State (HasCursor(..), VirtualCursor(..))
 import qualified GUI.Momentu.State as GuiState
 import qualified GUI.Momentu.Widget as Widget
-import qualified GUI.Momentu.Widget.Id as WidgetId
 import qualified Graphics.UI.GLFW as GLFW
 import           Hyper.Syntax.App (appFunc)
 import           Lamdu.Data.Db.Layout (ViewM)
@@ -182,7 +182,7 @@ testNewTag =
             >>= applyEvent dummyVirt (simpleKeyEvent (noMods GLFW.Key'Up))
             >>= convertAndMakeGui "" & void
 
-topLevelLamParamCursor :: Env -> OnceT (T ViewM) WidgetId.Id
+topLevelLamParamCursor :: Env -> OnceT (T ViewM) ElemId
 topLevelLamParamCursor env =
     fromWorkArea env
     (replExpr . Sugar._BodyLam . Sugar.lamFunc .
@@ -358,7 +358,7 @@ testKeyboardDirAndBack posEnv posVirt way back =
                 Nothing -> error (baseInfo <> " can't move back with cursor keys")
                 Just updBack
                     | Lens.anyOf (GuiState.uCursor . traverse)
-                    (`WidgetId.isSubId` (posEnv ^. cursor)) updBack & not ->
+                    (`isSubId` (posEnv ^. cursor)) updBack & not ->
                         baseInfo <> "moving back with cursor keys goes to different place: " <>
                         show (updBack ^. GuiState.uCursor)
                         & error

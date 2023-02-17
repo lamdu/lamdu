@@ -3,8 +3,8 @@ module Lamdu.GUI.Types
     , mParensId
     ) where
 
-import           GUI.Momentu (AnimId)
-import qualified GUI.Momentu.Widget.Id as WidgetId
+import qualified GUI.Momentu.Element.Id as ElementId
+import           GUI.Momentu.Element.Id (ElemId)
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import           Lamdu.Name (Name)
 import qualified Lamdu.Sugar.Types as Sugar
@@ -21,8 +21,8 @@ type Payload i o = Sugar.Payload (AnnEval i) o
 type Top t i o = t (AnnEval i) Name i o (Payload i o)
 
 -- | Just myId or Nothing depending on whether parens are needed
-mParensId :: Sugar.Payload v o -> Maybe AnimId
+mParensId :: Sugar.Payload v o -> Maybe ElemId
 mParensId pl
     | pl ^. Sugar.plParenInfo . Sugar.piNeedParens =
-          pl & WidgetIds.fromExprPayload & WidgetId.toAnimId & Just
+          pl & WidgetIds.fromExprPayload & ElementId.asElemId & Just
     | otherwise = Nothing

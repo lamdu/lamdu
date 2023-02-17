@@ -42,8 +42,8 @@ make expr =
         CompositeEdit.make (Just prependCase) bodyId conf expr
     where
         myId = expr ^. annotation & WidgetIds.fromExprPayload
-        headerId = Widget.joinId myId ["header"]
-        bodyId = Widget.joinId myId ["body"]
+        headerId = myId <> "header"
+        bodyId = myId <> "body"
         makeCaseLabel =
             (Widget.makeFocusableView ?? headerId <&> (M.tValue %~))
             <*> grammar (label Texts.case_)

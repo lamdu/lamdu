@@ -3,13 +3,11 @@ module Lamdu.GUI.Expr.HoleOptEdit
     ) where
 
 import qualified Control.Lens as Lens
-import qualified Data.ByteString.Char8 as SBS8
 import           Hyper
 import           GUI.Momentu (Responsive)
 import qualified GUI.Momentu as M
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.Responsive.Options as Options
-import qualified GUI.Momentu.Widget as Widget
 import qualified Lamdu.Config.Theme.TextColors as TextColors
 import           Lamdu.GUI.Styled (grammar, label)
 import           Lamdu.GUI.Wrap (stdWrapParentExpr)
@@ -38,16 +36,16 @@ make (Ann (Const pl) b) =
                 ( fieldNames
                     & Lens.itraverse
                     (\i fieldName ->
-                        let paramId = ["params", SBS8.pack (show (i :: Int))]
+                        let paramId = "params" <> M.asElemId i
                         in
-                        Widget.joinId myId paramId
+                        myId <> paramId
                         & GetVarEdit.makeSimpleView TextColors.variableColor fieldName
                         <&> Responsive.fromWithTextPos
-                        & local (M.animIdPrefix %~ (<> paramId))
+                        & local (M.elemIdPrefix %~ (<> paramId))
                     )
                 )
                 , grammar (label Texts.recordCloser) <&> Responsive.fromTextView
                 ] & stdWrapParentExpr pl
-        & local (M.animIdPrefix .~ Widget.toAnimId myId)
+        & local (M.elemIdPrefix .~ M.asElemId myId)
     where
         myId = WidgetIds.fromExprPayload pl

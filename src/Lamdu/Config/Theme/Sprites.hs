@@ -4,7 +4,7 @@ module Lamdu.Config.Theme.Sprites where
 
 import qualified Control.Lens as Lens
 import qualified Data.Aeson.TH.Extended as JsonTH
-import           GUI.Momentu.Animation.Id (ElemIds)
+import           GUI.Momentu.Element.Id (ElemIds)
 
 import           Lamdu.Prelude
 

@@ -3,6 +3,7 @@
 module Lamdu.GUI.Expr.NominalEdit
     ( makeFromNom, makeToNom, makeTId, makeTIdView
     ) where
+import           GUI.Momentu.Element.Id (ElemId)
 
 import qualified Control.Lens as Lens
 import           GUI.Momentu (Responsive)
@@ -59,7 +60,7 @@ makeToNom (Ann (Const pl) (Sugar.Nominal tid binder)) =
     where
         myId = WidgetIds.fromExprPayload pl
 
-makeFromNom :: _ => Widget.Id -> Sugar.TId Name -> GuiM env i o (Responsive o)
+makeFromNom :: _ => ElemId -> Sugar.TId Name -> GuiM env i o (Responsive o)
 makeFromNom myId nom =
     Styled.grammar (Label.make ".") M./|/ makeTId myId nom <&> Responsive.fromWithTextPos
 
@@ -84,7 +85,7 @@ makeTIdView tid =
         nomColor <- Lens.view (has . Theme.textColors . TextColors.nomColor)
         NameView.make (tid ^. Sugar.tidName) & local (TextView.color .~ nomColor)
 
-makeTId :: _ => Widget.Id -> Sugar.TId Name -> GuiM env i o (M.TextWidget o)
+makeTId :: _ => ElemId -> Sugar.TId Name -> GuiM env i o (M.TextWidget o)
 makeTId myId tid =
     do
         jumpToDefinitionEventMap <- makeJumpToNomEventMap tid
@@ -92,4 +93,4 @@ makeTId myId tid =
             <*> makeTIdView tid
             <&> Align.tValue %~ Widget.weakerEvents jumpToDefinitionEventMap
     where
-        nameId = Widget.joinId myId ["name"]
+        nameId = myId <> "name"

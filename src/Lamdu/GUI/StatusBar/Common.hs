@@ -13,7 +13,7 @@ import qualified Control.Lens as Lens
 import           Data.Property (Property(..))
 import           GUI.Momentu (EventMap, ModKey)
 import qualified GUI.Momentu as M
-import           GUI.Momentu.Animation.Id (ElemIds(..))
+import           GUI.Momentu.Element.Id (ElemIds(..))
 import qualified GUI.Momentu.EventMap as E
 import           GUI.Momentu.FocusDirection (FocusDirection(..))
 import qualified GUI.Momentu.Glue as Glue
@@ -58,25 +58,25 @@ fromWidget w =
 
 makeDropDownList ::
     _ =>
-    AnItemLens t (Text, M.AnimId) -> Property f a -> [(a, M.TextWidget f)] -> m (M.TextWidget f)
+    AnItemLens t (Text, M.ElemId) -> Property f a -> [(a, M.TextWidget f)] -> m (M.TextWidget f)
 makeDropDownList headerText prop choices =
     do
         defConf <- DropDownList.defaultConfig
         texts <- Lens.view has
-        let (text, animId) = ((,) <$> texts <*> elemIds) ^# headerText
-        let myId = Widget.Id ("status" : animId)
+        let (text, elemId) = ((,) <$> texts <*> elemIds) ^# headerText
+        let myId = "status" <> elemId
         DropDownList.make ?? prop ?? choices ?? defConf text ?? myId
 
 labeledDropDownList ::
     _ =>
-    AnItemLens t (Text, M.AnimId) -> Property f a -> [(a, M.TextWidget f)] -> M.WithTextPos M.View -> m (M.TextWidget f)
+    AnItemLens t (Text, M.ElemId) -> Property f a -> [(a, M.TextWidget f)] -> M.WithTextPos M.View -> m (M.TextWidget f)
 labeledDropDownList categoryTextLens prop choices headerView =
     pure headerView M./|/ makeDropDownList categoryTextLens prop choices
 
 makeSwitchStatusWidget ::
     _ =>
     m (M.WithTextPos M.View) ->
-    AnItemLens t (Text, M.AnimId) ->
+    AnItemLens t (Text, M.ElemId) ->
     AnItemLens Texts.StatusBar Text ->
     Lens.ALens' (Config ModKey) [ModKey] -> Property f a ->
     [(a, M.TextWidget f)] -> m (StatusWidget f)

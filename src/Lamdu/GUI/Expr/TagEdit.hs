@@ -14,6 +14,7 @@ import qualified Data.Text as Text
 import           GUI.Momentu (EventMap, Update)
 import qualified GUI.Momentu as M
 import qualified GUI.Momentu.Element as Element
+import           GUI.Momentu.Element.Id (ElemId)
 import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.Glue as Glue
 import qualified GUI.Momentu.Hover as Hover
@@ -104,8 +105,7 @@ makeAddNewTag ::
 makeAddNewTag tagOpt =
     makeNewTagPreEvent tagOpt <&>
     \newTagPreEvent mkPickResult ctx ->
-    let optionId =
-            (ctx ^. SearchMenu.rResultIdPrefix) `Widget.joinId` ["Create new"]
+    let optionId = (ctx ^. SearchMenu.rResultIdPrefix) <> "Create new"
         searchTerm = ctx ^. SearchMenu.rSearchTerm
     in  newTagPreEvent searchTerm mkPickResult
         <&> \preEvent ->
@@ -155,7 +155,7 @@ makeOptions tagRefReplace newTagOpt mkPickResult ctx
                     , Menu._oRender =
                         (Widget.makeFocusableView ?? optionWId <&> fmap)
                         <*> NameView.make (opt ^. Sugar.toInfo . Sugar.tagName)
-                        & local (M.animIdPrefix .~ Widget.toAnimId instanceId)
+                        & local (M.elemIdPrefix .~ M.asElemId instanceId)
                         <&>
                         \widget ->
                         Menu.RenderedOption
@@ -193,7 +193,7 @@ allowedSearchTerm = Name.isValidSearchText
 makeHoleSearchTerm ::
     _ =>
     Sugar.TagOption Name o ->
-    (EntityId -> Menu.PickResult) -> Widget.Id ->
+    (EntityId -> Menu.PickResult) -> ElemId ->
     m (SearchMenu.Term o)
 makeHoleSearchTerm newTagOption mkPickResult holeId =
     do
@@ -226,7 +226,7 @@ makeHoleSearchTerm newTagOption mkPickResult holeId =
                     newText <- Lens.view (has . Texts.new)
                     newTagLabel <-
                         (TextView.make ?? "(" <> newText <> ")")
-                            <*> (Element.subAnimId ?? ["label"])
+                            <*> (Element.subElemId ?? "label")
                     space <- Spacer.stdHSpace
                     hover <- Hover.hover
                     Glue.Poly (|||) <- Glue.mkPoly ?? Glue.Horizontal
@@ -242,15 +242,15 @@ makeHoleSearchTerm newTagOption mkPickResult holeId =
                     term & SearchMenu.termWidget %~ termWithHover & pure
                     & local (Hover.backgroundColor .~ tooltip ^. Theme.tooltipBgColor)
                     & local (TextView.color .~ tooltip ^. Theme.tooltipFgColor)
-                    & local (M.animIdPrefix <>~ ["label"])
+                    & local (M.elemIdPrefix <>~ "label")
             else pure term
     where
-        newTagId = newTagOption ^. Sugar.toInfo . Sugar.tagInstance & WidgetIds.fromEntityId & Widget.toAnimId
+        newTagId = newTagOption ^. Sugar.toInfo . Sugar.tagInstance & WidgetIds.fromEntityId & M.asElemId
 
 makeTagHoleEdit ::
     _ =>
     (EntityId -> Menu.PickResult) ->
-    Widget.Id ->
+    ElemId ->
     Sugar.TagChoice Name o ->
     m (M.TextWidget o)
 makeTagHoleEdit mkPickResult holeId tagRefReplace =
@@ -261,7 +261,7 @@ makeTagHoleEdit mkPickResult holeId tagRefReplace =
     where
         newTagOption = tagRefReplace ^. Sugar.tcNewTag
 
-makeTagRefEdit :: _ => (Sugar.EntityId -> Maybe Widget.Id) -> Sugar.TagRef Name i o -> m (M.TextWidget o)
+makeTagRefEdit :: _ => (Sugar.EntityId -> Maybe ElemId) -> Sugar.TagRef Name i o -> m (M.TextWidget o)
 makeTagRefEdit onPickNext = makeTagRefEditWith id onPickNext Nothing <&> fmap snd
 
 data TagRefEditType
@@ -285,7 +285,7 @@ makeJumpToTagEventMap =
 makeTagRefEditWith ::
     _ =>
     (m (M.TextWidget o) -> m (M.TextWidget o)) ->
-    (Sugar.EntityId -> Maybe Widget.Id) ->
+    (Sugar.EntityId -> Maybe ElemId) ->
     Maybe (o EntityId) ->
     Sugar.TagRef Name i o ->
     m (TagRefEditType, M.TextWidget o)
@@ -321,7 +321,7 @@ makeTagRefEditWith onView onPickNext mSetToAnon tag =
         info = tag ^. Sugar.tagRefTag
         myId = info ^. Sugar.tagInstance & WidgetIds.fromEntityId
         holeId = WidgetIds.tagHoleId myId
-        viewId = Widget.joinId myId ["view"]
+        viewId = myId <> "view"
         mkPickResult tagInstance =
             Menu.PickResult
             { Menu._pickDest = WidgetIds.fromEntityId tagInstance
@@ -334,13 +334,13 @@ makeTagRefEditWith onView onPickNext mSetToAnon tag =
             <&> WidgetIds.tagHoleId
 
 makeColoredTag ::
-    _ => _ -> (EntityId -> Maybe Widget.Id) -> Sugar.TagRef Name i o -> m (M.TextWidget o)
+    _ => _ -> (EntityId -> Maybe ElemId) -> Sugar.TagRef Name i o -> m (M.TextWidget o)
 makeColoredTag color onPickNext = makeTagRefEdit onPickNext <&> Styled.withColor color
 
-addItemId :: Widget.Id -> Widget.Id
-addItemId = (`Widget.joinId` ["add item"])
+addItemId :: ElemId -> ElemId
+addItemId = (<> "add item")
 
-makeChooseEventMap :: _ => Widget.Id -> m (EventMap (o Update))
+makeChooseEventMap :: _ => ElemId -> m (EventMap (o Update))
 makeChooseEventMap tagEditId =
     Lens.view id <&>
     \env ->
@@ -355,7 +355,7 @@ makeChooseEventMap tagEditId =
 
 makeLHSTag ::
     _ =>
-    (Sugar.EntityId -> Maybe Widget.Id) ->
+    (Sugar.EntityId -> Maybe ElemId) ->
     Lens.ALens' TextColors M.Color ->
     Maybe (o EntityId) -> Sugar.TagRef Name i o ->
     m (M.TextWidget o)
@@ -390,9 +390,9 @@ makeArgTag :: _ => Sugar.Tag Name -> m (M.WithTextPos M.View)
 makeArgTag tag =
     NameView.make (tag ^. Sugar.tagName)
     & Styled.withColor TextColors.argTagColor
-    & local (M.animIdPrefix .~ animId)
+    & local (M.elemIdPrefix .~ elemId)
     where
-        animId = WidgetIds.fromEntityId (tag ^. Sugar.tagInstance) & Widget.toAnimId
+        elemId = WidgetIds.fromEntityId (tag ^. Sugar.tagInstance) & M.asElemId
 
 makeBinderTagEdit ::
     _ =>

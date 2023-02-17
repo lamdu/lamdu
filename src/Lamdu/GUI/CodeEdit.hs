@@ -13,8 +13,8 @@ module Lamdu.GUI.CodeEdit
 import qualified Control.Lens as Lens
 import           Control.Monad (zipWithM)
 import           Control.Monad.Once (OnceT)
-import           Control.Monad.Trans.Reader (ReaderT)
 import           Control.Monad.Trans.FastWriter (runWriterT)
+import           Control.Monad.Trans.Reader (ReaderT)
 import           Control.Monad.Transaction (MonadTransaction(..))
 import           Data.CurAndPrev (CurAndPrev(..))
 import           Data.Functor.Compose (Compose(..))
@@ -25,6 +25,7 @@ import           GUI.Momentu (Widget, EventMap, Responsive, Update)
 import qualified GUI.Momentu as M
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Element as Element
+import           GUI.Momentu.Element.Id (ElemId)
 import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.I18N as MomentuTexts
 import           GUI.Momentu.Rect (Rect(..))
@@ -39,15 +40,15 @@ import qualified Lamdu.Data.Ops as DataOps
 import           Lamdu.Data.Tag (Tag, IsOperator, TextsInLang, getTagName)
 import qualified Lamdu.Eval.Results as EvalResults
 import qualified Lamdu.GUI.CodeEdit.GotoDefinition as GotoDefinition
-import qualified Lamdu.GUI.Definition as DefinitionEdit
 import           Lamdu.GUI.Definition (DefRes, _DefRes)
+import qualified Lamdu.GUI.Definition as DefinitionEdit
 import qualified Lamdu.GUI.Expr as ExpressionEdit
 import qualified Lamdu.GUI.Expr.BinderEdit as BinderEdit
 import           Lamdu.GUI.IOTrans (IOTrans(..))
 import qualified Lamdu.GUI.IOTrans as IOTrans
-import qualified Lamdu.GUI.NominalPane as NominalPane
 import           Lamdu.GUI.Monad (GuiM)
 import qualified Lamdu.GUI.Monad as GuiM
+import qualified Lamdu.GUI.NominalPane as NominalPane
 import qualified Lamdu.GUI.StatusBar.Common as StatusBar
 import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.GUI.TagPane as TagPaneEdit
@@ -100,7 +101,7 @@ make cp gp width mkWorkArea =
             <&> StatusBar.hoist IOTrans.liftTrans
         assocTagName <- DataOps.assocTagName
         do
-            newDefId <- Element.subAnimId ?? ["New definition"] <&> Widget.Id
+            newDefId <- Element.subElemId ?? "New definition"
             let dsts =
                     drop 1 (workArea ^.. Sugar.waPanes . traverse . Sugar.paneEntityId <&> WidgetIds.fromEntityId) ++ [newDefId]
             panesEdits <-
@@ -159,7 +160,7 @@ exportPaneEventMap env theExportActions paneBody =
 
 deleteAndClosePaneEventMap ::
     _ =>
-    Widget.Id ->
+    ElemId ->
     Sugar.Pane v name i0 o a -> Property o Sugar.DefinitionState ->
     GuiM env i1 o (EventMap (o Update))
 deleteAndClosePaneEventMap prevId pane defState =
@@ -184,10 +185,10 @@ makePaneBodyEdit pane =
     where
         myId = pane ^. Sugar.paneEntityId & WidgetIds.fromEntityId
 
-undeleteButton :: _ => o Widget.Id -> GuiM env i o (M.TextWidget o)
+undeleteButton :: _ => o ElemId -> GuiM env i o (M.TextWidget o)
 undeleteButton undelete =
     do
-        actionId <- Element.subAnimId ?? ["Undelete"] <&> Widget.Id
+        actionId <- Element.subElemId ?? "Undelete"
         toDoc <- Lens.view id <&> E.toDoc
         let doc =
                 toDoc
@@ -211,7 +212,7 @@ wholeFocused size f =
 makePaneEdit ::
     _ =>
     ExportActions m ->
-    Widget.Id ->
+    ElemId ->
     ExprGui.Top Sugar.Pane (OnceT (T m)) (T m) ->
     GuiM env (OnceT (T m)) (T m) (Responsive (IOTrans m))
 makePaneEdit theExportActions prevId pane =
@@ -261,7 +262,7 @@ makePaneEdit theExportActions prevId pane =
                             & Responsive.alignedWidget . M.tValue .> Widget.wFocused %@~ wholeFocused
                             & style
                         ]
-                & local (M.animIdPrefix <>~ Widget.toAnimId paneId)
+                & local (M.elemIdPrefix <>~ M.asElemId paneId)
             <&> Widget.weakerEvents paneEventMap
     where
         paneId = WidgetIds.fromEntityId (pane ^. Sugar.paneEntityId)
@@ -269,7 +270,7 @@ makePaneEdit theExportActions prevId pane =
             traverse_ (executeDef theExportActions)
             (pane ^? Sugar.paneBody . Sugar._PaneDefinition . Sugar.drDefI)
 
-makeNewDefinition :: _ => Anchors.CodeAnchors m -> GuiM env (OnceT (T m)) (T m) (T m Widget.Id)
+makeNewDefinition :: _ => Anchors.CodeAnchors m -> GuiM env (OnceT (T m)) (T m) (T m ElemId)
 makeNewDefinition cp =
     GuiM.mkPrejumpPosSaver <&> (*> DataOps.newEmptyPublicDefinitionWithPane cp)
     <&> Lens.mapped %~ WidgetIds.fromIRef
@@ -279,7 +280,7 @@ newDefinitionDoc =
     Lens.view id
     <&> (`E.toDoc` [has . MomentuTexts.edit, has . Texts.new])
 
-makeNewDefinitionButton :: _ => Anchors.CodeAnchors m -> Widget.Id -> GuiM env (OnceT (T m)) (T m) (Widget (T m))
+makeNewDefinitionButton :: _ => Anchors.CodeAnchors m -> ElemId -> GuiM env (OnceT (T m)) (T m) (Widget (T m))
 makeNewDefinitionButton cp newDefId =
     do
         newDefDoc <- newDefinitionDoc
@@ -287,7 +288,7 @@ makeNewDefinitionButton cp newDefId =
             >>= Styled.actionable newDefId Texts.newDefinitionButton newDefDoc
             <&> (^. Align.tValue)
 
-jumpBack :: Monad m => Anchors.GuiAnchors (T m) (T m) -> T m (Maybe (T m Widget.Id))
+jumpBack :: Monad m => Anchors.GuiAnchors (T m) (T m) -> T m (Maybe (T m ElemId))
 jumpBack gp =
     Property.getP (Anchors.preJumps gp)
     <&> \case

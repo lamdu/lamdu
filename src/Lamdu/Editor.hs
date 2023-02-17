@@ -199,7 +199,7 @@ mkEnv cachedFunctions monitors fonts evaluator configSampler mainEnv settings su
             , _style = MakeStyle.make fonts (sample ^. sThemeData)
             , _sprites = sample ^. sSpritesData
             , _mainLoop = mainEnv
-            , _animIdPrefix = mempty
+            , _elemIdPrefix = mempty
             , _debugMonitors = monitors
             , _cachedFunctions = cachedFunctions
             , _language = sample ^. sLanguageData
@@ -258,8 +258,8 @@ makeMainGui themeNames langNames dbToIO env mkWorkArea =
     where
         runExtraIO (extraAct, res) = res <$ extraAct
 
-backgroundId :: M.AnimId
-backgroundId = ["background"]
+backgroundId :: M.ElemId
+backgroundId = "background"
 
 titledLangSelection ::
     Selection Folder.Language -> IO (TitledSelection Folder.Language)

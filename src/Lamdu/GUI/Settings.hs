@@ -9,11 +9,10 @@ module Lamdu.GUI.Settings
 import qualified Control.Lens as Lens
 import           Data.Property (Property, composeLens)
 import           GUI.Momentu (WithTextPos(..))
-import qualified GUI.Momentu.Animation.Id as AnimId
+import           GUI.Momentu.Element.Id (asElemId)
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.I18N as Texts
 import qualified GUI.Momentu.Widget as Widget
-import qualified GUI.Momentu.Widget.Id as WidgetId
 import           GUI.Momentu.Widgets.EventMapHelp (IsHelpShown(..))
 import qualified GUI.Momentu.Widgets.TextView as TextView
 import qualified Lamdu.Annotations as Ann
@@ -69,28 +68,28 @@ makeStatusWidgets themeNames langNames prop =
     StatusWidgets
     { _annotationWidget =
         makeAnnotationsSwitcher (composeLens Settings.sAnnotationMode prop)
-        & local (Element.animIdPrefix <>~ ["Annotations Mode"])
+        & local (Element.elemIdPrefix <>~ "Annotations Mode")
     , _themeWidget =
         traverse opt themeNames
         >>= StatusBar.makeSwitchStatusWidget
         (Styled.sprite Sprites.theme <&> WithTextPos 0)
         Texts.sbTheme Texts.sbSwitchTheme
         Config.changeThemeKeys themeProp
-        & local (Element.animIdPrefix <>~ ["Theme Select"])
+        & local (Element.elemIdPrefix <>~ "Theme Select")
     , _languageWidget =
        traverse opt langNames
         >>= StatusBar.makeSwitchStatusWidget
         (Styled.sprite Sprites.earthGlobe <&> WithTextPos 0)
         Texts.language Texts.sbSwitchLanguage
         Config.changeLanguageKeys langProp
-        & local (Element.animIdPrefix <>~ ["Language Select"])
+        & local (Element.elemIdPrefix <>~ "Language Select")
     , _helpWidget =
         helpVals
         >>= StatusBar.makeSwitchStatusWidget
         (pure Element.empty)
         Texts.sbHelp Texts.sbSwitchHelp
         Config.helpKeys helpProp
-        & local (Element.animIdPrefix <>~ ["Help Select"])
+        & local (Element.elemIdPrefix <>~ "Help Select")
     }
     where
         helpHiddenSprite = Styled.sprite Sprites.help
@@ -98,21 +97,19 @@ makeStatusWidgets themeNames langNames prop =
             do
                 iconTint <- Lens.view (has . Theme.help . Theme.helpShownIconTint)
                 Styled.sprite Sprites.help <&> Element.tint iconTint
-        makeFocusable animId mkView =
-            (Widget.makeFocusableView ?? Widget.Id animId) <*> mkView
+        makeFocusable elemId mkView =
+            (Widget.makeFocusableView ?? elemId) <*> mkView
             <&> WithTextPos 0
-            & local (Element.animIdPrefix .~ animId)
+            & local (Element.elemIdPrefix .~ elemId)
 
         opt sel =
             (TextView.makeFocusable ?? sel ^. title)
-            <*> (Lens.view Element.animIdPrefix
-                    <&> AnimId.augmentId (sel ^. selection)
-                    <&> WidgetId.Id)
+            <*> (Lens.view Element.elemIdPrefix <&> (<> asElemId (sel ^. selection)))
             <&> (,) (sel ^. selection)
         helpVals =
             Lens.sequenceOf (Lens.traverse . _2)
-            [ (HelpNotShown, makeFocusable ["Help hidden"] helpHiddenSprite)
-            , (HelpShown, makeFocusable ["Help shown"] helpShownSprite)
+            [ (HelpNotShown, makeFocusable "Help hidden" helpHiddenSprite)
+            , (HelpShown, makeFocusable "Help shown" helpShownSprite)
             ]
         themeProp = composeLens Settings.sSelectedTheme prop
         langProp = composeLens Settings.sSelectedLanguage prop

@@ -8,12 +8,12 @@ import           Data.Bitraversable (Bitraversable(..))
 import qualified Data.ByteString.Char8 as BS8
 import qualified Data.Text as Text
 import           GUI.Momentu (Aligned(..), WithTextPos(..), View, (/|/))
+import qualified GUI.Momentu as M
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Direction as Dir
 import qualified GUI.Momentu.Draw as MDraw
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.Glue as Glue
-import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.GridView as GridView
 import qualified GUI.Momentu.Widgets.Label as Label
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
@@ -73,7 +73,7 @@ parens parent my view
     | otherwise = pure view
 
 makeTFun ::
-    ( MonadReader env m, Has Dir.Layout env, Element.HasAnimIdPrefix env, Has Theme env
+    ( MonadReader env m, Has Dir.Layout env, Element.HasElemIdPrefix env, Has Theme env
     , Spacer.HasStdSpacing env, Has (Texts.Name Text) env, Has (Texts.Code Text) env
     ) =>
     Prec ->
@@ -127,15 +127,15 @@ makeTInst parentPrecedence tid typeParams =
                 & afterName
     where
         tconsName =
-            NameView.make (tid ^. Sugar.tidName) & disambAnimId ["TCons"]
-        disambAnimId suffixes =
-            local (Element.animIdPrefix <>~ (suffixes <&> BS8.pack))
+            NameView.make (tid ^. Sugar.tidName) & disambElemId ["TCons"]
+        disambElemId suffixes =
+            local (Element.elemIdPrefix <>~ M.ElemId (suffixes <&> BS8.pack))
 
 addTypeBG :: _ => a -> m a
 addTypeBG view =
     do
         color <- Lens.view (has . Theme.typeFrameBGColor)
-        bgId <- Element.subAnimId ?? ["bg"]
+        bgId <- Element.subElemId ?? "bg"
         view
             & MDraw.backgroundColor bgId color
             & pure
@@ -185,7 +185,7 @@ makeComposite mkOpener mkCloser mkField composite =
                     <&> Lens.ix 0 . crPre .~ Styled.grammar mkOpener
                     <&> addExt
                     <&> Lens._last . crPost .~ Styled.grammar mkCloser
-                    <&> Lens.imap addAnimIdPrefix
+                    <&> Lens.imap addElemIdPrefix
                     >>= traverse sequenceA
                     <&> map horizSetCompositeRow
                 ) <&> Align.alignmentRatio . _1 .~ 0.5)
@@ -200,7 +200,7 @@ makeComposite mkOpener mkCloser mkField composite =
                             (pure Element.empty) (NameView.make var) (pure Element.empty)]) .
                     (Lens._last . crPost .~ pure Element.empty)
     where
-        addAnimIdPrefix i row = row <&> Element.locallyAugmented i
+        addElemIdPrefix i row = row <&> Element.locallyAugmented i
         toRow (t, v) =
             CompositeRow (pure Element.empty) (pure t) space (pure v)
             (Styled.grammar (Styled.label Texts.compositeSeparator))
@@ -221,9 +221,9 @@ makeInternal parentPrecedence (Ann (Const entityId) tbody) =
     Sugar.TVariant composite ->
         makeComposite (Styled.label Texts.caseOpener) (Styled.label Texts.caseCloser)
         makeVariantField composite
-    & local (Element.animIdPrefix .~ animId)
+    & local (Element.elemIdPrefix .~ elemId)
     where
-        animId = WidgetIds.fromEntityId entityId & Widget.toAnimId
+        elemId = WidgetIds.fromEntityId entityId & M.asElemId
 
 make :: _ => Annotated Sugar.EntityId # Sugar.Type Name -> m (WithTextPos View)
 make t = makeInternal (Prec 0) t & Styled.withColor TextColors.typeTextColor

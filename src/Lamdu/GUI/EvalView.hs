@@ -9,8 +9,8 @@ import           Control.Monad.Reader (ReaderT(..))
 import qualified Data.List as List
 import qualified Data.Text as Text
 import           Data.Vector.Vector2 (Vector2(..))
-import           Hyper (hfolded1)
 import           GUI.Momentu (View, Aligned(..), WithTextPos(..), (/-/), (/|/))
+import qualified GUI.Momentu as M
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Animation as Anim
 import qualified GUI.Momentu.Direction as Dir
@@ -18,13 +18,13 @@ import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.Glue as Glue
 import qualified GUI.Momentu.Rect as Rect
 import qualified GUI.Momentu.View as View
-import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.GridView as GridView
 import qualified GUI.Momentu.Widgets.Label as Label
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified GUI.Momentu.Widgets.TextView as TextView
 import           Graphics.DrawingCombinators ((%%))
 import qualified Graphics.DrawingCombinators.Extended as Draw
+import           Hyper (hfolded1)
 import qualified Lamdu.Config.Theme as Theme
 import           Lamdu.Formatting (Format(..))
 import qualified Lamdu.GUI.TagView as TagView
@@ -40,8 +40,8 @@ data Env env = Env
     }
 Lens.makeLenses ''Env
 
-instance Element.HasAnimIdPrefix env => Element.HasAnimIdPrefix (Env env) where
-    animIdPrefix = base . Element.animIdPrefix
+instance Element.HasElemIdPrefix env => Element.HasElemIdPrefix (Env env) where
+    elemIdPrefix = base . Element.elemIdPrefix
 instance Spacer.HasStdSpacing env => Spacer.HasStdSpacing (Env env) where
     stdSpacing = base . Spacer.stdSpacing
 instance Has r env => Has r (Env env) where has = base . has
@@ -52,10 +52,10 @@ type M env = ReaderT (Env env)
 -- ttl that eval results respect and change
 
 textView ::
-    ( MonadReader env m, Element.HasAnimIdPrefix env, Has TextView.Style env
+    ( MonadReader env m, Element.HasElemIdPrefix env, Has TextView.Style env
     , Has Dir.Layout env
     ) => Text -> m (WithTextPos View)
-textView text = (TextView.make ?? text) <*> Lens.view Element.animIdPrefix
+textView text = (TextView.make ?? text) <*> Lens.view Element.elemIdPrefix
 
 makeField :: _ => Sugar.Tag Name -> Annotated Sugar.EntityId # Sugar.Result Name -> M env m [Aligned View]
 makeField tag val =
@@ -73,12 +73,12 @@ makeField tag val =
             Aligned (Vector2 x (y / w ^. Element.height)) w
 
 makeError ::
-    ( MonadReader env m, Element.HasAnimIdPrefix env, Has TextView.Style env
+    ( MonadReader env m, Element.HasElemIdPrefix env, Has TextView.Style env
     , Has Dir.Layout env
     ) =>
     Sugar.EvalTypeError -> m (WithTextPos View)
 makeError (Sugar.EvalTypeError msg) =
-    textView msg & local (Element.animIdPrefix <>~ ["error"])
+    textView msg & local (Element.elemIdPrefix <>~ "error")
 
 advanceDepth :: _ => M env m (WithTextPos View) -> M env m (WithTextPos View)
 advanceDepth action =
@@ -169,8 +169,8 @@ makeList head_ =
             \case
             Dir.LeftToRight -> ("[", ", …]")
             Dir.RightToLeft -> ("]", "[… ,")
-        c <- (TextView.make ?? postLabel) <*> (Element.subAnimId ?? ["]"]) <&> (^. Align.tValue)
-        ((TextView.make ?? preLabel) <*> (Element.subAnimId ?? ["["])) /|/ makeInner head_
+        c <- (TextView.make ?? postLabel) <*> (Element.subElemId ?? "]") <&> (^. Align.tValue)
+        ((TextView.make ?? preLabel) <*> (Element.subElemId ?? "[")) /|/ makeInner head_
             >>= Align.tValue (hGlueAlign 1 ?? c)
     where
         hGlueAlign align l r =
@@ -219,9 +219,9 @@ makeInner (Ann (Const entityId) body) =
     Sugar.RTable x -> makeTable x
     Sugar.RList x -> makeList x
     & advanceDepthParents
-    & local (Element.animIdPrefix .~ animId)
+    & local (Element.elemIdPrefix .~ elemId)
     where
-        animId = WidgetIds.fromEntityId entityId & Widget.toAnimId
+        elemId = WidgetIds.fromEntityId entityId & M.asElemId
         -- Only cut non-leaf expressions due to depth limits
         advanceDepthParents
             | Lens.has hfolded1 body = advanceDepth

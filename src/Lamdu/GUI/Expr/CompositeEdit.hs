@@ -8,10 +8,10 @@ import qualified Control.Lens as Lens
 import           Control.Monad (zipWithM)
 import qualified Data.Char as Char
 import qualified Data.Text as Text
-import           Hyper (HFoldable(..), hflipped)
 import           GUI.Momentu (Responsive, EventMap, Update)
 import qualified GUI.Momentu as M
 import qualified GUI.Momentu.Element as Element
+import           GUI.Momentu.Element.Id (ElemId)
 import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.I18N as MomentuTexts
 import qualified GUI.Momentu.Responsive as Responsive
@@ -22,6 +22,7 @@ import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Menu as Menu
 import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
 import qualified GUI.Momentu.Widgets.StdKeys as StdKeys
+import           Hyper (HFoldable(..), hflipped)
 import qualified Lamdu.Config as Config
 import           Lamdu.Config.Theme.TextColors (TextColors)
 import qualified Lamdu.GUI.Expr.GetVarEdit as GetVarEdit
@@ -59,7 +60,7 @@ editDoc env texts =
 itemDocPrefix :: Config -> [Text]
 itemDocPrefix conf = [conf ^. name, conf ^. itemName]
 
-addItemWithSearchTermEventMap :: _ => Config -> env -> Widget.Id -> EventMap (o Update)
+addItemWithSearchTermEventMap :: _ => Config -> env -> ElemId -> EventMap (o Update)
 addItemWithSearchTermEventMap conf env myId =
     E.charEventMap "Letter" (editDoc env (itemDocPrefix conf ++ [env ^. has . Texts.add])) f
     where
@@ -73,7 +74,7 @@ addItemWithSearchTermEventMap conf env myId =
 
 makeUnit ::
     _ =>
-    Maybe (Responsive o -> Responsive o) -> Widget.Id -> Config -> ExprGui.Payload i o -> GuiM env i o (Responsive o)
+    Maybe (Responsive o -> Responsive o) -> ElemId -> Config -> ExprGui.Payload i o -> GuiM env i o (Responsive o)
 makeUnit prependKeywords myId conf pl =
     do
         makeFocusable <- Widget.makeFocusableView ?? myId <&> (M.tValue %~)
@@ -95,8 +96,8 @@ makeUnit prependKeywords myId conf pl =
 makeAddItem ::
     _ =>
     Config -> i (Sugar.TagChoice Name o) ->
-    o Widget.Id -> o Widget.Id ->
-    Widget.Id -> GuiM env i o (Maybe (TaggedItem o))
+    o ElemId -> o ElemId ->
+    ElemId -> GuiM env i o (Maybe (TaggedItem o))
 makeAddItem conf addItem prevId nextId baseId =
     GuiState.isSubCursor ?? myId <&> guard
     >>= (Lens._Just . const) (GuiM.im addItem >>= makeAddItemRow conf prevId nextId myId)
@@ -106,7 +107,7 @@ makeAddItem conf addItem prevId nextId baseId =
 make ::
     (HasCallStack, _) =>
     Maybe (Responsive o -> Responsive o) ->
-    Widget.Id -> Config -> ExprGui.Expr Sugar.Composite i o -> GuiM env i o (Responsive o)
+    ElemId -> Config -> ExprGui.Expr Sugar.Composite i o -> GuiM env i o (Responsive o)
 make prependKeywords myId conf (Ann (Const pl) (Sugar.Composite tl punned compositeTail)) =
     do
         tailEventMap <-
@@ -160,7 +161,7 @@ make prependKeywords myId conf (Ann (Const pl) (Sugar.Composite tl punned compos
     where
         assignPunned w p =
             M.assignCursorPrefix
-            (WidgetIds.fromEntityId (p ^. Sugar.pvTagEntityId)) (Widget.joinId punAddId) w
+            (WidgetIds.fromEntityId (p ^. Sugar.pvTagEntityId)) (punAddId <>) w
         punAddId =
             tl ^. Sugar.tlItems
             >>= Lens.lastOf (SugarLens.taggedListBodyItems . Sugar.tiTag)
@@ -196,7 +197,7 @@ addPostTags conf items =
 
 makeAddItemRow ::
     _ =>
-    Config -> o Widget.Id -> o Widget.Id -> Widget.Id ->
+    Config -> o ElemId -> o ElemId -> ElemId ->
     Sugar.TagChoice Name o ->
     GuiM env i o (TaggedItem o)
 makeAddItemRow conf prevId nextId tagHoleId addItem =
@@ -233,7 +234,7 @@ setPickAndAddNextKeys =
 
 makeItemRow ::
     _ =>
-    Config -> Maybe (o Widget.Id) -> TaggedList.Item Name i o (ExprGui.Expr Sugar.Term i o) ->
+    Config -> Maybe (o ElemId) -> TaggedList.Item Name i o (ExprGui.Expr Sugar.Term i o) ->
     GuiM env i o [TaggedItem o]
 makeItemRow conf mNextId item =
     do

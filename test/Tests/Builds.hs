@@ -147,6 +147,8 @@ ciGhcVersionTest :: TestTree
 ciGhcVersionTest =
     do
         ciFile <- readFile ".github/workflows/ci.yml"
-        let [major, minor] = take 2 (splitOn "." (splitOn "ghc: [\"" ciFile ^?! Lens.ix 1)) <&> read
-        assertEqual "ghc version" (__GLASGOW_HASKELL__ :: Int) (major*100+minor)
+        let ghcVer = splitOn "." (splitOn "ghc: [\"" ciFile ^?! Lens.ix 1) <&> read
+        case take 2 ghcVer of
+            [major, minor] -> assertEqual "ghc version" (__GLASGOW_HASKELL__ :: Int) (major*100+minor)
+            _ -> error "Missing dot in ghc version"
     & testCase "github-actions-ghc-version"

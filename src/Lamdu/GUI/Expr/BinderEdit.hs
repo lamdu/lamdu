@@ -3,14 +3,14 @@ module Lamdu.GUI.Expr.BinderEdit
     ) where
 
 import qualified Control.Lens as Lens
-import           Hyper (annValue)
 import           GUI.Momentu (Responsive)
 import qualified GUI.Momentu as M
+import           GUI.Momentu.Element.Id (ElemId)
 import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.I18N as MomentuTexts
 import qualified GUI.Momentu.Responsive as Responsive
-import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
+import           Hyper (annValue)
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.GUI.Expr.AssignmentEdit as AssignmentEdit
@@ -30,7 +30,7 @@ import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
 
-makeLetEdit :: _ => ExprGui.Body Sugar.Let i o -> Widget.Id -> GuiM env i o (Responsive o)
+makeLetEdit :: _ => ExprGui.Body Sugar.Let i o -> ElemId -> GuiM env i o (Responsive o)
 makeLetEdit item myId =
     do
         env <- Lens.view id
@@ -92,7 +92,7 @@ makeBody (Ann (Const pl) (Sugar.BinderLet l)) =
             , make body
             ]
         & stdWrapParentExpr pl
-        & local (M.animIdPrefix .~ Widget.toAnimId myId)
+        & local (M.elemIdPrefix .~ M.asElemId myId)
     where
         myId = WidgetIds.fromExprPayload pl
         body = l ^. Sugar.lBody

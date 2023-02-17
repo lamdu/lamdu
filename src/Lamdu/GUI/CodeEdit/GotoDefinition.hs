@@ -6,7 +6,6 @@ module Lamdu.GUI.CodeEdit.GotoDefinition
 
 import qualified Control.Lens as Lens
 import           Control.Monad.Trans.Reader (ReaderT)
-import qualified Data.ByteString.Char8 as BS8
 import           Data.MRUMemo (memo)
 import qualified Data.Text as Text
 import           GUI.Momentu ((/|/))
@@ -77,7 +76,7 @@ toGlobal prefix color goto nameRef idx = Global idx prefix color (nameRef ^. Sug
 {-# ANN makeOptions ("HLint: ignore Redundant <$>"::String) #-}
 makeOptions ::
     ( Monad i, Has (Texts.Navigation Text) env, Has (Texts.Name Text) env
-    , M.HasCursor env, M.HasAnimIdPrefix env, Has Theme env, Has TextView.Style env
+    , M.HasCursor env, M.HasElemIdPrefix env, Has Theme env, Has TextView.Style env
     , Has Dir.Layout env
     , Applicative o
     ) =>
@@ -105,17 +104,17 @@ makeOptions goto globals (SearchMenu.ResultsContext searchTerm prefix)
                     { Menu._oId = optId
                     , Menu._oRender =
                         ((TextView.make ?? global ^. globalPrefix)
-                            <*> (Element.subAnimId ?? ["."]))
+                            <*> (Element.subElemId ?? "."))
                         /|/
                         GetVarEdit.makeSimpleView (global ^. globalColor) name optId
                         <&> toRenderedOption (global ^. globalOpen)
-                        & local (M.animIdPrefix .~ Widget.toAnimId optId)
+                        & local (M.elemIdPrefix .~ M.asElemId optId)
                     , Menu._oSubmenuWidgets = Menu.SubmenuEmpty
                     }
                     where
                         name = global ^. globalName
                         idx = global ^. globalIdx
-                        optId = prefix `Widget.joinId` [BS8.pack (show idx)]
+                        optId = prefix <> M.asElemId idx
             globs <-
                 case mTagPrefix of
                 Just tagPrefix ->

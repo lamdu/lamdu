@@ -10,7 +10,7 @@ module Lamdu.Style.Make
 import qualified Control.Lens as Lens
 import           Data.Property (MkProperty)
 import qualified Data.Property as Property
-import           GUI.Momentu (AnimId, Font, ModKey, Widget, Zoom)
+import           GUI.Momentu (ElemId, Font, ModKey, Widget, Zoom)
 import qualified GUI.Momentu.Direction as Dir
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.EventMap as E
@@ -81,7 +81,7 @@ make fonts theme =
 data HelpEnv = HelpEnv
     { _heConfig :: !EventMapHelp.Config
     , _heStyle :: !EventMapHelp.Style
-    , _heAnimIdPrefix :: !AnimId
+    , _heElemIdPrefix :: !ElemId
     , _heDirLayout :: !Dir.Layout
     , _heDirTexts :: !(Dir.Texts Text)
     , _heGlueTexts :: !(Glue.Texts Text)
@@ -89,7 +89,7 @@ data HelpEnv = HelpEnv
     , _heEventMapTexts :: !(E.Texts Text)
     }
 Lens.makeLenses ''HelpEnv
-instance Element.HasAnimIdPrefix HelpEnv where animIdPrefix = heAnimIdPrefix
+instance Element.HasElemIdPrefix HelpEnv where elemIdPrefix = heElemIdPrefix
 instance Has TextView.Style HelpEnv where has = heStyle . has
 instance Has Dir.Layout HelpEnv where has = heDirLayout
 instance Has (Dir.Texts Text) HelpEnv where has = heDirTexts
@@ -113,7 +113,7 @@ addHelp config theme language font size widget =
                 EventMapHelp.Config
                 { EventMapHelp._configOverlayDocKeys = config ^. Config.helpKeys
                 }
-            , _heAnimIdPrefix = ["help box"]
+            , _heElemIdPrefix = "help box"
             , _heDirLayout = language ^. has
             , _heDirTexts = language ^. has
             , _heEventMapTexts = language ^. has

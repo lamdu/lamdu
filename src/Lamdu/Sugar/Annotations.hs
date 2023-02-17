@@ -213,7 +213,8 @@ instance MarkBodyAnnotations v Term where
         , morphMap (Proxy @MarkAnnotations #?> markNodeAnnotations) x & BodyLabeledApply
         )
         where
-            Right consVar = identFromHex "d711f82f8a4d4e199ece3fc4536329ea"
+            consVar =
+                identFromHex "d711f82f8a4d4e199ece3fc4536329ea" ^?! Lens._Right
     markBodyAnnotations (BodyIfElse x) = markBodyAnnotations x & _2 %~ BodyIfElse
     markBodyAnnotations (BodyLeaf (LeafHole x)) =
         ( alwaysShowAnnotations

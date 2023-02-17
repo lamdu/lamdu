@@ -13,7 +13,8 @@ import qualified Data.Property as Property
 import           GUI.Momentu (Responsive, EventMap, ModKey(..), noMods, Update)
 import qualified GUI.Momentu as M
 import qualified GUI.Momentu.Direction as Dir
-import           GUI.Momentu.Element (subAnimId)
+import           GUI.Momentu.Element (subElemId)
+import           GUI.Momentu.Element.Id (ElemId)
 import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.FocusDirection as Direction
 import qualified GUI.Momentu.Glue as Glue
@@ -137,7 +138,7 @@ blockEventMap env =
 
 makeScopeNavEdit ::
     _ =>
-    Sugar.Function v name i o expr -> Widget.Id -> ParamsEdit.ScopeCursor ->
+    Sugar.Function v name i o expr -> ElemId -> ParamsEdit.ScopeCursor ->
     GuiM env i o
     ( EventMap (o M.Update)
     , Maybe (M.Widget o)
@@ -182,7 +183,7 @@ makeScopeNavEdit func myId curCursor =
 
 makeFunctionParts ::
     _ =>
-    Sugar.FuncApplyLimit -> ExprGui.Expr Sugar.Function i o -> Widget.Id -> GuiM env i o (Parts o)
+    Sugar.FuncApplyLimit -> ExprGui.Expr Sugar.Function i o -> ElemId -> GuiM env i o (Parts o)
 makeFunctionParts funcApplyLimit (Ann (Const pl) func) delVarBackwardsId =
     do
         mScopeCursor <- mkChosenScopeCursor func
@@ -219,10 +220,10 @@ makeFunctionParts funcApplyLimit (Ann (Const pl) func) delVarBackwardsId =
             Sugar.LhsRecord ps ->
                 ps ^?! SugarLens.taggedListItems . Sugar.tiTag . Sugar.tagRefTag . Sugar.tagInstance
                 & WidgetIds.fromEntityId
-        scopesNavId = Widget.joinId myId ["scopesNav"]
+        scopesNavId = myId <> "scopesNav"
         bodyId = func ^. Sugar.fBody . annotation & WidgetIds.fromExprPayload
 
-makeJumpToRhs :: _ => Widget.Id -> GuiM env i o (EventMap (o M.Update))
+makeJumpToRhs :: _ => ElemId -> GuiM env i o (EventMap (o M.Update))
 makeJumpToRhs rhsId =
     do
         env <- Lens.view id
@@ -241,14 +242,14 @@ layout lhs body =
     do
         space <- Spacer.stdHSpace <&> Responsive.fromView
         indent <- ResponsiveExpr.indent
-        indentId <- subAnimId ?? ["assignment-body"]
+        indentId <- subElemId ?? "assignment-body"
         hbox <- Options.hbox ?? id ?? id
         Responsive.vboxSpaced
             ?? [lhs, indent indentId body]
             <&> Options.tryWideLayout hbox [lhs, space, body]
 
 makePlainLhsEventMap ::
-    _ => o Sugar.EntityId -> Widget.Id -> GuiM env i o (EventMap (o Update))
+    _ => o Sugar.EntityId -> ElemId -> GuiM env i o (EventMap (o Update))
 makePlainLhsEventMap addFirstParam rhsId =
     do
         env <- Lens.view id
@@ -261,7 +262,7 @@ makePlainLhsEventMap addFirstParam rhsId =
 -- The given nameEdit may represent an LhsRecord, hence it is a Responsive and not a simple widget
 make ::
     _ =>
-    Widget.Id ->
+    ElemId ->
     ExprGui.Expr Sugar.Assignment i o ->
     Responsive o ->
     GuiM env i o (Responsive o)
@@ -295,7 +296,7 @@ make delParamDest assignment nameEdit =
                     layout assignmentPrefix bodyEdit
                         & stdWrap pl
                         <&> Widget.weakerEvents eventMap
-    & local (M.animIdPrefix .~ Widget.toAnimId myId)
+    & local (M.elemIdPrefix .~ M.asElemId myId)
     where
         myId = WidgetIds.fromExprPayload pl
         Ann (Const pl) assignmentBody = assignment

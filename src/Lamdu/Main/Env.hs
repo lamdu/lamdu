@@ -12,7 +12,7 @@ module Lamdu.Main.Env
     , sprites
     , style
     , mainLoop
-    , animIdPrefix
+    , elemIdPrefix
     , debugMonitors
     , cachedFunctions
     ) where
@@ -20,7 +20,7 @@ module Lamdu.Main.Env
 import qualified Control.Lens as Lens
 import           Data.Property (Property)
 import qualified Data.Property as Property
-import           GUI.Momentu (AnimId, ModKey, GUIState)
+import           GUI.Momentu (ElemId, ModKey, GUIState)
 import qualified GUI.Momentu.Direction as Dir
 import           GUI.Momentu.Draw (Sprite)
 import qualified GUI.Momentu.Element as Element
@@ -67,7 +67,7 @@ data Env = Env
     , _sugars :: Property IO (SugarConfig.Sugars Bool)
     , _style :: Style.Style
     , _mainLoop :: MainLoop.Env
-    , _animIdPrefix :: AnimId
+    , _elemIdPrefix :: ElemId
     , _debugMonitors :: Debug.Monitors
     , _cachedFunctions :: Cache.Functions
     , _language :: Language
@@ -76,7 +76,7 @@ data Env = Env
 Lens.makeLenses ''Env
 
 instance Anchors.HasCodeAnchors Env ViewM where codeAnchors = codeAnchors
-instance Element.HasAnimIdPrefix Env where animIdPrefix = animIdPrefix
+instance Element.HasElemIdPrefix Env where elemIdPrefix = elemIdPrefix
 instance GuiState.HasCursor Env
 instance Has (GUIMain.ExportActions ViewM) Env where has = exportActions
 instance Has (Sprites Sprite) Env where has = sprites

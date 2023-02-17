@@ -27,10 +27,10 @@ import qualified Data.Monoid as Monoid
 import           Data.Property (MkProperty')
 import qualified Data.Property as Property
 import           GUI.Momentu (Responsive, View, WithTextPos)
+import qualified GUI.Momentu as M
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.State as GuiState
-import           GUI.Momentu.Widget.Id (toAnimId)
 import qualified GUI.Momentu.Widgets.Label as Label
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Config as Config
@@ -127,9 +127,9 @@ make sub expr =
         maker <- GuiM (Lens.view sub)
         maker expr
     & advanceDepth (pure . Responsive.fromTextView)
-    & local (Element.animIdPrefix .~ animId)
+    & local (Element.elemIdPrefix .~ elemId)
     where
-        animId = expr ^. annotation & WidgetIds.fromExprPayload & toAnimId
+        elemId = expr ^. annotation & WidgetIds.fromExprPayload & M.asElemId
 
 makeSubexpression :: _ => ExprGui.Expr Sugar.Term i o -> GuiM env i o (Responsive.Responsive o)
 makeSubexpression = make aMakeSubexpression

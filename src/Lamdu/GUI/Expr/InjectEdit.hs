@@ -3,22 +3,23 @@ module Lamdu.GUI.Expr.InjectEdit
     ) where
 
 import qualified Control.Lens as Lens
-import           Hyper (annValue)
 import           GUI.Momentu (Responsive, (/|/), Update)
 import qualified GUI.Momentu as M
+import           GUI.Momentu.Element.Id (ElemId)
 import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.I18N as MomentuTexts
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.Responsive.Expression as ResponsiveExpr
 import qualified GUI.Momentu.State as GuiState
 import qualified GUI.Momentu.Widget as Widget
+import           Hyper (annValue)
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Theme.TextColors as TextColors
 import qualified Lamdu.GUI.Expr.EventMap as EventMap
 import qualified Lamdu.GUI.Expr.RecordEdit as RecordEdit
+import qualified Lamdu.GUI.Expr.TagEdit as TagEdit
 import           Lamdu.GUI.Monad (GuiM)
 import           Lamdu.GUI.Styled (text, grammar, withColor)
-import qualified Lamdu.GUI.Expr.TagEdit as TagEdit
 import qualified Lamdu.GUI.TagView as TagView
 import qualified Lamdu.GUI.Types as ExprGui
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
@@ -33,7 +34,7 @@ import           Lamdu.Prelude
 
 injectTag :: _ => Sugar.TagRef Name i o -> GuiM env i o (M.WithTextPos M.View)
 injectTag tag =
-    grammar (text ["injectIndicator"] Texts.injectSymbol) /|/
+    grammar (text "injectIndicator" Texts.injectSymbol) /|/
     withColor TextColors.caseTagColor (TagView.make (tag ^. Sugar.tagRefTag))
 
 make :: _ => Annotated (ExprGui.Payload i o) # Const (Sugar.TagRef Name i o) -> GuiM env i o (Responsive o)
@@ -53,7 +54,7 @@ data NullaryRecord o
     = HiddenNullaryRecord (E.EventMap (o Update)) -- enter it
     | FocusedNullaryRecord (Responsive o)
 
-enterSubexpr :: _ => Widget.Id -> f (E.EventMap (o Update))
+enterSubexpr :: _ => ElemId -> f (E.EventMap (o Update))
 enterSubexpr myId =
     Lens.view id <&>
     \env ->
@@ -62,7 +63,7 @@ enterSubexpr myId =
     (E.toDoc env [has . MomentuTexts.navigation, has . Texts.enterSubexpression])
     (pure myId)
 
-leaveSubexpr :: _ => Widget.Id -> f (E.EventMap (o Update))
+leaveSubexpr :: _ => ElemId -> f (E.EventMap (o Update))
 leaveSubexpr myId =
     Lens.view id <&>
     \env ->

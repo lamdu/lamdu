@@ -90,7 +90,7 @@ makeResult mkGui ctx res =
                 & GuiState.assignCursor resId dstId
             indicator <-
                 res ^.. Sugar.optionTypeMatch . Lens.only False
-                & traverse (const (TextView.make ?? "?" ?? indicatorAnimId))
+                & traverse (const (TextView.make ?? "?" ?? indicatorElemId))
                 <&> Lens.mapped %~ Responsive.fromTextView
             r <- ResponsiveOptions.boxSpaced ?? ResponsiveOptions.disambiguationNone ?? optExpr : indicator
             pure Menu.RenderedOption
@@ -113,7 +113,7 @@ makeResult mkGui ctx res =
         dstId = fromMaybe (WidgetIds.fromExprPayload (res ^. Sugar.optionExpr . annotation)) innerHole
         resId = ctx ^. SearchMenu.rResultIdPrefix <> dstId
         innerHole = res ^? Sugar.optionExpr . SugarLens.unfinishedPayloads <&> WidgetIds.fromExprPayload
-        indicatorAnimId =
+        indicatorElemId =
             -- TODO: Animate nicely into the fragment's question mark.
             -- Would require the sugar to expose the id of the fragment to be generated
-            Widget.toAnimId resId <> ["indicator"]
+            M.asElemId resId <> "indicator"

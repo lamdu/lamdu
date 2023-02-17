@@ -22,7 +22,7 @@ test =
                  . Lens.ix (LangId "english") . name)
             <&> Set.fromList
         rtsConfig <- readDataFile "js/export/rtsConfig.js"
-        let (_:nameMapAndMore:_) = splitOn "var nameMap = {" rtsConfig
+        let nameMapAndMore = splitOn "var nameMap = {" rtsConfig ^?! Lens.ix 1
         let (nameMapTxt, _) = break (== '}') nameMapAndMore
         let nameMapItemTxts = splitOn "," nameMapTxt
         let nameMap =

@@ -3,12 +3,12 @@ module Lamdu.GUI.StatusBar.Sugars
     ) where
 
 import qualified Control.Lens as Lens
-import qualified Data.ByteString.Char8 as BS8
 import           Data.Property (Property, pVal, pureModify)
 import           GUI.Momentu (noMods)
 import qualified GUI.Momentu as M
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Element as Element
+import           GUI.Momentu.Element.Id (ElemId)
 import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.Glue as Glue
 import qualified GUI.Momentu.Hover as Hover
@@ -24,8 +24,8 @@ import qualified Lamdu.Config.Theme.Sprites as Sprites
 import           Lamdu.GUI.StatusBar.Common (StatusWidget)
 import qualified Lamdu.GUI.StatusBar.Common as StatusBar
 import           Lamdu.GUI.Styled (sprite)
-import qualified Lamdu.I18N.StatusBar as Texts
 import qualified Lamdu.I18N.CodeUI as Texts
+import qualified Lamdu.I18N.StatusBar as Texts
 import           Lamdu.Sugar.Config (Sugars)
 
 import           Lamdu.Prelude
@@ -49,7 +49,7 @@ make prop =
     ) <*>
     do
         top <-
-            (Widget.makeFocusableView ?? focusedSugarsId <> Widget.Id ["Header"]) <*> sprite Sprites.sugar
+            (Widget.makeFocusableView ?? focusedSugarsId <> "Header") <*> sprite Sprites.sugar
         showMenu <- isSubCursor ?? focusedSugarsId
         if showMenu
             then
@@ -70,11 +70,11 @@ make prop =
             else pure top
     <&> (`StatusBar.StatusWidget` mempty) . M.WithTextPos 0
 
-sugarsId :: Widget.Id
-sugarsId = Widget.Id ["Sugars"]
+sugarsId :: ElemId
+sugarsId = "Sugars"
 
-focusedSugarsId :: Widget.Id
-focusedSugarsId = sugarsId `Widget.joinId` ["inner"]
+focusedSugarsId :: ElemId
+focusedSugarsId = sugarsId <> "inner"
 
 mkSugarToggle :: _ => Property IO (Sugars Bool) -> Int -> (Text, Bool) -> m (M.TextWidget IO)
 mkSugarToggle prop idx (text, val) =
@@ -84,11 +84,11 @@ mkSugarToggle prop idx (text, val) =
         sbText <- Lens.view (has . Texts.sbStatusBar)
         actionText <- Lens.view (has . if val then Texts.sbDisable else Texts.sbEnable)
         (Widget.makeFocusableView ?? myId <&> (M.tValue %~))
-            <*> (TextView.make ?? text ?? Widget.toAnimId myId)
+            <*> (TextView.make ?? text ?? myId)
             & (if val then id else local (TextView.color .~ disabledCol))
             <&> M.tValue %~ M.weakerEvents (E.keysEventMap actionKeys (E.Doc [sbText, text, actionText]) toggle)
-    & local (Element.animIdPrefix .~ Widget.toAnimId myId)
+    & local (Element.elemIdPrefix .~ myId)
     where
-        myId = focusedSugarsId <> Widget.Id [BS8.pack (show idx)]
+        myId = focusedSugarsId <> M.asElemId idx
         toggle =
             pureModify prop (Lens.element idx .~ not val)

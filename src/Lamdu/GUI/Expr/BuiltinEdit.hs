@@ -7,11 +7,11 @@ import           Data.Property (Property(..))
 import qualified Data.Text as Text
 import           GUI.Momentu (noMods)
 import qualified GUI.Momentu as M
+import           GUI.Momentu.Element.Id (ElemId)
 import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.I18N as MomentuTexts
 import qualified GUI.Momentu.ModKey as ModKey
 import qualified GUI.Momentu.State as GuiState
-import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.FocusDelegator as FocusDelegator
 import qualified GUI.Momentu.Widgets.Label as Label
 import qualified GUI.Momentu.Widgets.TextEdit as TextEdit
@@ -35,21 +35,21 @@ builtinFDConfig env = FocusDelegator.Config
     where
         doc lens = E.toDoc env [has . MomentuTexts.edit, has . lens]
 
-builtinFFIPath :: Widget.Id -> Widget.Id
-builtinFFIPath = flip Widget.joinId ["FFIPath"]
+builtinFFIPath :: ElemId -> ElemId
+builtinFFIPath = (<> "FFIPath")
 
-builtinFFIName :: Widget.Id -> Widget.Id
-builtinFFIName = flip Widget.joinId ["FFIName"]
+builtinFFIName :: ElemId -> ElemId
+builtinFFIName = (<> "FFIName")
 
 makeNamePartEditor ::
-    _ => M.Color -> Text -> (Text -> f ()) -> Widget.Id -> m (M.TextWidget f)
+    _ => M.Color -> Text -> (Text -> f ()) -> ElemId -> m (M.TextWidget f)
 makeNamePartEditor color namePartStr setter myId =
     (FocusDelegator.make
         <*> (Lens.view id <&> builtinFDConfig)
         ?? FocusDelegator.FocusEntryParent
         ?? myId <&> (M.tValue %~))
     <*> ( TextEdits.makeWordEdit ?? empty ?? Property namePartStr setter ??
-          myId `Widget.joinId` ["textedit"]
+          myId <> "textedit"
         )
     & local (TextView.color .~ color)
     where
@@ -59,7 +59,7 @@ makeNamePartEditor color namePartStr setter myId =
             , TextEdit._focused = ""
             }
 
-make :: _ => Sugar.DefinitionBuiltin name o -> Widget.Id -> f (M.TextWidget o)
+make :: _ => Sugar.DefinitionBuiltin name o -> ElemId -> f (M.TextWidget o)
 make def myId =
     do
         colors <- Lens.view (has . Theme.textColors)

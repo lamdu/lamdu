@@ -7,8 +7,8 @@ import           Data.Property (Property)
 import           GUI.Momentu (Responsive, EventMap, Update)
 import qualified GUI.Momentu as M
 import           GUI.Momentu.Direction (Orientation(..), Order(..))
+import           GUI.Momentu.Element.Id (ElemId)
 import qualified GUI.Momentu.Responsive as Responsive
-import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.DropDownList as DropDownList
 import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import           GUI.Momentu.Widgets.StdKeys (dirKey)
@@ -29,7 +29,7 @@ import           Lamdu.Prelude
 
 make ::
     _ =>
-    Sugar.TaggedList Name i o (Property o Sugar.ParamKind) -> o Widget.Id -> Widget.Id ->
+    Sugar.TaggedList Name i o (Property o Sugar.ParamKind) -> o ElemId -> ElemId ->
     m (EventMap (o Update), [Responsive o])
 make params prevId myId =
     do
@@ -48,21 +48,21 @@ make params prevId myId =
             <> (traverse makeParam itemsR <&> concat)
             <&> (,) addFirstEventMap
 
-paramKindEdit :: _ => Property o Sugar.ParamKind -> Widget.Id -> m (M.TextWidget o)
-paramKindEdit prop myId@(Widget.Id animId) =
+paramKindEdit :: _ => Property o Sugar.ParamKind -> ElemId -> m (M.TextWidget o)
+paramKindEdit prop myId =
     (DropDownList.make ?? prop)
     <*> Lens.sequenceOf (traverse . _2)
         [(Sugar.TypeParam, Styled.focusableLabel Texts.typ), (Sugar.RowParam, Styled.focusableLabel Texts.row)]
     <*> (DropDownList.defaultConfig <*> Lens.view (has . Texts.parameter))
     ?? myId
-    & local (M.animIdPrefix .~ animId)
+    & local (M.elemIdPrefix .~ myId)
 
 makeParam :: _ => TaggedList.Item Name i o (Property o Sugar.ParamKind) -> m [Responsive o]
 makeParam item =
     (:)
     <$> ( TagEdit.makeParamTag Nothing (item ^. TaggedList.iTag)
             M./-/ (Lens.view (has . Theme.valAnnotation . ValAnnotation.valAnnotationSpacing) >>= Spacer.vspaceLines)
-            M./-/ paramKindEdit (item ^. TaggedList.iValue) (Widget.joinId myId ["kind"])
+            M./-/ paramKindEdit (item ^. TaggedList.iValue) (myId <> "kind")
             <&> Responsive.fromWithTextPos
             <&> M.weakerEvents (item ^. TaggedList.iEventMap)
         )

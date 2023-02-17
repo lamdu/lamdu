@@ -1,4 +1,4 @@
--- | Language Id
+-- | Language ElemId
 {-# LANGUAGE TemplateHaskell, GeneralizedNewtypeDeriving #-}
 
 module Lamdu.I18N.LangId where

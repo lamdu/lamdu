@@ -5,13 +5,13 @@ module Lamdu.GUI.Expr.ParamsEdit
     , makeLhs
     ) where
 
-import           GUI.Momentu.Direction (Orientation(..), Order(..))
-import           GUI.Momentu.Widgets.StdKeys (dirKey)
 import           Control.Applicative ((<|>))
 import qualified Control.Lens as Lens
 import           Data.CurAndPrev (CurAndPrev, current)
 import           GUI.Momentu (Responsive, EventMap, noMods, Update)
 import qualified GUI.Momentu as M
+import           GUI.Momentu.Direction (Orientation(..), Order(..))
+import           GUI.Momentu.Element.Id (ElemId)
 import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.Glue as Glue
 import qualified GUI.Momentu.I18N as MomentuTexts
@@ -21,15 +21,16 @@ import qualified GUI.Momentu.Responsive.Options as Options
 import qualified GUI.Momentu.State as GuiState
 import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Menu as Menu
+import           GUI.Momentu.Widgets.StdKeys (dirKey)
 import qualified GUI.Momentu.Widgets.TextView as TextView
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Theme.TextColors as TextColors
 import qualified Lamdu.GUI.Annotation as Annotation
 import qualified Lamdu.GUI.Expr.TagEdit as TagEdit
 import qualified Lamdu.GUI.LightLambda as LightLambda
-import qualified Lamdu.GUI.NameView as NameView
 import           Lamdu.GUI.Monad (GuiM)
 import qualified Lamdu.GUI.Monad as GuiM
+import qualified Lamdu.GUI.NameView as NameView
 import qualified Lamdu.GUI.ParamEdit as ParamEdit
 import           Lamdu.GUI.Styled (grammar, label, withColor)
 import qualified Lamdu.GUI.TaggedList as TaggedList
@@ -96,7 +97,7 @@ mkExpanded =
         arrow <- grammar (label Texts.arrow) <&> Responsive.fromTextView
         pure (\paramsEdit mScopeEdit -> lam : lhsEdits paramsEdit mScopeEdit <> [arrow])
 
-mkShrunk :: _ => [Sugar.EntityId] -> Widget.Id -> f (Maybe (M.Widget o) -> [Responsive o])
+mkShrunk :: _ => [Sugar.EntityId] -> ElemId -> f (Maybe (M.Widget o) -> [Responsive o])
 mkShrunk paramIds myId =
     do
         env <- Lens.view id
@@ -122,12 +123,12 @@ mkShrunk paramIds myId =
               & M.weakerEvents expandEventMap
             ]
 
-lamId :: Widget.Id -> Widget.Id
-lamId = (`Widget.joinId` ["lam"])
+lamId :: ElemId -> ElemId
+lamId = (<> "lam")
 
 mkLightLambda ::
     _ =>
-    Sugar.LhsNames a i o v -> Widget.Id ->
+    Sugar.LhsNames a i o v -> ElemId ->
     f (Responsive o -> Maybe (M.Widget o) -> [Responsive o])
 mkLightLambda params myId =
     do
@@ -159,7 +160,7 @@ mkLightLambda params myId =
 makeLhs ::
     _ =>
     Bool -> Sugar.LhsNames a i o v ->
-    Responsive o -> Maybe (Widget.Widget o) -> EventMap (o Update) -> Widget.Id ->
+    Responsive o -> Maybe (Widget.Widget o) -> EventMap (o Update) -> ElemId ->
     m [Responsive o]
 makeLhs _ (Sugar.LhsVar p) paramsEdit mScopeEdit _ _
     | p ^. Sugar.vIsNullParam = mkLhsEdits ?? paramsEdit ?? mScopeEdit
@@ -170,8 +171,8 @@ make ::
     _ =>
     Bool ->
     CurAndPrev (Maybe ScopeCursor) -> IsScopeNavFocused ->
-    Widget.Id -> Widget.Id ->
-    Widget.Id ->
+    ElemId -> ElemId ->
+    ElemId ->
     Sugar.LhsNames Name i o (Sugar.Annotation (Sugar.EvaluationScopes Name i) Name) ->
     GuiM env i o (EventMap (o Update), Responsive o)
 make isLet mScopeCursor isScopeNavFocused delVarBackwardsId myId bodyId params =
@@ -199,7 +200,7 @@ makeBody ::
     _ =>
     Bool ->
     Annotation.EvalAnnotationOptions ->
-    Widget.Id -> Widget.Id -> Widget.Id ->
+    ElemId -> ElemId -> ElemId ->
     Sugar.LhsNames Name i o (Sugar.Annotation (Sugar.EvaluationScopes Name i) Name) ->
     GuiM env i o (EventMap (o Update), Responsive o)
 makeBody isLet annotationOpts delVarBackwardsId lhsId rhsId params =
@@ -219,7 +220,7 @@ makeBody isLet annotationOpts delVarBackwardsId lhsId rhsId params =
             )
         <&> (,) mempty
         where
-            nullParamId = Widget.joinId lhsId ["param"]
+            nullParamId = lhsId <> "param"
     Sugar.LhsVar p ->
         do
             env <- Lens.view id
@@ -251,7 +252,7 @@ makeBody isLet annotationOpts delVarBackwardsId lhsId rhsId params =
 makeParams ::
     _ =>
     Annotation.EvalAnnotationOptions ->
-    Widget.Id -> Widget.Id ->
+    ElemId -> ElemId ->
     Sugar.TaggedList Name i o (Sugar.LhsField Name (Sugar.Annotation (Sugar.EvaluationScopes Name i) Name)) ->
     GuiM env i o (EventMap (o Update), Responsive o)
 makeParams annotationOpts prevId nextId items =
@@ -288,7 +289,7 @@ makeParams annotationOpts prevId nextId items =
                 s <-
                     traverse makeSubFields
                     (x ^.. TaggedList.iValue . Sugar.fSubFields . Lens._Just)
-                    & local (M.animIdPrefix .~ Widget.toAnimId myId)
+                    & local (M.elemIdPrefix .~ M.asElemId myId)
                 newP0 <- Options.box ?? Options.disambiguationNone ?? p ^.. Lens.ix 0 <> s
                 p & Lens.ix 0 .~ newP0 & pure
             where
@@ -307,6 +308,6 @@ makeParams annotationOpts prevId nextId items =
             & local (\env -> env & has .~ env ^. has . Style.nameAtBinder)
             <&> M.tValue %~ Widget.fromView
             >>= ParamEdit.addAnnotation annotationOpts (f ^. Sugar.fParam) subId
-            & local (M.animIdPrefix .~ Widget.toAnimId subId)
+            & local (M.elemIdPrefix .~ M.asElemId subId)
             where
                 subId = WidgetIds.fromEntityId (subTag ^. Sugar.tagInstance)

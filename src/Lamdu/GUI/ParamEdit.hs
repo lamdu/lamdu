@@ -5,6 +5,7 @@ module Lamdu.GUI.ParamEdit
 import qualified Control.Lens as Lens
 import           GUI.Momentu (Responsive, EventMap, TextWidget, noMods, Update)
 import qualified GUI.Momentu as M
+import           GUI.Momentu.Element.Id (ElemId)
 import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.I18N as MomentuTexts
 import qualified GUI.Momentu.Responsive as Responsive
@@ -13,9 +14,9 @@ import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Menu as Menu
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Theme.TextColors as TextColors
+import qualified Lamdu.GUI.Annotation as Annotation
 import qualified Lamdu.GUI.Classes as C
 import qualified Lamdu.GUI.Expr.TagEdit as TagEdit
-import qualified Lamdu.GUI.Annotation as Annotation
 import           Lamdu.GUI.Monad (GuiM)
 import qualified Lamdu.GUI.Styled as Styled
 import qualified Lamdu.GUI.TaggedList as TaggedList
@@ -28,7 +29,7 @@ import qualified Lamdu.Sugar.Types as Sugar
 import           Lamdu.Prelude
 
 eventMapAddNextParamOrPickTag ::
-    _ => Widget.Id -> Sugar.AddParam name i o -> m (EventMap (o Update))
+    _ => ElemId -> Sugar.AddParam name i o -> m (EventMap (o Update))
 eventMapAddNextParamOrPickTag myId Sugar.AddNext{} =
     do
         env <- Lens.view id
@@ -53,7 +54,7 @@ addAnnotation ::
     _ =>
     Annotation.EvalAnnotationOptions ->
     Sugar.FuncParam (Sugar.Annotation (Sugar.EvaluationScopes Name i) Name) ->
-    Widget.Id -> TextWidget o ->
+    ElemId -> TextWidget o ->
     GuiM env i o (Responsive o)
 addAnnotation annotationOpts param myId widget =
     do
@@ -64,13 +65,13 @@ addAnnotation annotationOpts param myId widget =
             (param ^. Sugar.fpAnnotation)
             <&> (Widget.widget %~)
             ?? Responsive.fromWithTextPos widget
-    & local (M.animIdPrefix .~ Widget.toAnimId myId)
+    & local (M.elemIdPrefix .~ M.asElemId myId)
 
 addAnnotationAndEvents ::
     _ =>
     Annotation.EvalAnnotationOptions ->
     Sugar.FuncParam (Sugar.Annotation (Sugar.EvaluationScopes Name i) Name) ->
-    Widget.Id -> TextWidget o ->
+    ElemId -> TextWidget o ->
     GuiM env i o (Responsive o)
 addAnnotationAndEvents annotationOpts param myId widget =
     do
@@ -87,7 +88,7 @@ addAnnotationAndEvents annotationOpts param myId widget =
         addAnnotation annotationOpts param myId widget
             <&> M.weakerEvents eventMap
 
-mkAddParam :: _ => i (Sugar.TagChoice Name o) -> Widget.Id -> m [Responsive o]
+mkAddParam :: _ => i (Sugar.TagChoice Name o) -> ElemId -> m [Responsive o]
 mkAddParam addParam myId =
     GuiState.isSubCursor ?? addId >>=
     \case
@@ -112,6 +113,6 @@ makeParam annotationOpts item =
         >>= addAnnotationAndEvents annotationOpts (item ^. TaggedList.iValue . Sugar.fParam) myId
         <&> M.weakerEvents (item ^. TaggedList.iEventMap) <&> (:[]))
     <> mkAddParam (item ^. TaggedList.iAddAfter) myId
-    & local (M.animIdPrefix .~ Widget.toAnimId myId)
+    & local (M.elemIdPrefix .~ M.asElemId myId)
     where
         myId = TaggedList.itemId (item ^. TaggedList.iTag)

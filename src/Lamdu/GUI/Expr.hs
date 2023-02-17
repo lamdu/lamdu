@@ -3,9 +3,9 @@ module Lamdu.GUI.Expr
     ) where
 
 import           GUI.Momentu (Responsive)
+import qualified GUI.Momentu as M
 import qualified GUI.Momentu.Element as Element
 import qualified GUI.Momentu.State as GuiState
-import qualified GUI.Momentu.Widget as Widget
 import qualified Lamdu.GUI.Expr.ApplyEdit as ApplyEdit
 import qualified Lamdu.GUI.Expr.FragmentEdit as FragmentEdit
 import qualified Lamdu.GUI.Expr.GetVarEdit as GetVarEdit
@@ -53,7 +53,7 @@ makeEditor (Ann (Const pl) body) =
         Sugar.LeafInject      x -> editor pl (Const x) InjectEdit.make
         Sugar.LeafGetVar      x -> editor pl (Const x) (GetVarEdit.make GetVarEdit.Normal)
     & local
-        (Element.animIdPrefix .~ Widget.toAnimId (WidgetIds.fromExprPayload pl))
+        (Element.elemIdPrefix .~ M.asElemId (WidgetIds.fromExprPayload pl))
 
 editor :: a -> h # Annotated a -> (Annotated a # h -> r) -> r
 editor pl x f = Ann (Const pl) x & f

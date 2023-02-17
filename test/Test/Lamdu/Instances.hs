@@ -17,7 +17,6 @@ import           Generics.Constraints (makeDerivings, makeInstances)
 import           GUI.Momentu (Color(..))
 import qualified GUI.Momentu.Hover as Hover
 import qualified GUI.Momentu.Responsive.Expression as ResponsiveExpr
-import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Grid as Grid
 import qualified GUI.Momentu.Widgets.Menu as Menu
 import qualified GUI.Momentu.Widgets.Menu.Search as SearchMenu
@@ -64,9 +63,6 @@ makeDerivings [''Data]
     , ''VcGuiConfig.Theme, ''TextEdit.Modes, ''Sprites, ''Fonts, ''Vector2
     ]
 
-instance IsString Widget.Id where
-    fromString = Widget.Id . pure . fromString
-
 instance IsString EntityId where
     fromString = EntityId . fromString
 
@@ -98,7 +94,8 @@ instance Eq (Sugar.TagPane f) where
 
 [makeDerivings [''Eq], makeInstances [''NFData]] ??
     [ ''Sugar.Annotation, ''Sugar.LhsField, ''Sugar.LhsNames, ''Sugar.CompositeFields
-    , ''Sugar.DefinitionOutdatedType, ''Sugar.FuncParam, ''Sugar.Type
+    -- , ''Sugar.DefinitionOutdatedType <-- moved to manual instances below so ghci can load this module (WTF?)
+    , ''Sugar.FuncParam, ''Sugar.Type
     , ''Sugar.ResInject, ''Sugar.ResTable, ''Sugar.ResTree, ''Sugar.Result
     , ''Sugar.AnnotatedArg, ''Sugar.AssignPlain, ''Sugar.Assignment, ''Sugar.Binder, ''Sugar.BinderBody
     , ''Sugar.Composite, ''Sugar.CompositeTail, ''Sugar.OptionalTag
@@ -119,7 +116,9 @@ instance Eq (Sugar.TagPane f) where
 
 makeInstances [''NFData]
     [ ''DebugTasks.Tasks, ''SugarConfig.Sugars
-    , ''Config, ''Config.Completion, ''Config.Debug, ''Config.Eval
+    , ''Config
+    -- , ''Config.Completion <-- moved to manual instance below so ghci can load this module (WTF?)
+    , ''Config.Debug, ''Config.Eval
     , ''Config.Export, ''Config.Literal, ''Config.Pane
     , ''Grid.Keys, ''Menu.Config, ''SearchMenu.Config
     , ''StdKeys.DirKeys, ''TextEdit.Keys, ''VcGuiConfig.Config, ''Zoom.Config
@@ -131,3 +130,7 @@ makeInstances [''NFData]
     , ''Tag.TextsInLang, ''Def.FFIName, ''Tag.DirOp, ''Tag.Symbol, ''Tag.Tag, ''CurAndPrev
     , ''Sugar.TaggedVarId
     ]
+
+deriving instance (Eq name, Eq (o a)) => Eq (Sugar.DefinitionOutdatedType name o a)
+deriving instance (NFData name, NFData (o a)) => NFData (Sugar.DefinitionOutdatedType name o a)
+deriving anyclass instance NFData (Config.Completion key)

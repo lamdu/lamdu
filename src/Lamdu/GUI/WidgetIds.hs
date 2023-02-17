@@ -5,46 +5,45 @@ module Lamdu.GUI.WidgetIds
 
 import           Data.UUID.Types (UUID)
 import qualified Data.UUID.Utils as UUIDUtils
-import           GUI.Momentu.Widget.Id (Id(..))
-import qualified GUI.Momentu.Widget.Id as WidgetId
+import           GUI.Momentu.Element.Id (ElemId(..))
 import           Lamdu.GUI.WidgetIdIRef
 import qualified Lamdu.Sugar.EntityId as EntityId
 import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
 
-defaultCursor :: Id
+defaultCursor :: ElemId
 defaultCursor = gotoDefId
 
-fromBS :: ByteString -> Id
-fromBS = Id . (: [])
+fromBS :: ByteString -> ElemId
+fromBS = ElemId . (: [])
 
-fromEntityId :: Sugar.EntityId -> Id
+fromEntityId :: Sugar.EntityId -> ElemId
 fromEntityId = fromBS . EntityId.bs
 
-ofTagValue :: Sugar.EntityId -> Id
-ofTagValue = (`WidgetId.joinId` ["val"]) . fromEntityId
+ofTagValue :: Sugar.EntityId -> ElemId
+ofTagValue = (<> "val") . fromEntityId
 
-fromExprPayload :: Sugar.Payload v o -> Id
+fromExprPayload :: Sugar.Payload v o -> ElemId
 fromExprPayload pl = fromEntityId (pl ^. Sugar.plEntityId)
 
-literalEditOf :: Id -> Id
-literalEditOf = flip WidgetId.joinId ["literal edit"]
+literalEditOf :: ElemId -> ElemId
+literalEditOf = (<> "literal edit")
 
-fromUUID :: UUID -> Id
+fromUUID :: UUID -> ElemId
 fromUUID = fromBS . UUIDUtils.toSBS16
 
-branchSelection :: Id
-branchSelection = Id ["selected branch"]
+branchSelection :: ElemId
+branchSelection = "selected branch"
 
-statusBarHamburger :: Id
-statusBarHamburger = Id ["hamburger"]
+statusBarHamburger :: ElemId
+statusBarHamburger = "hamburger"
 
-tagHoleId :: Id -> Id
-tagHoleId = (`WidgetId.joinId` ["hole"])
+tagHoleId :: ElemId -> ElemId
+tagHoleId = (<> "hole")
 
-fragmentHoleId :: Id -> Id
-fragmentHoleId = (`WidgetId.joinId` ["hole"])
+fragmentHoleId :: ElemId -> ElemId
+fragmentHoleId = (<> "hole")
 
-gotoDefId :: Id
-gotoDefId = Id ["goto-def"]
+gotoDefId :: ElemId
+gotoDefId = "goto-def"

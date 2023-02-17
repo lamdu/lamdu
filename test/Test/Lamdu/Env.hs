@@ -15,7 +15,7 @@ import qualified GUI.Momentu.Animation as Anim
 import qualified GUI.Momentu.Direction as Dir
 import           GUI.Momentu.Draw (Color(..), Sprite)
 import qualified GUI.Momentu.Draw as Draw
-import           GUI.Momentu.Element (HasAnimIdPrefix(..))
+import           GUI.Momentu.Element (HasElemIdPrefix(..))
 import           GUI.Momentu.Font (openFont, LCDSubPixelEnabled(..))
 import qualified GUI.Momentu.Hover as Hover
 import qualified GUI.Momentu.MetaKey as MetaKey
@@ -64,7 +64,7 @@ data Env =
     Env
     { _eTheme :: Theme
     , _eSpacing :: Vector2 Double
-    , _eAnimIdPrefix :: Anim.AnimId
+    , _eElemIdPrefix :: Anim.ElemId
     , _eState :: GUIState
     , _eConfig :: Config ModKey
     , _eSugars :: Sugars Bool
@@ -86,7 +86,7 @@ instance Anchors.HasCodeAnchors Env DbLayout.ViewM where codeAnchors = eCodeAnch
 instance Has Theme Env where has = eTheme
 instance HasStdSpacing Env where stdSpacing = eSpacing
 instance Has TextView.Style Env where has = has @TextEdit.Style . has
-instance HasAnimIdPrefix Env where animIdPrefix = eAnimIdPrefix
+instance HasElemIdPrefix Env where elemIdPrefix = eElemIdPrefix
 instance HasCursor Env
 instance Has GUIState Env where has = eState
 instance Has Settings Env where has = eSettings
@@ -176,7 +176,7 @@ make =
                 , TextEdit._sCursorWidth = 1
                 , TextEdit._sEmptyStringsColors = pure (Color 1 1 1 1)
                 }
-            , _eAnimIdPrefix = []
+            , _eElemIdPrefix = mempty
             , _eDirLayout = Dir.LeftToRight
             , _eLanguage = testLang
             , _eCodeAnchors = DbLayout.codeAnchors

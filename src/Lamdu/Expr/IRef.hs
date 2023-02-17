@@ -39,7 +39,7 @@ type T = Transaction
 
 type DefI m = IRef m (Definition (ValI m) ())
 
--- NOTE: Nobody else should generate Lamdu-visible Global Id's
+-- NOTE: Nobody else should generate Lamdu-visible Global ElemId's
 globalId :: DefI m -> V.Var
 globalId = V.Var . Identifier . UUIDUtils.toSBS16 . IRef.uuid
 

@@ -47,8 +47,8 @@ verifyLayers msg view =
     [] -> Right ()
     _ -> Left (prettyCallStack callStack <> "/" <> msg <> ": Clashing anim ids: " <> show clashingIds)
     where
-        animIds = view ^.. Element.layers . traverse . Anim.frameImages . traverse . Anim.iAnimId
-        clashingIds = sort animIds & group >>= tail
+        elemIds = view ^.. Element.layers . traverse . Anim.frameImages . traverse . Anim.iElemId
+        clashingIds = sort elemIds & group >>= tail
 
 wideFocused :: Lens.Traversal' (Responsive f) (Widget.Surrounding -> Widget.Focused (f M.Update))
 wideFocused = Responsive.rWide . Responsive.lWide . M.tValue . Widget.wState . Widget._StateFocused

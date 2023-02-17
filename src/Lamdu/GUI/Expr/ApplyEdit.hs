@@ -78,7 +78,7 @@ makeLabeled (Ann (Const pl) apply) =
                         (pure myId)
                     disambRhs <-
                         if Lens.has extraArgs apply
-                        then ResponsiveExpr.indent ?? Widget.toAnimId myId <> ["rhs"] <&> Responsive.vertLayoutMaybeDisambiguate
+                        then ResponsiveExpr.indent ?? M.asElemId myId <> "rhs" <&> Responsive.vertLayoutMaybeDisambiguate
                         else pure id
                     lhs <- GuiM.makeSubexpression l <&> swapAction Forward
                     op <- GetVarEdit.make GetVarEdit.Operator func
@@ -112,7 +112,7 @@ makeArgRow arg =
         pre <- TagEdit.makeArgTag (arg ^. Sugar.aaTag)
         comma <-
             Styled.label Texts.compositeSeparator
-            & local (M.animIdPrefix .~ (Widget.toAnimId . WidgetIds.fromEntityId) (arg ^. Sugar.aaTag . Sugar.tagInstance))
+            & local (M.elemIdPrefix .~ (M.asElemId . WidgetIds.fromEntityId) (arg ^. Sugar.aaTag . Sugar.tagInstance))
         pure TaggedItem
             { _tagPre = pre <&> Widget.fromView & Just
             , _taggedItem = expr
@@ -150,6 +150,6 @@ makePostfixFunc (Ann (Const pl) b) =
         <&> (:[]))
     -- Without adjusting anim-ids there is clash in fragment results such as
     -- ".Maybe .case"
-    & local (M.animIdPrefix .~ Widget.toAnimId (WidgetIds.fromExprPayload pl))
+    & local (M.elemIdPrefix .~ M.asElemId (WidgetIds.fromExprPayload pl))
     where
         myId = WidgetIds.fromExprPayload pl

@@ -15,12 +15,14 @@ runJS compiledCode =
     do
         procParams <- nodeRepl
         withProcess procParams $
-            \(Just stdin, Just stdout, Nothing, _procHandle) ->
-            do
-                IO.hPutStrLn stdin compiledCode
-                IO.hPutStrLn stdin "console.log(repl[0])"
-                IO.hClose stdin
-                BS.hGetContents stdout
+            \case
+            (Just stdin, Just stdout, Nothing, _procHandle) ->
+                do
+                    IO.hPutStrLn stdin compiledCode
+                    IO.hPutStrLn stdin "console.log(repl[0])"
+                    IO.hClose stdin
+                    BS.hGetContents stdout
+            _ -> error "withProcess yielded unexpected handles"
 
 nodeRepl :: IO Proc.CreateProcess
 nodeRepl =

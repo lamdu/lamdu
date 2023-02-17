@@ -1,4 +1,4 @@
-module Tests.AnimIdClash (test) where
+module Tests.ElemIdClash (test) where
 
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.View as View

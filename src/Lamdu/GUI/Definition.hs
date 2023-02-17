@@ -9,6 +9,7 @@ import           Data.CurAndPrev (CurPrevTag(..), fallbackToPrev, curPrevTag)
 import           GUI.Momentu (Responsive)
 import qualified GUI.Momentu as M
 import qualified GUI.Momentu.Element as Element
+import           GUI.Momentu.Element.Id (ElemId)
 import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.Glue as Glue
 import qualified GUI.Momentu.Hover as Hover
@@ -48,7 +49,7 @@ import           Lamdu.Prelude
 
 resultWidget ::
     _ =>
-    M.WidgetId -> Sugar.VarInfo -> CurPrevTag -> Sugar.EvalCompletionResult o ->
+    ElemId -> Sugar.VarInfo -> CurPrevTag -> Sugar.EvalCompletionResult o ->
     m (M.TextWidget (DefRes o))
 resultWidget myId varInfo tag res =
     case res of
@@ -96,10 +97,10 @@ errorDesc err =
             Sugar.RuntimeError exc ->
                 label Texts.jsException
                 M./|/ ((TextView.make ?? exc)
-                        <*> (Element.subAnimId ?? ["exception text"]))
+                        <*> (Element.subElemId ?? "exception text"))
             & local (TextView.color .~ errorColor)
 
-errorIndicator :: _ => Widget.Id -> CurPrevTag -> Sugar.EvalException o -> m (M.TextWidget o)
+errorIndicator :: _ => ElemId -> CurPrevTag -> Sugar.EvalException o -> m (M.TextWidget o)
 errorIndicator myId tag (Sugar.EvalException errorType jumpToErr) =
     do
         actionKeys <- Lens.view (has . Config.actionKeys)
@@ -137,21 +138,21 @@ errorIndicator myId tag (Sugar.EvalException errorType jumpToErr) =
                 pure indicator
 
 makeAddResultWidget ::
-    _ => Widget.Id -> Sugar.DefinitionExpression v name i o a -> m (Responsive (DefRes o) -> Responsive (DefRes o))
+    _ => ElemId -> Sugar.DefinitionExpression v name i o a -> m (Responsive (DefRes o) -> Responsive (DefRes o))
 makeAddResultWidget myId bodyExpr =
     (Glue.mkGlue ?? Glue.Horizontal) <*>
     ( (resultWidget indicatorId (bodyExpr ^. Sugar.deVarInfo) <$> curPrevTag <&> fmap) <*> bodyExpr ^. Sugar.deResult
         & fallbackToPrev
         & fromMaybe (Widget.respondToCursorPrefix ?? indicatorId ?? M.empty <&> M.WithTextPos 0)
-    ) & local (M.animIdPrefix <>~ ["result widget"])
+    ) & local (M.elemIdPrefix <>~ "result widget")
     where
-        indicatorId = Widget.joinId myId ["result indicator"]
+        indicatorId = myId <> "result indicator"
 
 makeExprDefinition ::
     _ =>
     Sugar.OptionalTag Name i o ->
     ExprGui.Top Sugar.DefinitionExpression i o ->
-    M.WidgetId ->
+    ElemId ->
     GuiM env i o (Responsive (DefRes o))
 makeExprDefinition defName bodyExpr myId =
     case bodyExpr ^. Sugar.deContent . hVal of
@@ -202,29 +203,29 @@ makeExprDefinition defName bodyExpr myId =
         nameTagHoleId = WidgetIds.tagHoleId nameEditId
         makeNameEdit = TagEdit.makeBinderTagEdit TextColors.definitionColor defName
         nameEditId = defName ^. Sugar.oTag . Sugar.tagRefTag . Sugar.tagInstance & WidgetIds.fromEntityId
-        presentationChoiceId = Widget.joinId myId ["presentation"]
+        presentationChoiceId = myId <> "presentation"
 
 makeBuiltinDefinition ::
     _ =>
     Sugar.Definition v Name i o (Sugar.Payload v o) ->
     Sugar.DefinitionBuiltin Name o ->
-    M.WidgetId ->
+    ElemId ->
     GuiM env i o (M.TextWidget o)
 makeBuiltinDefinition def builtin myId =
     TagEdit.makeBinderTagEdit TextColors.definitionColor name
     M./|/ Label.make " = "
     M./|/ BuiltinEdit.make builtin myId
     M./-/ ( topLevelSchemeTypeView (builtin ^. Sugar.biType)
-            & local (M.animIdPrefix .~ animId ++ ["builtinType"])
+            & local (M.elemIdPrefix .~ elemId <> "builtinType")
         )
     where
         name = def ^. Sugar.drName
-        animId = myId & Widget.toAnimId
+        elemId = myId & M.asElemId
 
 make ::
     _ =>
     ExprGui.Top Sugar.Definition i o ->
-    M.WidgetId ->
+    ElemId ->
     GuiM env i o (Responsive (DefRes o))
 make def myId =
     do
@@ -243,7 +244,7 @@ make def myId =
                 makeBuiltinDefinition def builtin myId <&> Responsive.fromWithTextPos
                 <&> Widget.updates %~ lift
             <&> M.weakerEvents nextOutdated
-    & local (M.animIdPrefix .~ Widget.toAnimId myId)
+    & local (M.elemIdPrefix .~ M.asElemId myId)
 
 topLevelSchemeTypeView :: _ => Sugar.Scheme Name -> GuiM env i o (M.WithTextPos M.View)
 topLevelSchemeTypeView scheme =

@@ -44,8 +44,8 @@ addAnnotationBackgroundH :: _ => Lens.ALens' ValAnnotation Draw.Color -> m (a ->
 addAnnotationBackgroundH color =
     do
         t <- Lens.view has
-        bgAnimId <- Element.subAnimId ?? ["annotation background"]
-        Draw.backgroundColor bgAnimId (t ^# Theme.valAnnotation . color) & pure
+        bgElemId <- Element.subElemId ?? "annotation background"
+        Draw.backgroundColor bgElemId (t ^# Theme.valAnnotation . color) & pure
 
 addAnnotationBackground :: _ => m (a -> a)
 addAnnotationBackground = addAnnotationBackgroundH ValAnnotation.valAnnotationBGColor
@@ -187,11 +187,11 @@ makeEvalView mNeighbours evalRes =
             & Element.setLayeredImage <>~ Element.translateLayeredImage nextPos (next ^. View.vAnimLayers)
             & pure
     where
-        evalAnimId erd =
-            erdVal erd ^. annotation & WidgetIds.fromEntityId & Widget.toAnimId
+        evalElemId erd =
+            erdVal erd ^. annotation & WidgetIds.fromEntityId & M.asElemId
         makeEvaluationResultViewBG res =
             ( addAnnotationBackground
-            & local (M.animIdPrefix .~ evalAnimId res)
+            & local (M.elemIdPrefix .~ evalElemId res)
             ) <*> makeEvaluationResultView res
             <&> (^. Align.tValue)
 
@@ -243,10 +243,10 @@ maybeAddAnnotationPl pl =
         postProcessAnnotation <- isExprSelected <&> postProcessAnnotationFromSelected
         maybeAddAnnotation postProcessAnnotation
             (pl ^. Sugar.plAnnotation)
-            & local (M.animIdPrefix .~ animId)
+            & local (M.elemIdPrefix .~ elemId)
     where
         isExprSelected = GuiState.isSubCursor ?? WidgetIds.fromExprPayload pl
-        animId = WidgetIds.fromExprPayload pl & Widget.toAnimId
+        elemId = WidgetIds.fromExprPayload pl & M.asElemId
 
 data EvalAnnotationOptions
     = NormalEvalAnnotation
