@@ -7,7 +7,7 @@ mkDerivation {
   src = fetchFromGitHub {
     owner = "lamdu";
     repo = "rocksdb-haskell";
-    sha256 = "TODO";
+    sha256 = "13xr7ppgsfrgyrzi0l5fzsy84glhysipd6ibc045c7mx4g4iill6";
     rev = "5bac865400c67e7bab0c219ec7327284cb87e348";
   };
   postPatch = ''
