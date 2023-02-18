@@ -14,10 +14,10 @@ If you do not install NodeJS, Lamdu's installation will build it from source.
 
 ### macOS
 
-requires an x86_64 [brew](http://brew.sh/) setup and [git](https://git-scm.com/):
+Using [homebrew](http://brew.sh/) and [git](https://git-scm.com/) (prerequirements):
 
 ```shell
-arch -arch x86_64 /usr/local/bin/brew install rocksdb haskell-stack
+brew install rocksdb haskell-stack
 git clone --recursive https://github.com/lamdu/lamdu
 cd lamdu
 stack setup
