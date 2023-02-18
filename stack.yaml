@@ -14,7 +14,7 @@ extra-deps:
 - github: lamdu/text-trie
   commit: 072256fb4884d40536c9a31e15fa60d3330d7c58
 - github: lamdu/rocksdb-haskell
-  commit: b0016acefbb38b1fbe148163f226f4cae15c03c7
+  commit: 5bac865400c67e7bab0c219ec7327284cb87e348
 - github: lamdu/bindings-freetype-gl
   commit: 8d311d96c5fa7fcfb5b79d057c9c24944d5d234b
 - github: lamdu/lamdu-calculus
