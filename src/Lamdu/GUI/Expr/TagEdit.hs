@@ -105,7 +105,7 @@ makeAddNewTag ::
 makeAddNewTag tagOpt =
     makeNewTagPreEvent tagOpt <&>
     \newTagPreEvent mkPickResult ctx ->
-    let optionId = (ctx ^. SearchMenu.rResultIdPrefix) <> "Create new"
+    let optionId = ctx ^. SearchMenu.rResultIdPrefix <> "Create new"
         searchTerm = ctx ^. SearchMenu.rSearchTerm
     in  newTagPreEvent searchTerm mkPickResult
         <&> \preEvent ->
