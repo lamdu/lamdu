@@ -48,8 +48,8 @@ import           Lamdu.Prelude
 
 makeSimpleView :: _ => Lens.ALens' TextColors M.Color -> Name -> ElemId -> m (M.TextWidget f)
 makeSimpleView color name myId =
-    (Widget.makeFocusableView ?? myId <&> (Align.tValue %~))
-    <*> NameView.make name
+    NameView.make name
+    >>= Align.tValue (Widget.makeFocusableView myId)
     & Styled.withColor (Lens.cloneLens color)
 
 data Role = Normal | Operator deriving Eq
@@ -126,7 +126,7 @@ definitionTypeChangeBox info getVarId =
         oldTypeView <- mkTypeView "oldTypeView" (info ^. Sugar.defTypeWhenUsed)
         newTypeView <- mkTypeView "newTypeView" (info ^. Sugar.defTypeCurrent)
 
-        Grid.make ??
+        Grid.make
             [ [ Align.fromWithTextPos 0 (oldTypeRow <&> Widget.fromView)
               , Align.fromWithTextPos 0 (oldTypeView <&> Widget.fromView) ]
             , [ Align.fromWithTextPos 0 newTypeRow
@@ -170,17 +170,16 @@ processDefinitionWidget (Sugar.DefTypeChanged info) myId mkLayout =
         layout <-
             local (TextView.underline ?~ underline) mkLayout
             & GuiState.assignCursor hiddenId myId
-        isSelected <- GuiState.isSubCursor ?? myId
-        isHidden <- GuiState.isSubCursor ?? hiddenId
+        isSelected <- GuiState.isSubCursor myId
+        isHidden <- GuiState.isSubCursor hiddenId
         case (isHidden, isSelected) of
             (True, _) ->
                 layout
                 <&> Widget.strongerEventsWithoutPreevents showDialogEventMap
                 & pure
             (False, True) ->
-                ( Hover.hoverBeside Align.tValue ?? layout )
-                <*>
-                ( definitionTypeChangeBox info myId <&> (^. Align.tValue) )
+                definitionTypeChangeBox info myId <&> (^. Align.tValue)
+                >>= Hover.hoverBeside Align.tValue layout
                 <&> fmap (Widget.weakerEventsWithoutPreevents hideDialogEventMap)
             (False, False) -> pure layout
     where
@@ -232,4 +231,4 @@ makePunnedVars args =
     do
         argEdits <- traverse makePunnedVar args
         collapsed <- grammar (label Texts.punnedFields) <&> Responsive.fromTextView
-        Options.boxSpaced ?? Options.disambiguationNone ?? collapsed : argEdits
+        Options.boxSpaced Options.disambiguationNone (collapsed : argEdits)

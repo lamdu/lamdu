@@ -30,7 +30,7 @@ makeCollisionSuffixLabel mCollision =
 
 mGlueRight :: (MonadReader env m, Glue.Glue env b a, Glue.Glued a b ~ b) => Maybe a -> b -> m (Glue.Glued a b)
 mGlueRight Nothing x = pure x
-mGlueRight (Just r) l = Glue.mkGlue ?? Glue.Horizontal ?? l ?? r
+mGlueRight (Just r) l = Glue.mkGlue Glue.Horizontal l r
 
 make :: _ => Name -> m (WithTextPos View)
 make name =
@@ -38,8 +38,8 @@ make name =
         (Name.TagText visibleName textCollision, tagCollision) <- Name.visible name
         nameTheme <- Lens.view (has . Theme.name)
         mTextSuffixLabel <-
-            (Draw.backgroundColor ?? nameTheme ^. NameTheme.textCollisionSuffixBGColor <&> (Lens._Just %~))
-            <*> makeCollisionSuffixLabel textCollision
+            makeCollisionSuffixLabel textCollision
+            >>= Lens._Just (Draw.backgroundColor (nameTheme ^. NameTheme.textCollisionSuffixBGColor))
             & Styled.withColor TextColors.collisionSuffixTextColor
             <&> Lens._Just %~ Aligned 0.5 . Element.scale (nameTheme ^. NameTheme.collisionSuffixScaleFactor) . (^. Align.tValue)
             & local (Element.elemIdPrefix <>~ "text-suffix")
@@ -47,7 +47,7 @@ make name =
             makeCollisionSuffixLabel tagCollision
             & local (Element.elemIdPrefix <>~ "tag-suffix")
         elemId <- Lens.view Element.elemIdPrefix
-        TextView.make ?? visibleName ?? elemId
+        TextView.make visibleName elemId
             <&> Aligned 0.5
             >>= mGlueRight mTextSuffixLabel
             <&> (^. Align.value)

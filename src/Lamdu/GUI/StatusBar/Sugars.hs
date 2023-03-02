@@ -29,6 +29,7 @@ import qualified Lamdu.I18N.StatusBar as Texts
 import           Lamdu.Sugar.Config (Sugars)
 
 import           Lamdu.Prelude
+import Control.Monad.Reader.Extended (pushToReader)
 
 sugarFdConfig :: _ => env -> FocusDelegator.Config
 sugarFdConfig env = FocusDelegator.Config
@@ -42,32 +43,28 @@ sugarFdConfig env = FocusDelegator.Config
 
 make :: _ => Property IO (Sugars Bool) -> m (StatusWidget IO)
 make prop =
-    ( FocusDelegator.make
-    <*> (Lens.view id <&> sugarFdConfig)
-    ?? FocusDelegator.FocusEntryParent
-    ?? sugarsId
-    ) <*>
     do
-        top <-
-            (Widget.makeFocusableView ?? focusedSugarsId <> "Header") <*> sprite Sprites.sugar
-        showMenu <- isSubCursor ?? focusedSugarsId
-        if showMenu
+        top <- sprite Sprites.sugar >>= Widget.makeFocusableView (focusedSugarsId <> "Header")
+        showMenu <- isSubCursor focusedSugarsId
+        c <- Lens.view id <&> sugarFdConfig
+        ( if showMenu
             then
                 do
-                    anchor <- Hover.anchor
+                    anchor <- pushToReader Hover.anchor
                     texts <- Lens.view has
-                    hover <- Hover.hover
-                    vbox <- Glue.vbox
+                    hover <- pushToReader Hover.hover
+                    vbox <- pushToReader Glue.vbox
                     elems <-
                         traverse (uncurry (mkSugarToggle prop)) (((,) <$> texts <*> prop ^. pVal) ^@.. Lens.traversed)
                         <&> Lens.mapped %~ (^. M.tValue)
-                    Glue.Poly (///) <- Glue.mkPoly ?? Glue.Vertical
+                    Glue.Poly (///) <- Glue.mkPoly Glue.Vertical
                     let opt x =
                             ( M.Aligned x (anchor top)
                                 /// Hover.sequenceHover (hover (vbox (elems <&> M.Aligned x)))
                             ) ^. Align.value
                     top & Hover.hoverInPlaceOf [opt 0, opt 1] . anchor & pure
             else pure top
+            ) >>= FocusDelegator.make c FocusDelegator.FocusEntryParent sugarsId
     <&> (`StatusBar.StatusWidget` mempty) . M.WithTextPos 0
 
 sugarsId :: ElemId
@@ -83,8 +80,7 @@ mkSugarToggle prop idx (text, val) =
         disabledCol <- Lens.view (has . Theme.disabledColor)
         sbText <- Lens.view (has . Texts.sbStatusBar)
         actionText <- Lens.view (has . if val then Texts.sbDisable else Texts.sbEnable)
-        (Widget.makeFocusableView ?? myId <&> (M.tValue %~))
-            <*> (TextView.make ?? text ?? myId)
+        TextView.make text myId >>= M.tValue (Widget.makeFocusableView myId)
             & (if val then id else local (TextView.color .~ disabledCol))
             <&> M.tValue %~ M.weakerEvents (E.keysEventMap actionKeys (E.Doc [sbText, text, actionText]) toggle)
     & local (Element.elemIdPrefix .~ myId)

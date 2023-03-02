@@ -98,12 +98,11 @@ makeBranchSelector rwtransaction rtransaction actions =
                         <&> Property.pSet . Lens.mapped %~ rwtransaction
                         & rtransaction
                     branchNameEdit <-
-                        ( FocusDelegator.make ?? branchNameFDConfig txt
-                        ?? FocusDelegator.FocusEntryParent
-                        ?? branchDelegatorId branch
-                        <&> (Align.tValue %~) )
-                        <*> (TextEdits.makeLineEdit ?? empty ?? nameProp
-                                ?? branchTextEditId branch)
+                        TextEdits.makeLineEdit empty nameProp (branchTextEditId branch)
+                        >>= Align.tValue
+                            (FocusDelegator.make (branchNameFDConfig txt)
+                            FocusDelegator.FocusEntryParent
+                            (branchDelegatorId branch))
                     config <- Lens.view has
                     let delEventMap
                             | List.isLengthAtLeast 2 (A.branches actions) =
@@ -129,9 +128,8 @@ makeBranchSelector rwtransaction rtransaction actions =
                             env ^. has . VersionControl.selectedBranchColor
                         else id
         branchNameEdits <- A.branches actions & traverse makeBranchNameEdit
-        defConfig <- DropDownList.defaultConfig ?? txt ^. has . Texts.branches
-        DropDownList.make ?? A.currentBranch actions ?? branchNameEdits
-            ?? defConfig ?? WidgetIds.branchSelection
+        defConfig <- DropDownList.defaultConfig (txt ^. has . Texts.branches)
+        DropDownList.make (A.currentBranch actions) branchNameEdits defConfig WidgetIds.branchSelection
     where
         empty =
             TextEdit.Modes

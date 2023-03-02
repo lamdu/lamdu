@@ -3,6 +3,7 @@ module Lamdu.GUI.Expr.ApplyEdit
     ) where
 
 import qualified Control.Lens as Lens
+import           Control.Monad.Reader.Extended (pushToReader)
 import           GUI.Momentu (Responsive)
 import qualified GUI.Momentu as M
 import           GUI.Momentu.Direction (Orientation(..), Order(..))
@@ -49,7 +50,7 @@ makeLabeled (Ann (Const pl) apply) =
         argRows <-
             case apply ^. Sugar.aAnnotatedArgs of
             [] -> pure []
-            xs -> taggedListIndent <*> (traverse makeArgRow xs <&> Lens._last . tagPost .~ Nothing) <&> (:[])
+            xs -> traverse makeArgRow xs <&> Lens._last . tagPost .~ Nothing >>= taggedListIndent <&> (:[])
         punnedArgs <-
             case apply ^. Sugar.aPunnedArgs of
             [] -> pure []
@@ -57,10 +58,11 @@ makeLabeled (Ann (Const pl) apply) =
         let extraRows = argRows <> punnedArgs
         let addArgs funcRow
                 | null extraRows = pure funcRow
-                | otherwise =  Styled.addValFrame <*> (Responsive.vboxSpaced ?? (funcRow : extraRows))
+                | otherwise = Styled.addValFrame <*> Responsive.vboxSpaced (funcRow : extraRows)
         let wrap x =
-                (maybeAddAnnotationPl pl <&> (Widget.widget %~)) <*>
-                addArgs x
+                do
+                    addAnnotation <- maybeAddAnnotationPl pl
+                    addArgs x <&> Widget.widget %~ addAnnotation
         case apply ^. Sugar.aMOpArgs of
             Nothing -> GetVarEdit.make GetVarEdit.Normal func >>= wrap
             Just (Sugar.OperatorArgs l r s) ->
@@ -78,24 +80,22 @@ makeLabeled (Ann (Const pl) apply) =
                         (pure myId)
                     disambRhs <-
                         if Lens.has extraArgs apply
-                        then ResponsiveExpr.indent ?? M.asElemId myId <> "rhs" <&> Responsive.vertLayoutMaybeDisambiguate
+                        then ResponsiveExpr.indent (M.asElemId myId <> "rhs") & pushToReader <&> Responsive.vertLayoutMaybeDisambiguate
                         else pure id
                     lhs <- GuiM.makeSubexpression l <&> swapAction Forward
                     op <- GetVarEdit.make GetVarEdit.Operator func
                     rhs <- GuiM.makeSubexpression r <&> Widget.weakerEvents navigateOut . swapAction Backward . disambRhs
                     res <-
-                        (ResponsiveExpr.boxSpacedMDisamb ?? ExprGui.mParensId pl) <*>
                         sequenceA
                         [ pure lhs
-                        , Options.boxSpaced ?? Options.disambiguationNone ?? [op, rhs] >>= wrap
-                        ]
+                        , Options.boxSpaced Options.disambiguationNone [op, rhs] >>= wrap
+                        ] >>= ResponsiveExpr.boxSpacedMDisamb (ExprGui.mParensId pl)
                     if null extraRows
                         then
-                            (ResponsiveExpr.boxSpacedMDisamb ?? ExprGui.mParensId pl) <*>
                             sequenceA
-                            [ Options.boxSpaced ?? Options.disambiguationNone ?? [lhs, op]
+                            [ Options.boxSpaced Options.disambiguationNone [lhs, op]
                             , pure rhs
-                            ]
+                            ] >>= ResponsiveExpr.boxSpacedMDisamb (ExprGui.mParensId pl)
                             >>= wrap
                             <&> Responsive.rWide .~ res ^. Responsive.rWide
                         else pure res
@@ -125,29 +125,28 @@ makeSimple ::
         # Sugar.App (Sugar.Term (Sugar.Annotation (Sugar.EvaluationScopes Name i) Name) Name i o) ->
     GuiM env i o (Responsive o)
 makeSimple (Ann (Const pl) (Sugar.App func arg)) =
-    (ResponsiveExpr.boxSpacedMDisamb ?? ExprGui.mParensId pl)
-    <*> sequenceA
+    sequenceA
     [ GuiM.makeSubexpression func
     , GuiM.makeSubexpression arg
-    ] & stdWrapParentExpr pl
+    ] >>= ResponsiveExpr.boxSpacedMDisamb (ExprGui.mParensId pl)
+    & stdWrapParentExpr pl
 
 makePostfix :: _ => ExprGui.Expr Sugar.PostfixApply i o -> GuiM env i o (Responsive o)
 makePostfix (Ann (Const pl) (Sugar.PostfixApply arg func)) =
-    (ResponsiveExpr.boxSpacedMDisamb ?? ExprGui.mParensId pl) <*>
     sequenceA
     [ GuiM.makeSubexpression arg
     , (maybeAddAnnotationPl pl <&> (Widget.widget %~)) <*> makePostfixFunc func
-    ]
+    ] >>= ResponsiveExpr.boxSpacedMDisamb (ExprGui.mParensId pl)
     & wrapParentNoAnn pl
 
 makePostfixFunc :: _ => ExprGui.Expr Sugar.PostfixFunc i o -> GuiM env i o (Responsive o)
 makePostfixFunc (Ann (Const pl) b) =
-    (ResponsiveExpr.boxSpacedMDisamb ?? ExprGui.mParensId pl) <*>
-    ( case b of
-        Sugar.PfCase x -> CaseEdit.make (Ann (Const pl) x)
-        Sugar.PfFromNom x -> NominalEdit.makeFromNom myId x & stdWrapParentExpr pl
-        Sugar.PfGetField x -> GetFieldEdit.make x & stdWrapParentExpr pl
-        <&> (:[]))
+    case b of
+    Sugar.PfCase x -> CaseEdit.make (Ann (Const pl) x)
+    Sugar.PfFromNom x -> NominalEdit.makeFromNom myId x & stdWrapParentExpr pl
+    Sugar.PfGetField x -> GetFieldEdit.make x & stdWrapParentExpr pl
+    <&> (:[])
+    >>= ResponsiveExpr.boxSpacedMDisamb (ExprGui.mParensId pl)
     -- Without adjusting anim-ids there is clash in fragment results such as
     -- ".Maybe .case"
     & local (M.elemIdPrefix .~ M.asElemId (WidgetIds.fromExprPayload pl))

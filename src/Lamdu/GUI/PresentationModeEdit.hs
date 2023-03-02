@@ -44,11 +44,8 @@ make myId (Sugar.LhsRecord params) prop =
             ]
             & local
                 (has . TextView.styleColor .~ theme ^. Theme.textColors . TextColors.presentationChoiceColor)
-        defConfig <-
-            DropDownList.defaultConfig
-            <*> Lens.view (has . Texts.presentationMode)
-        DropDownList.make ?? prop ?? pairs
-            ?? defConfig ?? myId
+        defConfig <- Lens.view (has . Texts.presentationMode) >>= DropDownList.defaultConfig
+        DropDownList.make prop pairs defConfig myId
             <&> Element.scale (theme ^. Theme.presentationChoiceScaleFactor)
     where
         paramTags = params ^.. SugarLens.taggedListItems . Sugar.tiTag . Sugar.tagRefTag . Sugar.tagVal

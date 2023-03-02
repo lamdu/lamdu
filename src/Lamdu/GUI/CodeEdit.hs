@@ -101,7 +101,7 @@ make cp gp width mkWorkArea =
             <&> StatusBar.hoist IOTrans.liftTrans
         assocTagName <- DataOps.assocTagName
         do
-            newDefId <- Element.subElemId ?? "New definition"
+            newDefId <- Element.subElemId "New definition"
             let dsts =
                     drop 1 (workArea ^.. Sugar.waPanes . traverse . Sugar.paneEntityId <&> WidgetIds.fromEntityId) ++ [newDefId]
             panesEdits <-
@@ -112,8 +112,7 @@ make cp gp width mkWorkArea =
                 <&> Widget.updates %~ IOTrans.liftTrans
                 <&> Responsive.fromWidget
             eventMap <- panesEventMap theExportActions cp gp
-            Responsive.vboxSpaced
-                ?? panesEdits <> [newDefinitionButton]
+            Responsive.vboxSpaced (panesEdits <> [newDefinitionButton])
                 <&> Widget.widget . Widget.eventMapMaker . Lens.mapped %~ (<> eventMap)
             & GuiM.run (workArea ^. Sugar.waOpenPane) assocTagName ExpressionEdit.make BinderEdit.make
                 (Anchors.onGui (Property.mkProperty %~ lift) gp) env
@@ -188,7 +187,7 @@ makePaneBodyEdit pane =
 undeleteButton :: _ => o ElemId -> GuiM env i o (M.TextWidget o)
 undeleteButton undelete =
     do
-        actionId <- Element.subElemId ?? "Undelete"
+        actionId <- Element.subElemId "Undelete"
         toDoc <- Lens.view id <&> E.toDoc
         let doc =
                 toDoc
@@ -256,7 +255,7 @@ makePaneEdit theExportActions prevId pane =
                         & undeleteButton <&> Responsive.fromWithTextPos
                         <&> Widget.updates %~ IOTrans.liftTrans
                     style <- Styled.deletedDef
-                    Responsive.vbox ??
+                    Responsive.vbox
                         [ buttonGui
                         , bodyGui
                             & Responsive.alignedWidget . M.tValue .> Widget.wFocused %@~ wholeFocused

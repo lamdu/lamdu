@@ -59,7 +59,7 @@ addAnnotation ::
 addAnnotation annotationOpts param myId widget =
     do
         postProcessAnnotation <-
-            GuiState.isSubCursor ?? myId
+            GuiState.isSubCursor myId
             <&> Annotation.postProcessAnnotationFromSelected
         Annotation.maybeAddAnnotationWith annotationOpts postProcessAnnotation
             (param ^. Sugar.fpAnnotation)
@@ -90,7 +90,7 @@ addAnnotationAndEvents annotationOpts param myId widget =
 
 mkAddParam :: _ => i (Sugar.TagChoice Name o) -> ElemId -> m [Responsive o]
 mkAddParam addParam myId =
-    GuiState.isSubCursor ?? addId >>=
+    GuiState.isSubCursor addId >>=
     \case
     False -> pure []
     True ->

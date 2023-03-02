@@ -50,17 +50,16 @@ disallowedNameChars = Set.fromList ",[]\\`()"
 makeTagNameEdit :: _ => Property f Text -> ElemId -> m (TextWidget f)
 makeTagNameEdit prop myId =
     TextEdits.makeWordEdit
-    ?? pure "  "
-    ?? (prop & Property.pSet %~ (. (Lens.ix 0 %~ Char.toLower)))
-    ?? tagRenameId myId
+    (pure "  ")
+    (prop & Property.pSet %~ (. (Lens.ix 0 %~ Char.toLower)))
+    (tagRenameId myId)
     <&> Align.tValue . Widget.eventMapMaker . Lens.mapped %~ E.filterChars (`Set.notMember` disallowedNameChars)
 
 makeSymbolNameEdit :: _ => Property f Text -> ElemId -> m (TextWidget f)
 makeSymbolNameEdit prop myId =
-    TextEdits.makeWordEdit
-    <*> (Lens.view (has . Texts.typeOperatorHere) <&> pure)
-    ?? prop
-    ?? tagRenameId myId
+    do
+        empties <- Lens.view (has . Texts.typeOperatorHere) <&> pure
+        TextEdits.makeWordEdit empties prop (tagRenameId myId)
     <&> Align.tValue . Widget.eventMapMaker . Lens.mapped %~ E.filterChars allowedSymbolChars
     where
         allowedSymbolChars =
@@ -91,15 +90,13 @@ makeFocusableTagNameEdit myId prop =
                     , has . Texts.stopEditing
                     ]
                 }
-        (FocusDelegator.make ?? fdConfig ?? FocusDelegator.FocusEntryParent ?? myId
-            <&> (Align.tValue %~))
-            <*> makeTagNameEdit prop myId
+        makeTagNameEdit prop myId
+            >>= Align.tValue (FocusDelegator.make fdConfig FocusDelegator.FocusEntryParent myId)
 
 makeLanguageTitle :: _ => ElemId -> LangId -> m (TextWidget o)
 makeLanguageTitle myId lang =
-    TextView.make
-    <*> (Lens.view has <&> getLang)
-    <*> pure (myId <> "lang-title")
+    Lens.view has <&> getLang
+    >>= (`TextView.make` (myId <> "lang-title"))
     <&> Align.tValue %~ Widget.fromView
     where
         getLang :: Map LangId Text -> Text
@@ -193,10 +190,8 @@ makeLangsTable myId tagTexts setName =
                 tagTexts ^@.. Lens.itraversed
                 & filter ((/= lang) . fst)
                 <&> uncurry (makeLangRow myId setName)
-        Grid.make <*>
-            sequence
-            (heading : currentLang : editOtherLangs)
-            <&> snd
+        sequence (heading : currentLang : editOtherLangs)
+    >>= Grid.make <&> snd
     where
         -- the type of Styled.label is RankN, so duplicate a bit of
         -- code to avoid complicating too much here
@@ -242,20 +237,18 @@ makeSymbol myId symProp =
 
         mkId suffix = myId <> suffix
         nameEdit prop = makeSymbolNameEdit prop . mkId
-        focusableLabel l suffix =
-            TextView.makeFocusable <*> Lens.view (has . l) ?? mkId suffix
+        focusableLabel l suffix = Lens.view (has . l) >>= (`TextView.makeFocusable` mkId suffix)
         makeDropDownList curType toTagSym =
             do
                 noSymLabel <- focusableLabel Texts.noSymbol "nosym"
                 uniLabel <- focusableLabel Texts.symbol "unisym"
                 dirLabel <- focusableLabel Texts.directionalSymbol "dirsym"
-                defConf <- DropDownList.defaultConfig <*> Lens.view (has . Texts.symbolType)
-                DropDownList.make ?? Property curType (set . toTagSym)
-                    ?? [ (NoSymbol, noSymLabel)
-                       , (UniversalSymbol, uniLabel)
-                       , (DirectionalSymbol, dirLabel)
-                       ]
-                    ?? defConf ?? mkId "symType"
+                defConf <- Lens.view (has . Texts.symbolType) >>= DropDownList.defaultConfig
+                DropDownList.make (Property curType (set . toTagSym))
+                    [ (NoSymbol, noSymLabel)
+                    , (UniversalSymbol, uniLabel)
+                    , (DirectionalSymbol, dirLabel)
+                    ] defConf (mkId "symType")
                 & withColor TextColors.actionTextColor
 
 
@@ -272,7 +265,7 @@ makeIntEdit myId prop =
             M.readWidgetState myId
             <&> (^? Lens._Just . Lens.filtered ((== Just prevVal) . parseInt))
             <&> fromMaybe prevValStr
-        TextEdit.make ?? TextEdit.Modes "0" "0" ?? text ?? myId
+        TextEdit.make (TextEdit.Modes "0" "0") text myId
             <&> Align.tValue . Widget.eventMapMaker . Lens.mapped %~
             -- Avoid taking keys that don't belong to us,
             -- so weakerEvents with them will work.
@@ -309,7 +302,7 @@ make tagPane myId =
                 max (nextLine ^. Element.width) (langsTable ^. Element.width)
         let gap = totalWidth - (symbol ^. Element.width + orderEdit ^. Element.width)
         pure langsTable
-            /-/ (hbox ?? [symbol, hspaceOf gap, orderEdit] <&> (^. Align.tValue))
+            /-/ (hbox [symbol, hspaceOf gap, orderEdit] <&> (^. Align.tValue))
             /-/ pure (nextLine ^. Align.tValue)
     & local (Element.elemIdPrefix .~ M.asElemId myId)
     & GuiState.assignCursor myId (nameId (langElemId myId lang))

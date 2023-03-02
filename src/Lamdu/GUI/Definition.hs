@@ -4,6 +4,7 @@ module Lamdu.GUI.Definition
     ) where
 
 import qualified Control.Lens as Lens
+import           Control.Monad.Reader.Extended (pushToReader)
 import           Control.Monad.Writer (MonadWriter(..))
 import           Data.CurAndPrev (CurPrevTag(..), fallbackToPrev, curPrevTag)
 import           GUI.Momentu (Responsive)
@@ -64,7 +65,7 @@ resultWidget myId varInfo tag res =
                         let executeEventMap =
                                 Lens._Wrapped # True & tell & DefRes
                                 & E.keysEventMap actionKeys (toDoc [Texts.execRepl])
-                        Widget.makeFocusableView ?? myId <&> (M.tValue %~) ?? view
+                        view & M.tValue (Widget.makeFocusableView myId)
                             <&> M.tValue %~ Widget.takesStroll myId
                             <&> M.tValue %~ Widget.weakerEvents executeEventMap
                 _ -> view & M.tValue %~ Widget.fromView & pure
@@ -96,8 +97,7 @@ errorDesc err =
                 label (compiledErrorDesc cErr)
             Sugar.RuntimeError exc ->
                 label Texts.jsException
-                M./|/ ((TextView.make ?? exc)
-                        <*> (Element.subElemId ?? "exception text"))
+                M./|/ (Element.subElemId "exception text" >>= TextView.make exc)
             & local (TextView.color .~ errorColor)
 
 errorIndicator :: _ => ElemId -> CurPrevTag -> Sugar.EvalException o -> m (M.TextWidget o)
@@ -112,8 +112,8 @@ errorIndicator myId tag (Sugar.EvalException errorType jumpToErr) =
                 j <&> WidgetIds.fromEntityId
                 & E.keysEventMapMovesCursor actionKeys jumpDoc
         indicator <-
-            (Widget.makeFocusableView ?? myId <&> (M.tValue %~))
-            <*> makeIndicator tag Theme.errorColor "⚠"
+            makeIndicator tag Theme.errorColor "⚠"
+            >>= M.tValue (Widget.makeFocusableView myId)
             <&> Lens.mapped %~ Widget.takesStroll myId
             <&> Lens.mapped %~ Widget.weakerEvents (foldMap jumpEventMap jumpToErr)
         if Widget.isFocused (indicator ^. M.tValue)
@@ -122,10 +122,10 @@ errorIndicator myId tag (Sugar.EvalException errorType jumpToErr) =
                 descLabel <- errorDesc errorType
                 hspace <- Spacer.stdHSpace
                 vspace <- Spacer.stdVSpace
-                hover <- Hover.hover
-                Glue.Poly (|||) <- Glue.mkPoly ?? Glue.Horizontal
-                Glue.Poly (|---|) <- Glue.mkPoly ?? Glue.Vertical
-                anchor <- Hover.anchor <&> fmap
+                hover <- pushToReader Hover.hover
+                Glue.Poly (|||) <- Glue.mkPoly Glue.Horizontal
+                Glue.Poly (|---|) <- Glue.mkPoly Glue.Vertical
+                anchor <- pushToReader Hover.anchor <&> fmap
                 let hDescLabel f = hover (f descLabel) & Hover.sequenceHover
                 let hoverOptions =
                         [ anchor indicator ||| hDescLabel (hspace |||)
@@ -140,11 +140,11 @@ errorIndicator myId tag (Sugar.EvalException errorType jumpToErr) =
 makeAddResultWidget ::
     _ => ElemId -> Sugar.DefinitionExpression v name i o a -> m (Responsive (DefRes o) -> Responsive (DefRes o))
 makeAddResultWidget myId bodyExpr =
-    (Glue.mkGlue ?? Glue.Horizontal) <*>
-    ( (resultWidget indicatorId (bodyExpr ^. Sugar.deVarInfo) <$> curPrevTag <&> fmap) <*> bodyExpr ^. Sugar.deResult
-        & fallbackToPrev
-        & fromMaybe (Widget.respondToCursorPrefix ?? indicatorId ?? M.empty <&> M.WithTextPos 0)
-    ) & local (M.elemIdPrefix <>~ "result widget")
+    (resultWidget indicatorId (bodyExpr ^. Sugar.deVarInfo) <$> curPrevTag <&> fmap) <*> bodyExpr ^. Sugar.deResult
+    & fallbackToPrev
+    & fromMaybe (Widget.respondToCursorPrefix indicatorId M.empty <&> M.WithTextPos 0)
+    >>= (Glue.mkGlue Glue.Horizontal <&> pushToReader)
+    & local (M.elemIdPrefix <>~ "result widget")
     where
         indicatorId = myId <> "result indicator"
 
@@ -158,7 +158,7 @@ makeExprDefinition defName bodyExpr myId =
     case bodyExpr ^. Sugar.deContent . hVal of
     Sugar.BodyPlain x ->
         do
-            isPickingName <- GuiState.isSubCursor ?? nameEditId
+            isPickingName <- GuiState.isSubCursor nameEditId
             let isPlainLhs = isPickingName || Lens.has (Sugar.oTag . Sugar.tagRefJumpTo . Lens._Just) defName
 
             let rhsId = bodyExpr ^. Sugar.deContent . annotation & WidgetIds.fromExprPayload
@@ -170,7 +170,7 @@ makeExprDefinition defName bodyExpr myId =
                 <&> Widget.updates %~ lift
 
             equals <- grammar (label Texts.assign) <&> Responsive.fromTextView
-            plainLhs <- Options.boxSpaced ?? Options.disambiguationNone ?? [nameEdit, equals]
+            plainLhs <- Options.boxSpaced Options.disambiguationNone [nameEdit, equals]
             let width =
                     plainLhs
                     ^. Responsive.rWide . Responsive.lWide . M.tValue . Widget.wSize . Lens._1
@@ -179,10 +179,9 @@ makeExprDefinition defName bodyExpr myId =
                 if isPlainLhs
                 then pure plainLhs
                 else
-                    do
-                        repl <- (Widget.makeFocusableView ?? nameTagHoleId <&> (M.tValue %~)) <*> label Texts.repl
-                        Element.padToSize ?? M.Vector2 width 0 ?? 0 ?? repl
-                        <&> Responsive.fromWithTextPos
+                    label Texts.repl >>= M.tValue (Widget.makeFocusableView nameTagHoleId)
+                    >>= Element.padToSize (M.Vector2 width 0) 0
+                    <&> Responsive.fromWithTextPos
             bodyExpr ^. Sugar.deContent & annValue .~ x ^. Sugar.apBody & GuiM.makeBinder
                 <&> Widget.updates %~ lift
                 >>= AssignmentEdit.layout lhs
@@ -194,8 +193,8 @@ makeExprDefinition defName bodyExpr myId =
                     params <- bodyExpr ^? Sugar.deContent . hVal . Sugar._BodyFunction . Sugar.fParams
                     GuiM.im presModeProp >>= PresentationModeEdit.make presentationChoiceId params & Just
                     & sequenceA
-            (|---|) <- Glue.mkGlue ?? Glue.Vertical
-            makeNameEdit <&> (|---| fromMaybe M.empty mPresentationEdit) <&> Responsive.fromWithTextPos
+            makeNameEdit Glue./-/
+                pure (fromMaybe M.empty mPresentationEdit) <&> Responsive.fromWithTextPos
                 >>= AssignmentEdit.make nameEditId (bodyExpr ^. Sugar.deContent)
             <&> Widget.updates %~ lift
     & GuiState.assignCursor myId nameEditId

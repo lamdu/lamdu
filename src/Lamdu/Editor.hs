@@ -347,7 +347,7 @@ makeRootWidget env perfMonitors db evaluator sample cacheRef =
                 makeMainGui themeNames langNames dbToIO env (ecMkWorkArea cache)
                 & _OnceT %~ mapStateT dbToIO
             )
-            <&> M.backgroundColor backgroundId bgColor
+            <&> M.backgroundColor bgColor ?? backgroundId
             <&> measureLayout
     where
         selectedLang = env ^. Env.settings . Property.pVal . Settings.sSelectedLanguage

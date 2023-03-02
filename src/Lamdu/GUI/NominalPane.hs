@@ -2,6 +2,7 @@ module Lamdu.GUI.NominalPane
     ( make
     ) where
 
+import           Control.Monad.Reader.Extended (pushToReader)
 import           GUI.Momentu (Responsive)
 import qualified GUI.Momentu as M
 import qualified GUI.Momentu.Responsive as Responsive
@@ -35,7 +36,7 @@ make nom =
             case nom ^. Sugar.npBody of
             Nothing -> Styled.grammar (Styled.focusableLabel Texts.opaque) <&> Responsive.fromWithTextPos
             Just scheme -> TypeView.makeScheme scheme <&> Responsive.fromTextView
-        hbox <- ResponsiveOptions.boxSpaced ?? ResponsiveOptions.disambiguationNone
+        hbox <- ResponsiveOptions.boxSpaced ResponsiveOptions.disambiguationNone & pushToReader
         hbox [hbox ((nameEdit : paramEdits) <> [sep]), bodyEdit]
             & pure
         & local (M.elemIdPrefix .~ M.asElemId myId)

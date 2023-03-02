@@ -50,9 +50,6 @@ make gotoDefinition themeNames langNames settingsProp sugarsProp width vcActions
             <&> Lens.mapped %~ StatusBar.hoist IOTrans.liftIO
 
         theTheme <- Lens.view has
-        bgColor <-
-            M.backgroundColor ?? theTheme ^. Theme.statusBar . Theme.statusBarBGColor
-        padToSize <- Element.padToSize
 
         sugarsWidget <- StatusBar.Sugars.make sugarsProp <&> StatusBar.hoist IOTrans.liftIO
 
@@ -64,5 +61,5 @@ make gotoDefinition themeNames langNames settingsProp sugarsProp width vcActions
             , sugarsWidget
             , statusWidgets ^. SettingsGui.helpWidget
             ]
-            <&> StatusBar.widget . M.tValue %~ padToSize (Vector2 width 0) 0
-            <&> StatusBar.widget %~ bgColor
+            >>= (StatusBar.widget . M.tValue) (Element.padToSize (Vector2 width 0) 0)
+            >>= StatusBar.widget (M.backgroundColor (theTheme ^. Theme.statusBar . Theme.statusBarBGColor))

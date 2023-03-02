@@ -4,6 +4,7 @@ module Lamdu.GUI.TypeView
     ) where
 
 import qualified Control.Lens as Lens
+import           Control.Monad.Reader.Extended (pushToReader)
 import           Data.Bitraversable (Bitraversable(..))
 import qualified Data.ByteString.Char8 as BS8
 import qualified Data.Text as Text
@@ -65,7 +66,7 @@ parensAround view =
     do
         openParenView <- grammar "("
         closeParenView <- grammar ")"
-        Glue.hbox Dir.LeftToRight [openParenView, view, closeParenView] & pure
+        Glue.hbox [openParenView, view, closeParenView] Dir.LeftToRight & pure
 
 parens :: _ => Prec -> Prec -> WithTextPos View -> m (WithTextPos View)
 parens parent my view
@@ -81,19 +82,18 @@ makeTFun ::
     Annotated Sugar.EntityId # Sugar.Type Name ->
     m (WithTextPos View)
 makeTFun parentPrecedence a b =
-    Glue.hbox <*>
-    ( case a ^. hVal of
-        Sugar.TRecord (Sugar.CompositeFields [] Nothing) ->
-            [ grammar "|"
-            , Spacer.stdHSpace <&> WithTextPos 0
-            ]
-        _ ->
-            [ makeInternal (Prec 1) a
-            , Styled.grammar (Styled.label Texts.arrow)
-            ]
-        ++ [makeInternal (Prec 0) b]
-        & sequence
-    ) >>= parens parentPrecedence (Prec 0)
+    case a ^. hVal of
+    Sugar.TRecord (Sugar.CompositeFields [] Nothing) ->
+        [ grammar "|"
+        , Spacer.stdHSpace <&> WithTextPos 0
+        ]
+    _ ->
+        [ makeInternal (Prec 1) a
+        , Styled.grammar (Styled.label Texts.arrow)
+        ]
+    <> [makeInternal (Prec 0) b]
+    & sequence
+    >>= Glue.hbox >>= parens parentPrecedence (Prec 0)
 
 makeTInst ::
     (MonadReader env m, _) =>
@@ -135,10 +135,7 @@ addTypeBG :: _ => a -> m a
 addTypeBG view =
     do
         color <- Lens.view (has . Theme.typeFrameBGColor)
-        bgId <- Element.subElemId ?? "bg"
-        view
-            & MDraw.backgroundColor bgId color
-            & pure
+        MDraw.backgroundColor color view
 
 makeEmptyComposite :: _ => m (WithTextPos View)
 makeEmptyComposite = grammar "Ø"
@@ -159,7 +156,7 @@ makeVariantField t = makeField t
 
 gridViewTopLeftAlign :: _ => m (vert (horiz (Aligned View)) -> Aligned View)
 gridViewTopLeftAlign =
-    GridView.make <&>
+    pushToReader GridView.make <&>
     \mkGrid views ->
     let (alignPoints, view) = mkGrid views
     in  case alignPoints ^? traverse . traverse of

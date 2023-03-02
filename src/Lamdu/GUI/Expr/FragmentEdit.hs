@@ -3,6 +3,7 @@ module Lamdu.GUI.Expr.FragmentEdit
     ) where
 
 import qualified Control.Lens as Lens
+import           Control.Monad.Reader.Extended (pushToReader)
 import qualified GUI.Momentu as M
 import           GUI.Momentu (Responsive, (/|/), noMods)
 import qualified GUI.Momentu.Animation as Anim
@@ -77,14 +78,14 @@ make (Ann (Const pl) fragment) =
         searchMenu <-
             SearchMenu.make
             (SearchMenu.searchTermEdit menuId (pure . allowedSearchTerm))
-            (makeResults (fragment ^. Sugar.fOptions) (fragment ^. Sugar.fTagSuffixes)) M.empty menuId
-            ?? Menu.AnyPlace
+            (makeResults (fragment ^. Sugar.fOptions) (fragment ^. Sugar.fTagSuffixes))
+             M.empty menuId
+            Menu.AnyPlace
             & local (has . SearchMenu.emptyStrings . Lens.mapped .~ "?")
             -- Space goes to next hole in target (not necessarily visible)
             & local (has . Menu.configKeysPickOptionAndGotoNext <>~ [noMods ModKey.Key'Space])
             <&> Lens.mapped %~ Widget.weakerEventsWithoutPreevents delHealsEventMap
             <&> Lens.mapped %~ Widget.strongerEventsWithoutPreevents applyActionsEventMap
-        hbox <- ResponsiveExpr.boxSpacedMDisamb ?? ExprGui.mParensId pl
 
         addInnerType <-
             case fragment ^. Sugar.fTypeMismatch of
@@ -92,7 +93,7 @@ make (Ann (Const pl) fragment) =
             Just mismatchedType ->
                 do
                     color <- Lens.view (has . Theme.errorColor)
-                    elemId <- Element.subElemId ?? "err-line"
+                    elemId <- Element.subElemId "err-line"
                     spacing <- Lens.view
                         (has . Theme.valAnnotation . ValAnnotation.valAnnotationSpacing)
                     stdFontHeight <- Spacer.stdFontHeight
@@ -100,12 +101,12 @@ make (Ann (Const pl) fragment) =
                         <&> (lineBelow color elemId (spacing * stdFontHeight) .)
             & Element.locallyAugmented ("inner type"::Text)
 
-        hbox
+        ResponsiveExpr.boxSpacedMDisamb (ExprGui.mParensId pl)
             [ fragmentExprGui
             , Responsive.fromWithTextPos searchMenu
             ]
-            & Widget.widget %~ addInnerType
-            & pure & stdWrapParentExpr pl
+            <&> Widget.widget %~ addInnerType
+            & stdWrapParentExpr pl
             <&> Widget.weakerEventsWithoutPreevents healEventMap
     where
         editFragmentHeal = [has . MomentuTexts.edit, has . Texts.fragment, has . Texts.heal]
@@ -133,17 +134,15 @@ makeResults opts tagSuffixes ctx =
             makeQuery tagSuffixes ctx
             >>= GuiM.im
             <&> take c
-            <&> Lens.mapped %~ makeResult makeFragOpt ctx
-            <&> Menu.OptionList isTruncated
+    <&> Lens.mapped %~ makeResult makeFragOpt ctx
+    <&> Menu.OptionList isTruncated
     where
         isTruncated = False -- TODO: Need to specify whether we have more options
 
 makeFragOpt :: _ => ExprGui.Expr Sugar.FragOpt i o -> GuiM env i o (Responsive o)
 makeFragOpt (Ann (Const a) b) =
     case b of
-    Sugar.FragPostfix x ->
-        (ResponsiveExpr.boxSpacedMDisamb ?? Nothing)
-        <*> traverse ApplyEdit.makePostfixFunc x
+    Sugar.FragPostfix x -> traverse ApplyEdit.makePostfixFunc x >>= ResponsiveExpr.boxSpacedMDisamb Nothing
     Sugar.FragInject x -> InjectEdit.make (Ann (Const a) (Const x))
     Sugar.FragApplyFunc x -> GetVarEdit.make GetVarEdit.Normal (Ann (Const a) (Const x)) /|/ grammar (Label.make " _")
     Sugar.FragOp x -> makeFragOperator x
@@ -161,16 +160,19 @@ makeFragOpt (Ann (Const a) b) =
     & local (M.elemIdPrefix .~ M.asElemId myId)
     where
         myId = WidgetIds.fromExprPayload a
-        fromView act = (Widget.makeFocusableWidget ?? myId <&> (Widget.widget %~)) <*> (act <&> Responsive.fromTextView) & stdWrap a
+        fromView act =
+            do
+                makeFocusable <- Widget.makeFocusableWidget myId & pushToReader
+                act <&> Responsive.fromTextView <&> Widget.widget %~ makeFocusable
+            & stdWrap a
 
 makeFragOperator :: _ => ExprGui.Body Sugar.FragOperator i o -> GuiM env i o (Responsive o)
 makeFragOperator (Sugar.FragOperator f rArg aArgs) =
-    (Options.boxSpaced ?? Options.disambiguationNone) <*>
     sequenceA
-    ( ((Options.boxSpaced ?? Options.disambiguationNone) <*>
-        sequenceA
+    ( ( sequenceA
         [ GetVarEdit.make GetVarEdit.Operator f
         , GuiM.makeSubexpression rArg
-        ])
-        : (aArgs <&> fmap Responsive.fromTextView . TagEdit.makeArgTag)
-    )
+        ] >>= Options.boxSpaced Options.disambiguationNone
+        )
+    : (aArgs <&> fmap Responsive.fromTextView . TagEdit.makeArgTag)
+    ) >>= Options.boxSpaced Options.disambiguationNone

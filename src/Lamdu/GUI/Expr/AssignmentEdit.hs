@@ -166,10 +166,9 @@ makeScopeNavEdit func myId curCursor =
         Lens.view (has . Settings.sAnnotationMode)
             >>= \case
             Annotations.Evaluation ->
-                (Widget.makeFocusableWidget ?? myId)
-                <*> ( Glue.hbox <*> traverse (uncurry (makeScopeNavArrow setScope)) scopes
-                        <&> (^. M.tValue)
-                    )
+                traverse (uncurry (makeScopeNavArrow setScope)) scopes <&> Lens.mapped %~ (^. M.tValue)
+                >>= Glue.hbox
+                >>= Widget.makeFocusableWidget myId
                 <&> Widget.weakerEvents
                     (mkScopeEventMap prevKeys nextKeys <> blockEventMap env)
                 <&> Just
@@ -241,11 +240,9 @@ layout :: _ => Responsive o -> Responsive o -> m (Responsive o)
 layout lhs body =
     do
         space <- Spacer.stdHSpace <&> Responsive.fromView
-        indent <- ResponsiveExpr.indent
-        indentId <- subElemId ?? "assignment-body"
-        hbox <- Options.hbox ?? id ?? id
-        Responsive.vboxSpaced
-            ?? [lhs, indent indentId body]
+        b <- subElemId "assignment-body" >>= (`ResponsiveExpr.indent` body)
+        hbox <- Options.hbox id id
+        Responsive.vboxSpaced [lhs, b]
             <&> Options.tryWideLayout hbox [lhs, space, body]
 
 makePlainLhsEventMap ::
@@ -275,8 +272,8 @@ make delParamDest assignment nameEdit =
                         makePlainLhsEventMap (x ^. Sugar.apAddFirstParam) (WidgetIds.fromExprPayload pl)
                     equals <- grammar (label Texts.assign) <&> Responsive.fromTextView
                     assignmentPrefix <-
-                        Options.boxSpaced ?? Options.disambiguationNone
-                        ?? [Widget.weakerEvents lhsEventMap nameEdit, equals]
+                        Options.boxSpaced Options.disambiguationNone
+                        [Widget.weakerEvents lhsEventMap nameEdit, equals]
                     x ^. Sugar.apBody & Ann (Const (assignment ^. annotation)) & GuiM.makeBinder
                         >>= layout assignmentPrefix
             Sugar.BodyFunction x ->
@@ -288,11 +285,11 @@ make delParamDest assignment nameEdit =
                     equals <- grammar (label Texts.assign) <&> Responsive.fromTextView
                     paramScopeEdit <-
                         Responsive.vboxSpaced
-                        ?? (paramsEdit : fmap Responsive.fromWidget mScopeEdit ^.. Lens._Just)
+                        (paramsEdit : fmap Responsive.fromWidget mScopeEdit ^.. Lens._Just)
                         <&> Widget.strongerEvents rhsJumperEquals
                     assignmentPrefix <-
-                        Options.boxSpaced ?? Options.disambiguationNone
-                        ?? [Widget.weakerEvents (rhsJumperEquals <> lhsEventMap) nameEdit, paramScopeEdit, equals]
+                        Options.boxSpaced Options.disambiguationNone
+                        [Widget.weakerEvents (rhsJumperEquals <> lhsEventMap) nameEdit, paramScopeEdit, equals]
                     layout assignmentPrefix bodyEdit
                         & stdWrap pl
                         <&> Widget.weakerEvents eventMap

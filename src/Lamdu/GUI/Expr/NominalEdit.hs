@@ -49,14 +49,13 @@ makeToNom (Ann (Const pl) (Sugar.Nominal tid binder)) =
                 binder ^.
                 annotation . Sugar.plActions . Sugar.mReplaceParent .
                 Lens._Just . Lens.to mkEventMap
-        (ResponsiveExpr.boxSpacedMDisamb ?? ExprGui.mParensId pl)
-            <*>
-            sequence
+        sequence
             [ makeTId myId tid
                 <&> Responsive.fromWithTextPos
                 <&> M.weakerEvents eventMap
             , GuiM.makeBinder binder
-            ] & stdWrapParentExpr pl
+            ] >>= ResponsiveExpr.boxSpacedMDisamb (ExprGui.mParensId pl)
+            & stdWrapParentExpr pl
     where
         myId = WidgetIds.fromExprPayload pl
 
@@ -89,8 +88,8 @@ makeTId :: _ => ElemId -> Sugar.TId Name -> GuiM env i o (M.TextWidget o)
 makeTId myId tid =
     do
         jumpToDefinitionEventMap <- makeJumpToNomEventMap tid
-        (Widget.makeFocusableView ?? nameId <&> (M.tValue %~))
-            <*> makeTIdView tid
+        makeTIdView tid
+            >>= M.tValue (Widget.makeFocusableView nameId)
             <&> Align.tValue %~ Widget.weakerEvents jumpToDefinitionEventMap
     where
         nameId = myId <> "name"

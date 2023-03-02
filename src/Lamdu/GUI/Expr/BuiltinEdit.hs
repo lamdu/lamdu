@@ -44,13 +44,10 @@ builtinFFIName = (<> "FFIName")
 makeNamePartEditor ::
     _ => M.Color -> Text -> (Text -> f ()) -> ElemId -> m (M.TextWidget f)
 makeNamePartEditor color namePartStr setter myId =
-    (FocusDelegator.make
-        <*> (Lens.view id <&> builtinFDConfig)
-        ?? FocusDelegator.FocusEntryParent
-        ?? myId <&> (M.tValue %~))
-    <*> ( TextEdits.makeWordEdit ?? empty ?? Property namePartStr setter ??
-          myId <> "textedit"
-        )
+    do
+        fdConfig <- Lens.view id <&> builtinFDConfig
+        TextEdits.makeWordEdit empty (Property namePartStr setter) (myId <> "textedit")
+            >>= M.tValue (FocusDelegator.make fdConfig FocusDelegator.FocusEntryParent myId)
     & local (TextView.color .~ color)
     where
         empty =

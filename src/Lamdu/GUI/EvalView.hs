@@ -55,7 +55,7 @@ textView ::
     ( MonadReader env m, Element.HasElemIdPrefix env, Has TextView.Style env
     , Has Dir.Layout env
     ) => Text -> m (WithTextPos View)
-textView text = (TextView.make ?? text) <*> Lens.view Element.elemIdPrefix
+textView text = Lens.view Element.elemIdPrefix >>= TextView.make text
 
 makeField :: _ => Sugar.Tag Name -> Annotated Sugar.EntityId # Sugar.Result Name -> M env m [Aligned View]
 makeField tag val =
@@ -101,7 +101,7 @@ makeTable (Sugar.ResTable headers valss) =
         rows <- take (tableCutoff-1) valss & traverse . traverse %%~ makeInner
         s <- Spacer.stdHSpace
         table <-
-            GridView.make ??
+            GridView.make
             ( header : rows <&> traverse %~ (^. Align.tValue)
                 <&> List.intersperse s
                 <&> traverse %~ Aligned 0.5
@@ -124,16 +124,14 @@ makeArray items =
             Dir.RightToLeft -> ("]", "[")
         opener <- Label.make preLabel
         closer <- Label.make postLabel
-        Glue.hbox ?? opener : itemViews ++ [closer]
+        Glue.hbox (opener : itemViews ++ [closer])
     where
         makeItem idx val =
-            Glue.hbox
-            <*> ( [ [ Label.make ", " | idx > 0 ]
-                    , [ makeInner val
-                      | idx < arrayCutoff ]
-                    , [ Label.make "…" | idx == arrayCutoff ]
-                    ] & concat & sequence
-                )
+            [ [ Label.make ", " | idx > 0 ]
+            , [ makeInner val | idx < arrayCutoff ]
+            , [ Label.make "…" | idx == arrayCutoff ]
+            ] & concat & sequence
+            >>= Glue.hbox
             & Element.locallyAugmented (idx :: Int)
 
 makeTree :: _ => Sugar.ResTree Name # Annotated Sugar.EntityId -> M env m (WithTextPos View)
@@ -141,15 +139,14 @@ makeTree (Sugar.ResTree root subtrees) =
     do
         rootView <- makeInner root
         subtreeViews <- zipWithM makeItem [0..cutoff] subtrees
-        Glue.vbox ?? (rootView : subtreeViews)
+        Glue.vbox (rootView : subtreeViews)
     where
         makeItem idx val =
-            Glue.hbox <*>
-            ( [ [ Label.make "* " ]
-                , [ makeInner val | idx < cutoff ]
-                , [ Label.make "…" | idx == cutoff ]
-                ] & concat & sequence
-            )
+            [ [ Label.make "* " ]
+            , [ makeInner val | idx < cutoff ]
+            , [ Label.make "…" | idx == cutoff ]
+            ] & concat & sequence
+            >>= Glue.hbox
             & Element.locallyAugmented (idx :: Int)
         cutoff = 4
 
@@ -158,8 +155,7 @@ makeRecord ::
     _ =>
     [(Sugar.Tag Name, Annotated Sugar.EntityId # Sugar.Result Name)] -> M env m (WithTextPos View)
 makeRecord fields =
-    GridView.make <*> traverse (uncurry makeField) fields <&> snd
-    <&> Align.WithTextPos 0
+    traverse (uncurry makeField) fields >>= GridView.make <&> snd <&> Align.WithTextPos 0
 
 makeList :: _ => Annotated Sugar.EntityId # Sugar.Result Name -> M env m (WithTextPos View)
 makeList head_ =
@@ -169,8 +165,8 @@ makeList head_ =
             \case
             Dir.LeftToRight -> ("[", ", …]")
             Dir.RightToLeft -> ("]", "[… ,")
-        c <- (TextView.make ?? postLabel) <*> (Element.subElemId ?? "]") <&> (^. Align.tValue)
-        ((TextView.make ?? preLabel) <*> (Element.subElemId ?? "[")) /|/ makeInner head_
+        c <- Element.subElemId "]" >>= TextView.make postLabel <&> (^. Align.tValue)
+        (Element.subElemId "[" >>= TextView.make preLabel) /|/ makeInner head_
             >>= Align.tValue (hGlueAlign 1 ?? c)
     where
         hGlueAlign align l r =

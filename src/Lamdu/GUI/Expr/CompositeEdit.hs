@@ -77,7 +77,6 @@ makeUnit ::
     Maybe (Responsive o -> Responsive o) -> ElemId -> Config -> ExprGui.Payload i o -> GuiM env i o (Responsive o)
 makeUnit prependKeywords myId conf pl =
     do
-        makeFocusable <- Widget.makeFocusableView ?? myId <&> (M.tValue %~)
         env <- Lens.view id
         let addItemEventMap =
                 E.keysEventMapMovesCursor (env ^. has . Config.compositeAddItemKeys)
@@ -85,7 +84,7 @@ makeUnit prependKeywords myId conf pl =
                 (pure (TagEdit.addItemId myId))
         grammar (label (conf ^. opener))
             M./|/ grammar (label (conf ^. closer))
-            <&> makeFocusable
+            >>= M.tValue (Widget.makeFocusableView myId)
             <&> M.tValue %~ Widget.weakerEvents
                 (addItemEventMap <> addItemWithSearchTermEventMap conf env myId)
             <&> Responsive.fromWithTextPos
@@ -99,7 +98,7 @@ makeAddItem ::
     o ElemId -> o ElemId ->
     ElemId -> GuiM env i o (Maybe (TaggedItem o))
 makeAddItem conf addItem prevId nextId baseId =
-    GuiState.isSubCursor ?? myId <&> guard
+    GuiState.isSubCursor myId <&> guard
     >>= (Lens._Just . const) (GuiM.im addItem >>= makeAddItemRow conf prevId nextId myId)
     where
         myId = TagEdit.addItemId baseId
@@ -153,7 +152,7 @@ make prependKeywords myId conf (Ann (Const pl) (Sugar.Composite tl punned compos
             _ ->
                 Styled.addValFrame <*>
                 ( grammar (label (conf ^. opener))
-                    M./|/ (taggedListIndent <*> (addPostTags conf items >>= postProcess))
+                    M./|/ (addPostTags conf items >>= postProcess >>= taggedListIndent)
                 ) <&> Widget.weakerEvents (goToParentEventMap <> tailEventMap)
                 <&> fromMaybe id prependKeywords
                 & stdWrapParentExpr pl

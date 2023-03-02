@@ -15,6 +15,7 @@ module Lamdu.GUI.Annotation
     ) where
 
 import qualified Control.Lens as Lens
+import           Control.Monad.Reader.Extended (pushToReader, pushToReaderExt)
 import           Data.CurAndPrev (CurAndPrev(..), CurPrevTag(..), curPrevTag, fallbackToPrev)
 import qualified GUI.Momentu as M
 import qualified GUI.Momentu.Align as Align
@@ -44,8 +45,7 @@ addAnnotationBackgroundH :: _ => Lens.ALens' ValAnnotation Draw.Color -> m (a ->
 addAnnotationBackgroundH color =
     do
         t <- Lens.view has
-        bgElemId <- Element.subElemId ?? "annotation background"
-        Draw.backgroundColor bgElemId (t ^# Theme.valAnnotation . color) & pure
+        Draw.backgroundColor (t ^# Theme.valAnnotation . color) & pushToReader
 
 addAnnotationBackground :: _ => m (a -> a)
 addAnnotationBackground = addAnnotationBackgroundH ValAnnotation.valAnnotationBGColor
@@ -79,7 +79,7 @@ hoverWideAnnotation which =
     do
         shrinker <- shrinkIfNeeded which
         addBg <- addAnnotationHoverBackground
-        pad <- Element.pad
+        pad <- pushToReaderExt (pushToReaderExt pushToReader) Element.pad
         pure $
             \shrinkRatio wideView ->
                 let shrunkView = shrinker shrinkRatio wideView
@@ -207,13 +207,13 @@ addAnnotationH f postProcess =
         vspace <- annotationSpacer
         annotationLayout <- f <&> (^. Align.tValue)
         processAnn <- processAnnotationGui postProcess
-        padToSize <- Element.padToSize
+        padToSize <- pushToReaderExt (pushToReaderExt pushToReader) Element.padToSize
         let ann w =
                 processAnn (w ^. M.width) annotationLayout
                 & padToSize (M.Vector2 theMinWidth 0) 0
                 where
                     theMinWidth = w ^. M.width
-        (|---|) <- Glue.mkGlue ?? Glue.Vertical
+        (|---|) <- Glue.mkGlue Glue.Vertical & pushToReaderExt pushToReader
         pure (\w -> w |---| vspace |---| ann w)
 
 addInferredType ::
@@ -245,7 +245,7 @@ maybeAddAnnotationPl pl =
             (pl ^. Sugar.plAnnotation)
             & local (M.elemIdPrefix .~ elemId)
     where
-        isExprSelected = GuiState.isSubCursor ?? WidgetIds.fromExprPayload pl
+        isExprSelected = GuiState.isSubCursor (WidgetIds.fromExprPayload pl)
         elemId = WidgetIds.fromExprPayload pl & M.asElemId
 
 data EvalAnnotationOptions

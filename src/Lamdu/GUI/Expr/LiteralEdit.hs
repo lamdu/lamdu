@@ -60,10 +60,9 @@ bytesEdit ::
     Sugar.Payload v o -> m (M.TextWidget o)
 bytesEdit prop pl =
     Label.make "#" M./|/
-    ( TextEdits.makeLineEdit ?? emptyTexts ??
-        Property.pureCompose enc dec prop ??
-        WidgetIds.literalEditOf (WidgetIds.fromExprPayload pl)
-    )
+    TextEdits.makeLineEdit emptyTexts
+    (Property.pureCompose enc dec prop)
+    (WidgetIds.literalEditOf (WidgetIds.fromExprPayload pl))
     where
         enc s = Hex.encode s ^.. chars & groupsOf 2 & unwords & Text.pack
         dec s =
@@ -83,9 +82,9 @@ charEdit (Property char setChar) pl =
                 ]
         let setCharEventMap = E.allChars (env ^. has . TextEdit.textCharacter) doc ((mempty <$) . setChar)
         edit <-
-            TextView.makeFocusable ?? Text.singleton char ?? innerId
+            TextView.makeFocusable (Text.singleton char) innerId
             <&> M.tValue %~ Widget.weakerEvents setCharEventMap
-        let quote elemId = (TextView.make ?? "'") <*> (Element.subElemId ?? elemId)
+        let quote elemId = Element.subElemId elemId >>= TextView.make "'"
         quote "opener"
             M./|/ pure edit
             M./|/ quote "closer"
@@ -128,12 +127,12 @@ fdConfig =
 textEdit :: _ => Property o Text -> Sugar.Payload v o -> m (M.TextWidget o)
 textEdit prop pl =
     do
-        text <- TextEdits.make ?? emptyTexts ?? prop ?? WidgetIds.literalEditOf (WidgetIds.fromExprPayload pl)
+        text <- TextEdits.make emptyTexts prop (WidgetIds.literalEditOf (WidgetIds.fromExprPayload pl))
         label Texts.textOpener
             M./|/ pure text
-            M./|/ ((M.tValue %~)
-                    <$> (Element.padToSize ?? (text ^. Element.size & _1 .~ 0) ?? 1)
-                    <*> label Texts.textCloser
+            M./|/ (
+                label Texts.textCloser
+                >>= M.tValue (Element.padToSize (text ^. Element.size & _1 .~ 0) 1)
                 )
     & withStyle Style.text
 
@@ -159,7 +158,7 @@ numEdit prop pl =
                 , Widget._pAction = pure mempty
                 , Widget._pTextRemainder = if "." `Text.isSuffixOf` text then "." else ""
                 }
-        pos <- TextEdit.getCursor ?? text ?? innerId <&> fromMaybe (Text.length text)
+        pos <- TextEdit.getCursor text innerId <&> fromMaybe (Text.length text)
         let negateText
                 | "-" `Text.isPrefixOf` text = Text.tail text
                 | otherwise = "-" <> text
@@ -211,7 +210,7 @@ numEdit prop pl =
             if Text.null text
             then ExprEventMap.makeLiteralEventMap ?? pl ^. Sugar.plActions . Sugar.setToLiteral
             else pure mempty
-        TextEdit.make ?? empty ?? text ?? innerId
+        TextEdit.make empty text innerId
             <&> M.tValue . Widget.eventMapMaker . Lens.mapped %~
                 -- Avoid taking keys that don't belong to us,
                 -- so weakerEvents with them will work.
@@ -240,12 +239,13 @@ make ::
     Annotated (ExprGui.Payload i o) # Const (Sugar.Literal (Property o)) ->
     GuiM env i o (Responsive o)
 make (Ann (Const p) (Const lit)) =
-    (FocusDelegator.make <*> fdConfig ?? FocusDelegator.FocusEntryParent ?? WidgetIds.fromExprPayload p
-        <&> (M.tValue %~)) <*>
-    case lit of
-    Sugar.LiteralNum x -> numEdit x p
-    Sugar.LiteralBytes x -> bytesEdit x p
-    Sugar.LiteralChar x -> charEdit x p
-    Sugar.LiteralText x -> textEdit x p
+    do
+        c <- fdConfig
+        case lit of
+            Sugar.LiteralNum x -> numEdit x p
+            Sugar.LiteralBytes x -> bytesEdit x p
+            Sugar.LiteralChar x -> charEdit x p
+            Sugar.LiteralText x -> textEdit x p
+            >>= M.tValue (FocusDelegator.make c FocusDelegator.FocusEntryParent (WidgetIds.fromExprPayload p))
     <&> Responsive.fromWithTextPos
     & stdWrap p

@@ -58,7 +58,7 @@ make hole@(Ann (Const pl) _) =
                         SearchMenu.termEditEventMap %~ blockChars
         (ExprEventMap.add options pl <&> (M.tValue %~))
             <*> ((maybeAddAnnotationPl pl <&> (M.tValue %~))
-                <*> (SearchMenu.make mkSearchTerm (makeResults hole) M.empty myId ?? Menu.AnyPlace))
+            <*> SearchMenu.make mkSearchTerm (makeResults hole) M.empty myId Menu.AnyPlace)
             & local (has . SearchMenu.emptyStrings . Lens.mapped .~ "_")
             <&> Responsive.fromWithTextPos
             <&> M.weakerEvents innerHoleEventMap

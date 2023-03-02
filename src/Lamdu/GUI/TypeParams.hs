@@ -50,11 +50,12 @@ make params prevId myId =
 
 paramKindEdit :: _ => Property o Sugar.ParamKind -> ElemId -> m (M.TextWidget o)
 paramKindEdit prop myId =
-    (DropDownList.make ?? prop)
-    <*> Lens.sequenceOf (traverse . _2)
-        [(Sugar.TypeParam, Styled.focusableLabel Texts.typ), (Sugar.RowParam, Styled.focusableLabel Texts.row)]
-    <*> (DropDownList.defaultConfig <*> Lens.view (has . Texts.parameter))
-    ?? myId
+    do
+        conf <- Lens.view (has . Texts.parameter) >>= DropDownList.defaultConfig
+        params <-
+            Lens.sequenceOf (traverse . _2)
+            [(Sugar.TypeParam, Styled.focusableLabel Texts.typ), (Sugar.RowParam, Styled.focusableLabel Texts.row)]
+        DropDownList.make prop params conf myId
     & local (M.elemIdPrefix .~ myId)
 
 makeParam :: _ => TaggedList.Item Name i o (Property o Sugar.ParamKind) -> m [Responsive o]

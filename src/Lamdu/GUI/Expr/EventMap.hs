@@ -12,6 +12,7 @@ module Lamdu.GUI.Expr.EventMap
     ) where
 
 import qualified Control.Lens as Lens
+import           Control.Monad.Reader.Extended (pushToReader)
 import qualified Data.Char as Char
 import qualified Data.Text as Text
 import           GUI.Momentu (EventMap, noMods, Update)
@@ -54,7 +55,7 @@ defaultOptions =
 
 exprInfoFromPl :: _ => GuiM env i o (Sugar.Payload v o0 -> ExprInfo o0)
 exprInfoFromPl =
-    GuiState.isSubCursor <&>
+    pushToReader GuiState.isSubCursor <&>
     \isSubCursor pl ->
     let isSelected = WidgetIds.fromExprPayload pl & isSubCursor in
     ExprInfo

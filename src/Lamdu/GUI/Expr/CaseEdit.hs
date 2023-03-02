@@ -3,6 +3,7 @@ module Lamdu.GUI.Expr.CaseEdit
     ) where
 
 import qualified Control.Lens as Lens
+import           Control.Monad.Reader.Extended (pushToReader)
 import           GUI.Momentu (Responsive, (/|/))
 import qualified GUI.Momentu as M
 import qualified GUI.Momentu.Responsive as Responsive
@@ -37,14 +38,14 @@ make expr =
     do
         header <- grammar (Label.make ".") /|/ makeCaseLabel
         conf <- caseConf
-        hbox <- Options.boxSpaced
-        let prependCase altsGui = hbox Options.disambiguationNone [header, altsGui]
+        hbox <- Options.boxSpaced Options.disambiguationNone & pushToReader
+        let prependCase altsGui = hbox [header, altsGui]
         CompositeEdit.make (Just prependCase) bodyId conf expr
     where
         myId = expr ^. annotation & WidgetIds.fromExprPayload
         headerId = myId <> "header"
         bodyId = myId <> "body"
         makeCaseLabel =
-            (Widget.makeFocusableView ?? headerId <&> (M.tValue %~))
-            <*> grammar (label Texts.case_)
+            grammar (label Texts.case_)
+            >>= M.tValue (Widget.makeFocusableView headerId)
             <&> Responsive.fromWithTextPos

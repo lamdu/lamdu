@@ -85,12 +85,11 @@ makeBody (Ann (Const pl) (Sugar.BinderLet l)) =
                     , has . CodeUI.letClause
                     , has . Texts.moveInwards
                     ]) . void)
-        Responsive.vboxSpaced
-            <*>
-            sequence
+        sequence
             [ makeLetEdit l myId <&> M.weakerEvents moveToInnerEventMap
             , make body
             ]
+        >>= Responsive.vboxSpaced
         & stdWrapParentExpr pl
         & local (M.elemIdPrefix .~ M.asElemId myId)
     where

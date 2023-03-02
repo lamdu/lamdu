@@ -5,6 +5,7 @@ module Lamdu.GUI.Expr.IfElseEdit
     ) where
 
 import qualified Control.Lens as Lens
+import           Control.Monad.Reader.Extended (pushToReader, pushToReaderExt)
 import           Data.Functor.Compose (Compose(..))
 import           Data.Vector.Vector2 (Vector2(..))
 import           GUI.Momentu (Responsive)
@@ -80,9 +81,8 @@ makeElse _ (Ann (Const pl) (Sugar.ElseIf (Sugar.ElseIfBody addLet content))) =
         -- TODO: green evaluation backgrounds, "◗"?
         letEventMap <- ExprEventMap.addLetEventMap addLet
         elseIfKeyword <-
-            ( (.) <$> ExprEventMap.add ExprEventMap.defaultOptions pl <*> (Widget.makeFocusableView ?? myId)
-                <&> (M.tValue %~)
-            ) <*> label Texts.elseIf
+            (ExprEventMap.add ExprEventMap.defaultOptions pl<&> (M.tValue %~)) <*>
+            (label Texts.elseIf >>= M.tValue (Widget.makeFocusableView myId))
             & grammar
         (:)
             <$> ( makeIfThen elseIfKeyword elemId content
@@ -98,13 +98,13 @@ makeElse _ (Ann (Const pl) (Sugar.ElseIf (Sugar.ElseIfBody addLet content))) =
 verticalRowRender :: _ => f (Row (Responsive o) -> Responsive o)
 verticalRowRender =
     do
-        indent <- ResponsiveExpr.indent
-        obox <- Options.box
-        vbox <- Responsive.vboxSpaced
+        indent <- pushToReaderExt pushToReader ResponsiveExpr.indent
+        obox <- Options.box Options.disambiguationNone & pushToReader
+        vbox <- pushToReader Responsive.vboxSpaced
         pure $
             \row ->
             vbox
-            [ obox Options.disambiguationNone [row ^. rKeyword, row ^. rPredicate]
+            [ obox [row ^. rKeyword, row ^. rPredicate]
             , indent (row ^. rIndentId) (row ^. rResult)
             ]
 
@@ -113,21 +113,21 @@ renderRows mParensId =
     do
         vspace <- Spacer.getSpaceSize <&> (^._2)
         -- TODO: better way to make space between rows in grid??
-        obox <- Options.box
-        pad <- Element.pad
+        obox <- Options.box Options.disambiguationNone & pushToReader
+        pad <- pushToReaderExt (pushToReaderExt pushToReader) Element.pad
         let -- When there's only "if" and "else", we want to merge the predicate with the keyword
             -- because there are no several predicates to be aligned
             prep2 row =
                 row
-                & rKeyword .~ obox Options.disambiguationNone [row ^. rKeyword, row ^. rPredicate]
+                & rKeyword .~ obox [row ^. rKeyword, row ^. rPredicate]
                 & rPredicate .~ M.empty
         let spaceAbove = (<&> pad (Vector2 0 vspace) 0)
         let prepareRows [] = []
             prepareRows [x, y] = [prep2 x, spaceAbove (prep2 y)]
             prepareRows (x:xs) = x : (xs <&> spaceAbove)
         vert <- verticalRowRender
-        addParens <- maybe (pure id) (ResponsiveExpr.addParens ??) mParensId
-        vbox <- Responsive.vboxSpaced
+        addParens <- maybe (pure id) (ResponsiveExpr.addParens <&> pushToReader) mParensId
+        vbox <- pushToReader Responsive.vboxSpaced
         table <- Options.table
         pure $
             \rows ->
@@ -146,8 +146,8 @@ make (Ann (Const pl) ifElse) =
         res <- renderRows (ExprGui.mParensId pl) ?? rows
         frame <- addValFrame
         s <- Spacer.stdHSpace <&> Widget.fromView <&> M.WithTextPos 0
-        disambig <- maybe (pure id) (ResponsiveExpr.addParens ??) (ExprGui.mParensId pl)
-        hbox <- Glue.hbox
+        disambig <- maybe (pure id) (ResponsiveExpr.addParens <&> pushToReader) (ExprGui.mParensId pl)
+        hbox <- pushToReader Glue.hbox
         let oneLinerLayout (Compose [if_, else_]) Responsive.WideOneLiner =
                 Just (Responsive.WideLayouts r (disambig r) Responsive.WideOneLiner)
                 where

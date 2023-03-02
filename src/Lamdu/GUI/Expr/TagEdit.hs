@@ -8,6 +8,7 @@ module Lamdu.GUI.Expr.TagEdit
     ) where
 
 import qualified Control.Lens as Lens
+import           Control.Monad.Reader.Extended (pushToReader)
 import qualified Data.Char as Char
 import           Data.MRUMemo (memo)
 import qualified Data.Text as Text
@@ -113,7 +114,7 @@ makeAddNewTag tagOpt =
         { Menu._oId = optionId
         , Menu._oSubmenuWidgets = Menu.SubmenuEmpty
         , Menu._oRender =
-            (Widget.makeFocusableView ?? optionId <&> fmap)
+            (Widget.makeFocusableView optionId & pushToReader <&> fmap)
             <*> Styled.label Texts.createNew
             <&> (`Menu.RenderedOption` preEvent)
             & Styled.withColor TextColors.actionTextColor
@@ -153,7 +154,7 @@ makeOptions tagRefReplace newTagOpt mkPickResult ctx
                     Menu.Option
                     { Menu._oId = optionWId
                     , Menu._oRender =
-                        (Widget.makeFocusableView ?? optionWId <&> fmap)
+                        (Widget.makeFocusableView optionWId & pushToReader <&> fmap)
                         <*> NameView.make (opt ^. Sugar.toInfo . Sugar.tagName)
                         & local (M.elemIdPrefix .~ M.asElemId instanceId)
                         <&>
@@ -213,9 +214,8 @@ makeHoleSearchTerm newTagOption mkPickResult holeId =
                 Widget.wState . Widget._StateFocused . Lens.mapped .
                 Widget.fPreEvents %~ (newTagPreEvents <>)
         term <-
-            SearchMenu.addDelSearchTerm holeId
-            <*> SearchMenu.basicSearchTermEdit newTagId holeId (pure . allowedSearchTerm)
-                SearchMenu.defaultEmptyStrings
+            SearchMenu.basicSearchTermEdit newTagId holeId (pure . allowedSearchTerm) SearchMenu.defaultEmptyStrings
+            >>= SearchMenu.addDelSearchTerm holeId
             <&> SearchMenu.termWidget . M.tValue %~
                 addPreEvents . Widget.weakerEvents newTagEventMap
         tooltip <- Lens.view (has . Theme.tooltip)
@@ -224,13 +224,11 @@ makeHoleSearchTerm newTagOption mkPickResult holeId =
             then
                 do
                     newText <- Lens.view (has . Texts.new)
-                    newTagLabel <-
-                        (TextView.make ?? "(" <> newText <> ")")
-                            <*> (Element.subElemId ?? "label")
+                    newTagLabel <- Element.subElemId "label" >>= TextView.make ("(" <> newText <> ")")
                     space <- Spacer.stdHSpace
-                    hover <- Hover.hover
-                    Glue.Poly (|||) <- Glue.mkPoly ?? Glue.Horizontal
-                    anchor <- Hover.anchor <&> fmap
+                    hover <- pushToReader Hover.hover
+                    Glue.Poly (|||) <- Glue.mkPoly Glue.Horizontal
+                    anchor <- pushToReader Hover.anchor <&> fmap
                     let hNewTagLabel = hover newTagLabel & Hover.sequenceHover
                     let termWithHover termW =
                             let hoverOptions =
@@ -257,7 +255,7 @@ makeTagHoleEdit mkPickResult holeId tagRefReplace =
     SearchMenu.make
     (const (makeHoleSearchTerm newTagOption mkPickResult holeId))
     (makeOptions tagRefReplace newTagOption mkPickResult) M.empty holeId
-    ?? Menu.AnyPlace
+    Menu.AnyPlace
     where
         newTagOption = tagRefReplace ^. Sugar.tcNewTag
 
@@ -291,7 +289,7 @@ makeTagRefEditWith ::
     m (TagRefEditType, M.TextWidget o)
 makeTagRefEditWith onView onPickNext mSetToAnon tag =
     do
-        isHole <- GuiState.isSubCursor ?? holeId
+        isHole <- GuiState.isSubCursor holeId
         env <- Lens.view id
         let chooseNewTagEventMap =
                 E.keysEventMapMovesCursor
@@ -306,8 +304,8 @@ makeTagRefEditWith onView onPickNext mSetToAnon tag =
                 foldMap jumpToTagEventMap (tag ^. Sugar.tagRefJumpTo)
                 <> chooseNewTagEventMap
         nameView <-
-            (Widget.makeFocusableView ?? viewId <&> fmap) <*>
             TagView.make info
+            >>= M.tValue (Widget.makeFocusableView viewId)
             <&> Lens.mapped %~ Widget.weakerEvents eventMap
             & onView
         if isHole

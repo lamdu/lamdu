@@ -7,6 +7,7 @@ module Lamdu.GUI.Expr.ParamsEdit
 
 import           Control.Applicative ((<|>))
 import qualified Control.Lens as Lens
+import           Control.Monad.Reader.Extended (pushToReaderExt, pushToReader)
 import           Data.CurAndPrev (CurAndPrev, current)
 import           GUI.Momentu (Responsive, EventMap, noMods, Update)
 import qualified GUI.Momentu as M
@@ -74,7 +75,7 @@ scopeCursor mChosenScope scopes =
 
 addScopeEdit :: _ => m (Maybe (M.Widget o) -> Responsive o -> Responsive o)
 addScopeEdit =
-    Glue.mkGlue ?? Glue.Vertical
+    Glue.mkGlue Glue.Vertical & pushToReaderExt pushToReader
     <&>
     (\(|---|) ->
         \case
@@ -113,8 +114,8 @@ mkShrunk paramIds myId =
                       ) . pure . WidgetIds.fromEntityId)
         theme <- Lens.view has
         lamLabel <-
-            (Widget.makeFocusableView ?? lamId myId <&> (M.tValue %~))
-            <*> grammar (label Texts.lam)
+            grammar (label Texts.lam)
+            >>=  M.tValue (Widget.makeFocusableView (lamId myId))
             <&> Responsive.fromWithTextPos
             & local (TextView.underline ?~ LightLambda.underline theme)
         addScopeEd <- addScopeEdit
@@ -134,7 +135,7 @@ mkLightLambda params myId =
     do
         isSelected <-
             paramIds <&> WidgetIds.fromEntityId
-            & traverse (GuiState.isSubCursor ??)
+            & traverse GuiState.isSubCursor
             <&> or
         let shrinkKeys = [noMods ModKey.Key'Escape]
         env <- Lens.view id
@@ -214,8 +215,8 @@ makeBody isLet annotationOpts delVarBackwardsId lhsId rhsId params =
                 (E.toDoc env [has . MomentuTexts.edit, has . MomentuTexts.delete])
                 (GuiState.updateCursor rhsId <$ p ^. Sugar.vDelete)
             )
-        <*> ( (Widget.makeFocusableView ?? nullParamId <&> (M.tValue %~))
-                <*> grammar (label Texts.defer)
+        <*> ( grammar (label Texts.defer)
+                >>= M.tValue (Widget.makeFocusableView nullParamId)
                 >>= ParamEdit.addAnnotationAndEvents annotationOpts (p ^. Sugar.vParam) nullParamId
             )
         <&> (,) mempty
@@ -230,14 +231,13 @@ makeBody isLet annotationOpts delVarBackwardsId lhsId rhsId params =
                         TaggedList.delEventMap [env ^. has . Texts.parameter] (p ^. Sugar.vDelete)
                         (pure delVarBackwardsId) (pure rhsId) env <>
                         ParamEdit.eventMapAddNextParamOrPickTag widgetId (p ^. Sugar.vAddNext) env
-            (Options.boxSpaced ?? Options.disambiguationNone) <*>
-                mconcat
+            mconcat
                 [ foldMap (`ParamEdit.mkAddParam` lhsId) (p ^? Sugar.vAddPrev . Sugar._AddNext)
                 , TagEdit.makeLHSTag onPickNext TextColors.variableColor (Just (tag ^. Sugar.oPickAnon)) (tag ^. Sugar.oTag)
                     >>= ParamEdit.addAnnotationAndEvents annotationOpts (p ^. Sugar.vParam) widgetId
                     <&> M.weakerEvents eventMap <&> (:[])
                 , foldMap (`ParamEdit.mkAddParam` widgetId) (p ^? Sugar.vAddNext . Sugar._AddNext)
-                ]
+                ] >>= Options.boxSpaced Options.disambiguationNone
                 <&> (,) (ParamEdit.eventMapAddNextParamOrPickTag lhsId (p ^. Sugar.vAddPrev) env)
         where
             tag = p ^. Sugar.vTag
@@ -267,14 +267,13 @@ makeParams annotationOpts prevId nextId items =
             }
         (addFirstEventMap, itemsR) <-
             TaggedList.make [env ^. has . Texts.parameter] keys (pure prevId) (pure nextId) items
-        (Options.box ?? Options.disambiguationNone) <*>
-            sequenceA
+        sequenceA
             [ mkLabel (label Texts.recordOpener)
-            , (Options.boxSpaced ?? Options.disambiguationNone) <*>
-                ParamEdit.mkAddParam (items ^. Sugar.tlAddFirst) prevId
+            , ParamEdit.mkAddParam (items ^. Sugar.tlAddFirst) prevId
                 <> (traverse makeParam itemsR <&> concat)
+                >>= Options.boxSpaced Options.disambiguationNone
             , mkLabel (label Texts.recordCloser)
-            ]
+            ] >>= Options.box Options.disambiguationNone
             <&> (,) addFirstEventMap
     where
         mkLabel x = grammar x <&> Responsive.fromTextView
@@ -290,17 +289,16 @@ makeParams annotationOpts prevId nextId items =
                     traverse makeSubFields
                     (x ^.. TaggedList.iValue . Sugar.fSubFields . Lens._Just)
                     & local (M.elemIdPrefix .~ M.asElemId myId)
-                newP0 <- Options.box ?? Options.disambiguationNone ?? p ^.. Lens.ix 0 <> s
+                newP0 <- Options.box Options.disambiguationNone (p ^.. Lens.ix 0 <> s)
                 p & Lens.ix 0 .~ newP0 & pure
             where
                 myId = x ^. TaggedList.iTag . Sugar.tagRefTag . Sugar.tagInstance & WidgetIds.fromEntityId
         makeSubFields subFields =
-            (Options.box ?? Options.disambiguationNone) <*>
             sequenceA
             [ mkLabel (label Texts.recordOpener)
-            , (Options.boxSpaced ?? Options.disambiguationNone) <*> traverse makeSubField subFields
+            , traverse makeSubField subFields >>= Options.boxSpaced Options.disambiguationNone
             , mkLabel (label Texts.recordCloser)
-            ]
+            ] >>= Options.box Options.disambiguationNone
         makeSubField (subTag, f) =
             -- TODO: Recursive sub-fields
             NameView.make (subTag ^. Sugar.tagName)

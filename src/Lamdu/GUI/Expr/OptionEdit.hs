@@ -3,6 +3,7 @@
 module Lamdu.GUI.Expr.OptionEdit where
 
 import qualified Control.Lens as Lens
+import           Control.Monad.Reader.Extended (pushToReader, pushToReaderExt)
 import           Hyper
 import           GUI.Momentu (EventMap)
 import qualified GUI.Momentu as M
@@ -73,7 +74,7 @@ makeResult mkGui ctx res =
                     do
                         label <- Styled.label Texts.createNew <&> (^. M.tValue)
                         space <- Spacer.stdHSpace
-                        (|||) <- Glue.mkGlue ?? Glue.Horizontal
+                        (|||) <- Glue.mkGlue Glue.Horizontal & pushToReaderExt pushToReader
                         setName <- C.setTagName
                         pure
                             ( \x -> x ||| space ||| label
@@ -90,9 +91,9 @@ makeResult mkGui ctx res =
                 & GuiState.assignCursor resId dstId
             indicator <-
                 res ^.. Sugar.optionTypeMatch . Lens.only False
-                & traverse (const (TextView.make ?? "?" ?? indicatorElemId))
+                & traverse (const (TextView.make "?" indicatorElemId))
                 <&> Lens.mapped %~ Responsive.fromTextView
-            r <- ResponsiveOptions.boxSpaced ?? ResponsiveOptions.disambiguationNone ?? optExpr : indicator
+            r <- ResponsiveOptions.boxSpaced ResponsiveOptions.disambiguationNone (optExpr : indicator)
             pure Menu.RenderedOption
                 { Menu._rWidget =
                     r ^. Responsive.rWide . Responsive.lWide & M.tValue . Widget.enterResultCursor .~ resId

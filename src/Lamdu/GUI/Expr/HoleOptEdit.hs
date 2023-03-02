@@ -27,25 +27,22 @@ make (Ann (Const pl) b) =
     case b of
     Sugar.HoleBinder x -> GuiM.makeBinder (Ann (Const pl) x)
     Sugar.HoleVarsRecord fieldNames ->
-        do
-            (Options.box ?? Options.disambiguationNone)
-                <*> sequence
-                [ grammar (label Texts.recordOpener) <&> Responsive.fromTextView
-                , (Options.boxSpaced ?? Options.disambiguationNone)
-                <*>
-                ( fieldNames
-                    & Lens.itraverse
-                    (\i fieldName ->
-                        let paramId = "params" <> M.asElemId i
-                        in
-                        myId <> paramId
-                        & GetVarEdit.makeSimpleView TextColors.variableColor fieldName
-                        <&> Responsive.fromWithTextPos
-                        & local (M.elemIdPrefix %~ (<> paramId))
-                    )
-                )
-                , grammar (label Texts.recordCloser) <&> Responsive.fromTextView
-                ] & stdWrapParentExpr pl
+        sequenceA
+        [ grammar (label Texts.recordOpener) <&> Responsive.fromTextView
+        , fieldNames
+            & Lens.itraverse
+            (\i fieldName ->
+                let paramId = "params" <> M.asElemId i
+                in
+                myId <> paramId
+                & GetVarEdit.makeSimpleView TextColors.variableColor fieldName
+                <&> Responsive.fromWithTextPos
+                & local (M.elemIdPrefix %~ (<> paramId))
+            )
+            >>= Options.boxSpaced Options.disambiguationNone
+        , grammar (label Texts.recordCloser) <&> Responsive.fromTextView
+        ] >>= Options.box Options.disambiguationNone
+        & stdWrapParentExpr pl
         & local (M.elemIdPrefix .~ M.asElemId myId)
     where
         myId = WidgetIds.fromExprPayload pl

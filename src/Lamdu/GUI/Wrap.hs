@@ -23,6 +23,7 @@ import qualified Lamdu.I18N.Navigation as Texts
 import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
+import Control.Monad.Reader.Extended (pushToReader)
 
 parentExprFDConfig :: _ => m FocusDelegator.Config
 parentExprFDConfig =
@@ -50,8 +51,9 @@ stdWrap pl act =
 
 parentDelegator :: _ => ElemId -> m (Responsive o -> Responsive o)
 parentDelegator myId =
-    FocusDelegator.make <*> parentExprFDConfig
-    ?? FocusDelegator.FocusEntryChild ?? myId
+    do
+        conf <- parentExprFDConfig
+        FocusDelegator.make conf FocusDelegator.FocusEntryChild myId & pushToReader
 
 stdWrapParentExpr :: _ => ExprGui.Payload i o -> GuiM env i o (Responsive o) -> GuiM env i o (Responsive o)
 stdWrapParentExpr pl act =

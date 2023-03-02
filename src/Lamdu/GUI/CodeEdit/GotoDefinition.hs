@@ -103,8 +103,7 @@ makeOptions goto globals (SearchMenu.ResultsContext searchTerm prefix)
                     Menu.Option
                     { Menu._oId = optId
                     , Menu._oRender =
-                        ((TextView.make ?? global ^. globalPrefix)
-                            <*> (Element.subElemId ?? "."))
+                        (Element.subElemId "." >>= TextView.make (global ^. globalPrefix))
                         /|/
                         GetVarEdit.makeSimpleView (global ^. globalColor) name optId
                         <&> toRenderedOption (global ^. globalOpen)
@@ -148,7 +147,7 @@ make gotoPane globals =
                 & SearchMenu.emptyStrings . Lens.mapped .~ goto
                 & SearchMenu.bgColors . Lens.mapped .~ M.Color 0 0 0 0
         SearchMenu.make (SearchMenu.searchTermEdit WidgetIds.gotoDefId (pure . allowSearchTerm))
-            (makeOptions gotoPane globals) M.empty WidgetIds.gotoDefId ?? Menu.Below
+            (makeOptions gotoPane globals) M.empty WidgetIds.gotoDefId Menu.Below
             & local (has . Theme.searchTerm %~ onTermStyle)
             <&> \searchWidget -> StatusBar.StatusWidget
             { StatusBar._widget = searchWidget

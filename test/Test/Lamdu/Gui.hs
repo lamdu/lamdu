@@ -66,12 +66,11 @@ makeGui afterDoc env workArea =
                 & WidgetIds.fromExprPayload
         let assocTagName = DataOps.assocTagName env
         gui <-
-            Responsive.vbox <*>
-            ( workArea ^..
-                Sugar.waPanes . traverse
-                & traverse CodeEdit.makePaneBodyEdit
-                & GuiState.assignCursor WidgetIds.defaultCursor defId
-            )
+            workArea ^..
+            Sugar.waPanes . traverse
+            & traverse CodeEdit.makePaneBodyEdit
+            & GuiState.assignCursor WidgetIds.defaultCursor defId
+            >>= Responsive.vbox
             & GuiM.run (workArea ^. Sugar.waOpenPane) assocTagName ExpressionEdit.make BinderEdit.make
                 (Anchors.onGui (Property.mkProperty %~ lift) DbLayout.guiAnchors)
                 env

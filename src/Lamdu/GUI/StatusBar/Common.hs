@@ -10,6 +10,7 @@ module Lamdu.GUI.StatusBar.Common
 
 import           Control.Lens.Extended (AnItemLens)
 import qualified Control.Lens as Lens
+import           Control.Monad.Reader.Extended (pushToReader)
 import           Data.Property (Property(..))
 import           GUI.Momentu (EventMap, ModKey)
 import qualified GUI.Momentu as M
@@ -61,11 +62,11 @@ makeDropDownList ::
     AnItemLens t (Text, M.ElemId) -> Property f a -> [(a, M.TextWidget f)] -> m (M.TextWidget f)
 makeDropDownList headerText prop choices =
     do
-        defConf <- DropDownList.defaultConfig
         texts <- Lens.view has
         let (text, elemId) = ((,) <$> texts <*> elemIds) ^# headerText
+        defConf <- DropDownList.defaultConfig text
         let myId = "status" <> elemId
-        DropDownList.make ?? prop ?? choices ?? defConf text ?? myId
+        DropDownList.make prop choices defConf myId
 
 labeledDropDownList ::
     _ =>
@@ -111,17 +112,14 @@ hamburgerText = "☰"
 
 hamburgerLabel :: _ => m (M.TextWidget f)
 hamburgerLabel =
-    do
-        toFocusable <- Widget.makeFocusableView
-        Label.make hamburgerText <&> M.tValue %~ toFocusable WidgetIds.statusBarHamburger
-            & Styled.info
+    Label.make hamburgerText >>= M.tValue (Widget.makeFocusableView WidgetIds.statusBarHamburger)
+    & Styled.info
 
 -- | Generate an invisible hamburger that responds to cursor so we
 -- don't get a red cursor if the hamburger disappears with the cursor
 -- on it
 makeInvisibleHamburger :: _ => m (M.TextWidget f)
-makeInvisibleHamburger =
-    Widget.respondToCursorPrefix ?? WidgetIds.statusBarHamburger ?? M.empty <&> M.WithTextPos 0
+makeInvisibleHamburger = Widget.respondToCursorPrefix WidgetIds.statusBarHamburger M.empty <&> M.WithTextPos 0
 
 enter :: M.Widget f -> Maybe (f M.Update)
 enter w =
@@ -149,11 +147,11 @@ clickTo action w =
 makeHamburgerMenu :: _ => m (M.TextWidget f -> [M.TextWidget f] -> M.TextWidget f)
 makeHamburgerMenu =
     do
-        vbox <- Glue.vbox
-        hover <- Hover.hover
-        anchor <- Hover.anchor <&> (M.tValue %~)
+        vbox <- pushToReader Glue.vbox
+        hover <- pushToReader Hover.hover
+        anchor <- pushToReader Hover.anchor <&> (M.tValue %~)
         actionKeys <- Lens.view (has . Config.actionKeys)
-        Glue.Poly (///) <- Glue.mkPoly ?? Glue.Vertical
+        Glue.Poly (///) <- Glue.mkPoly Glue.Vertical
         texts <- Lens.view has
         let doc = E.toDoc texts [Texts.sbStatusBar, Texts.sbExtraOptions]
         pure $ \hamburger hiddenWidgets ->
@@ -173,7 +171,7 @@ makeHamburgerMenu =
 combineWidgets :: _ => m (Double -> [StatusWidget f] -> StatusWidget f)
 combineWidgets =
     do
-        Glue.Poly (|||) <- Glue.mkPoly ?? Glue.Horizontal
+        Glue.Poly (|||) <- Glue.mkPoly Glue.Horizontal
         hamburger <- hamburgerLabel
         hamburgerMenu <- makeHamburgerMenu ?? hamburger
         invisibleHamburger <- makeInvisibleHamburger
@@ -200,7 +198,7 @@ combineWidgets =
 combineEdges :: _ => m (Double -> StatusWidget f -> [StatusWidget f] -> StatusWidget f)
 combineEdges =
     (,,)
-    <$> (Glue.mkPoly ?? Glue.Horizontal)
+    <$> Glue.mkPoly Glue.Horizontal
     <*> combineWidgets
     <*> hspacer
     <&> \(Glue.Poly (/||/), combine, space) width (StatusWidget topLeftWidget em) topRightWidgets ->

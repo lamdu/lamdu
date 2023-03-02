@@ -16,6 +16,7 @@ module Lamdu.GUI.Styled
 
 import qualified Control.Lens as Lens
 import           Control.Lens.Extended (AnItemLens)
+import           Control.Monad.Reader.Extended (pushToReader, pushToReaderExt)
 import qualified GUI.Momentu as M
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Animation as Anim
@@ -48,8 +49,7 @@ grammar :: _ => m a -> m a
 grammar = withColor TextColors.grammarColor
 
 rawText :: _ => M.ElemId -> Text -> f (M.WithTextPos M.View)
-rawText elemIdSuffix txt =
-    (TextView.make ?? txt) <*> (Element.subElemId ?? elemIdSuffix)
+rawText elemIdSuffix txt = Element.subElemId elemIdSuffix >>= TextView.make txt
 
 text :: _ => M.ElemId -> Lens.ALens' (t Text) Text -> f (M.WithTextPos M.View)
 text elemIdSuffix txtLens =
@@ -59,8 +59,8 @@ text elemIdSuffix txtLens =
 mkLabel :: _ => m (AnItemLens t (Text, M.ElemId) -> M.WithTextPos M.View)
 mkLabel =
     do
-        textView <- TextView.make
-        subElemId <- Element.subElemId
+        textView <- pushToReaderExt pushToReader TextView.make
+        subElemId <- pushToReader Element.subElemId
         texts <- Lens.view has
         pure (
             \lens ->
@@ -72,7 +72,7 @@ mkLabel =
 mkFocusableLabel :: _ => m (AnItemLens t (Text, M.ElemId) -> M.TextWidget f)
 mkFocusableLabel =
     do
-        toFocusable <- Widget.makeFocusableView
+        toFocusable <- pushToReaderExt pushToReader Widget.makeFocusableView
         elemIdPrefix <- Lens.view Element.elemIdPrefix
         lbl <- mkLabel
         pure (
@@ -94,7 +94,7 @@ addValBG = addBgColor Theme.valFrameBGColor
 
 addBgColor :: _ => Lens.ALens' Theme Draw.Color -> m (a -> a)
 addBgColor getColor =
-    Draw.backgroundColor <*> Lens.view (has . Lens.cloneLens getColor)
+    Lens.view (has . Lens.cloneLens getColor) >>= pushToReader . Draw.backgroundColor
 
 addValPadding :: _ => m (a -> a)
 addValPadding =
@@ -110,7 +110,7 @@ addValFrame =
 -- | Add a diagonal line (top-left to right-bottom).
 addDiagonal :: _ => m (Draw.Color -> Draw.R -> a -> a)
 addDiagonal =
-    Element.subElemId ?? "diagonal" <&>
+    Element.subElemId "diagonal" <&>
     \elemId color thickness ->
         let mkFrame sz =
                 Draw.convexPoly

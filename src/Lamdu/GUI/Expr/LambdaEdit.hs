@@ -35,10 +35,10 @@ make (Ann (Const pl) lam) =
             closeParenEvent
             [has . MomentuTexts.navigation, has . Texts.lambda, has . Texts.leaveSubexpression]
             (pure myId)
-        (ResponsiveExpr.boxSpacedMDisamb ?? ExprGui.mParensId pl)
-            <*> (Options.boxSpaced ?? Options.disambiguationNone ?? paramsAndLabelEdits
-                <&> Widget.strongerEvents rhsJumperEquals
-                <&> (: [bodyEdit]))
+        Options.boxSpaced Options.disambiguationNone paramsAndLabelEdits
+            <&> Widget.strongerEvents rhsJumperEquals
+            <&> (: [bodyEdit])
+            >>= ResponsiveExpr.boxSpacedMDisamb (ExprGui.mParensId pl)
             & stdWrapParentExpr pl
             <&> M.weakerEvents (scopeEventMap <> navigateOut)
     where

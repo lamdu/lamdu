@@ -98,13 +98,12 @@ makeStatusWidgets themeNames langNames prop =
                 iconTint <- Lens.view (has . Theme.help . Theme.helpShownIconTint)
                 Styled.sprite Sprites.help <&> Element.tint iconTint
         makeFocusable elemId mkView =
-            (Widget.makeFocusableView ?? elemId) <*> mkView
+            mkView >>=  Widget.makeFocusableView elemId
             <&> WithTextPos 0
             & local (Element.elemIdPrefix .~ elemId)
-
         opt sel =
-            (TextView.makeFocusable ?? sel ^. title)
-            <*> (Lens.view Element.elemIdPrefix <&> (<> asElemId (sel ^. selection)))
+            Lens.view Element.elemIdPrefix <&> (<> asElemId (sel ^. selection))
+            >>= TextView.makeFocusable (sel ^. title)
             <&> (,) (sel ^. selection)
         helpVals =
             Lens.sequenceOf (Lens.traverse . _2)
