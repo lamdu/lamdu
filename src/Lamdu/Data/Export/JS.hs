@@ -108,8 +108,7 @@ exportFancy def evalResults =
                 ^? EV.erExprValues
                 . Lens.ix (IRef.uuid (repl ^. Def.expr . hAnn . ExprIRef.iref . _F))
                 . Lens.ix EV.topLevelScopeId
-                <&> formatResult
-                & fromMaybe "<NO RESULT>"
+                & maybe "<NO RESULT>" formatResult
         replJs <- compile def <&> fromString
         pure $
             do

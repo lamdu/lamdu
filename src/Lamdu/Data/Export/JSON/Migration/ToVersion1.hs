@@ -139,10 +139,9 @@ migrateEntity nominalMap defMap (Aeson.Object obj) =
                 & Lens.at "typ" ?~ fixedTyp
                 & addFrozenDeps nominalMap prevFrozenTypes
     , obj ^. Lens.at "builtin" <&> convertBuiltin obj
-    , obj ^. Lens.at "repl" <&>
-        \replVal ->
-        replDefExpr nominalMap defMap replVal
-        <&> \defExpr -> obj & Lens.at "repl" ?~ defExpr
+    , obj ^. Lens.at "repl"
+        <&> replDefExpr nominalMap defMap
+        <&> Lens.mapped %~ \defExpr -> obj & Lens.at "repl" ?~ defExpr
     ]
     & fromMaybe (Right obj)
     <&> Aeson.Object

@@ -103,8 +103,7 @@ convertGlobal var exprPl =
                 DeletedDefinition -> DefDeleted
                 LiveDefinition ->
                     ctx ^. ConvertM.scOutdatedDefinitions . Lens.at var
-                    <&> Lens.mapped .~ exprPl ^. Input.entityId
-                    & maybe DefUpToDate DefTypeChanged
+                    & maybe DefUpToDate (DefTypeChanged . (exprPl ^. Input.entityId <$))
         nameRef <- NameRef.makeForDefinition defI & lift
         inline <-
             case defForm of

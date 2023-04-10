@@ -1,6 +1,11 @@
 - warn: { name: Use DerivingStrategies }
 - warn: { name: Redundant bracket due to operator fixities }
 - ignore: { name: Too strict if }
+- ignore: { name: Functor law }
+- ignore: { name: Fuse traverse/<&> }
+- ignore: { name: Fuse traverse_/<&> }
+- ignore: { name: Fuse foldMap/<&> }
+- ignore: { name: Fuse foldr/<&> }
 - fixity: "infixl 9 |||"
 
 - group:
@@ -88,3 +93,4 @@
     - error: {lhs: "Control.Lens.nullOf (Control.Lens.at a)", rhs: "False"}
     - error: {lhs: "Control.Lens.nullOf (a . Control.Lens.at b)", rhs: "Control.Lens.nullOf a"}
     - warn: {lhs: "Control.Monad.Reader.local (a %~ b)", rhs: "Control.Lens.locally a b"}
+    - warn: {lhs: "Control.Lens.mapped .~ a", rhs: "(a <$)"}

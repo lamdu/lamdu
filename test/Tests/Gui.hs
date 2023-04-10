@@ -397,7 +397,7 @@ testTabNavigation env virtCursor =
                 }
         let testDir (name, event, expected) =
                 E.lookup (Identity Nothing) event eventMap
-                    & runIdentity <&> (^. E.dhHandler) & sequenceA & lift
+                    & runIdentity & traverse (^. E.dhHandler) & lift
                 >>=
                 \case
                 Nothing -> pure ()

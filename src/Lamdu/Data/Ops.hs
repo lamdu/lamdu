@@ -140,7 +140,7 @@ newPane codeAnchors pane =
     do
         Property panes setPanes <-
             Anchors.panes codeAnchors ^. Property.mkProperty
-        panes ++ [pane] & setPanes & when (pane `notElem` panes)
+        panes ++ [pane] & setPanes & unless (pane `elem` panes)
 
 newDefinition :: Monad m => PresentationMode -> Definition (ValI m) () -> T m (DefI m)
 newDefinition presentationMode def =

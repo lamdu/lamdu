@@ -252,8 +252,7 @@ makeMainGui themeNames langNames dbToIO env mkWorkArea =
     \act ->
     act ^. ioTrans . Lens._Wrapped
     <&> (^. Lens._Wrapped)
-    <&> dbToIO
-    & join
+    >>= dbToIO
     >>= runExtraIO
     where
         runExtraIO (extraAct, res) = res <$ extraAct

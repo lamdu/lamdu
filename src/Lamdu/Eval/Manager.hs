@@ -106,7 +106,7 @@ evalActions evaluator =
         ExprIRef.defI globalId
         & loadDef evaluator
         <&> Def.defBody . Lens.mapped . hflipped %~ hmap (const (Const . IRef.uuid . (^. ExprIRef.iref . _F)))
-        <&> Lens.mapped .~ ()
+        <&> void
     , Eval._aReportUpdatesAvailable = resultsUpdated (eParams evaluator)
     , Eval._aJSDebugPaths = jsDebugPaths (eParams evaluator)
     }

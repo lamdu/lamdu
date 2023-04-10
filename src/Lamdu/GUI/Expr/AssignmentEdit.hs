@@ -228,7 +228,7 @@ makeJumpToRhs rhsId =
     do
         env <- Lens.view id
         GuiM.mkPrejumpPosSaver
-            <&> Lens.mapped .~ GuiState.updateCursor rhsId
+            <&> (GuiState.updateCursor rhsId <$)
             <&> const
             <&> E.charGroup Nothing
             (E.toDoc env

@@ -138,8 +138,7 @@ unwrapTInsts :: Map T.NominalId (Pure # N.NominalDecl T.Type) -> Pure # T.Type -
 unwrapTInsts nomsMap typ =
     case typ ^. _Pure of
     T.TInst (N.NominalInst tid params) ->
-        Map.lookup tid nomsMap
-        <&> (\nominalInst -> applyNominal nominalInst params ^. _Pure . sTyp)
-        <&> unwrapTInsts nomsMap
-        & fromMaybe typ
+        Map.lookup tid nomsMap & maybe typ (unwrapTInsts nomsMap . appNom)
+        where
+            appNom nominalInst = applyNominal nominalInst params ^. _Pure . sTyp
     _ -> typ
