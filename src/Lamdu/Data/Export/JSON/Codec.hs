@@ -186,14 +186,15 @@ decodeTagId :: Decoder T.Tag
 decodeTagId Aeson.Null = pure Anchors.anonTag
 decodeTagId json = decodeIdent json <&> T.Tag
 
-jsum :: [AesonTypes.Parser a] -> AesonTypes.Parser a
-jsum parsers =
-    parsers <&> toEither
-    <&> swapEither & sequence <&> unlines & swapEither
-    & fromEither
+swapParser :: Lens.Iso' (AesonTypes.Parser a) (Either a String)
+swapParser =
+    Lens.iso (swapEither . toEither) (fromEither . swapEither)
     where
         swapEither (Left x) = Right x
         swapEither (Right x) = Left x
+
+jsum :: [AesonTypes.Parser a] -> AesonTypes.Parser a
+jsum parsers = swapParser # (parsers ^.. traverse . swapParser & sequence <&> unlines)
 
 encodeComposite :: Encoder (Pure # T.Row)
 encodeComposite  =
