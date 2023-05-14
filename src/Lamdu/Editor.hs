@@ -24,6 +24,7 @@ import qualified Data.Property as Property
 import           GHC.Stack (SrcLoc(..))
 import           GUI.Momentu (Widget)
 import qualified GUI.Momentu as M
+import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.Main (MainLoop, Handlers(..))
 import qualified GUI.Momentu.Main as MainLoop
 import qualified GUI.Momentu.Widget as Widget
@@ -347,6 +348,7 @@ makeRootWidget env perfMonitors db evaluator sample cacheRef =
                 makeMainGui themeNames langNames dbToIO env (ecMkWorkArea cache)
                 & _OnceT %~ mapStateT dbToIO
             )
+            <&> Element.pad 0 1000 ?? env -- Pad so background fills more than window (for resizes)
             <&> M.backgroundColor bgColor ?? backgroundId
             <&> measureLayout
     where

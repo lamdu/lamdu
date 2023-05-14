@@ -20,7 +20,7 @@ extra-deps:
 - github: lamdu/lamdu-calculus
   commit: 6fe1f9d89d584eb173c10f851a819865824fb5ee
 - github: lamdu/momentu
-  commit: 221c57fe3291534e1bbb89b1b3e9d3cb2fea6cdb
+  commit: 6f169330d3a6dffbf27b7b202c2d4f2313f14817
 - github: lamdu/hypertypes
   commit: 9a28e3863b0e2525f38ce7b6efabbc056d3145b2
 - github: lamdu/graphics-drawingcombinators
@@ -32,12 +32,20 @@ extra-deps:
 - github: tweag/inline-js
   commit: 8512b09d2c0533a41d5d2aef182b11a58c420c10
   subdirs:
-    - inline-js-core
+  - inline-js-core
+- github: lamdu/inline-c
+  commit: 9af83f947acacc52f10a134fde3931dcbf3f845b
+  subdirs:
+  - inline-c-objc
 
 allow-newer: true
 
 ghc-options:
   # this is for weeder:
   "$locals": -fwrite-ide-info
+
+flags:
+  bindings-GLFW:
+    ExposeNative: true
 
 # require-stack-version: ">=2.5"
