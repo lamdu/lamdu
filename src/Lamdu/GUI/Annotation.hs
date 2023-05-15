@@ -124,7 +124,7 @@ data EvalResDisplay name = EvalResDisplay
     , erdVal :: Annotated Sugar.EntityId # Sugar.Result name
     }
 
-makeEvaluationResultView :: _ => EvalResDisplay Name -> GuiM env i o (M.WithTextPos M.View)
+makeEvaluationResultView :: _ => EvalResDisplay Name -> m (M.WithTextPos M.View)
 makeEvaluationResultView res =
     do
         th <- Lens.view has
@@ -164,7 +164,7 @@ neighborPositions evalView prev next =
 makeEvalView ::
     _ =>
     Maybe (NeighborVals (Maybe (EvalResDisplay Name))) ->
-    EvalResDisplay Name -> GuiM env i o (M.WithTextPos M.View)
+    EvalResDisplay Name -> m (M.WithTextPos M.View)
 makeEvalView mNeighbours evalRes =
     do
         evalTheme <- Lens.view (has . Theme.eval)
@@ -226,8 +226,8 @@ addInferredType typ postProcess =
 addEvaluationResult ::
     _ =>
     Maybe (NeighborVals (Maybe (EvalResDisplay Name))) ->
-    EvalResDisplay Name -> PostProcessAnnotation (GuiM env i o) ->
-    GuiM env i o (M.Widget f -> M.Widget f)
+    EvalResDisplay Name -> PostProcessAnnotation m ->
+    m (M.Widget f -> M.Widget f)
 addEvaluationResult mNeigh resDisp postProcess =
     case erdVal resDisp ^. hVal of
     Sugar.RRecord [] -> Styled.addBgColor Theme.evaluatedPathBGColor
