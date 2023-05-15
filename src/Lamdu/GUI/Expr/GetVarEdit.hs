@@ -142,8 +142,7 @@ definitionTypeChangeBox info getVarId =
 processDefinitionWidget ::
     _ => Sugar.DefinitionForm Name f -> ElemId -> m (M.TextWidget f) -> m (M.TextWidget f)
 processDefinitionWidget Sugar.DefUpToDate _myId mkLayout = mkLayout
-processDefinitionWidget Sugar.DefDeleted _myId mkLayout =
-    Styled.deletedUse <*> mkLayout
+processDefinitionWidget Sugar.DefDeleted _myId mkLayout = mkLayout >>= Styled.deletedUse
 processDefinitionWidget (Sugar.DefTypeChanged info) myId mkLayout =
     do
         env <- Lens.view id

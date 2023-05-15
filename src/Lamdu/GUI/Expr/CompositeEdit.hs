@@ -150,10 +150,10 @@ make prependKeywords myId conf (Ann (Const pl) (Sugar.Composite tl punned compos
         case items of
             [] -> makeUnit prependKeywords myId conf pl
             _ ->
-                Styled.addValFrame <*>
                 ( grammar (label (conf ^. opener))
                     M./|/ (addPostTags conf items >>= postProcess >>= taggedListIndent)
-                ) <&> Widget.weakerEvents (goToParentEventMap <> tailEventMap)
+                ) >>= Styled.addValFrame
+                <&> Widget.weakerEvents (goToParentEventMap <> tailEventMap)
                 <&> fromMaybe id prependKeywords
                 & stdWrapParentExpr pl
         & (foldl assignPunned ?? punned)

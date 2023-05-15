@@ -144,68 +144,62 @@ clickTo action w =
             , Widget._enterResultEvent = action
             }
 
-makeHamburgerMenu :: _ => m (M.TextWidget f -> [M.TextWidget f] -> M.TextWidget f)
-makeHamburgerMenu =
+makeHamburgerMenu :: _ => M.TextWidget f -> [M.TextWidget f] -> m (M.TextWidget f)
+makeHamburgerMenu hamburger hiddenWidgets =
     do
-        vbox <- pushToReader Glue.vbox
-        hover <- pushToReader Hover.hover
-        anchor <- pushToReader Hover.anchor <&> (M.tValue %~)
         actionKeys <- Lens.view (has . Config.actionKeys)
-        Glue.Poly (///) <- Glue.mkPoly Glue.Vertical
         texts <- Lens.view has
         let doc = E.toDoc texts [Texts.sbStatusBar, Texts.sbExtraOptions]
-        pure $ \hamburger hiddenWidgets ->
-            let menu = vbox hiddenWidgets
-                hoverMenu = hover menu & Hover.sequenceHover
-                hoverOptions = [M.Aligned 1 (anchor hamburger) /// M.Aligned 1 hoverMenu] <&> (^. M.value . M.tValue)
-                enterFirst = head hiddenWidgets ^. M.tValue & enter
-                gotoFirstHiddenItem = foldMap (E.keyPresses actionKeys doc) enterFirst
-            in  if Widget.isFocused (menu ^. M.tValue)
-                then anchor hamburger
-                     & M.tValue %~ Hover.hoverInPlaceOf hoverOptions
-                else hamburger
-                     & M.tValue %~ maybe id clickTo enterFirst
-                     & M.tValue %~ M.weakerEvents gotoFirstHiddenItem
+        let gotoFirstHiddenItem = foldMap (E.keyPresses actionKeys doc) enterFirst
+        menu <- Glue.vbox hiddenWidgets
+        anc <- M.tValue Hover.anchor hamburger
+        hoverOption <-
+            pure (M.Aligned 1 anc)
+            M./-/ (Hover.hover menu <&> Hover.sequenceHover <&> M.Aligned 1)
+        if Widget.isFocused (menu ^. M.tValue)
+            then anc & M.tValue %~ Hover.hoverInPlaceOf [hoverOption ^. M.value . M.tValue] & pure
+            else
+                hamburger
+                & M.tValue %~ maybe id clickTo enterFirst
+                & M.tValue %~ M.weakerEvents gotoFirstHiddenItem
+                & pure
+    where
+        enterFirst = head hiddenWidgets ^. M.tValue & enter
 
-
-combineWidgets :: _ => m (Double -> [StatusWidget f] -> StatusWidget f)
-combineWidgets =
+combineWidgets :: _ => Double -> [StatusWidget f] -> m (StatusWidget f)
+combineWidgets width statusWidgets =
     do
         Glue.Poly (|||) <- Glue.mkPoly Glue.Horizontal
         hamburger <- hamburgerLabel
-        hamburgerMenu <- makeHamburgerMenu ?? hamburger
+        hamburgerMenu <- makeHamburgerMenu hamburger & pushToReader
         invisibleHamburger <- makeInvisibleHamburger
         space <- hspacer
-        pure $ \width statusWidgets ->
-            let go _ [] = M.empty
-                go remainingWidth [w]
-                    | w ^. M.width > remainingWidth = hamburgerMenu [w]
-                    | otherwise = w ||| invisibleHamburger
-                go remainingWidth (w:ws)
-                    | newRemaining < hamburger ^. M.width = hamburgerMenu (w:ws)
-                    | otherwise = wSpaced ||| go newRemaining ws
-                    where
-                        wSpaced = w ||| space
-                        newRemaining = remainingWidth - wSpaced ^. M.width
-                combined = go width (statusWidgets ^.. Lens.folded . widget)
-                paddingWidth = max 0 (width - combined ^. M.width)
-                padding = Spacer.makeHorizontal paddingWidth
-            in  StatusWidget
-                { _widget = padding ||| combined
-                , _globalEventMap = statusWidgets ^. Lens.folded . globalEventMap
-                }
+        let go _ [] = M.empty
+            go remainingWidth [w]
+                | w ^. M.width > remainingWidth = hamburgerMenu [w]
+                | otherwise = w ||| invisibleHamburger
+            go remainingWidth (w:ws)
+                | newRemaining < hamburger ^. M.width = hamburgerMenu (w:ws)
+                | otherwise = wSpaced ||| go newRemaining ws
+                where
+                    wSpaced = w ||| space
+                    newRemaining = remainingWidth - wSpaced ^. M.width
+            combined = go width (statusWidgets ^.. Lens.folded . widget)
+            paddingWidth = max 0 (width - combined ^. M.width)
+            padding = Spacer.makeHorizontal paddingWidth
+        pure StatusWidget
+            { _widget = padding ||| combined
+            , _globalEventMap = statusWidgets ^. Lens.folded . globalEventMap
+            }
 
-combineEdges :: _ => m (Double -> StatusWidget f -> [StatusWidget f] -> StatusWidget f)
-combineEdges =
-    (,,)
-    <$> Glue.mkPoly Glue.Horizontal
-    <*> combineWidgets
-    <*> hspacer
-    <&> \(Glue.Poly (/||/), combine, space) width (StatusWidget topLeftWidget em) topRightWidgets ->
-    let topLeftSpacedWidget = topLeftWidget /||/ space
-        topRightMaxWidth = width - topLeftSpacedWidget ^. M.width
-        topRightCombined = combine topRightMaxWidth topRightWidgets
-    in  StatusWidget
-        { _widget = topLeftSpacedWidget /||/ (topRightCombined ^. widget)
-        , _globalEventMap = em <> topRightCombined ^. globalEventMap
-        }
+combineEdges :: _ => Double -> StatusWidget f -> [StatusWidget f] -> m (StatusWidget f)
+combineEdges width (StatusWidget topLeftWidget em) topRightWidgets =
+    do
+        topLeftSpacedWidget <- pure topLeftWidget M./|/ hspacer
+        let topRightMaxWidth = width - topLeftSpacedWidget ^. M.width
+        topRightCombined <- combineWidgets topRightMaxWidth topRightWidgets
+        w <- pure topLeftSpacedWidget M./|/ pure (topRightCombined ^. widget)
+        pure StatusWidget
+            { _widget = w
+            , _globalEventMap = em <> topRightCombined ^. globalEventMap
+            }

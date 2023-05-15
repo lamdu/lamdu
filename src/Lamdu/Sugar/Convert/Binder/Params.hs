@@ -145,12 +145,12 @@ writeNewParamList tags =
 
 addFieldParam ::
     Monad m =>
-    ConvertM m
-    (T m (ValI m) -> BinderKind m -> StoredLam m -> (T.Tag -> [T.Tag]) -> T.Tag -> T m ())
-addFieldParam =
+    T m (ValI m) -> BinderKind m -> StoredLam m -> (T.Tag -> [T.Tag]) ->
+    ConvertM m (T.Tag -> T m ())
+addFieldParam mkArg binderKind storedLam mkTags =
     fixLamUsages
     <&>
-    \fixUsages mkArg binderKind storedLam mkTags tag ->
+    \fixUsages tag ->
     do
         let t = storedLam ^. slLam . V.tlInType
         case t ^. hVal . _HCompose of
@@ -276,11 +276,11 @@ fieldParamInfo ::
 fieldParamInfo binderKind tags fp storedLam tag =
     do
         postProcess <- ConvertM.postProcessAssert
-        add <- addFieldParam
+        add <- addFieldParam DataOps.newHole binderKind storedLam (: tags)
         let resultInfo () newTag =
                 ConvertTag.TagResultInfo
                 (EntityId.ofTaggedEntity param newTag)
-                (add DataOps.newHole binderKind storedLam (: tags) newTag >> postProcess)
+                (add newTag >> postProcess)
         addNext <-
             ConvertTag.replace (nameWithContext Nothing param) (Set.fromList tags) (pure ()) resultInfo
             >>= ConvertM . lift
@@ -416,11 +416,11 @@ convertRecordParams mPresMode binderKind fieldParams storedLam =
                 | hasDups = ps <&> tiValue . fSubFields .~ Nothing
                 | otherwise = ps
         postProcess <- ConvertM.postProcessAssert
-        add <- addFieldParam
+        add <- addFieldParam DataOps.newHole binderKind storedLam (: (fieldParams <&> fpTag))
         let resultInfo () tag =
                 ConvertTag.TagResultInfo
                 (EntityId.ofTaggedEntity param tag)
-                (add DataOps.newHole binderKind storedLam (: (fieldParams <&> fpTag)) tag >> postProcess)
+                (add tag >> postProcess)
         addFirstSelection <-
             ConvertTag.replace (nameWithContext Nothing param) (Set.fromList tags) (pure ()) resultInfo >>= ConvertM . lift
         ConvertTaggedList.convert addFirstSelection fixedParams & LhsRecord & pure

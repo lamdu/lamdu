@@ -142,12 +142,11 @@ addFieldToLetLhsRecord ::
     [T.Tag] -> V.Var -> V.TypedLam V.Var (HCompose Prune T.Type) V.Term # Ann (HRef m) ->
     Params.StoredLam m -> ConvertM m (T m (HRef m # V.Term))
 addFieldToLetLhsRecord fieldTags var letLam storedLam =
-    Params.addFieldParam <&>
+    Params.addFieldParam mkNewArg (BinderKindLet letLam) storedLam ((fieldTags ++) . pure) <&>
     \addParam ->
     do
         paramTag <- DataOps.genNewTag
-        addParam mkNewArg (BinderKindLet letLam) storedLam
-            ((fieldTags ++) . pure) paramTag
+        addParam paramTag
         convertVarToGetFieldParam var paramTag (storedLam ^. Params.slLam)
         storedLam ^. Params.slLambdaProp & pure
     where

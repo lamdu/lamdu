@@ -12,7 +12,6 @@ module Lamdu.GUI.Expr.EventMap
     ) where
 
 import qualified Control.Lens as Lens
-import           Control.Monad.Reader.Extended (pushToReader)
 import qualified Data.Char as Char
 import qualified Data.Text as Text
 import           GUI.Momentu (EventMap, noMods, Update)
@@ -53,11 +52,10 @@ defaultOptions =
     { addOperatorSetHoleState = Nothing
     }
 
-exprInfoFromPl :: _ => GuiM env i o (Sugar.Payload v o0 -> ExprInfo o0)
-exprInfoFromPl =
-    pushToReader GuiState.isSubCursor <&>
-    \isSubCursor pl ->
-    let isSelected = WidgetIds.fromExprPayload pl & isSubCursor in
+exprInfoFromPl :: _ => Sugar.Payload v o0 -> GuiM env i o (ExprInfo o0)
+exprInfoFromPl pl =
+    WidgetIds.fromExprPayload pl & GuiState.isSubCursor <&>
+    \isSelected ->
     ExprInfo
     { exprInfoActions = pl ^. Sugar.plActions
     , exprInfoMinOpPrec =
@@ -73,22 +71,21 @@ exprInfoFromPl =
 add ::
     _ =>
     Options -> Sugar.Payload v o ->
-    GuiM env i o (w o -> w o)
-add options pl =
-    exprInfoFromPl ?? pl >>= actionsEventMap options <&> Widget.weakerEventsWithContext
+    w o -> GuiM env i o (w o)
+add options pl w =
+    exprInfoFromPl pl >>= actionsEventMap options <&> Widget.weakerEventsWithContext ?? w
 
 makeBaseEvents :: _ => Sugar.Payload v o -> GuiM env i o (EventMap (o Update))
-makeBaseEvents pl = exprInfoFromPl ?? pl >>= baseEvents
+makeBaseEvents pl = exprInfoFromPl pl >>= baseEvents
 
 extractCursor :: Sugar.ExtractDestination -> ElemId
 extractCursor (Sugar.ExtractToLet letId) = WidgetIds.fromEntityId letId
 extractCursor (Sugar.ExtractToDef defId) = WidgetIds.fromEntityId defId
 
-extractEventMap :: _ => m (Sugar.NodeActions o -> EventMap (o Update))
-extractEventMap =
-    Lens.view id
-    <&>
-    \env actions ->
+extractEventMap :: _ => Sugar.NodeActions o -> m (EventMap (o Update))
+extractEventMap actions =
+    Lens.view id <&>
+    \env ->
     actions ^. Sugar.extract <&> extractCursor
     & E.keysEventMapMovesCursor (env ^. has . Config.extractKeys)
     (E.toDoc env
@@ -117,7 +114,7 @@ actionsEventMap ::
     GuiM env i o (EventContext -> EventMap (o Update))
 actionsEventMap options exprInfo =
     (baseEvents exprInfo <&> const) -- throw away EventContext here
-    <> (transformEventMap ?? options ?? exprInfo)
+    <> transformEventMap options exprInfo
 
 baseEvents ::
     _ =>
@@ -125,12 +122,12 @@ baseEvents ::
     GuiM env i o (EventMap (o Update))
 baseEvents exprInfo =
     mconcat
-    [ detachEventMap ?? exprInfo
-    , extractEventMap ?? actions
+    [ detachEventMap exprInfo
+    , extractEventMap actions
     , mkReplaceParent
     , actions ^. Sugar.delete & replaceEventMap
     , actions ^. Sugar.mApply & foldMap applyEventMap
-    , makeLiteralEventMap ?? actions ^. Sugar.setToLiteral
+    , makeLiteralEventMap (actions ^. Sugar.setToLiteral)
     ]
     where
         actions = exprInfoActions exprInfo
@@ -194,10 +191,10 @@ transformSearchTerm =
     <&> (searchStrRemainder <>)
 
 transformEventMap ::
-    _ => m (Options -> ExprInfo o -> EventContext -> EventMap (o Update))
-transformEventMap =
+    _ => Options -> ExprInfo o -> m (EventContext -> EventMap (o Update))
+transformEventMap options exprInfo =
     transformSearchTerm <&>
-    \transform options exprInfo eventCtx ->
+    \transform eventCtx ->
     let x = case exprInfoActions exprInfo ^. Sugar.detach of
             Sugar.DetachAction detach ->
                 addOperatorSetHoleState options & maybe detachAndOpen widgetId
@@ -220,10 +217,10 @@ parenKeysEvent =
     E.charGroup (Just "Open Paren")
     (E.toDoc env texts) "([" (const act)
 
-detachEventMap :: _ => m (ExprInfo o -> EventMap (o Update))
-detachEventMap =
+detachEventMap :: _ => ExprInfo o -> m (EventMap (o Update))
+detachEventMap exprInfo =
     parenKeysEvent <&>
-    \mkEvent exprInfo ->
+    \mkEvent ->
     case exprInfoActions exprInfo ^. Sugar.detach of
     Sugar.DetachAction act | exprInfoIsSelected exprInfo ->
         mkEvent [has . MomentuTexts.edit, has . Texts.detach] (mempty <$ act)
@@ -249,40 +246,41 @@ goToLiteral = GuiState.updateCursor . WidgetIds.literalEditOf
 
 makeLiteralNumberEventMap ::
     _ =>
-    String ->
-    m ((Sugar.Literal Identity -> o Sugar.EntityId) -> EventMap (o Update))
-makeLiteralNumberEventMap prefix =
+    String -> (Sugar.Literal Identity -> o Sugar.EntityId) ->
+    m (EventMap (o Update))
+makeLiteralNumberEventMap prefix setToLiteral =
     makeLiteralCommon (Just "Digit") Chars.digit Texts.literalNumber
-    ?? Sugar.LiteralNum . Identity . read . (prefix <>) . (: [])
-    <&> Lens.mapped . Lens.mapped . Lens.mapped %~ goToLiteral
+    (Sugar.LiteralNum . Identity . read . (prefix <>) . (: [])) setToLiteral
+    <&> Lens.mapped . Lens.mapped %~ goToLiteral
 
 makeLiteralCharEventMap ::
     _ =>
-    Text -> m ((Sugar.Literal Identity -> o Sugar.EntityId) -> EventMap (o Update))
-makeLiteralCharEventMap searchTerm =
+    Text -> (Sugar.Literal Identity -> o Sugar.EntityId) -> m (EventMap (o Update))
+makeLiteralCharEventMap searchTerm setToLiteral =
     case Text.unpack searchTerm of
     ['\'', c] ->
-        makeLiteralCommon Nothing "'" Texts.literalChar ?? const (Sugar.LiteralChar (Identity c))
-        <&> Lens.mapped . Lens.mapped . Lens.mapped %~ GuiState.updateCursor
+        makeLiteralCommon Nothing "'" Texts.literalChar (const (Sugar.LiteralChar (Identity c))) setToLiteral
+        <&> Lens.mapped . Lens.mapped %~ GuiState.updateCursor
     _ -> mempty
 
 makeLiteralCommon ::
     _ =>
     Maybe Text -> String ->
     Lens.ALens' (Texts.CodeUI Text) Text ->
-    m ((Char -> Sugar.Literal Identity) ->
-          (Sugar.Literal Identity -> o Sugar.EntityId) -> EventMap (o ElemId))
-makeLiteralCommon mGroupDesc chars help =
-    Lens.view id <&> E.toDoc
-    <&> \toDoc f makeLiteral ->
+    (Char -> Sugar.Literal Identity) ->
+    (Sugar.Literal Identity -> o Sugar.EntityId) ->
+    m (EventMap (o ElemId))
+makeLiteralCommon mGroupDesc chars help f setToLiteral =
+    Lens.view id <&> E.toDoc <&>
+    \toDoc ->
     E.charGroup mGroupDesc (toDoc [has . MomentuTexts.edit, has . Lens.cloneLens help])
-    chars (fmap WidgetIds.fromEntityId . makeLiteral . f)
+    chars (fmap WidgetIds.fromEntityId . setToLiteral . f)
 
-makeLiteralEventMap :: _ => m ((Sugar.Literal Identity -> o Sugar.EntityId) -> EventMap (o Update))
+makeLiteralEventMap :: _ => (Sugar.Literal Identity -> o Sugar.EntityId) -> m (EventMap (o Update))
 makeLiteralEventMap =
     mconcat
-    [ makeLiteralCommon Nothing "\"" Texts.literalText ?? const (Sugar.LiteralText (Identity "")) <&> f
-    , makeLiteralCommon Nothing "#" Texts.literalBytes ?? const (Sugar.LiteralBytes (Identity "")) <&> f
+    [ makeLiteralCommon Nothing "\"" Texts.literalText (const (Sugar.LiteralText (Identity ""))) <&> f
+    , makeLiteralCommon Nothing "#" Texts.literalBytes (const (Sugar.LiteralBytes (Identity ""))) <&> f
     , makeLiteralNumberEventMap ""
     ]
     where

@@ -4,7 +4,6 @@ module Lamdu.GUI.TypeView
     ) where
 
 import qualified Control.Lens as Lens
-import           Control.Monad.Reader.Extended (pushToReader)
 import           Data.Bitraversable (Bitraversable(..))
 import qualified Data.ByteString.Char8 as BS8
 import qualified Data.Text as Text
@@ -120,9 +119,10 @@ makeTInst parentPrecedence tid typeParams =
                 & afterName
                 >>= parens parentPrecedence (Prec 0)
             params ->
-                gridViewTopLeftAlign <*> traverse makeTypeParam params
+                traverse makeTypeParam params
+                >>= gridViewTopLeftAlign
                 <&> Align.toWithTextPos
-                >>= (Styled.addValPadding ??)
+                >>= Styled.addValPadding
                 >>= addTypeBG
                 & afterName
     where
@@ -154,14 +154,14 @@ makeVariantField (tag, Ann _ (Sugar.TRecord (Sugar.CompositeFields [] Nothing)))
     TagView.make tag <&> (, Element.empty)
 makeVariantField t = makeField t
 
-gridViewTopLeftAlign :: _ => m (vert (horiz (Aligned View)) -> Aligned View)
-gridViewTopLeftAlign =
-    pushToReader GridView.make <&>
-    \mkGrid views ->
-    let (alignPoints, view) = mkGrid views
-    in  case alignPoints ^? traverse . traverse of
-        Nothing -> Aligned 0 view
-        Just x -> x & Align.value .~ view
+gridViewTopLeftAlign :: _ => vert (horiz (Aligned View)) -> m (Aligned View)
+gridViewTopLeftAlign views =
+    GridView.make views
+    <&>
+    \(alignPoints, view) ->
+    case alignPoints ^? traverse . traverse of
+    Nothing -> Aligned 0 view
+    Just x -> x & Align.value .~ view
 
 makeComposite ::
     _ =>
@@ -174,18 +174,18 @@ makeComposite mkOpener mkCloser mkField composite =
     case composite of
     Sugar.CompositeFields [] Nothing -> makeEmptyComposite
     Sugar.CompositeFields fields extension ->
-        Styled.addValFrame <*>
-        do
-            Styled.addValPadding <*> (gridViewTopLeftAlign <*>
-                ( traverse mkField fields
-                    <&> map toRow
-                    <&> Lens.ix 0 . crPre .~ Styled.grammar mkOpener
-                    <&> addExt
-                    <&> Lens._last . crPost .~ Styled.grammar mkCloser
-                    <&> Lens.imap addElemIdPrefix
-                    >>= traverse sequenceA
-                    <&> map horizSetCompositeRow
-                ) <&> Align.alignmentRatio . _1 .~ 0.5)
+        traverse mkField fields
+        <&> map toRow
+        <&> Lens.ix 0 . crPre .~ Styled.grammar mkOpener
+        <&> addExt
+        <&> Lens._last . crPost .~ Styled.grammar mkCloser
+        <&> Lens.imap addElemIdPrefix
+        >>= traverse sequenceA
+        <&> map horizSetCompositeRow
+        >>= gridViewTopLeftAlign
+        >>= Styled.addValPadding
+        <&> Align.alignmentRatio . _1 .~ 0.5
+        >>= Styled.addValFrame
         <&> Align.toWithTextPos
         where
             addExt =

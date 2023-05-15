@@ -3,7 +3,6 @@
 module Lamdu.GUI.Styled
     ( grammar, info
     , text
-    , mkLabel, mkFocusableLabel
     , label, focusableLabel
     , addValBG, addBgColor
     , addValPadding, addValFrame
@@ -16,7 +15,6 @@ module Lamdu.GUI.Styled
 
 import qualified Control.Lens as Lens
 import           Control.Lens.Extended (AnItemLens)
-import           Control.Monad.Reader.Extended (pushToReader, pushToReaderExt)
 import qualified GUI.Momentu as M
 import qualified GUI.Momentu.Align as Align
 import qualified GUI.Momentu.Animation as Anim
@@ -56,62 +54,41 @@ text elemIdSuffix txtLens =
     Lens.view (has . Lens.cloneLens txtLens)
     >>= rawText elemIdSuffix
 
-mkLabel :: _ => m (AnItemLens t (Text, M.ElemId) -> M.WithTextPos M.View)
-mkLabel =
-    do
-        textView <- pushToReaderExt pushToReader TextView.make
-        subElemId <- pushToReader Element.subElemId
-        texts <- Lens.view has
-        pure (
-            \lens ->
-            let (txt, elemId) = ((,) <$> texts <*> elemIds) ^# lens
-            in
-            textView txt (subElemId elemId)
-            )
-
-mkFocusableLabel :: _ => m (AnItemLens t (Text, M.ElemId) -> M.TextWidget f)
-mkFocusableLabel =
-    do
-        toFocusable <- pushToReaderExt pushToReader Widget.makeFocusableView
-        elemIdPrefix <- Lens.view Element.elemIdPrefix
-        lbl <- mkLabel
-        pure (
-            \lens ->
-            let widgetId =
-                    elemIdPrefix <>
-                    (elemIds <&> (,) "") ^. Lens.cloneLens lens . Lens._2
-            in  lbl lens & Align.tValue %~ toFocusable widgetId
-            )
-
 label :: _ => AnItemLens t (Text, M.ElemId) -> m (M.WithTextPos M.View)
-label lens = mkLabel ?? lens
+label lens =
+    do
+        texts <- Lens.view has
+        let (txt, elemId) = ((,) <$> texts <*> elemIds) ^# lens
+        Element.subElemId elemId >>= TextView.make txt
 
 focusableLabel :: _ => AnItemLens t (Text, M.ElemId) -> m (M.TextWidget f)
-focusableLabel lens = mkFocusableLabel ?? lens
+focusableLabel lens =
+    do
+        elemIdPrefix <- Lens.view Element.elemIdPrefix
+        let widgetId = elemIdPrefix <> (elemIds <&> (,) "") ^. Lens.cloneLens lens . Lens._2
+        label lens >>= Align.tValue (Widget.makeFocusableView widgetId)
 
-addValBG :: _ => m (a -> a)
+addValBG :: _ => a -> m a
 addValBG = addBgColor Theme.valFrameBGColor
 
-addBgColor :: _ => Lens.ALens' Theme Draw.Color -> m (a -> a)
-addBgColor getColor =
-    Lens.view (has . Lens.cloneLens getColor) >>= pushToReader . Draw.backgroundColor
+addBgColor :: _ => Lens.ALens' Theme Draw.Color -> a -> m a
+addBgColor getColor x =
+    Lens.view (has . Lens.cloneLens getColor) >>= (`Draw.backgroundColor` x)
 
-addValPadding :: _ => m (a -> a)
-addValPadding =
-    Lens.view (has . Theme.valFramePadding) <&> Element.padAround
+addValPadding :: _ => a -> m a
+addValPadding x =
+    Lens.view (has . Theme.valFramePadding) <&> (`Element.padAround` x)
 
-addValFrame :: _ => m (a -> a)
-addValFrame =
-    (.)
-    <$> addValBG
-    <*> addValPadding
+addValFrame :: _ => a -> m a
+addValFrame x =
+    addValPadding x >>= addValBG
     & local (Element.elemIdPrefix <>~ "val")
 
 -- | Add a diagonal line (top-left to right-bottom).
-addDiagonal :: _ => m (Draw.Color -> Draw.R -> a -> a)
-addDiagonal =
+addDiagonal :: _ => Draw.Color -> Draw.R -> a -> m a
+addDiagonal color thickness w =
     Element.subElemId "diagonal" <&>
-    \elemId color thickness ->
+    \elemId ->
         let mkFrame sz =
                 Draw.convexPoly
                 [ (0, thickness)
@@ -125,24 +102,24 @@ addDiagonal =
                 & void
                 & Anim.singletonFrame 1 (elemId <> "diagonal")
                 & Anim.scale sz
-        in  Element.setLayeredImage <. Element.layers %@~ snoc . mkFrame
+        in  w & Element.setLayeredImage <. Element.layers %@~ snoc . mkFrame
     where
         snoc x xs = xs ++ [x]
 
-deletedDiagonal :: _ => Lens.Getting Widget.R Theme.Deleted Widget.R -> m (a -> a)
-deletedDiagonal widthLens =
+deletedDiagonal :: _ => Lens.Getting Widget.R Theme.Deleted Widget.R -> a -> m a
+deletedDiagonal widthLens w =
     do
+        color <- Lens.view (has . Theme.errorColor)
         width <- Lens.view (has . Theme.deleted . widthLens)
-        addDiagonal <*> Lens.view (has . Theme.errorColor) ?? width
+        addDiagonal color width w
 
-deletedUse :: _ => m (a -> a)
+deletedUse :: _ => a -> m a
 deletedUse = deletedDiagonal Theme.deletedUseDiagonalWidth
 
-deletedDef :: _ => m (a -> a)
-deletedDef =
-    (.)
-    <$> deletedDiagonal Theme.deletedDefDiagonalWidth
-    <*> (Lens.view (has . Theme.deleted . Theme.deletedDefTint) <&> Element.tint)
+deletedDef :: _ => a -> m a
+deletedDef w =
+    Lens.view (has . Theme.deleted . Theme.deletedDefTint)
+    >>= deletedDiagonal Theme.deletedDefDiagonalWidth . (`Element.tint` w)
 
 withColor :: _ => Lens.ALens' TextColors Draw.Color -> m a -> m a
 withColor textColor act =

@@ -48,12 +48,10 @@ Lens.makeLenses ''TitledSelection
 makeAnnotationsSwitcher :: _ => Property f Ann.Mode -> m (StatusBar.StatusWidget f)
 makeAnnotationsSwitcher annotationModeProp =
     do
-        mk0 <- Styled.mkFocusableLabel
-        mk1 <- Styled.mkFocusableLabel
-        [ (Ann.Evaluation, mk0 Texts.evaluation)
-            , (Ann.Types, mk1 Texts.sbTypes)
-            , (Ann.None, mk1 Texts.sbNone)
-            ]
+        eval <- Styled.focusableLabel Texts.evaluation
+        types <- Styled.focusableLabel Texts.sbTypes
+        none <- Styled.focusableLabel Texts.sbNone
+        [(Ann.Evaluation, eval), (Ann.Types, types), (Ann.None, none)]
             & StatusBar.makeSwitchStatusWidget
                 (Styled.sprite Sprites.pencilLine <&> WithTextPos 0)
                 Texts.sbAnnotations Texts.sbSwitchAnnotations

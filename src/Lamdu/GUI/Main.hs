@@ -64,9 +64,7 @@ make themeNames langNames settingsProp sugarsProp env mkWorkArea =
             (fullSize ^. _1) vcActions
         let statusBarWidget = statusBar ^. StatusBar.widget . M.tValue
 
-        vcEventMap <-
-            VersionControlGUI.eventMap ??
-            env ^. Config.hasConfig . Config.versionControl ?? vcActions
+        vcEventMap <- VersionControlGUI.eventMap  (env ^. Config.hasConfig . Config.versionControl) vcActions
 
         pure statusBarWidget
             M./-/ Spacer.vspaceLines (env ^. has . Theme.topPadding)

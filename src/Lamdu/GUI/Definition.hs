@@ -138,12 +138,12 @@ errorIndicator myId tag (Sugar.EvalException errorType jumpToErr) =
                 pure indicator
 
 makeAddResultWidget ::
-    _ => ElemId -> Sugar.DefinitionExpression v name i o a -> m (Responsive (DefRes o) -> Responsive (DefRes o))
-makeAddResultWidget myId bodyExpr =
+    _ => ElemId -> Sugar.DefinitionExpression v name i o a -> Responsive (DefRes o) -> m (Responsive (DefRes o))
+makeAddResultWidget myId bodyExpr w =
     (resultWidget indicatorId (bodyExpr ^. Sugar.deVarInfo) <$> curPrevTag <&> fmap) <*> bodyExpr ^. Sugar.deResult
     & fallbackToPrev
     & fromMaybe (Widget.respondToCursorPrefix indicatorId M.empty <&> M.WithTextPos 0)
-    >>= (Glue.mkGlue Glue.Horizontal <&> pushToReader)
+    >>= (Glue.mkGlue Glue.Horizontal ?? w)
     & local (M.elemIdPrefix <>~ "result widget")
     where
         indicatorId = myId <> "result indicator"
@@ -175,13 +175,13 @@ makeExprDefinition defName bodyExpr myId =
                     plainLhs
                     ^. Responsive.rWide . Responsive.lWide . M.tValue . Widget.wSize . Lens._1
             lhs <-
-                makeAddResultWidget myId bodyExpr <*>
-                if isPlainLhs
-                then pure plainLhs
-                else
-                    label Texts.repl >>= M.tValue (Widget.makeFocusableView nameTagHoleId)
-                    >>= Element.padToSize (M.Vector2 width 0) 0
-                    <&> Responsive.fromWithTextPos
+                ( if isPlainLhs
+                    then pure plainLhs
+                    else
+                        label Texts.repl >>= M.tValue (Widget.makeFocusableView nameTagHoleId)
+                        >>= Element.padToSize (M.Vector2 width 0) 0
+                        <&> Responsive.fromWithTextPos
+                ) >>= makeAddResultWidget myId bodyExpr
             bodyExpr ^. Sugar.deContent & annValue .~ x ^. Sugar.apBody & GuiM.makeBinder
                 <&> Widget.updates %~ lift
                 >>= AssignmentEdit.layout lhs

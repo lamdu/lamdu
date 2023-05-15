@@ -7,14 +7,12 @@ module Lamdu.GUI.Expr.ParamsEdit
 
 import           Control.Applicative ((<|>))
 import qualified Control.Lens as Lens
-import           Control.Monad.Reader.Extended (pushToReaderExt, pushToReader)
 import           Data.CurAndPrev (CurAndPrev, current)
 import           GUI.Momentu (Responsive, EventMap, noMods, Update)
 import qualified GUI.Momentu as M
 import           GUI.Momentu.Direction (Orientation(..), Order(..))
 import           GUI.Momentu.Element.Id (ElemId)
 import qualified GUI.Momentu.EventMap as E
-import qualified GUI.Momentu.Glue as Glue
 import qualified GUI.Momentu.I18N as MomentuTexts
 import qualified GUI.Momentu.ModKey as ModKey
 import qualified GUI.Momentu.Responsive as Responsive
@@ -73,33 +71,26 @@ scopeCursor mChosenScope scopes =
             , sMNextParamScope = scopes ^? Lens.ix 1
             }
 
-addScopeEdit :: _ => m (Maybe (M.Widget o) -> Responsive o -> Responsive o)
-addScopeEdit =
-    Glue.mkGlue Glue.Vertical & pushToReaderExt pushToReader
-    <&>
-    (\(|---|) ->
-        \case
-        Nothing -> id
-        Just scopeEdit ->
-            (Responsive.rWide . Responsive.lForm .~ Responsive.WideOneLiner) .
-            ((|---|) ?? M.WithTextPos 0 scopeEdit)
-    )
+addScopeEdit :: _ => Maybe (M.Widget o) -> Responsive o -> m (Responsive o)
+addScopeEdit Nothing paramsEdit = pure paramsEdit
+addScopeEdit (Just scopeEdit) paramsEdit =
+    pure paramsEdit M./-/ pure (M.WithTextPos 0 scopeEdit)
+    <&> Responsive.rWide . Responsive.lForm .~ Responsive.WideOneLiner
 
-mkLhsEdits :: _ => m (Responsive o -> Maybe (M.Widget o) -> [Responsive o])
-mkLhsEdits =
-    addScopeEdit <&>
-    \add paramsEdit mScopeEdit -> [add mScopeEdit paramsEdit]
+mkLhsEdits :: _ => Responsive o -> Maybe (M.Widget o) -> m [Responsive o]
+mkLhsEdits paramsEdit mScopeEdit =
+    addScopeEdit mScopeEdit paramsEdit <&> (:[])
 
-mkExpanded :: _ => f (Responsive o -> Maybe (M.Widget o) -> [Responsive o])
-mkExpanded =
+mkExpanded :: _ => Responsive o -> Maybe (M.Widget o) -> f [Responsive o]
+mkExpanded paramsEdit mScopeEdit =
     do
         lam <- grammar (label Texts.lam) <&> Responsive.fromTextView
-        lhsEdits <- mkLhsEdits
+        lhsEdits <- mkLhsEdits paramsEdit mScopeEdit
         arrow <- grammar (label Texts.arrow) <&> Responsive.fromTextView
-        pure (\paramsEdit mScopeEdit -> lam : lhsEdits paramsEdit mScopeEdit <> [arrow])
+        pure (lam : lhsEdits <> [arrow])
 
-mkShrunk :: _ => [Sugar.EntityId] -> ElemId -> f (Maybe (M.Widget o) -> [Responsive o])
-mkShrunk paramIds myId =
+mkShrunk :: _ => [Sugar.EntityId] -> ElemId -> Maybe (M.Widget o) -> f [Responsive o]
+mkShrunk paramIds myId mScopeEdit =
     do
         env <- Lens.view id
         let expandEventMap =
@@ -118,20 +109,17 @@ mkShrunk paramIds myId =
             >>=  M.tValue (Widget.makeFocusableView (lamId myId))
             <&> Responsive.fromWithTextPos
             & local (TextView.underline ?~ LightLambda.underline theme)
-        addScopeEd <- addScopeEdit
-        pure $ \mScopeEdit ->
-            [ addScopeEd mScopeEdit lamLabel
-              & M.weakerEvents expandEventMap
-            ]
+        addScopeEdit mScopeEdit lamLabel
+            <&> M.weakerEvents expandEventMap
+    <&> (:[])
 
 lamId :: ElemId -> ElemId
 lamId = (<> "lam")
 
 mkLightLambda ::
     _ =>
-    Sugar.LhsNames a i o v -> ElemId ->
-    f (Responsive o -> Maybe (M.Widget o) -> [Responsive o])
-mkLightLambda params myId =
+    Sugar.LhsNames a i o v -> ElemId -> Responsive o -> Maybe (M.Widget o) -> f [Responsive o]
+mkLightLambda params myId paramsEdit mScopeEdit =
     do
         isSelected <-
             paramIds <&> WidgetIds.fromEntityId
@@ -147,11 +135,10 @@ mkLightLambda params myId =
                     ]) (pure (lamId myId))
         if isSelected
             then
-                 mkExpanded
-                 <&> Lens.mapped . Lens.mapped . Lens.mapped %~
+                 mkExpanded paramsEdit mScopeEdit
+                 <&> Lens.mapped %~
                      M.weakerEvents shrinkEventMap
-            else mkShrunk paramIds myId
-                 <&> \mk _mParamsEdit mScopeEdit -> mk mScopeEdit
+            else mkShrunk paramIds myId mScopeEdit
     where
         paramIds =
             case params of
@@ -164,9 +151,9 @@ makeLhs ::
     Responsive o -> Maybe (Widget.Widget o) -> EventMap (o Update) -> ElemId ->
     m [Responsive o]
 makeLhs _ (Sugar.LhsVar p) paramsEdit mScopeEdit _ _
-    | p ^. Sugar.vIsNullParam = mkLhsEdits ?? paramsEdit ?? mScopeEdit
-makeLhs True params paramsEdit mScopeEdit _ myId = mkLightLambda params myId ?? paramsEdit ?? mScopeEdit
-makeLhs _ _ paramsEdit mScopeEdit lhsEventMap _ = mkExpanded ?? paramsEdit ?? mScopeEdit <&> Lens.ix 0 %~ M.weakerEvents lhsEventMap
+    | p ^. Sugar.vIsNullParam = mkLhsEdits paramsEdit mScopeEdit
+makeLhs True params paramsEdit mScopeEdit _ myId = mkLightLambda params myId paramsEdit mScopeEdit
+makeLhs _ _ paramsEdit mScopeEdit lhsEventMap _ = mkExpanded paramsEdit mScopeEdit <&> Lens.ix 0 %~ M.weakerEvents lhsEventMap
 
 make ::
     _ =>

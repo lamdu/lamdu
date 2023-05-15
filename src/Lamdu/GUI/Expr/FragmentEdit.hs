@@ -3,7 +3,6 @@ module Lamdu.GUI.Expr.FragmentEdit
     ) where
 
 import qualified Control.Lens as Lens
-import           Control.Monad.Reader.Extended (pushToReader)
 import qualified GUI.Momentu as M
 import           GUI.Momentu (Responsive, (/|/), noMods)
 import qualified GUI.Momentu.Animation as Anim
@@ -72,7 +71,7 @@ make (Ann (Const pl) fragment) =
         searchTerm <- SearchMenu.readSearchTerm menuId
         applyActionsEventMap <-
             (if searchTerm == "" then  ExprEventMap.makeBaseEvents applyPl else mempty)
-            <> (ExprEventMap.makeLiteralCharEventMap searchTerm ?? applyPl ^. Sugar.plActions . Sugar.setToLiteral)
+            <> ExprEventMap.makeLiteralCharEventMap searchTerm (applyPl ^. Sugar.plActions . Sugar.setToLiteral)
             <&> Lens.mapped %~ ((optApply ^. Sugar.optionPick) *>)
 
         searchMenu <-
@@ -161,9 +160,7 @@ makeFragOpt (Ann (Const a) b) =
     where
         myId = WidgetIds.fromExprPayload a
         fromView act =
-            do
-                makeFocusable <- Widget.makeFocusableWidget myId & pushToReader
-                act <&> Responsive.fromTextView <&> Widget.widget %~ makeFocusable
+            act >>= M.tValue (Widget.makeFocusableWidget myId . Widget.fromView) <&> Responsive.fromWithTextPos
             & stdWrap a
 
 makeFragOperator :: _ => ExprGui.Body Sugar.FragOperator i o -> GuiM env i o (Responsive o)

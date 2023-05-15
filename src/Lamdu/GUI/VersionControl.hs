@@ -59,10 +59,10 @@ redoEventMap env config =
     & foldMap
 
 eventMap ::
-    _ => m (VersionControl.Config ModKey -> A.Actions t f -> EventMap (f Update))
-eventMap =
-    Lens.view id
-    <&> \env config actions ->
+    _ => VersionControl.Config ModKey -> A.Actions t f -> m (EventMap (f Update))
+eventMap config actions =
+    Lens.view id <&>
+    \env ->
     let toDoc = E.toDoc env in
     mconcat
     [ A.makeBranch actions

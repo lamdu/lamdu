@@ -254,13 +254,11 @@ makePaneEdit theExportActions prevId pane =
                         <$ (pane ^. Sugar.paneDefinitionState . Property.pSet) Sugar.LiveDefinition
                         & undeleteButton <&> Responsive.fromWithTextPos
                         <&> Widget.updates %~ IOTrans.liftTrans
-                    style <- Styled.deletedDef
-                    Responsive.vbox
-                        [ buttonGui
-                        , bodyGui
-                            & Responsive.alignedWidget . M.tValue .> Widget.wFocused %@~ wholeFocused
-                            & style
-                        ]
+                    g <-
+                        bodyGui
+                        & Responsive.alignedWidget . M.tValue .> Widget.wFocused %@~ wholeFocused
+                        & Styled.deletedDef
+                    Responsive.vbox [buttonGui, g]
                 & local (M.elemIdPrefix <>~ M.asElemId paneId)
             <&> Widget.weakerEvents paneEventMap
     where

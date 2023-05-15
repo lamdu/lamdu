@@ -38,9 +38,9 @@ make hole@(Ann (Const pl) _) =
         searchTerm <- SearchMenu.readSearchTerm myId
         negativeNumberEventMap <-
             if searchTerm == "-"
-            then ExprEventMap.makeLiteralNumberEventMap "-" ?? setToLiteral
+            then ExprEventMap.makeLiteralNumberEventMap "-" setToLiteral
             else pure mempty
-        charEventMap <- ExprEventMap.makeLiteralCharEventMap searchTerm ?? setToLiteral
+        charEventMap <- ExprEventMap.makeLiteralCharEventMap searchTerm setToLiteral
         env <- Lens.view id
         let innerHoleEventMap =
                 -- Make space go to the hole inside a result
@@ -56,9 +56,9 @@ make hole@(Ann (Const pl) _) =
                     Menu.PickFirstResult{} -> id
                     Menu.NoPickFirstResult ->
                         SearchMenu.termEditEventMap %~ blockChars
-        (ExprEventMap.add options pl <&> (M.tValue %~))
-            <*> ((maybeAddAnnotationPl pl <&> (M.tValue %~))
-            <*> SearchMenu.make mkSearchTerm (makeResults hole) M.empty myId Menu.AnyPlace)
+        (maybeAddAnnotationPl pl <&> (M.tValue %~))
+            <*> SearchMenu.make mkSearchTerm (makeResults hole) M.empty myId Menu.AnyPlace
+            >>= M.tValue (ExprEventMap.add options pl)
             & local (has . SearchMenu.emptyStrings . Lens.mapped .~ "_")
             <&> Responsive.fromWithTextPos
             <&> M.weakerEvents innerHoleEventMap

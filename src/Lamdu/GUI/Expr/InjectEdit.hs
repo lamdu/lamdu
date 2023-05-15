@@ -3,7 +3,6 @@ module Lamdu.GUI.Expr.InjectEdit
     ) where
 
 import qualified Control.Lens as Lens
-import           Control.Monad.Reader.Extended (pushToReader)
 import           GUI.Momentu (Responsive, (/|/), Update)
 import qualified GUI.Momentu as M
 import           GUI.Momentu.Element.Id (ElemId)
@@ -41,12 +40,11 @@ injectTag tag =
 make :: _ => Annotated (ExprGui.Payload i o) # Const (Sugar.TagRef Name i o) -> GuiM env i o (Responsive o)
 make (Ann (Const pl) (Const tag)) =
     do
-        jumpToTag <- foldMap (TagEdit.makeJumpToTagEventMap ??) (tag ^. Sugar.tagRefJumpTo)
-        makeFocusable <- Widget.makeFocusableWidget myId & pushToReader
+        jumpToTag <- foldMap TagEdit.makeJumpToTagEventMap (tag ^. Sugar.tagRefJumpTo)
         injectTag tag <&> Lens.mapped %~ Widget.fromView
             >>= maybe pure ResponsiveExpr.addParens (ExprGui.mParensId pl)
+            >>= M.tValue (Widget.makeFocusableWidget myId)
             <&> Responsive.fromWithTextPos
-            <&> Widget.widget %~ makeFocusable
             <&> M.weakerEvents jumpToTag
     & Wrap.stdWrap pl
     where
@@ -121,7 +119,7 @@ makeNullary (Ann (Const pl) (Sugar.NullaryInject tag r)) =
                     [rawInjectEdit, Widget.weakerEvents leaveEventMap w]
 
         jumpToTag <-
-            foldMap (TagEdit.makeJumpToTagEventMap ??) (tag ^. hVal . Lens._Wrapped . Sugar.tagRefJumpTo)
+            foldMap TagEdit.makeJumpToTagEventMap (tag ^. hVal . Lens._Wrapped . Sugar.tagRefJumpTo)
         valEventMap <-
             case r ^. annotation . Sugar.plActions . Sugar.delete of
             Sugar.SetToHole a ->

@@ -291,7 +291,6 @@ make :: _ => Sugar.TagPane o -> ElemId -> m (Widget o)
 make tagPane myId =
     Lens.view has >>=
     \lang ->
-    addValFrame <*>
     do
         (symbol, nextLine) <- makeSymbol myId symbolProp
         langsTable <-
@@ -304,6 +303,7 @@ make tagPane myId =
         pure langsTable
             /-/ (hbox [symbol, hspaceOf gap, orderEdit] <&> (^. Align.tValue))
             /-/ pure (nextLine ^. Align.tValue)
+    >>= addValFrame
     & local (Element.elemIdPrefix .~ M.asElemId myId)
     & GuiState.assignCursor myId (nameId (langElemId myId lang))
     where

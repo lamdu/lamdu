@@ -53,7 +53,7 @@ make gotoDefinition themeNames langNames settingsProp sugarsProp width vcActions
 
         sugarsWidget <- StatusBar.Sugars.make sugarsProp <&> StatusBar.hoist IOTrans.liftIO
 
-        StatusBar.combineEdges ?? width ?? gotoDefinition ??
+        StatusBar.combineEdges width gotoDefinition
             [ statusWidgets ^. SettingsGui.annotationWidget
             , statusWidgets ^. SettingsGui.themeWidget
             , branchSelector

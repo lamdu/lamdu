@@ -5,7 +5,7 @@ module Lamdu.GUI.Expr.IfElseEdit
     ) where
 
 import qualified Control.Lens as Lens
-import           Control.Monad.Reader.Extended (pushToReader, pushToReaderExt)
+import           Control.Monad.Reader.Extended (pushToReader)
 import           Data.Functor.Compose (Compose(..))
 import           Data.Vector.Vector2 (Vector2(..))
 import           GUI.Momentu (Responsive)
@@ -81,8 +81,9 @@ makeElse _ (Ann (Const pl) (Sugar.ElseIf (Sugar.ElseIfBody addLet content))) =
         -- TODO: green evaluation backgrounds, "◗"?
         letEventMap <- ExprEventMap.addLetEventMap addLet
         elseIfKeyword <-
-            (ExprEventMap.add ExprEventMap.defaultOptions pl<&> (M.tValue %~)) <*>
-            (label Texts.elseIf >>= M.tValue (Widget.makeFocusableView myId))
+            label Texts.elseIf
+            >>= M.tValue (Widget.makeFocusableView myId)
+            >>= M.tValue (ExprEventMap.add ExprEventMap.defaultOptions pl)
             & grammar
         (:)
             <$> ( makeIfThen elseIfKeyword elemId content
@@ -95,45 +96,34 @@ makeElse _ (Ann (Const pl) (Sugar.ElseIf (Sugar.ElseIfBody addLet content))) =
         elemId = M.asElemId myId
         entityId = pl ^. Sugar.plEntityId
 
-verticalRowRender :: _ => f (Row (Responsive o) -> Responsive o)
-verticalRowRender =
-    do
-        indent <- pushToReaderExt pushToReader ResponsiveExpr.indent
-        obox <- Options.box Options.disambiguationNone & pushToReader
-        vbox <- pushToReader Responsive.vboxSpaced
-        pure $
-            \row ->
-            vbox
-            [ obox [row ^. rKeyword, row ^. rPredicate]
-            , indent (row ^. rIndentId) (row ^. rResult)
-            ]
+verticalRowRender :: _ => Row (Responsive o) -> f (Responsive o)
+verticalRowRender row =
+    sequenceA
+    [ Options.box Options.disambiguationNone [row ^. rKeyword, row ^. rPredicate]
+    , ResponsiveExpr.indent (row ^. rIndentId) (row ^. rResult)
+    ] >>= Responsive.vboxSpaced
 
-renderRows :: _ => Maybe M.ElemId -> f ([Row (Responsive o)] -> Responsive o)
-renderRows mParensId =
+renderRows :: _ => Maybe M.ElemId -> [Row (Responsive o)] -> f (Responsive o)
+renderRows mParensId rows =
     do
         vspace <- Spacer.getSpaceSize <&> (^._2)
         -- TODO: better way to make space between rows in grid??
         obox <- Options.box Options.disambiguationNone & pushToReader
-        pad <- pushToReaderExt (pushToReaderExt pushToReader) Element.pad
         let -- When there's only "if" and "else", we want to merge the predicate with the keyword
             -- because there are no several predicates to be aligned
             prep2 row =
                 row
                 & rKeyword .~ obox [row ^. rKeyword, row ^. rPredicate]
                 & rPredicate .~ M.empty
-        let spaceAbove = (<&> pad (Vector2 0 vspace) 0)
+        spaceAbove <- Element.pad (Vector2 0 vspace) 0 & pushToReader
         let prepareRows [] = []
-            prepareRows [x, y] = [prep2 x, spaceAbove (prep2 y)]
-            prepareRows (x:xs) = x : (xs <&> spaceAbove)
-        vert <- verticalRowRender
-        addParens <- maybe (pure id) (ResponsiveExpr.addParens <&> pushToReader) mParensId
-        vbox <- pushToReader Responsive.vboxSpaced
+            prepareRows [x, y] = [prep2 x, prep2 y <&> spaceAbove]
+            prepareRows (x:xs) = x : (xs <&> Lens.mapped %~ spaceAbove)
         table <- Options.table
-        pure $
-            \rows ->
-            vbox (rows <&> vert)
-            & Options.tryWideLayout table (Compose (prepareRows rows))
-            & Responsive.rWide . Responsive.lWideDisambig %~ addParens
+        traverse verticalRowRender rows
+            >>= Responsive.vboxSpaced
+            <&> Options.tryWideLayout table (Compose (prepareRows rows))
+            >>= (Responsive.rWide . Responsive.lWideDisambig) (maybe pure ResponsiveExpr.addParens mParensId)
 
 make :: _ => ExprGui.Expr Sugar.IfElse i o -> GuiM env i o (Responsive o)
 make (Ann (Const pl) ifElse) =
@@ -143,8 +133,8 @@ make (Ann (Const pl) ifElse) =
             (:)
             <$> makeIfThen ifKeyword elemId ifElse
             <*> makeElse elemId (ifElse ^. Sugar.iElse)
-        res <- renderRows (ExprGui.mParensId pl) ?? rows
-        frame <- addValFrame
+        res <- renderRows (ExprGui.mParensId pl) rows
+        frame <- pushToReader addValFrame
         s <- Spacer.stdHSpace <&> Widget.fromView <&> M.WithTextPos 0
         disambig <- maybe (pure id) (ResponsiveExpr.addParens <&> pushToReader) (ExprGui.mParensId pl)
         hbox <- pushToReader Glue.hbox

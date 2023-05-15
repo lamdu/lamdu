@@ -2,7 +2,6 @@ module Lamdu.GUI.NominalPane
     ( make
     ) where
 
-import           Control.Monad.Reader.Extended (pushToReader)
 import           GUI.Momentu (Responsive)
 import qualified GUI.Momentu as M
 import qualified GUI.Momentu.Responsive as Responsive
@@ -32,16 +31,16 @@ make nom =
             <&> Responsive.fromWithTextPos
             <&> M.weakerEvents addFirstEventMap
         sep <- Styled.grammar (Label.make ":") <&> Responsive.fromTextView
-        bodyEdit <-
-            case nom ^. Sugar.npBody of
-            Nothing -> Styled.grammar (Styled.focusableLabel Texts.opaque) <&> Responsive.fromWithTextPos
-            Just scheme -> TypeView.makeScheme scheme <&> Responsive.fromTextView
-        hbox <- ResponsiveOptions.boxSpaced ResponsiveOptions.disambiguationNone & pushToReader
-        hbox [hbox ((nameEdit : paramEdits) <> [sep]), bodyEdit]
-            & pure
+        sequenceA
+            [ hbox ((nameEdit : paramEdits) <> [sep])
+            , case nom ^. Sugar.npBody of
+                Nothing -> Styled.grammar (Styled.focusableLabel Texts.opaque) <&> Responsive.fromWithTextPos
+                Just scheme -> TypeView.makeScheme scheme <&> Responsive.fromTextView
+            ] >>= hbox
         & local (M.elemIdPrefix .~ M.asElemId myId)
         & GuiState.assignCursor myId nameEditId
     where
+        hbox = ResponsiveOptions.boxSpaced ResponsiveOptions.disambiguationNone
         myId = nom ^. Sugar.npEntityId & WidgetIds.fromEntityId
         nameEditId =
             nom ^. Sugar.npName . Sugar.oTag . Sugar.tagRefTag . Sugar.tagInstance

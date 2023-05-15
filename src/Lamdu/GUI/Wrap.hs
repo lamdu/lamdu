@@ -23,7 +23,6 @@ import qualified Lamdu.I18N.Navigation as Texts
 import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
-import Control.Monad.Reader.Extended (pushToReader)
 
 parentExprFDConfig :: _ => m FocusDelegator.Config
 parentExprFDConfig =
@@ -45,19 +44,19 @@ stdWrap pl act =
     act
     >>> (takeFocusIfNeeded pl <&> (Widget.widget %~))
     >>> (maybeAddAnnotationPl pl <&> (Widget.widget %~))
-    >>> ExprEventMap.add ExprEventMap.defaultOptions pl
+    >>= ExprEventMap.add ExprEventMap.defaultOptions pl
     where
         a >>> f = f <*> a
 
-parentDelegator :: _ => ElemId -> m (Responsive o -> Responsive o)
-parentDelegator myId =
+parentDelegator :: _ => ElemId -> Responsive o -> m (Responsive o)
+parentDelegator myId w =
     do
         conf <- parentExprFDConfig
-        FocusDelegator.make conf FocusDelegator.FocusEntryChild myId & pushToReader
+        FocusDelegator.make conf FocusDelegator.FocusEntryChild myId w
 
 stdWrapParentExpr :: _ => ExprGui.Payload i o -> GuiM env i o (Responsive o) -> GuiM env i o (Responsive o)
 stdWrapParentExpr pl act =
-    parentDelegator (WidgetIds.fromExprPayload pl) <*> act & stdWrap pl
+    act >>= parentDelegator (WidgetIds.fromExprPayload pl) & stdWrap pl
 
 takeFocusIfNeeded :: _ => Sugar.Payload v o -> GuiM env i o (Widget o -> Widget o)
 takeFocusIfNeeded pl =

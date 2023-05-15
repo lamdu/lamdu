@@ -1,5 +1,5 @@
 -- | A wrapper for the fuzzyset library that makes it a Fuzzy map
-{-# LANGUAGE TemplateHaskell, DerivingVia #-}
+{-# LANGUAGE TemplateHaskell, DerivingVia, TupleSections #-}
 module Lamdu.Fuzzy
     ( Fuzzy, make, matches
     , Distance(..), isFuzzy, distanceInts
@@ -114,6 +114,6 @@ memoableMake memoMake pairs =
         flatten (dist, indices) = indices ^.. Lens.folded <&> (,) dist
         f =
             pairs ^@.. Lens.ifolded
-            >>= (\(idx, (texts, _)) -> texts <&> (,) ?? idx)
+            >>= (\(idx, (texts, _)) -> texts <&> (, idx))
             & memoMake
         v = pairs <&> snd & Vector.fromList

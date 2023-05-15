@@ -41,8 +41,9 @@ import           Lamdu.Prelude
 
 wrapParentNoAnn :: _ => Sugar.Payload v o -> GuiM env i o (Responsive o) -> GuiM env i o (Responsive o)
 wrapParentNoAnn pl act =
-    ExprEventMap.add ExprEventMap.defaultOptions pl <*>
-    (Wrap.parentDelegator (WidgetIds.fromExprPayload pl) <*> act)
+    act
+    >>= Wrap.parentDelegator (WidgetIds.fromExprPayload pl)
+    >>= ExprEventMap.add ExprEventMap.defaultOptions pl
 
 makeLabeled :: _ => ExprGui.Expr Sugar.LabeledApply i o -> GuiM env i o (Responsive o)
 makeLabeled (Ann (Const pl) apply) =
@@ -58,7 +59,7 @@ makeLabeled (Ann (Const pl) apply) =
         let extraRows = argRows <> punnedArgs
         let addArgs funcRow
                 | null extraRows = pure funcRow
-                | otherwise = Styled.addValFrame <*> Responsive.vboxSpaced (funcRow : extraRows)
+                | otherwise = Responsive.vboxSpaced (funcRow : extraRows) >>= Styled.addValFrame
         let wrap x =
                 do
                     addAnnotation <- maybeAddAnnotationPl pl

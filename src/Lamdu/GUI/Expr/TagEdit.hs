@@ -114,8 +114,8 @@ makeAddNewTag tagOpt =
         { Menu._oId = optionId
         , Menu._oSubmenuWidgets = Menu.SubmenuEmpty
         , Menu._oRender =
-            (Widget.makeFocusableView optionId & pushToReader <&> fmap)
-            <*> Styled.label Texts.createNew
+            Styled.label Texts.createNew
+            >>= M.tValue (Widget.makeFocusableView optionId)
             <&> (`Menu.RenderedOption` preEvent)
             & Styled.withColor TextColors.actionTextColor
         }
@@ -154,8 +154,8 @@ makeOptions tagRefReplace newTagOpt mkPickResult ctx
                     Menu.Option
                     { Menu._oId = optionWId
                     , Menu._oRender =
-                        (Widget.makeFocusableView optionWId & pushToReader <&> fmap)
-                        <*> NameView.make (opt ^. Sugar.toInfo . Sugar.tagName)
+                        NameView.make (opt ^. Sugar.toInfo . Sugar.tagName)
+                        >>= M.tValue (Widget.makeFocusableView optionWId)
                         & local (M.elemIdPrefix .~ M.asElemId instanceId)
                         <&>
                         \widget ->
@@ -226,10 +226,9 @@ makeHoleSearchTerm newTagOption mkPickResult holeId =
                     newText <- Lens.view (has . Texts.new)
                     newTagLabel <- Element.subElemId "label" >>= TextView.make ("(" <> newText <> ")")
                     space <- Spacer.stdHSpace
-                    hover <- pushToReader Hover.hover
                     Glue.Poly (|||) <- Glue.mkPoly Glue.Horizontal
+                    hNewTagLabel <- Hover.hover newTagLabel <&> Hover.sequenceHover
                     anchor <- pushToReader Hover.anchor <&> fmap
-                    let hNewTagLabel = hover newTagLabel & Hover.sequenceHover
                     let termWithHover termW =
                             let hoverOptions =
                                     [ anchor (termW ||| space) ||| hNewTagLabel
@@ -267,10 +266,10 @@ data TagRefEditType
     | SimpleView
     deriving (Eq)
 
-makeJumpToTagEventMap :: _ => m (o EntityId -> EventMap (o M.Update))
-makeJumpToTagEventMap =
+makeJumpToTagEventMap :: _ => o EntityId -> m (EventMap (o M.Update))
+makeJumpToTagEventMap jump =
     Lens.view id <&>
-    \env jump ->
+    \env ->
     jump <&> WidgetIds.fromEntityId
     & E.keysEventMapMovesCursor
     (env ^. Config.hasConfig . Config.jumpToDefinitionKeys)
@@ -299,10 +298,8 @@ makeTagRefEditWith onView onPickNext mSetToAnon tag =
                     , has . Texts.tag
                     , has . MomentuTexts.choose
                     ] ) chooseAction
-        jumpToTagEventMap <- makeJumpToTagEventMap
-        let eventMap =
-                foldMap jumpToTagEventMap (tag ^. Sugar.tagRefJumpTo)
-                <> chooseNewTagEventMap
+        jumpToTagEventMap <- foldMap makeJumpToTagEventMap (tag ^. Sugar.tagRefJumpTo)
+        let eventMap = jumpToTagEventMap <> chooseNewTagEventMap
         nameView <-
             TagView.make info
             >>= M.tValue (Widget.makeFocusableView viewId)

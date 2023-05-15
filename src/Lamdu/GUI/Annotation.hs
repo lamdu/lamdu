@@ -230,7 +230,7 @@ addEvaluationResult ::
     m (M.Widget f -> M.Widget f)
 addEvaluationResult mNeigh resDisp postProcess =
     case erdVal resDisp ^. hVal of
-    Sugar.RRecord [] -> Styled.addBgColor Theme.evaluatedPathBGColor
+    Sugar.RRecord [] -> Styled.addBgColor Theme.evaluatedPathBGColor & pushToReader
     Sugar.RFunc _ -> pure id
     _ -> addAnnotationH (makeEvalView mNeigh resDisp) (postProcess ValAnnotation)
 
