@@ -10,7 +10,6 @@ import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.I18N as MomentuTexts
 import qualified GUI.Momentu.Responsive as Responsive
 import qualified GUI.Momentu.State as GuiState
-import qualified GUI.Momentu.Widget as Widget
 import qualified GUI.Momentu.Widgets.Menu as Menu
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Theme.TextColors as TextColors
@@ -62,9 +61,9 @@ addAnnotation annotationOpts param myId widget =
             GuiState.isSubCursor myId
             <&> Annotation.postProcessAnnotationFromSelected
         Annotation.maybeAddAnnotationWith annotationOpts postProcessAnnotation
-            (param ^. Sugar.fpAnnotation)
-            <&> (Widget.widget %~)
-            ?? Responsive.fromWithTextPos widget
+            (param ^. Sugar.fpAnnotation) <&> (M.tValue %~)
+            ?? widget
+            <&> Responsive.fromWithTextPos
     & local (M.elemIdPrefix .~ M.asElemId myId)
 
 addAnnotationAndEvents ::
