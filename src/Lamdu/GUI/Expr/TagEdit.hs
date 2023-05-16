@@ -84,12 +84,12 @@ makeNewTag tagOpt =
 
 makeNewTagPreEvent ::
     _ =>
-    Sugar.TagOption Name o ->
-    m (Text -> (EntityId -> r) -> Maybe (Widget.PreEvent (o r)))
-makeNewTagPreEvent tagOpt =
+    Sugar.TagOption Name o -> Text -> (EntityId -> r) ->
+    m (Maybe (Widget.PreEvent (o r)))
+makeNewTagPreEvent tagOpt searchTerm mkPickResult =
     (,) <$> Lens.view (has . Texts.newName) <*> makeNewTag tagOpt
     <&>
-    \(newNameText, newTag) searchTerm mkPickResult ->
+    \(newNameText, newTag) ->
     if Text.null searchTerm
     then Nothing
     else
@@ -101,24 +101,23 @@ makeNewTagPreEvent tagOpt =
 
 makeAddNewTag ::
     _ =>
-    Sugar.TagOption Name o ->
-    m ((EntityId -> Menu.PickResult) -> SearchMenu.ResultsContext -> Maybe (Menu.Option m o))
-makeAddNewTag tagOpt =
-    makeNewTagPreEvent tagOpt <&>
-    \newTagPreEvent mkPickResult ctx ->
-    let optionId = ctx ^. SearchMenu.rResultIdPrefix <> "Create new"
+    Sugar.TagOption Name o -> (EntityId -> Menu.PickResult) -> SearchMenu.ResultsContext ->
+    m (Maybe (Menu.Option m o))
+makeAddNewTag tagOpt mkPickResult ctx =
+    makeNewTagPreEvent tagOpt searchTerm mkPickResult <&> Lens.mapped %~
+    \preEvent ->
+    Menu.Option
+    { Menu._oId = optionId
+    , Menu._oSubmenuWidgets = Menu.SubmenuEmpty
+    , Menu._oRender =
+        Styled.label Texts.createNew
+        >>= M.tValue (Widget.makeFocusableView optionId)
+        <&> (`Menu.RenderedOption` preEvent)
+        & Styled.withColor TextColors.actionTextColor
+    }
+    where
+        optionId = ctx ^. SearchMenu.rResultIdPrefix <> "Create new"
         searchTerm = ctx ^. SearchMenu.rSearchTerm
-    in  newTagPreEvent searchTerm mkPickResult
-        <&> \preEvent ->
-        Menu.Option
-        { Menu._oId = optionId
-        , Menu._oSubmenuWidgets = Menu.SubmenuEmpty
-        , Menu._oRender =
-            Styled.label Texts.createNew
-            >>= M.tValue (Widget.makeFocusableView optionId)
-            <&> (`Menu.RenderedOption` preEvent)
-            & Styled.withColor TextColors.actionTextColor
-        }
 
 nameText :: Lens.Traversal' (Sugar.TagOption Name m) Text
 nameText = Sugar.toInfo . Sugar.tagName . Name._NameTag . Name.tnDisplayText . Name.ttText
@@ -144,11 +143,11 @@ makeOptions tagRefReplace newTagOpt mkPickResult ctx
             let nonFuzzyResults =
                     results ^? Lens.ix 0 . _1 . Fuzzy.isFuzzy
                     & any not
-            addNewTag <- makeAddNewTag newTagOpt
+            addNewTag <- makeAddNewTag newTagOpt mkPickResult ctx
             let maybeAddNewTagOption
                     | nonFuzzyResults || not (Name.isValidSearchText searchTerm) = id
                     | otherwise =
-                        maybe id (:) (addNewTag mkPickResult ctx)
+                        maybe id (:) addNewTag
             chooseText <- Lens.view (has . MomentuTexts.choose)
             let makeOption opt =
                     Menu.Option
@@ -205,11 +204,9 @@ makeHoleSearchTerm newTagOption mkPickResult holeId =
             if allowNewTag
             then newTag searchTerm mkPickResult & makePickEventMap
             else pure mempty
-        newTagPreEvent <- makeNewTagPreEvent newTagOption
-        let newTagPreEvents =
-                newTagPreEvent searchTerm mkPickResult
-                ^.. Lens._Just
-                <&> fmap (mempty <$)
+        newTagPreEvents <-
+            makeNewTagPreEvent newTagOption searchTerm mkPickResult
+            <&> (^.. Lens._Just) <&> Lens.mapped . Lens.mapped %~ (mempty <$)
         let addPreEvents =
                 Widget.wState . Widget._StateFocused . Lens.mapped .
                 Widget.fPreEvents %~ (newTagPreEvents <>)
