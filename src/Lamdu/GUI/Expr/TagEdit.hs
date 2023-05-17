@@ -204,17 +204,10 @@ makeHoleSearchTerm newTagOption mkPickResult holeId =
             if allowNewTag
             then newTag searchTerm mkPickResult & makePickEventMap
             else pure mempty
-        newTagPreEvents <-
-            makeNewTagPreEvent newTagOption searchTerm mkPickResult
-            <&> (^.. Lens._Just) <&> Lens.mapped . Lens.mapped %~ (mempty <$)
-        let addPreEvents =
-                Widget.wState . Widget._StateFocused . Lens.mapped .
-                Widget.fPreEvents %~ (newTagPreEvents <>)
         term <-
             SearchMenu.basicSearchTermEdit newTagId holeId (pure . allowedSearchTerm) SearchMenu.defaultEmptyStrings
             >>= SearchMenu.addDelSearchTerm holeId
-            <&> SearchMenu.termWidget . M.tValue %~
-                addPreEvents . Widget.weakerEvents newTagEventMap
+            <&> SearchMenu.termWidget . M.tValue %~ Widget.weakerEvents newTagEventMap
         tooltip <- Lens.view (has . Theme.tooltip)
         if  allowNewTag &&
             Widget.isFocused (term ^. SearchMenu.termWidget . M.tValue)
@@ -248,10 +241,18 @@ makeTagHoleEdit ::
     Sugar.TagChoice Name o ->
     m (M.TextWidget o)
 makeTagHoleEdit mkPickResult holeId tagRefReplace =
-    SearchMenu.make
-    (const (makeHoleSearchTerm newTagOption mkPickResult holeId))
-    (makeOptions tagRefReplace newTagOption mkPickResult) M.empty holeId
-    Menu.AnyPlace
+    do
+        searchTerm <- SearchMenu.readSearchTerm holeId
+        newTagPreEvents <-
+            makeNewTagPreEvent newTagOption searchTerm mkPickResult
+            <&> (^.. Lens._Just) <&> Lens.mapped . Lens.mapped %~ (mempty <$)
+        let setPreEvent [] = newTagPreEvents
+            setPreEvent x = x
+        SearchMenu.make
+            (const (makeHoleSearchTerm newTagOption mkPickResult holeId))
+            (makeOptions tagRefReplace newTagOption mkPickResult) M.empty holeId
+            Menu.AnyPlace
+            <&> M.tValue . Widget.wState . Widget._StateFocused . Lens.mapped . Widget.fPreEvents %~ setPreEvent
     where
         newTagOption = tagRefReplace ^. Sugar.tcNewTag
 

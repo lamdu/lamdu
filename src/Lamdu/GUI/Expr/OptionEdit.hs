@@ -49,8 +49,8 @@ removeUnwanted :: _ => m (EventMap a -> EventMap a)
 removeUnwanted =
     Lens.view id <&>
     \c ->
-    Config.delKeys c -- Delete key has behaviours in various editors like if-else
-    <> c ^.. Config.hasConfig . Config.dirKeys . Lens.folded -- Arrow keys taken by hole is weird
+    ModKey.noMods ModKey.Key'Down -- Down key reserved for browsing between options
+    : Config.delKeys c -- Delete key has behaviours in various editors like if-else
     <&> E.KeyEvent ModKey.KeyState'Pressed
     & E.deleteKeys
 

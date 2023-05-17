@@ -12,7 +12,7 @@ mkDerivation {
     owner = "lamdu";
     repo = "momentu";
     sha256 = "TODO";
-    rev = "f40326bf328af1ec093ddae9644c36d245a16a2f";
+    rev = "07814b1e207049c8ab9f9516e777435b79a20ee7";
   };
   libraryHaskellDepends = [
     GLFW-b HUnit OpenGL QuickCheck aeson base base-compat binary bytestring
