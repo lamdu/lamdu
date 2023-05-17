@@ -1,6 +1,5 @@
 module Tests.Wytiwys (test) where
 
-import           Control.Monad (foldM)
 import           Control.Monad.Once (OnceT, evalOnceT)
 import           GUI.Momentu (noMods, shift)
 import           GUI.Momentu.EventMap (Event(..))
@@ -35,9 +34,16 @@ charEvent '«' = shift GLFW.Key'Left & simpleKeyEvent
 charEvent x = EventChar x
 
 applyActions :: HasCallStack => Env.Env -> String -> OnceT (T ViewM) Env.Env
-applyActions env xs =
-    zip [0..] xs
-    & foldM (flip (\(i, x) -> applyEventWith (take (i+1) xs) dummyVirt (charEvent x))) env
+applyActions startEnv xs =
+    go (zip [0..] xs) startEnv
+    where
+        go [] env  = pure env
+        go ((_,'✗'):(i,x):rest) env =
+            do
+                eventShouldDoNothing (take (i+1) xs) dummyVirt (charEvent x) env
+                go rest env
+        go ((i,x):rest) env =
+            applyEventWith (take (i+1) xs) dummyVirt (charEvent x) env >>= go rest
 
 wytiwysDb :: HasCallStack => IO (Transaction.Store DbLayout.DbM) -> String -> ByteString -> TestTree
 wytiwysDb mkDb src result =
@@ -101,4 +107,6 @@ test =
     , wytiwys "if 'a=='a\n←←id\t3\t4" "3"
 
     , wytiwys "toArr repli 3000\t0««.len\n" "3000"
+
+    , wytiwys "1+↑✗2↓2" "3" -- When cursor is at fragment's search term the should "2" do nothing.
     ]

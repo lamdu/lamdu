@@ -117,9 +117,16 @@ applyEventWith msg virtCursor event env =
         r <-
             convertWorkArea msg env
             >>= mApplyEvent msg env virtCursor event
-            <&> fromMaybe (error msg)
+            <&> fromMaybe (error ("Event did nothing: " <> msg))
             <&> (`GuiState.update` env)
         r `seq` pure r
+
+eventShouldDoNothing :: HasCallStack => String -> VirtualCursor -> E.Event -> Env -> OnceT (T ViewM) ()
+eventShouldDoNothing msg virtCursor event env =
+    convertWorkArea msg env >>= mApplyEvent msg env virtCursor event >>=
+    \case
+    Nothing -> pure ()
+    Just{} -> error ("Event expected to do nothing: " <> msg)
 
 dummyVirt :: VirtualCursor
 dummyVirt = VirtualCursor (Rect 0 0)
