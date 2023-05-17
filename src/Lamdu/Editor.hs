@@ -122,10 +122,12 @@ jumpToSource SrcLoc{srcLocFile, srcLocStartLine, srcLocStartCol} =
             hPutStrLn stderr "EDITOR not defined"
             hFlush stderr
     Just editor ->
-        spawnProcess editor
-        [ "+" ++ show srcLocStartLine ++ ":" ++ show srcLocStartCol
-        , srcLocFile
-        ] & void
+        spawnProcess editor params & void
+        where
+            params
+                | editor == "code" = ["--goto", srcLocFile <> ":" <> pos]
+                | otherwise = ["+" <> pos, srcLocFile]
+            pos = show srcLocStartLine <> ":" <> show srcLocStartCol
 
 mainLoopOptions ::
     MkProperty' IO Settings -> Sampler -> (M.Zoom -> IO (Fonts M.Font)) ->
