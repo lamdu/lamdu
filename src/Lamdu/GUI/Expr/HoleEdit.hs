@@ -53,8 +53,8 @@ make hole@(Ann (Const pl) _) =
                 else
                     (SearchMenu.termWidget . Lens.mapped . Widget.eventMapMaker . Lens.mapped %~ blockChars) .
                     case firstRes of
-                    Menu.PickFirstResult{} -> id
-                    Menu.NoPickFirstResult ->
+                    Menu.PickActiveResult{} -> id
+                    Menu.NoPickActiveResult ->
                         SearchMenu.termEditEventMap %~ blockChars
         (maybeAddAnnotationPl pl <&> (M.tValue %~))
             <*> SearchMenu.make mkSearchTerm (makeResults hole) M.empty myId Menu.AnyPlace
