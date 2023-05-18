@@ -3,6 +3,7 @@ module Lamdu.GUI.Wrap
     ( stdWrap
     , stdWrapParentExpr
     , parentDelegator
+    , wrapWithoutEvents
     ) where
 
 import qualified Control.Lens as Lens
@@ -39,14 +40,19 @@ parentExprFDConfig =
     , FocusDelegator.focusParentDoc = doc Texts.leaveSubexpression
     }
 
-stdWrap :: _ => ExprGui.Payload i o -> GuiM env i o (Responsive o) -> GuiM env i o (Responsive o)
-stdWrap pl act =
+wrapWithoutEvents ::
+    _ => ExprGui.Payload i o -> GuiM env i o (Responsive o) -> GuiM env i o (Responsive o)
+wrapWithoutEvents pl act =
     act
     >>> (takeFocusIfNeeded pl <&> (Widget.widget %~))
     >>> (maybeAddAnnotationPl pl <&> (Widget.widget %~))
-    >>= ExprEventMap.add ExprEventMap.defaultOptions pl
     where
         a >>> f = f <*> a
+
+stdWrap :: _ => ExprGui.Payload i o -> GuiM env i o (Responsive o) -> GuiM env i o (Responsive o)
+stdWrap pl act =
+    wrapWithoutEvents pl act
+    >>= ExprEventMap.add ExprEventMap.defaultOptions pl
 
 parentDelegator :: _ => ElemId -> Responsive o -> m (Responsive o)
 parentDelegator myId w =

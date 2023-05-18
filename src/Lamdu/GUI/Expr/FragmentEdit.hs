@@ -36,7 +36,7 @@ import           Lamdu.GUI.Styled (label, grammar)
 import qualified Lamdu.GUI.TagView as TagView
 import qualified Lamdu.GUI.Types as ExprGui
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
-import           Lamdu.GUI.Wrap (stdWrapParentExpr, stdWrap)
+import qualified Lamdu.GUI.Wrap as Wrap
 import qualified Lamdu.I18N.Code as Texts
 import qualified Lamdu.I18N.CodeUI as Texts
 import           Lamdu.Name (Name)
@@ -76,7 +76,9 @@ make (Ann (Const pl) fragment) =
 
         searchMenu <-
             SearchMenu.make
-            (SearchMenu.searchTermEdit menuId (pure . allowedSearchTerm))
+            ( SearchMenu.searchTermEdit menuId (pure . allowedSearchTerm)
+                <&> Lens.mapped . SearchMenu.termWidget . M.tValue %~ id
+            )
             (makeResults (fragment ^. Sugar.fOptions) (fragment ^. Sugar.fTagSuffixes))
              M.empty menuId
             Menu.AnyPlace
@@ -100,12 +102,18 @@ make (Ann (Const pl) fragment) =
                         <&> (lineBelow color elemId (spacing * stdFontHeight) .)
             & Element.locallyAugmented ("inner type"::Text)
 
+        let addEvents
+                | Widget.isFocused (searchMenu ^. M.tValue) = pure
+                | otherwise = ExprEventMap.add ExprEventMap.defaultOptions pl
+
         ResponsiveExpr.boxSpacedMDisamb (ExprGui.mParensId pl)
             [ fragmentExprGui
             , Responsive.fromWithTextPos searchMenu
             ]
             <&> Widget.widget %~ addInnerType
-            & stdWrapParentExpr pl
+            >>= Wrap.parentDelegator (WidgetIds.fromExprPayload pl)
+            & Wrap.wrapWithoutEvents pl
+            >>= addEvents
             <&> Widget.weakerEventsWithoutPreevents healEventMap
     where
         editFragmentHeal = [has . MomentuTexts.edit, has . Texts.fragment, has . Texts.heal]
@@ -161,7 +169,7 @@ makeFragOpt (Ann (Const a) b) =
         myId = WidgetIds.fromExprPayload a
         fromView act =
             act >>= M.tValue (Widget.makeFocusableWidget myId . Widget.fromView) <&> Responsive.fromWithTextPos
-            & stdWrap a
+            & Wrap.stdWrap a
 
 makeFragOperator :: _ => ExprGui.Body Sugar.FragOperator i o -> GuiM env i o (Responsive o)
 makeFragOperator (Sugar.FragOperator f rArg aArgs) =
