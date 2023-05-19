@@ -10,6 +10,7 @@ import qualified Data.Char as Char
 import qualified Data.Text as Text
 import           GUI.Momentu (Responsive, EventMap, Update)
 import qualified GUI.Momentu as M
+import qualified GUI.Momentu.Direction as Dir
 import qualified GUI.Momentu.Element as Element
 import           GUI.Momentu.Element.Id (ElemId)
 import qualified GUI.Momentu.EventMap as E
@@ -228,7 +229,13 @@ setPickAndAddNextKeys =
         env
         & has . Menu.configKeysPickOptionAndGotoNext .~ (env ^. has . Config.compositeAddItemKeys :: [M.ModKey])
         & has . Menu.configKeysPickOption <>~
-            env ^. has . Menu.configKeysPickOptionAndGotoNext <> [M.noMods M.Key'Space]
+            env ^. has . Menu.configKeysPickOptionAndGotoNext <>
+            [ M.noMods M.Key'Space
+            , case env ^. has of
+                Dir.LeftToRight -> M.Key'Right
+                Dir.RightToLeft -> M.Key'Left
+                & M.noMods
+            ]
     )
 
 makeItemRow ::

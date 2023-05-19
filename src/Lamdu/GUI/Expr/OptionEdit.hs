@@ -7,6 +7,7 @@ import           Control.Monad.Reader.Extended (pushToReader, pushToReaderExt)
 import           Hyper
 import           GUI.Momentu (EventMap)
 import qualified GUI.Momentu as M
+import qualified GUI.Momentu.Direction as Dir
 import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.Glue as Glue
 import qualified GUI.Momentu.I18N as MomentuTexts
@@ -118,3 +119,17 @@ makeResult mkGui ctx res =
             -- TODO: Animate nicely into the fragment's question mark.
             -- Would require the sugar to expose the id of the fragment to be generated
             M.asElemId resId <> "indicator"
+
+mkNextEventMap :: _ => M.ElemId -> m (EventMap (f GuiState.Update))
+mkNextEventMap dst =
+    Lens.view id <&>
+    \env ->
+    let nextKey =
+            case env ^. has of
+            Dir.LeftToRight -> M.Key'Right
+            Dir.RightToLeft -> M.Key'Left
+    in
+    E.keysEventMapMovesCursor [M.noMods nextKey]
+    (E.toDoc env [has . MomentuTexts.navigation, has . MomentuTexts.forward])
+    (pure dst)
+

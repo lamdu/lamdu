@@ -148,8 +148,12 @@ make gotoPane globals =
                 & SearchMenu.bgColors . Lens.mapped .~ M.Color 0 0 0 0
         SearchMenu.make (SearchMenu.searchTermEdit WidgetIds.gotoDefId (pure . allowSearchTerm))
             (makeOptions gotoPane globals) M.empty WidgetIds.gotoDefId Menu.Below
+            -- Avoid pre-events for go-to-definition
+            <&> M.tValue . Widget.wFocused . Widget.fPreEvents .~ []
             & local (has . Theme.searchTerm %~ onTermStyle)
-            <&> \searchWidget -> StatusBar.StatusWidget
+            <&>
+            \searchWidget ->
+            StatusBar.StatusWidget
             { StatusBar._widget = searchWidget
             , StatusBar._globalEventMap = mempty
             }

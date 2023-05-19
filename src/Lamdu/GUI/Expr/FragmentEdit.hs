@@ -3,6 +3,7 @@ module Lamdu.GUI.Expr.FragmentEdit
     ) where
 
 import qualified Control.Lens as Lens
+import           Data.Foldable (Foldable(..))
 import qualified GUI.Momentu as M
 import           GUI.Momentu (Responsive, (/|/), noMods)
 import qualified GUI.Momentu.Animation as Anim
@@ -40,6 +41,7 @@ import qualified Lamdu.GUI.Wrap as Wrap
 import qualified Lamdu.I18N.Code as Texts
 import qualified Lamdu.I18N.CodeUI as Texts
 import           Lamdu.Name (Name)
+import qualified Lamdu.Sugar.Lens as SugarLens
 import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
@@ -173,11 +175,17 @@ makeFragOpt (Ann (Const a) b) =
 
 makeFragOperator :: _ => ExprGui.Body Sugar.FragOperator i o -> GuiM env i o (Responsive o)
 makeFragOperator (Sugar.FragOperator f rArg aArgs) =
-    sequenceA
-    ( ( sequenceA
-        [ GetVarEdit.make GetVarEdit.Operator f
-        , GuiM.makeSubexpression rArg
-        ] >>= Options.boxSpaced Options.disambiguationNone
-        )
-    : (aArgs <&> fmap Responsive.fromTextView . TagEdit.makeArgTag)
-    ) >>= Options.boxSpaced Options.disambiguationNone
+    do
+        -- Go to first hole in right side of operator
+        nextEventMap <-
+            rArg ^? SugarLens.unfinishedPayloads
+            & Lens._Just (mkNextEventMap . WidgetIds.fromExprPayload) <&> fold
+        sequenceA
+            ( ( sequenceA
+                [ GetVarEdit.make GetVarEdit.Operator f
+                , GuiM.makeSubexpression rArg
+                ] >>= Options.boxSpaced Options.disambiguationNone
+                )
+            : (aArgs <&> fmap Responsive.fromTextView . TagEdit.makeArgTag)
+            ) >>= Options.boxSpaced Options.disambiguationNone
+            <&> Widget.strongerEvents nextEventMap
