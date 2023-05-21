@@ -1,7 +1,7 @@
 module Tests.Wytiwys (test) where
 
 import           Control.Monad.Once (OnceT, evalOnceT)
-import           GUI.Momentu (noMods, shift)
+import           GUI.Momentu (Key, noMods, shift)
 import           GUI.Momentu.EventMap (Event(..))
 import qualified Graphics.UI.GLFW as GLFW
 import           Lamdu.Data.Db.Layout (ViewM, runDbTransaction)
@@ -20,18 +20,21 @@ import qualified Test.Tasty as Tasty
 
 import           Test.Lamdu.Prelude
 
+charKey :: Char -> Maybe Key
+charKey ' ' = Just GLFW.Key'Space
+charKey '\n' = Just GLFW.Key'Enter
+charKey '\t' = Just GLFW.Key'Tab
+charKey ',' = Just GLFW.Key'Comma
+charKey '⌫' = Just GLFW.Key'Backspace
+charKey '→' = Just GLFW.Key'Right
+charKey '↑' = Just GLFW.Key'Up
+charKey '↓' = Just GLFW.Key'Down
+charKey '←' = Just GLFW.Key'Left
+charKey _ = Nothing
+
 charEvent :: Char -> Event
-charEvent ' ' = noMods GLFW.Key'Space & simpleKeyEvent
-charEvent '\n' = noMods GLFW.Key'Enter & simpleKeyEvent
-charEvent '\t' = noMods GLFW.Key'Tab & simpleKeyEvent
-charEvent ',' = noMods GLFW.Key'Comma & simpleKeyEvent
-charEvent '⌫' = noMods GLFW.Key'Backspace & simpleKeyEvent
-charEvent '→' = noMods GLFW.Key'Right & simpleKeyEvent
-charEvent '↑' = noMods GLFW.Key'Up & simpleKeyEvent
-charEvent '↓' = noMods GLFW.Key'Down & simpleKeyEvent
-charEvent '←' = noMods GLFW.Key'Left & simpleKeyEvent
 charEvent '«' = shift GLFW.Key'Left & simpleKeyEvent
-charEvent x = EventChar x
+charEvent x = charKey x & maybe (EventChar x) (simpleKeyEvent . noMods)
 
 applyActions :: HasCallStack => Env.Env -> String -> OnceT (T ViewM) Env.Env
 applyActions startEnv xs =
