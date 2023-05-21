@@ -157,4 +157,7 @@ test =
     , wytiwys "1+↑2✗↓2" "3" -- When cursor is at fragment's search term the should "2" do nothing.
 
     , wytiwys_ "'a 1←←\n"
+
+    , wytiwys_ "{x["
+    , wytiwys_ "{x⌥L"
     ]
