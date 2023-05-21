@@ -1,5 +1,9 @@
+{-# LANGUAGE TemplateHaskell #-}
+
 module Tests.Wytiwys (test) where
 
+import qualified Control.Lens as Lens
+import           Control.Monad (foldM)
 import           Control.Monad.Once (OnceT, evalOnceT)
 import           GUI.Momentu (Key, noMods, shift)
 import           GUI.Momentu.EventMap (Event(..))
@@ -20,6 +24,15 @@ import qualified Test.Tasty as Tasty
 
 import           Test.Lamdu.Prelude
 
+
+data Step = Step
+    { _sEvent :: Event
+    , _sHaveAction :: Bool
+    , _sContext :: String
+    }
+
+Lens.makeLenses ''Step
+
 charKey :: Char -> Maybe Key
 charKey ' ' = Just GLFW.Key'Space
 charKey '\n' = Just GLFW.Key'Enter
@@ -36,17 +49,23 @@ charEvent :: Char -> Event
 charEvent '«' = shift GLFW.Key'Left & simpleKeyEvent
 charEvent x = charKey x & maybe (EventChar x) (simpleKeyEvent . noMods)
 
-applyActions :: HasCallStack => Env.Env -> String -> OnceT (T ViewM) Env.Env
-applyActions startEnv xs =
-    go (zip [0..] xs) startEnv
+parseSteps :: String -> [Step]
+parseSteps xs =
+    zip [0..] xs & go
     where
-        go [] env  = pure env
-        go ((_,'✗'):(i,x):rest) env =
-            do
-                eventShouldDoNothing (take (i+1) xs) dummyVirt (charEvent x) env
-                go rest env
-        go ((i,x):rest) env =
-            applyEventWith (take (i+1) xs) dummyVirt (charEvent x) env >>= go rest
+        go [] = []
+        go ((_,'✗'):rest) = go rest & Lens.ix 0 . sHaveAction .~ False
+        go ((i,x):rest) = Step (charEvent x) True (take (i+1) xs) : go rest
+
+applyActions :: HasCallStack => Env.Env -> String -> OnceT (T ViewM) Env.Env
+applyActions startEnv =
+    foldM go startEnv . parseSteps
+    where
+        go env step
+            | step ^. sHaveAction =
+                applyEventWith (step ^. sContext) dummyVirt (step ^. sEvent) env
+            | otherwise =
+                env <$ eventShouldDoNothing (step ^. sContext) dummyVirt (step ^. sEvent) env
 
 wytiwysCompile :: HasCallStack => IO (Transaction.Store DbLayout.DbM) -> String -> IO String
 wytiwysCompile mkDb src =
