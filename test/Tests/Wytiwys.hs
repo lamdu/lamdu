@@ -45,8 +45,8 @@ applyActions startEnv xs =
         go ((i,x):rest) env =
             applyEventWith (take (i+1) xs) dummyVirt (charEvent x) env >>= go rest
 
-wytiwysDb :: HasCallStack => IO (Transaction.Store DbLayout.DbM) -> String -> ByteString -> TestTree
-wytiwysDb mkDb src result =
+wytiwysCompile :: HasCallStack => IO (Transaction.Store DbLayout.DbM) -> String -> IO String
+wytiwysCompile mkDb src =
     do
         env <- Env.make
         db <- mkDb
@@ -57,6 +57,10 @@ wytiwysDb mkDb src result =
             & evalOnceT
             & runAction
             & runDbTransaction db
+
+wytiwysDb :: HasCallStack => IO (Transaction.Store DbLayout.DbM) -> String -> ByteString -> TestTree
+wytiwysDb mkDb src result =
+    wytiwysCompile mkDb src
     >>= runJS
     >>= assertEqual "Expected output" (result <> "\n")
     & testCase (show src)
