@@ -11,6 +11,7 @@ extra-deps:
 - ekg-core-0.1.1.7
 - aeson-diff-1.1.0.12
 - lens-aeson-1.2
+- inline-c-objc-0.1.0.0
 - github: lamdu/text-trie
   commit: 072256fb4884d40536c9a31e15fa60d3330d7c58
 - github: lamdu/rocksdb-haskell
@@ -33,10 +34,6 @@ extra-deps:
   commit: 8512b09d2c0533a41d5d2aef182b11a58c420c10
   subdirs:
   - inline-js-core
-- github: lamdu/inline-c
-  commit: 9af83f947acacc52f10a134fde3931dcbf3f845b
-  subdirs:
-  - inline-c-objc
 
 allow-newer: true
 
