@@ -21,6 +21,7 @@ import qualified Test.Lamdu.Env as Env
 import           Test.Lamdu.Exec (runJS)
 import           Test.Lamdu.Gui
 import           Test.Lamdu.Instances ()
+import           Test.Lamdu.Sugar (convertWorkArea)
 import qualified Test.Tasty as Tasty
 
 import           Test.Lamdu.Prelude
@@ -84,7 +85,8 @@ wytiwysCompile mkDb src =
         db <- mkDb
         do
             repl <- DataOps.newEmptyPublicDefinitionWithPane DbLayout.codeAnchors & lift
-            _ <- applyActions env src
+            newEnv <- applyActions env src
+            _ <- convertWorkArea src newEnv >>= makeFocusedWidget src newEnv
             globalId repl & ExportJS.compile & lift
             & evalOnceT
             & runAction
@@ -102,6 +104,7 @@ test =
     Tasty.withResource (ramDB ["data/freshdb.json"]) mempty $
     \mkDb ->
     let wytiwys = wytiwysDb (join mkDb)
+        wytiwys_ src = wytiwysCompile (join mkDb) src & void & testCase (show src)
     in
     testGroup "WYTIWYS"
     [ wytiwys "1+1" "2"
@@ -145,4 +148,6 @@ test =
     , wytiwys "toArr repli 3000\t0⇧←⇧←.len\n" "3000"
 
     , wytiwys "1+↑2✗↓2" "3" -- When cursor is at fragment's search term the should "2" do nothing.
+
+    , wytiwys_ "'a 1←←\n"
     ]
