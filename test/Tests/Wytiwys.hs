@@ -56,6 +56,7 @@ parseSteps xs =
     where
         go [] = []
         go ((_,'⇧'):rest) = go rest & Lens.ix 0 . sEvent %~ addMod shiftMods
+        go ((_,'⌥'):rest) = go rest & Lens.ix 0 . sEvent %~ addMod altMods
         go ((_,x):(i,'✗'):rest) = Step (charEvent x) False (take (i+1) xs) : go rest
         go ((i,x):rest) = Step (charEvent x) True (take (i+1) xs) : go rest
 
@@ -66,7 +67,13 @@ addMod mods (EventKey k)
     where
         oldMods = keModKeys k
         newMods = oldMods <> mods
+addMod mods (EventChar c) = keyToChar c & noMods & simpleKeyEvent & addMod mods
 addMod _ _ = error "addMod expected key event"
+
+-- Used to translate shortcuts expressed as "⌥L", "⌘X", etc to key events
+keyToChar :: Char -> Key
+keyToChar 'L' = GLFW.Key'L
+keyToChar _ = error "TODO"
 
 applyActions :: HasCallStack => Env.Env -> String -> OnceT (T ViewM) Env.Env
 applyActions startEnv =
