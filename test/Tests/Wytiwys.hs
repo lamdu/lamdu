@@ -5,8 +5,9 @@ module Tests.Wytiwys (test) where
 import qualified Control.Lens as Lens
 import           Control.Monad (foldM)
 import           Control.Monad.Once (OnceT, evalOnceT)
-import           GUI.Momentu (Key, noMods, shift)
 import           GUI.Momentu.EventMap (Event(..))
+import           GUI.Momentu.Main.Events (KeyEvent(..))
+import           GUI.Momentu.ModKey
 import qualified Graphics.UI.GLFW as GLFW
 import           Lamdu.Data.Db.Layout (ViewM, runDbTransaction)
 import qualified Lamdu.Data.Db.Layout as DbLayout
@@ -46,7 +47,6 @@ charKey '←' = Just GLFW.Key'Left
 charKey _ = Nothing
 
 charEvent :: Char -> Event
-charEvent '«' = shift GLFW.Key'Left & simpleKeyEvent
 charEvent x = charKey x & maybe (EventChar x) (simpleKeyEvent . noMods)
 
 parseSteps :: String -> [Step]
@@ -55,7 +55,17 @@ parseSteps xs =
     where
         go [] = []
         go ((_,'✗'):rest) = go rest & Lens.ix 0 . sHaveAction .~ False
+        go ((_,'⇧'):rest) = go rest & Lens.ix 0 . sEvent %~ addMod shiftMods
         go ((i,x):rest) = Step (charEvent x) True (take (i+1) xs) : go rest
+
+addMod :: _ -> Event -> Event
+addMod mods (EventKey k)
+    | newMods == oldMods = error "modifiers enabled twice?"
+    | otherwise = EventKey k { keModKeys = newMods }
+    where
+        oldMods = keModKeys k
+        newMods = oldMods <> mods
+addMod _ _ = error "addMod expected key event"
 
 applyActions :: HasCallStack => Env.Env -> String -> OnceT (T ViewM) Env.Env
 applyActions startEnv =
@@ -124,7 +134,7 @@ test =
     , wytiwys "if ⌫1+2" "3" -- Backspace after "if " deletes it
 
     , wytiwys "7+negate\n→4" "3"
-    , wytiwys "1==2««if 3\t4" "4"
+    , wytiwys "1==2⇧←⇧←if 3\t4" "4"
 
     , wytiwys "if 'a'=='b'\t1\t2" "2"
 
@@ -132,7 +142,7 @@ test =
 
     , wytiwys "if 'a=='a\n←←id\t3\t4" "3"
 
-    , wytiwys "toArr repli 3000\t0««.len\n" "3000"
+    , wytiwys "toArr repli 3000\t0⇧←⇧←.len\n" "3000"
 
     , wytiwys "1+↑✗2↓2" "3" -- When cursor is at fragment's search term the should "2" do nothing.
     ]
