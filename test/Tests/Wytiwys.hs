@@ -54,8 +54,8 @@ parseSteps xs =
     zip [0..] xs & go
     where
         go [] = []
-        go ((_,'✗'):rest) = go rest & Lens.ix 0 . sHaveAction .~ False
         go ((_,'⇧'):rest) = go rest & Lens.ix 0 . sEvent %~ addMod shiftMods
+        go ((_,x):(i,'✗'):rest) = Step (charEvent x) False (take (i+1) xs) : go rest
         go ((i,x):rest) = Step (charEvent x) True (take (i+1) xs) : go rest
 
 addMod :: _ -> Event -> Event
@@ -144,5 +144,5 @@ test =
 
     , wytiwys "toArr repli 3000\t0⇧←⇧←.len\n" "3000"
 
-    , wytiwys "1+↑✗2↓2" "3" -- When cursor is at fragment's search term the should "2" do nothing.
+    , wytiwys "1+↑2✗↓2" "3" -- When cursor is at fragment's search term the should "2" do nothing.
     ]
