@@ -329,6 +329,10 @@ withCache db env cacheRef action =
         writeIORef cacheRef (Just cache { ecState = s })
         pure r
 
+addBackground :: Element.Element t => Env -> t -> t
+addBackground env widget =
+    M.backgroundColor (env ^. Env.theme . Theme.backgroundColor) (Element.pad 0 1000 widget env) backgroundId
+
 makeRootWidget ::
     HasCallStack =>
     Env -> Debug.Monitors ->
@@ -344,14 +348,12 @@ makeRootWidget env perfMonitors db evaluator sample cacheRef =
             Folder.getSelections (Proxy @Language)
             >>= traverse titledLangSelection
             <&> sortOn (^. GUIMain.title)
-        let bgColor = env ^. Env.theme . Theme.backgroundColor
         withCache db env cacheRef
             (\cache ->
                 makeMainGui themeNames langNames dbToIO env (ecMkWorkArea cache)
                 & _OnceT %~ mapStateT dbToIO
             )
-            <&> Element.pad 0 1000 ?? env -- Pad so background fills more than window (for resizes)
-            <&> M.backgroundColor bgColor ?? backgroundId
+            <&> addBackground env
             <&> measureLayout
     where
         selectedLang = env ^. Env.settings . Property.pVal . Settings.sSelectedLanguage
