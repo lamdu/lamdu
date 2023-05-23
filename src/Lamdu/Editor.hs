@@ -331,7 +331,13 @@ withCache db env cacheRef action =
 
 addBackground :: Element.Element t => Env -> t -> t
 addBackground env widget =
-    M.backgroundColor (env ^. Env.theme . Theme.backgroundColor) (Element.pad 0 1000 widget env) backgroundId
+    -- Hack: we expand the widget before adding background so it is there when resizing,
+    -- but then unpad it back so that hovers don't hover out of the window area.
+    M.backgroundColor (env ^. Env.theme . Theme.backgroundColor) (p bgExpand widget) backgroundId
+    & p (negate bgExpand)
+    where
+        p x w = Element.pad 0 x w env
+        bgExpand = 1000
 
 makeRootWidget ::
     HasCallStack =>
