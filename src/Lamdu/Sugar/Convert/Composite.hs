@@ -9,7 +9,9 @@ import qualified Control.Lens as Lens
 import           Control.Monad.Once (OnceT)
 import           Control.Monad.Transaction (MonadTransaction(..))
 import qualified Data.Set as Set
-import           Hyper.Type.Functor (F(..))
+import           Hyper
+import           Hyper.Type.Functor (F(..), _F)
+import           Hyper.Syntax.Row (eRest)
 import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Data.Ops as DataOps
@@ -25,8 +27,8 @@ import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import qualified Lamdu.Sugar.Lens as SugarLens
 import           Lamdu.Sugar.Types
-import           Revision.Deltum.IRef (unsafeFromUUID)
-import           Revision.Deltum.Transaction (Transaction, newKey)
+import           Revision.Deltum.IRef (IRef(..), unsafeFromUUID)
+import           Revision.Deltum.Transaction (Transaction)
 
 import           Lamdu.Prelude
 
@@ -61,11 +63,21 @@ cons =
     CompRecord -> V._BRecExtend
     CompCase -> V._BCase
 
+data IsLastField = LastField | MoreFields
+
 deleteItem ::
     Monad m =>
-    HRef m # V.Term -> ValI m ->
+    HRef m # V.Term -> ValI m -> CompositeType -> IsLastField ->
     ConvertM m (T m ())
-deleteItem stored restI = ConvertM.typeProtectedSetToVal ?? stored ?? restI <&> void
+deleteItem stored restI _ MoreFields =
+    ConvertM.typeProtectedSetToVal ?? stored ?? restI <&> void
+deleteItem stored _ compType LastField =
+    -- For the last field we set existing ref to empty record to preserve its id
+    ConvertM.typeProtectedSetToVal <&>
+    \setToVal ->
+    do
+        closed compType & V.BLeaf & ExprIRef.writeValI (stored ^. ExprIRef.iref)
+        setToVal stored (stored ^. ExprIRef.iref) & void
 
 convertAddItem ::
     Monad m =>
@@ -76,18 +88,45 @@ convertAddItem ::
 convertAddItem compType existingTags stored =
     do
         protectedSetToVal <- ConvertM.typeProtectedSetToVal
-        genNewExtendId <- transaction newKey & ConvertM.convertOnce
+        genNewExtendId <-
+            stored ^. ExprIRef.iref & ExprIRef.readRecursively
+            <&> uuid . (^. _F) . newTagId compType
+            & transaction & ConvertM.convertOnce
         let resultInfo dstKey =
                 ConvertTag.TagResultInfo <$> EntityId.ofTag (EntityId.ofIRef dst) <*> addItem
                 where
                     dst = unsafeFromUUID dstKey
                     addItem tag =
                         do
-                            DataOps.newHole
-                                >>= ExprIRef.writeValI (F dst) . (cons compType #) . (V.RowExtend tag ?? stored ^. ExprIRef.iref)
-                            _ <- protectedSetToVal stored (F dst)
+                            stored ^. ExprIRef.iref & ExprIRef.readRecursively
+                                <&> addTag tag compType <&> hflipped %~ hmap (const (:*: Const ()))
+                                >>= ExprIRef.writeRecursively <&> (^. hAnn . Lens._1)
+                                >>= protectedSetToVal stored & void
                             DataOps.setTagOrder tag (Set.size existingTags)
         ConvertTag.replace nameWithoutContext existingTags genNewExtendId resultInfo >>= ConvertM . lift
+
+newTagId :: CompositeType -> Ann a # V.Term -> a # V.Term
+newTagId compType (Ann pos body) =
+    case body ^? cons compType of
+    Just row -> row ^. eRest & newTagId compType
+    Nothing -> pos
+
+-- Somewhat hacky implementation of adding the new tag on the inner empty record/case
+addTag ::
+    T.Tag -> CompositeType ->
+    Ann (F (IRef m)) # V.Term -> Ann (ExprIRef.Write m) # V.Term
+addTag tag compType term@(Ann pos body) =
+    cons compType #
+    case body of
+    V.BLeaf l | l == closed compType -> V.BLeaf l & Ann ExprIRef.WriteNew & ext
+    _ ->
+        case body ^? cons compType of
+        Just (V.RowExtend t v r) -> addTag tag compType r & V.RowExtend t (existing v)
+        Nothing -> existing term & ext
+    & Ann (ExprIRef.ExistingRef pos)
+    where
+        ext = V.RowExtend tag (Ann ExprIRef.WriteNew (V.BLeaf V.LHole))
+        existing = hflipped %~ hmap (const ExprIRef.ExistingRef)
 
 convertExtend ::
     Monad m =>
@@ -104,6 +143,7 @@ convertExtend compType valS exprPl extendV restC =
             convertItem addItemAction compType exprPl
             (Set.fromList restTags) valS
             (extendV & extendRest %~ (^. Input.stored . ExprIRef.iref))
+            (if Lens.has (cList . tlItems . Lens._Nothing) restC then LastField else MoreFields)
         punSugar <- Lens.view (ConvertM.scSugars . Config.fieldPuns)
         let addItem items =
                 Just TaggedListBody
@@ -145,7 +185,7 @@ convertOneItemOpenComposite compType valS restS exprPl extendV =
         addItem <- convertAddItem compType (Set.singleton (extendV ^. extendTag)) (exprPl ^. Input.stored)
         item <-
             convertItem addItem compType exprPl mempty valS
-            (extendV & extendRest %~ (^. Input.stored . ExprIRef.iref))
+            (extendV & extendRest %~ (^. Input.stored . ExprIRef.iref)) MoreFields
         protectedSetToVal <- ConvertM.typeProtectedSetToVal
         let close =
                 closed compType & V.BLeaf & ExprIRef.newValI >>=
@@ -198,10 +238,11 @@ convertItem ::
     h # Term v InternalName (OnceT (T m)) (T m) ->
     -- Using tuple in place of shared RecExtend/Case structure (no such in lamdu-calculus)
     ExtendVal m (ValI m) ->
+    IsLastField ->
     ConvertM m (TaggedItem InternalName (OnceT (T m)) (T m) (h # Term v InternalName (OnceT (T m)) (T m)))
-convertItem addItem compType exprPl forbiddenTags exprS extendVal =
+convertItem addItem compType exprPl forbiddenTags exprS extendVal isLast =
     do
-        delItem <- deleteItem (exprPl ^. Input.stored) restI
+        delItem <- deleteItem (exprPl ^. Input.stored) restI compType isLast
         protectedSetToVal <- ConvertM.typeProtectedSetToVal
         let setTag newTag =
                 do
@@ -234,10 +275,7 @@ convert compType valS restS expr extendV =
     True ->
         case restS ^? hVal . sugarCons compType of
         Nothing -> convertOneItem
-        Just r ->
-            convertExtend compType valS (expr ^. hAnn) extendV r >>= makeItem
-            -- Closed sugar Composites use their tail as an entity id.
-            <&> annotation . pEntityId .~ restS ^. annotation . pEntityId
+        Just r -> convertExtend compType valS (expr ^. hAnn) extendV r
+    >>= addActions expr . (sugarCons compType #)
     where
-        convertOneItem = convertOneItemOpenComposite compType valS restS (expr ^. hAnn) extendV >>= makeItem
-        makeItem = addActions expr . (sugarCons compType #)
+        convertOneItem = convertOneItemOpenComposite compType valS restS (expr ^. hAnn) extendV
