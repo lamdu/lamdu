@@ -87,7 +87,10 @@ convertExtend cons valS exprPl extendV restC =
         let addItem items =
                 Just TaggedListBody
                 { _tlHead = itemS
-                , _tlTail = items ^.. Lens._Just . SugarLens.taggedListBodyItems <&> (`TaggedSwappableItem` pure ())
+                , _tlTail =
+                    items ^.. Lens._Just . SugarLens.taggedListBodyItems
+                    <&> tiAddAfter .~ addItemAction
+                    <&> (`TaggedSwappableItem` pure ())
                 }
         do
             guard punSugar
