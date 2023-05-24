@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell, RankNTypes #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module Lamdu.Sugar.Convert.Composite
     ( convertEmpty, convert, CompositeType(..)
@@ -42,8 +42,9 @@ Lens.makeLenses ''ExtendVal
 type T = Transaction
 
 bodyPrism ::
+    (Lens.Choice p, Applicative f) =>
     CompositeType ->
-    Lens.Prism'
+    Lens.Optic' p f
     (Term v InternalName (OnceT (T m)) (T m) # Annotated (ConvertPayload m))
     (Composite v InternalName (OnceT (T m)) (T m) # Annotated (ConvertPayload m))
 bodyPrism CompRecord = _BodyRecord
