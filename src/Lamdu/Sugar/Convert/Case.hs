@@ -22,7 +22,7 @@ import           Lamdu.Prelude
 
 convertAbsurd :: Monad m => Input.Payload m # V.Term -> ConvertM m (ExpressionU v m)
 convertAbsurd pl =
-    Composite.convertEmpty V.BCase (pl ^. Input.stored)
+    Composite.convertEmpty Composite.CompCase (pl ^. Input.stored)
     <&> PfCase <&> BodyPostfixFunc
     >>= addActions (Ann pl (V.BLeaf V.LAbsurd))
 
@@ -41,4 +41,4 @@ convert r@(RowExtend tag v rest) exprPl =
                 , Composite._extendValI = v ^. hAnn . Input.stored . ExprIRef.iref
                 , Composite._extendRest = rest ^. hAnn
                 }
-        Composite.convert V.LAbsurd V.BCase (_BodyPostfixFunc . _PfCase) valS restS (Ann exprPl (V.BCase r)) caseP
+        Composite.convert Composite.CompCase valS restS (Ann exprPl (V.BCase r)) caseP

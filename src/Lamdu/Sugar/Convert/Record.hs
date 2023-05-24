@@ -18,7 +18,7 @@ import           Lamdu.Prelude
 
 convertEmpty :: Monad m => Input.Payload m # V.Term -> ConvertM m (ExpressionU v m)
 convertEmpty pl =
-    Composite.convertEmpty V.BRecExtend (pl ^. Input.stored)
+    Composite.convertEmpty Composite.CompRecord (pl ^. Input.stored)
     <&> BodyRecord
     >>= addActions (Ann pl (V.BLeaf V.LRecEmpty))
     <&> annotation . pActions . mApply .~ Nothing
@@ -38,5 +38,5 @@ convertExtend r@(RowExtend tag val rest) exprPl =
                 , Composite._extendValI = val ^. hAnn . Input.stored . ExprIRef.iref
                 , Composite._extendRest = rest ^. hAnn
                 }
-        Composite.convert V.LRecEmpty V.BRecExtend _BodyRecord valS restS (Ann exprPl (V.BRecExtend r)) recP
+        Composite.convert Composite.CompRecord valS restS (Ann exprPl (V.BRecExtend r)) recP
     <&> annotation . pActions . mApply .~ Nothing
