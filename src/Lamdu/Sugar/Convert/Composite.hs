@@ -41,14 +41,11 @@ Lens.makeLenses ''ExtendVal
 
 type T = Transaction
 
-bodyPrism ::
+sugarCons ::
     (Lens.Choice p, Applicative f) =>
-    CompositeType ->
-    Lens.Optic' p f
-    (Term v InternalName (OnceT (T m)) (T m) # Annotated (ConvertPayload m))
-    (Composite v InternalName (OnceT (T m)) (T m) # Annotated (ConvertPayload m))
-bodyPrism CompRecord = _BodyRecord
-bodyPrism CompCase = _BodyPostfixFunc . _PfCase
+    CompositeType -> Lens.Optic' p f (Term v name i o # h) (Composite v name i o # h)
+sugarCons CompRecord = _BodyRecord
+sugarCons CompCase = _BodyPostfixFunc . _PfCase
 
 closed :: CompositeType -> V.Leaf
 closed =
@@ -56,11 +53,13 @@ closed =
     CompRecord -> V.LRecEmpty
     CompCase -> V.LAbsurd
 
-cons :: CompositeType -> V.RowExtend T.Tag V.Term V.Term # h -> V.Term # h
+cons ::
+    (Lens.Choice p, Applicative f) =>
+    CompositeType -> Lens.Optic' p f (V.Term # h) (V.RowExtend T.Tag V.Term V.Term # h)
 cons =
     \case
-    CompRecord -> V.BRecExtend
-    CompCase -> V.BCase
+    CompRecord -> V._BRecExtend
+    CompCase -> V._BCase
 
 deleteItem ::
     Monad m =>
@@ -85,7 +84,7 @@ convertAddItem compType existingTags stored =
                     addItem tag =
                         do
                             DataOps.newHole
-                                >>= ExprIRef.writeValI (F dst) . cons compType . (V.RowExtend tag ?? stored ^. ExprIRef.iref)
+                                >>= ExprIRef.writeValI (F dst) . (cons compType #) . (V.RowExtend tag ?? stored ^. ExprIRef.iref)
                             _ <- protectedSetToVal stored (F dst)
                             DataOps.setTagOrder tag (Set.size existingTags)
         ConvertTag.replace nameWithoutContext existingTags genNewExtendId resultInfo >>= ConvertM . lift
@@ -206,7 +205,7 @@ convertItem addItem compType exprPl forbiddenTags exprS extendVal =
         protectedSetToVal <- ConvertM.typeProtectedSetToVal
         let setTag newTag =
                 do
-                    V.RowExtend newTag exprI restI & cons compType & ExprIRef.writeValI valI
+                    cons compType # V.RowExtend newTag exprI restI & ExprIRef.writeValI valI
                     protectedSetToVal (exprPl ^. Input.stored) valI & void
                 where
                     valI = exprPl ^. Input.stored . ExprIRef.iref
@@ -233,16 +232,12 @@ convert compType valS restS expr extendV =
     \case
     False -> convertOneItem
     True ->
-        case restS ^? hVal . bodyPrism compType of
+        case restS ^? hVal . sugarCons compType of
         Nothing -> convertOneItem
         Just r ->
-            convertExtend compType valS (expr ^. hAnn) extendV r
-            <&> (bodyPrism compType #)
-            >>= addActions expr
+            convertExtend compType valS (expr ^. hAnn) extendV r >>= makeItem
             -- Closed sugar Composites use their tail as an entity id.
             <&> annotation . pEntityId .~ restS ^. annotation . pEntityId
     where
-        convertOneItem =
-            convertOneItemOpenComposite compType valS restS (expr ^. hAnn) extendV
-            <&> (bodyPrism compType #)
-            >>= addActions expr
+        convertOneItem = convertOneItemOpenComposite compType valS restS (expr ^. hAnn) extendV >>= makeItem
+        makeItem = addActions expr . (sugarCons compType #)
