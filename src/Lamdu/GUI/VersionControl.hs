@@ -1,10 +1,10 @@
-{-# LANGUAGE RankNTypes, DerivingVia #-}
 module Lamdu.GUI.VersionControl
     ( makeBranchSelector, eventMap
     ) where
 
 import qualified Control.Lens as Lens
 import qualified Data.List.Extended as List
+import           Data.Property (Property)
 import qualified Data.Property as Property
 import           GUI.Momentu (TextWidget, EventMap, ModKey, noMods, Update)
 import qualified GUI.Momentu.Align as Align
@@ -85,8 +85,8 @@ branchTextEditId = (<> "textedit") . branchDelegatorId
 
 makeBranchSelector ::
     _ =>
-    (forall a. Transaction n a -> mw a) ->
-    (forall a. Transaction n a -> mr a) ->
+    (Transaction n () -> mw ()) ->
+    (Transaction n (Property mw Text) -> mr (Property mw Text)) ->
     A.Actions n mw -> mr (TextWidget mw)
 makeBranchSelector rwtransaction rtransaction actions =
     do

@@ -1,6 +1,5 @@
 {-# OPTIONS -O0 #-}
-{-# LANGUAGE TemplateHaskell, FlexibleInstances, RankNTypes #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE TemplateHaskell, FlexibleInstances, MultiParamTypeClasses #-}
 module Lamdu.I18N.Texts
     ( Texts(..)
     ) where

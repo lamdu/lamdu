@@ -1,14 +1,12 @@
-{-# LANGUAGE RankNTypes #-}
-
 module Lamdu.GUI.Expr.NominalEdit
     ( makeFromNom, makeToNom, makeTId, makeTIdView
     ) where
-import           GUI.Momentu.Element.Id (ElemId)
 
 import qualified Control.Lens as Lens
 import           GUI.Momentu (Responsive)
 import qualified GUI.Momentu as M
 import qualified GUI.Momentu.Align as Align
+import           GUI.Momentu.Element.Id (ElemId)
 import qualified GUI.Momentu.EventMap as E
 import qualified GUI.Momentu.I18N as MomentuTexts
 import qualified GUI.Momentu.Responsive as Responsive

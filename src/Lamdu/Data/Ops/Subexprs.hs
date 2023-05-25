@@ -1,4 +1,4 @@
-{-# LANGUAGE RankNTypes, GADTs #-}
+{-# LANGUAGE GADTs #-}
 module Lamdu.Data.Ops.Subexprs
     ( onMatchingSubexprs
     , toHole
@@ -8,6 +8,7 @@ module Lamdu.Data.Ops.Subexprs
 
 
 import qualified Control.Lens as Lens
+import           Data.Monoid (Any)
 import           Hyper
 import           Hyper.Recurse (unwrap)
 import qualified Lamdu.Calc.Term as V
@@ -22,7 +23,7 @@ type T = Transaction
 onMatchingSubexprs ::
     Applicative m =>
     (a # V.Term -> m ()) ->
-    Lens.Fold (Pure # V.Term) b ->
+    Lens.Getting Any (Pure # V.Term) b ->
     Ann a # V.Term ->
     m ()
 onMatchingSubexprs action predicate x =
