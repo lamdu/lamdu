@@ -74,7 +74,6 @@
         "lightLambdaUnderlineColor": [1.0, 1.0, 1.0, 0.5],
         "foreignModuleColor": [1.0, 0, 0, 1.0],
         "foreignVarColor": [1.0, 0.5, 0, 1.0],
-        "presentationChoiceColor": [0.5, 0.5, 0.5, 1.0],
         "variableColor": [0.5, 1.0, 1.0, 1.0],
         "definitionColor": [1.0, 0.5, 1.0, 1.0],
         "collisionSuffixTextColor": [1.0, 1.0, 1.0, 1.0],
@@ -107,6 +106,5 @@
     "valFramePadding": [0, 0],
     "letItemPadding": [0, 0],
     "backgroundColor": [0, 0, 0.5, 0.5],
-    "presentationChoiceScaleFactor": [1.0, 1.0],
     "invalidCursorOverlayColor": [1.0, 0, 0, 0.5]
 }

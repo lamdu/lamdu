@@ -18,7 +18,6 @@ data TextColors = TextColors
     , _lightLambdaUnderlineColor :: Draw.Color
     , _foreignModuleColor :: Draw.Color
     , _foreignVarColor :: Draw.Color
-    , _presentationChoiceColor :: Draw.Color
     , _actionTextColor :: Draw.Color
     , _infoTextColor :: Draw.Color
     , _typeTextColor :: Draw.Color

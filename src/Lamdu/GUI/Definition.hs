@@ -34,7 +34,6 @@ import qualified Lamdu.GUI.Expr.BuiltinEdit as BuiltinEdit
 import qualified Lamdu.GUI.Expr.TagEdit as TagEdit
 import           Lamdu.GUI.Monad (GuiM)
 import qualified Lamdu.GUI.Monad as GuiM
-import qualified Lamdu.GUI.PresentationModeEdit as PresentationModeEdit
 import           Lamdu.GUI.Styled (label, grammar)
 import qualified Lamdu.GUI.TypeView as TypeView
 import qualified Lamdu.GUI.Types as ExprGui
@@ -186,23 +185,14 @@ makeExprDefinition defName bodyExpr myId =
                 <&> Widget.updates %~ lift
                 >>= AssignmentEdit.layout lhs
     _ ->
-        do
-            mPresentationEdit <-
-                do
-                    presModeProp <- bodyExpr ^. Sugar.dePresentationMode
-                    params <- bodyExpr ^? Sugar.deContent . hVal . Sugar._BodyFunction . Sugar.fParams
-                    GuiM.im presModeProp >>= PresentationModeEdit.make presentationChoiceId params & Just
-                    & sequenceA
-            makeNameEdit Glue./-/
-                pure (fromMaybe M.empty mPresentationEdit) <&> Responsive.fromWithTextPos
-                >>= AssignmentEdit.make nameEditId (bodyExpr ^. Sugar.deContent)
-            <&> Widget.updates %~ lift
+        makeNameEdit <&> Responsive.fromWithTextPos
+        >>= AssignmentEdit.make nameEditId (bodyExpr ^. Sugar.deContent)
+        <&> Widget.updates %~ lift
     & GuiState.assignCursor myId nameEditId
     where
         nameTagHoleId = WidgetIds.tagHoleId nameEditId
         makeNameEdit = TagEdit.makeBinderTagEdit TextColors.definitionColor defName
         nameEditId = defName ^. Sugar.oTag . Sugar.tagRefTag . Sugar.tagInstance & WidgetIds.fromEntityId
-        presentationChoiceId = myId <> "presentation"
 
 makeBuiltinDefinition ::
     _ =>

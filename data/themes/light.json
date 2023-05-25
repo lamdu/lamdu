@@ -40,7 +40,6 @@
         "foreignVarColor"               : [0.8, 0.55, 0.4, 1.0],
         "foreignModuleColor"            : [0.9, 0.45, 0.5, 1.0],
         "lightLambdaUnderlineColor"     : [0.0, 0.0, 0.0, 0.6],
-        "presentationChoiceColor"       : [0.4, 0.4, 0.4, 1.0],
         "variableColor"              : [0.25, 0.4, 0.5, 1.0],
         "definitionColor"            : [0.5, 0.25, 0.5, 1.0],
         "collisionSuffixTextColor"   : [0, 0, 0, 1.0],

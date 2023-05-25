@@ -6,7 +6,6 @@
     "maxEvalViewSize": 32,
     "valFramePadding": [7.0, 7.0],
     "letItemPadding": [5, 5],
-    "presentationChoiceScaleFactor": [0.5, 0.5],
     "textEditCursorColor": [0.5, 1, 0.5, 1],
     "textEditCursorWidth": 4,
     "topPadding": 0.5,

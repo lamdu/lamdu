@@ -22,7 +22,7 @@ module Lamdu.Config.Theme
         , letItemPadding, narrowUnderlineWidth
         , wideUnderlineWidth, valFrameBGColor, valFramePadding
         , typeFrameBGColor, stdSpacing, cursorColor, cursorDecayExponent
-        , disabledColor, presentationChoiceScaleFactor, evaluatedPathBGColor
+        , disabledColor, evaluatedPathBGColor
     ) where
 
 import qualified Control.Lens as Lens
@@ -162,7 +162,6 @@ data Theme = Theme
     , _cursorColor :: Draw.Color
     , _cursorDecayExponent :: Draw.R
     , _disabledColor :: Draw.Color
-    , _presentationChoiceScaleFactor :: Vector2 Double
     , _evaluatedPathBGColor :: Draw.Color
     } deriving (Eq, Generic)
 JsonTH.derivePrefixed "_" ''Theme
