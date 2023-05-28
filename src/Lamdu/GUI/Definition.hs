@@ -7,6 +7,7 @@ import qualified Control.Lens as Lens
 import           Control.Monad.Reader.Extended (pushToReader)
 import           Control.Monad.Writer (MonadWriter(..))
 import           Data.CurAndPrev (CurPrevTag(..), fallbackToPrev, curPrevTag)
+import           Data.Property (Property, pVal, pSet)
 import           GUI.Momentu (Responsive)
 import qualified GUI.Momentu as M
 import qualified GUI.Momentu.Element as Element
@@ -24,10 +25,12 @@ import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified GUI.Momentu.Widgets.TextView as TextView
 import           Hyper (annValue)
 import qualified Lamdu.Builtins.Anchors as Builtins
+import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Config as Config
 import           Lamdu.Config.Theme (Theme)
 import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.Config.Theme.TextColors as TextColors
+import           Lamdu.GUI.Classes (InfoMonad(..))
 import           Lamdu.GUI.Definition.Result
 import qualified Lamdu.GUI.Expr.AssignmentEdit as AssignmentEdit
 import qualified Lamdu.GUI.Expr.BuiltinEdit as BuiltinEdit
@@ -43,6 +46,7 @@ import qualified Lamdu.I18N.CodeUI as Texts
 import qualified Lamdu.I18N.Definitions as Texts
 import qualified Lamdu.I18N.Navigation as Texts
 import           Lamdu.Name (Name(..))
+import qualified Lamdu.Sugar.Lens as SugarLens
 import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
@@ -147,6 +151,38 @@ makeAddResultWidget myId bodyExpr w =
     where
         indicatorId = myId <> "result indicator"
 
+makeOperatorIndicator ::
+    _ => ElemId -> Maybe (Property f (Sugar.SpecialArgs a)) -> m (M.TextWidget f)
+makeOperatorIndicator nameId mPresMode =
+    case mPresMode of
+    Just presMode | Lens.has (pVal . Sugar._Operator) presMode ->
+        do
+            delKeys <- Config.delKeys
+            toDoc <- Lens.view has <&> E.toDoc
+            let executeEventMap =
+                    nameId <$ (presMode ^. pSet) Sugar.Verbose
+                    & E.keysEventMapMovesCursor delKeys (toDoc [Texts.presentationMode, Texts.pModeVerbose])
+            TextView.make "." opIndicatorId
+                >>= M.tValue (Widget.makeFocusableView opIndicatorId)
+                <&> M.tValue %~ M.weakerEvents executeEventMap
+    _ -> pure M.empty
+    where
+        opIndicatorId = nameId <> M.ElemId ["."]
+
+makeToOperatorEventMap ::
+    _ =>
+    Sugar.LhsNames name i o v ->
+    Maybe (Property m (Sugar.SpecialArgs T.Tag)) ->
+    f (E.EventMap (m a))
+makeToOperatorEventMap params mPresMode =
+    case (mPresMode, params ^.. Sugar._LhsRecord . SugarLens.taggedListItems . Sugar.tiTag . Sugar.tagRefTag . Sugar.tagVal) of
+    (Just presMode, l : r : _) | Lens.has (pVal . Sugar._Verbose) presMode ->
+        Lens.view has <&>
+        \env ->
+        mempty <$ (presMode ^. pSet) (Sugar.Operator l r) & const
+        & E.charGroup Nothing (E.toDoc env [Texts.presentationMode, Texts.pModeOperator]) "."
+    _ -> pure mempty
+
 makeExprDefinition ::
     _ =>
     Sugar.OptionalTag Name i o ->
@@ -184,9 +220,13 @@ makeExprDefinition defName bodyExpr myId =
             bodyExpr ^. Sugar.deContent & annValue .~ x ^. Sugar.apBody & GuiM.makeBinder
                 <&> Widget.updates %~ lift
                 >>= AssignmentEdit.layout lhs
-    _ ->
-        makeNameEdit <&> Responsive.fromWithTextPos
-        >>= AssignmentEdit.make nameEditId (bodyExpr ^. Sugar.deContent)
+    Sugar.BodyFunction f ->
+        do
+            mPresMode <- bodyExpr ^. Sugar.dePresentationMode & Lens._Just liftInfo
+            toOp <- makeToOperatorEventMap (f ^. Sugar.fParams) mPresMode
+            makeOperatorIndicator nameEditId mPresMode
+                M./|/ (makeNameEdit <&> M.tValue %~ M.weakerEvents toOp) <&> Responsive.fromWithTextPos
+                >>= AssignmentEdit.make nameEditId (bodyExpr ^. Sugar.deContent)
         <&> Widget.updates %~ lift
     & GuiState.assignCursor myId nameEditId
     where
