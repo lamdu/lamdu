@@ -80,7 +80,7 @@ convertBinderBody rawExpr expr =
                     postProcess <- ConvertM.postProcessAssert
                     let del =
                             do
-                                traverse_ (`SubExprs.getVarsToHole` (rawExpr & hflipped %~ hmap (const (^. Input.stored)))) mVar
+                                var `SubExprs.getVarsToHole` (rawExpr & hflipped %~ hmap (const (^. Input.stored)))
                                 (lam ^. lamFunc . fBody . annotation . pStored
                                     & replaceWith topStored)
                                     <* postProcess
@@ -95,12 +95,14 @@ convertBinderBody rawExpr expr =
                             }
                         & annotation . pLambdas <>~ [toUUID (lamPl ^. Lens._Wrapped . pStored . ExprIRef.iref)]
                     where
-                        mLam = rawExpr ^? hVal . V._BApp . V.appFunc . hVal . V._BLam
-                        mVar = mLam ^? Lens._Just . V.tlIn
+                        lamC =
+                            rawExpr ^? hVal . V._BApp . V.appFunc . hVal . V._BLam
+                            & fromMaybe (error "sugared lambda not originally a lambda?")
+                        var = lamC ^. V.tlIn
                         binderKind =
-                            maybe BinderKindLambda -- <- Shouldn't happen?
-                            (BinderKindLet . hmap (Proxy @(Recursively HFunctor) #> hflipped %~ hmap (const (^. Input.stored))))
-                            mLam
+                            lamC
+                            & hmap (Proxy @(Recursively HFunctor) #> hflipped %~ hmap (const (^. Input.stored)))
+                            & BinderKindLet
             _ -> expr & annValue %~ BinderTerm & pure
     <&> annValue %~ Binder (DataOps.redexWrap topStored <&> EntityId.ofValI)
     where
