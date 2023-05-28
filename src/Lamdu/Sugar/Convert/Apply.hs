@@ -74,12 +74,18 @@ convertSimpleApply app@(V.App funcI argI) exprPl =
                 argI
                 <&> Just
             _ -> pure Nothing
+        let argScopeUpdates =
+                case mFloat of
+                Nothing -> id
+                Just{} -> ConvertM.siFloatPos ?~ pos
         argS <-
-            ConvertM.convertSubexpression argI <&>
+            ConvertM.convertSubexpression argI
+            & local (ConvertM.scScopeInfo %~ argScopeUpdates)
+            <&>
             case mFloat of
             Nothing -> id
             Just float -> annotation . pActions . extract .~ float
-        let scopeUpdates =
+        let funcScopeUpdates =
                 ( case inlineVar expr of
                     Nothing -> id
                     Just (v, mkInline) -> ConvertM.siLetItems . Lens.at v ?~ mkInline
@@ -101,7 +107,7 @@ convertSimpleApply app@(V.App funcI argI) exprPl =
                 & cTail . _OpenCompositeTail %~ singleApply
         funcS <-
             ConvertM.convertSubexpression funcI
-            & local (ConvertM.scScopeInfo %~ scopeUpdates)
+            & local (ConvertM.scScopeInfo %~ funcScopeUpdates)
             <&> annotation . pActions . delete %~ fixDel
             <&> hVal . _BodyLam . lamApplyLimit .~ AtMostOneFuncApply
             <&> hVal . _BodyPostfixFunc . _PfCase %~ onEachAppliedAlt
