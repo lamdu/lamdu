@@ -1,4 +1,4 @@
-{-# LANGUAGE TypeFamilies, TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module Lamdu.Sugar.Convert.Apply
     ( convert
@@ -22,7 +22,6 @@ import qualified Lamdu.Calc.Type as T
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Sugar.Config as Config
 import           Lamdu.Sugar.Convert.Binder.Inline (inlineVar)
-import           Lamdu.Sugar.Convert.Binder.Float (makeFloatLetToOuterScope)
 import           Lamdu.Sugar.Convert.Fragment (convertAppliedHole)
 import           Lamdu.Sugar.Convert.GetField (convertGetFieldParam)
 import           Lamdu.Sugar.Convert.IfElse (convertIfElse)
@@ -55,7 +54,9 @@ convert app exprPl =
         convertEmptyInject appS >>= lift . addAct & justToLeft
         convertPostfix appS exprPl >>= lift . addAct & justToLeft
         convertLabeled appS exprPl >>= lift . addAct & justToLeft
-        convertPrefix appS exprPl >>= addAct & lift
+        convertPrefix appS exprPl >>= addAct
+            & local (ConvertM.scScopeInfo . ConvertM.scopeInfoOuterPositions ?~ ConvertM.scopeInfo exprPl)
+            & lift
     where
         addAct = addActions expr
         expr = Ann exprPl (V.BApp app)
@@ -66,33 +67,11 @@ convertSimpleApply ::
     ConvertM m (AppS EvalPrep m)
 convertSimpleApply app@(V.App funcI argI) exprPl =
     do
-        mFloat <-
-            case funcI ^. hVal of
-            V.BLam lam ->
-                makeFloatLetToOuterScope (exprPl ^. Input.stored . ExprIRef.setIref)
-                (lam & hmap (Proxy @(Recursively HFunctor) #> hflipped %~ hmap (const (^. Input.stored))))
-                argI
-                <&> Just
-            _ -> pure Nothing
-        let argScopeUpdates =
-                case mFloat of
-                Nothing -> id
-                Just{} -> ConvertM.siFloatPos ?~ pos
         argS <-
             ConvertM.convertSubexpression argI
-            & local (ConvertM.scScopeInfo %~ argScopeUpdates)
-            <&>
-            case mFloat of
-            Nothing -> id
-            Just float -> annotation . pActions . extract .~ float
-        let funcScopeUpdates =
-                ( case inlineVar expr of
-                    Nothing -> id
-                    Just (v, mkInline) -> ConvertM.siLetItems . Lens.at v ?~ mkInline
-                ) .
-                case mFloat of
-                Nothing -> id
-                Just{} -> ConvertM.scopeInfoOuterPositions ?~ pos
+            & local
+                (ConvertM.scScopeInfo . ConvertM.scopeInfoOuterPositions ?~
+                    ConvertM.scopeInfo (argI ^. hAnn))
         protectedSetToVal <- ConvertM.typeProtectedSetToVal
         let dst = argI ^. hAnn . Input.stored . ExprIRef.iref
         let fixDel d
@@ -113,8 +92,12 @@ convertSimpleApply app@(V.App funcI argI) exprPl =
             <&> hVal . _BodyPostfixFunc . _PfCase %~ onEachAppliedAlt
         App funcS argS & pure
     where
+        funcScopeUpdates =
+            ( case inlineVar expr of
+                Nothing -> id
+                Just (v, mkInline) -> ConvertM.siLetItems . Lens.at v ?~ mkInline
+            ) . (ConvertM.scopeInfoOuterPositions ?~ ConvertM.scopeInfo exprPl)
         expr = Ann exprPl (V.BApp app)
-        pos = ConvertM.scopeInfo exprPl
 
 defParamsMatchArgs ::
     V.Var ->

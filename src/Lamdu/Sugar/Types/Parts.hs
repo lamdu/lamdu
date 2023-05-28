@@ -77,7 +77,7 @@ data NodeActions o = NodeActions
     { _detach :: DetachAction o
     , _delete :: Delete o
     , _setToLiteral :: Literal Identity -> o EntityId
-    , _extract :: o ExtractDestination
+    , _extract :: o EntityId
     , _mReplaceParent :: Maybe (o EntityId)
     , _mApply :: Maybe (o EntityId)
     } deriving Generic

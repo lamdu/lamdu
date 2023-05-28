@@ -235,9 +235,12 @@ makeFloatLetToOuterScope setTopLevel lam val =
                         & addRecursiveRefAsDep
                         & Def.pruneDeps val
             Just outerScopeInfo ->
-                EntityId.ofValI (val ^. hAnn . Input.stored . ExprIRef.iref) <$
-                DataOps.redexWrapWithGivenParam param
-                (newLetP ^. ExprIRef.iref) (outerScopeInfo ^. ConvertM.osiPos)
+                do
+                    _ <-
+                        DataOps.redexWrapWithGivenParam param
+                        (newLetP ^. ExprIRef.iref) (outerScopeInfo ^. ConvertM.osiPos)
+                    Anchors.assocTag param & Property.getP
+                <&> EntityId.ofTaggedEntity param
                 <&> ExtractToLet
         r <$ postProcess fixUsages
     where

@@ -30,31 +30,32 @@ import qualified Lamdu.Sugar.Types as Sugar
 
 import           Lamdu.Prelude
 
+floatCursor :: Sugar.ExtractDestination -> ElemId
+floatCursor (Sugar.ExtractToLet letId) = WidgetIds.fromEntityId letId
+floatCursor (Sugar.ExtractToDef defId) = WidgetIds.fromEntityId defId
+
 makeLetEdit :: _ => ExprGui.Body Sugar.Let i o -> ElemId -> GuiM env i o (Responsive o)
 makeLetEdit item myId =
     do
         env <- Lens.view id
         delKeys <- Config.delKeys
-        let eventMap =
-                foldMap
-                ( E.keysEventMapMovesCursor (env ^. has . Config.extractKeys)
-                    (E.toDoc env
-                        [ has . MomentuTexts.edit
-                        , has . CodeUI.letClause
-                        , has . Definitions.extractToOuter
-                        ])
-                    . fmap ExprEventMap.extractCursor
-                ) (item ^? Sugar.lValue . annotation . Sugar.plActions . Sugar.extract)
-                <>
-                foldMap
+        let floatEventMap =
+                E.keysEventMapMovesCursor (env ^. has . Config.extractKeys)
+                (E.toDoc env
+                    [ has . MomentuTexts.edit
+                    , has . CodeUI.letClause
+                    , has . Definitions.extractToOuter
+                    ])
+                (item ^. Sugar.lFloat <&> floatCursor)
+        let delEventMap = foldMap
                 ( E.keysEventMapMovesCursor delKeys
                     (E.toDoc env [has . MomentuTexts.edit, has . Texts.let_, has . MomentuTexts.delete])
                     . fmap (const bodyId)
                 ) (item ^? Sugar.lNames . Sugar._LhsVar . Sugar.vDelete)
         (_, nameEdit) <- ParamsEdit.make True (pure Nothing) ParamsEdit.ScopeNavNotFocused myId myId bodyId (item ^. Sugar.lNames)
-        grammar (label Texts.let_) M./|/ Spacer.stdHSpace M./|/ pure nameEdit
+        grammar (label Texts.let_) M./|/ Spacer.stdHSpace M./|/ pure (nameEdit & M.weakerEvents floatEventMap)
             >>= AssignmentEdit.make myId binder
-            <&> M.weakerEvents eventMap
+            <&> M.weakerEvents delEventMap
             <&> M.padAround (env ^. has . Theme.letItemPadding)
     where
         bodyId = item ^. Sugar.lBody . annotation & WidgetIds.fromExprPayload

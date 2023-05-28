@@ -1,7 +1,6 @@
 module Lamdu.GUI.Expr.EventMap
     ( add, makeBaseEvents
     , Options(..), defaultOptions
-    , extractCursor
     , addLetEventMap
     , makeLiteralNumberEventMap
     , makeLiteralCharEventMap
@@ -78,15 +77,11 @@ add options pl w =
 makeBaseEvents :: _ => Sugar.Payload v o -> GuiM env i o (EventMap (o Update))
 makeBaseEvents pl = exprInfoFromPl pl >>= baseEvents
 
-extractCursor :: Sugar.ExtractDestination -> ElemId
-extractCursor (Sugar.ExtractToLet letId) = WidgetIds.fromEntityId letId
-extractCursor (Sugar.ExtractToDef defId) = WidgetIds.fromEntityId defId
-
 extractEventMap :: _ => Sugar.NodeActions o -> m (EventMap (o Update))
 extractEventMap actions =
     Lens.view id <&>
     \env ->
-    actions ^. Sugar.extract <&> extractCursor
+    actions ^. Sugar.extract <&> WidgetIds.fromEntityId
     & E.keysEventMapMovesCursor (env ^. has . Config.extractKeys)
     (E.toDoc env
         [has . MomentuTexts.edit, has . Texts.extract])

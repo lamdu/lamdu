@@ -38,7 +38,11 @@ makeActions exprPl =
             { _detach = DataOps.applyHoleTo stored <* postProcess <&> EntityId.ofValI & DetachAction
             , _delete = DataOps.setToHole stored <* postProcess <&> EntityId.ofValI & SetToHole
             , _setToLiteral = setToLit
-            , _extract = ext
+            , _extract =
+                ext <&>
+                \case
+                ExtractToLet x -> x
+                ExtractToDef{} -> error "sub-expression extract should always be to let"
             , _mReplaceParent = Nothing
             , _mApply = Just apply
             }

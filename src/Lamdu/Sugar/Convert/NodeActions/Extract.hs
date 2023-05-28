@@ -83,12 +83,12 @@ mkExtractToLet ::
     ExprIRef.HRef m # V.Term -> ExprIRef.HRef m # V.Term -> T m EntityId
 mkExtractToLet outerScope stored =
     do
-        lamI <-
+        (param, lamI) <-
             if stored ^. ExprIRef.iref == extractPosI
             then
                 -- Give entire binder body a name (replace binder body
                 -- with "(\x -> x) stored")
-                DataOps.newIdentityLambda <&> snd
+                DataOps.newIdentityLambda
             else
                 -- Give some subexpr in binder body a name (replace
                 -- binder body with "(\x -> assignmentBody) stored", and
@@ -101,10 +101,10 @@ mkExtractToLet outerScope stored =
                         & ExprIRef.newValI
                     getVarI <- V.LVar newParam & V.BLeaf & ExprIRef.newValI
                     (stored ^. ExprIRef.setIref) getVarI
-                    pure lamI
+                    pure (newParam, lamI)
         V.App lamI oldStored & V.BApp & ExprIRef.newValI
             >>= outerScope ^. ExprIRef.setIref
-        EntityId.ofValI oldStored & pure
+        EntityId.ofTaggedEntity param Anchors.anonTag & pure
     where
         extractPosI = outerScope ^. ExprIRef.iref
         oldStored = stored ^. ExprIRef.iref

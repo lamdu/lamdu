@@ -15,7 +15,7 @@ module Lamdu.Sugar.Types.Expression
     , Lambda(..), lamFunc, lamLightweight, lamApplyLimit
     , Nominal(..), nTId, nVal
     -- Binders
-    , Let(..), lValue, lNames, lBody
+    , Let(..), lValue, lNames, lBody, lFloat
     , Meta.DefinitionState(..)
     , BinderParamScopeId(..), bParamScopeId
     , Binder(..), bBody, bAddOuterLet
@@ -227,6 +227,7 @@ data Let v name i o k = Let
     { _lValue :: k :# Assignment v name i o -- "let foo = [[bar]] in x"
     , _lNames :: LhsNames name i o v -- let [[foo]] = bar in x
     , _lBody :: k :# Binder v name i o -- "let foo = bar in [[x]]"
+    , _lFloat :: o ExtractDestination
     } deriving Generic
 
 -- An expression with 0 or more let items,

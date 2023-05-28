@@ -44,6 +44,7 @@ test =
     , setHoleToHole
     , testCreateLetInLetVal
     , testFloatToRepl
+    , testExtractLetBody
     , floatLetWithGlobalRef
     , lightConst
     , addParamToLet
@@ -536,23 +537,40 @@ testFloatToRepl =
             do
                 workArea <- convertWorkArea "" env
                 assertLetVals workArea 1 2
-                _ <- workArea ^?! innerLet . annotation . plActions . extract & lift
+                _ <- workArea ^?! innerLet . lFloat & lift
                 newWorkArea <- convertWorkArea "" env
                 assertLetVals newWorkArea 2 1
     where
         assertLetVals workArea outer inner =
             do
                 assertEq "Outer let hVal" outer
-                    (workArea ^?! replLet . lValue . literalVal)
+                    (workArea ^?! replLet . lValue . assignNumVal)
                 assertEq "Inner let hVal" inner
-                    (workArea ^?! innerLet . literalVal)
+                    (workArea ^?! innerLet . lValue . assignNumVal)
 
-        innerLet ::
-            Lens.Traversal' (WorkArea v name i o a) (Annotated a # Assignment v name i o)
-        innerLet = replLet . lBody . hVal . bBody . _BinderLet . lValue
-        literalVal =
-            hVal . _BodyPlain . apBody . bBody . _BinderTerm .
-            _BodyLeaf . _LeafLiteral . _LiteralNum . Property.pVal
+innerLet ::
+    Lens.Traversal' (WorkArea v name i o a) (Let v name i o # Annotated a)
+innerLet = replLet . lBody . hVal . bBody . _BinderLet
+
+assignNumVal :: Lens.Traversal' (Ann a # Assignment v name i o) Double
+assignNumVal =
+    hVal . _BodyPlain . apBody . bBody . _BinderTerm .
+    _BodyLeaf . _LeafLiteral . _LiteralNum . Property.pVal
+
+testExtractLetBody :: TestTree
+testExtractLetBody =
+    testCase "extract-let-body" $
+    do
+        env <- Env.make
+        testProgram "repl-2-lets.json" $
+            do
+                workArea <- convertWorkArea "" env
+                _ <- workArea ^?! innerLet . lValue . annotation . plActions . extract & lift
+                newWorkArea <- convertWorkArea "" env
+                let newInnerLet =
+                        newWorkArea ^?! innerLet . lValue .
+                        hVal . _BodyPlain . apBody . bBody . _BinderLet . lValue . assignNumVal
+                assertEq "Inner inner let hVal" 2 newInnerLet
 
 testCreateLetInLetVal :: TestTree
 testCreateLetInLetVal =

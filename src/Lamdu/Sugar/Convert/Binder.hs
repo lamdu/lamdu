@@ -22,6 +22,7 @@ import           Lamdu.Expr.IRef (DefI)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import           Lamdu.Expr.UniqueId (ToUUID(..))
 import qualified Lamdu.Sugar.Config as Config
+import           Lamdu.Sugar.Convert.Binder.Float (makeFloatLetToOuterScope)
 import           Lamdu.Sugar.Convert.Binder.Params (convertLamParams, convertEmptyParams)
 import           Lamdu.Sugar.Convert.Binder.Types (BinderKind(..))
 import qualified Lamdu.Sugar.Convert.Input as Input
@@ -78,7 +79,12 @@ convertBinderBody expr =
                                 SubExprs.getVarsToHole var rawExprStored
                                 replaceWith topStored (lam ^. lamFunc . fBody . annotation . pStored)
                                     <* postProcess
-                    convertBinderBody argT >>= toAssignment binderKind <&>
+                    float <-
+                        makeFloatLetToOuterScope (rawExprStored ^. hAnn . ExprIRef.setIref)
+                        lamC (argT ^. annotation . pUnsugared)
+                    convertBinderBody argT
+                        & local (ConvertM.scScopeInfo %~ setScopeInfo)
+                        >>= toAssignment (BinderKindLet lamC) <&>
                         \argA ->
                         expr
                         & annValue .~
@@ -86,20 +92,20 @@ convertBinderBody expr =
                             { _lValue = argA & annotation . pActions . delete . _Delete .~ del
                             , _lNames = lam ^. lamFunc . fParams & _LhsVar . vDelete .~ void del
                             , _lBody = lam ^. lamFunc . fBody
+                            , _lFloat = float
                             }
                         & annotation . pLambdas <>~ [toUUID (lamPl ^. Lens._Wrapped . pStored . ExprIRef.iref)]
                     where
+                        setScopeInfo = (ConvertM.siExtractPos ?~ pos) . (ConvertM.siFloatPos ?~ pos)
+                        pos = expr ^. annotation . pUnsugared . hAnn & ConvertM.scopeInfo
                         rawExprStored =
                             expr ^. annotation . pUnsugared
                             & hflipped %~ hmap (const (^. Input.stored))
                         lamC =
                             lamPl ^? Lens._Wrapped . pUnsugared . hVal . V._BLam
                             & fromMaybe (error "sugared lambda not originally a lambda?")
-                        var = lamC ^. V.tlIn
-                        binderKind =
-                            lamC
                             & hmap (Proxy @(Recursively HFunctor) #> hflipped %~ hmap (const (^. Input.stored)))
-                            & BinderKindLet
+                        var = lamC ^. V.tlIn
             _ -> expr & annValue %~ BinderTerm & pure
     <&> annValue %~ Binder (DataOps.redexWrap topStored <&> EntityId.ofValI)
     where
