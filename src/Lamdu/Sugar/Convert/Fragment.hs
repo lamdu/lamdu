@@ -35,12 +35,12 @@ import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Load as Load
 import qualified Lamdu.Sugar.Config as Config
 import           Lamdu.Sugar.Convert.Annotation (makeTypeAnnotation)
-import qualified Lamdu.Sugar.Convert.Expression.Actions as Actions
 import           Lamdu.Sugar.Convert.Fragment.Heal (healMismatch)
 import qualified Lamdu.Sugar.Convert.Hole as Hole
 import qualified Lamdu.Sugar.Convert.Input as Input
 import           Lamdu.Sugar.Convert.Monad (ConvertM)
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
+import qualified Lamdu.Sugar.Convert.NodeActions as Actions
 import           Lamdu.Sugar.Convert.Option
 import qualified Lamdu.Sugar.Convert.PostProcess as PostProcess
 import           Lamdu.Sugar.Convert.Suggest

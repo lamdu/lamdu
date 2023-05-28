@@ -23,11 +23,11 @@ import qualified Lamdu.Data.Ops as DataOps
 import           Lamdu.Expr.IRef (HRef)
 import qualified Lamdu.Expr.IRef as ExprIRef
 import           Lamdu.Sugar.Convert.Binder.Params (mkVarInfo)
-import           Lamdu.Sugar.Convert.Expression.Actions (addActions)
 import qualified Lamdu.Sugar.Convert.Input as Input
 import           Lamdu.Sugar.Convert.Monad (ConvertM)
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
 import qualified Lamdu.Sugar.Convert.NameRef as NameRef
+import           Lamdu.Sugar.Convert.NodeActions (addActions)
 import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import           Lamdu.Sugar.Types

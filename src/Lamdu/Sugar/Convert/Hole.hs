@@ -20,10 +20,10 @@ import qualified Lamdu.Data.Ops as DataOps
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Expr.Load as Load
 import qualified Lamdu.I18N.Code as Texts
-import           Lamdu.Sugar.Convert.Expression.Actions (addActions)
 import qualified Lamdu.Sugar.Convert.Input as Input
 import           Lamdu.Sugar.Convert.Monad (ConvertM)
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
+import           Lamdu.Sugar.Convert.NodeActions (addActions)
 import           Lamdu.Sugar.Convert.Option
 import           Lamdu.Sugar.Convert.Suggest
 import           Lamdu.Sugar.Internal

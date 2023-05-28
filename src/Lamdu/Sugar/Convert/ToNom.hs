@@ -18,10 +18,10 @@ import qualified Lamdu.Calc.Term as V
 import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Sugar.Config as Config
 import qualified Lamdu.Sugar.Convert.Binder as ConvertBinder
-import           Lamdu.Sugar.Convert.Expression.Actions (addActions)
 import qualified Lamdu.Sugar.Convert.Input as Input
 import           Lamdu.Sugar.Convert.Monad (ConvertM, PositionInfo(..))
 import qualified Lamdu.Sugar.Convert.Monad as ConvertM
+import           Lamdu.Sugar.Convert.NodeActions (addActions)
 import qualified Lamdu.Sugar.Convert.TId as ConvertTId
 import           Lamdu.Sugar.Internal
 import           Lamdu.Sugar.Types

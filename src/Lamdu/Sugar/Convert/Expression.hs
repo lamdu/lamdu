@@ -10,13 +10,13 @@ import qualified Lamdu.Expr.IRef as ExprIRef
 import qualified Lamdu.Sugar.Convert.Apply as Apply
 import qualified Lamdu.Sugar.Convert.Binder as Binder
 import qualified Lamdu.Sugar.Convert.Case as Case
-import           Lamdu.Sugar.Convert.Expression.Actions (addActions)
 import qualified Lamdu.Sugar.Convert.GetField as GetField
 import qualified Lamdu.Sugar.Convert.GetVar as GetVar
 import qualified Lamdu.Sugar.Convert.Hole as Hole
 import qualified Lamdu.Sugar.Convert.Inject as Inject
 import qualified Lamdu.Sugar.Convert.Input as Input
 import           Lamdu.Sugar.Convert.Monad (ConvertM, PositionInfo)
+import           Lamdu.Sugar.Convert.NodeActions (addActions)
 import qualified Lamdu.Sugar.Convert.Record as Record
 import qualified Lamdu.Sugar.Convert.ToNom as ToNom
 import qualified Lamdu.Sugar.Convert.TId as TId
