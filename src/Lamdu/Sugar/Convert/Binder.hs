@@ -54,7 +54,7 @@ convertBinder pos expr =
     do
         convertSub <- Lens.view id <&> ConvertM.scConvertSubexpression
         convertSub pos expr
-    >>= convertBinderBody expr
+    >>= convertBinderBody
     & local (ConvertM.scScopeInfo %~ addPos)
     where
         addPos x =
@@ -68,10 +68,9 @@ convertBinder pos expr =
 
 convertBinderBody ::
     Monad m =>
-    Ann (Input.Payload m) # V.Term ->
     Annotated (ConvertPayload m) # Term EvalPrep InternalName (OnceT (T m)) (T m) ->
     ConvertM m (Annotated (ConvertPayload m) # Binder EvalPrep InternalName (OnceT (T m)) (T m))
-convertBinderBody rawExpr expr =
+convertBinderBody expr =
     do
         supportLet <- Lens.view (ConvertM.scSugars . Config.letExpression)
         case expr ^. hVal of
@@ -80,11 +79,10 @@ convertBinderBody rawExpr expr =
                     postProcess <- ConvertM.postProcessAssert
                     let del =
                             do
-                                var `SubExprs.getVarsToHole` (rawExpr & hflipped %~ hmap (const (^. Input.stored)))
-                                (lam ^. lamFunc . fBody . annotation . pStored
-                                    & replaceWith topStored)
+                                SubExprs.getVarsToHole var rawExprStored
+                                replaceWith topStored (lam ^. lamFunc . fBody . annotation . pStored)
                                     <* postProcess
-                    convertBinderBody rawExpr argT >>= toAssignment binderKind <&>
+                    convertBinderBody argT >>= toAssignment binderKind <&>
                         \argA ->
                         expr
                         & annValue .~
@@ -95,8 +93,11 @@ convertBinderBody rawExpr expr =
                             }
                         & annotation . pLambdas <>~ [toUUID (lamPl ^. Lens._Wrapped . pStored . ExprIRef.iref)]
                     where
+                        rawExprStored =
+                            expr ^. annotation . pUnsugared
+                            & hflipped %~ hmap (const (^. Input.stored))
                         lamC =
-                            rawExpr ^? hVal . V._BApp . V.appFunc . hVal . V._BLam
+                            lamPl ^? Lens._Wrapped . pUnsugared . hVal . V._BLam
                             & fromMaybe (error "sugared lambda not originally a lambda?")
                         var = lamC ^. V.tlIn
                         binderKind =
