@@ -114,11 +114,7 @@ convertSimpleApply app@(V.App funcI argI) exprPl =
         App funcS argS & pure
     where
         expr = Ann exprPl (V.BApp app)
-        pos =
-            ConvertM.OuterScopeInfo
-            { ConvertM._osiPos = exprPl ^. Input.stored
-            , ConvertM._osiScope = exprPl ^. Input.inferScope
-            }
+        pos = ConvertM.scopeInfo exprPl
 
 defParamsMatchArgs ::
     V.Var ->

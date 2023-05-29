@@ -59,11 +59,7 @@ convertBinder pos expr =
     where
         addPos x =
             x
-            & ConvertM.siExtractPos ?~
-                ConvertM.OuterScopeInfo
-                { ConvertM._osiPos = expr ^. hAnn . Input.stored
-                , ConvertM._osiScope = expr ^. hAnn . Input.inferScope
-                }
+            & ConvertM.siExtractPos ?~ ConvertM.scopeInfo (expr ^. hAnn)
             & ConvertM.siFloatPos .~ x ^. ConvertM.siExtractPos
 
 convertBinderBody ::

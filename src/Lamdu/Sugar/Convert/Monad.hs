@@ -4,6 +4,7 @@ module Lamdu.Sugar.Convert.Monad
     ( OuterScopeInfo(..), osiPos, osiScope
     , RecursiveRef(..), rrDefI, rrDefType
     , ScopeInfo(..), siRecordParams, siNullParams, siLetItems, siExtractPos, siFloatPos
+    , scopeInfo
 
     , Context(..)
     , scInferContext, scTopLevelExpr, scPostProcessRoot, siRecursiveRef
@@ -167,3 +168,10 @@ convertSubexpression exprI =
     do
         convertSub <- Lens.view id <&> scConvertSubexpression
         convertSub ExpressionPos exprI
+
+scopeInfo :: Input.Payload m # V.Term -> OuterScopeInfo m
+scopeInfo pl =
+    OuterScopeInfo
+    { _osiPos = pl ^. Input.stored
+    , _osiScope = pl ^. Input.inferScope
+    }
