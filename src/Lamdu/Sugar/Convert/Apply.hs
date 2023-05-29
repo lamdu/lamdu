@@ -92,7 +92,7 @@ convertSimpleApply app@(V.App funcI argI) exprPl =
                 ) .
                 case mFloat of
                 Nothing -> id
-                Just{} -> (ConvertM.siExtractPos ?~ pos) . (ConvertM.siFloatPos ?~ pos)
+                Just{} -> ConvertM.scopeInfoOuterPositions ?~ pos
         protectedSetToVal <- ConvertM.typeProtectedSetToVal
         let dst = argI ^. hAnn . Input.stored . ExprIRef.iref
         let fixDel d

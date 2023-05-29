@@ -4,7 +4,7 @@ module Lamdu.Sugar.Convert.Monad
     ( OuterScopeInfo(..), osiPos, osiScope
     , RecursiveRef(..), rrDefI, rrDefType
     , ScopeInfo(..), siRecordParams, siNullParams, siLetItems, siExtractPos, siFloatPos
-    , scopeInfo
+    , scopeInfo, scopeInfoOuterPositions
 
     , Context(..)
     , scInferContext, scTopLevelExpr, scPostProcessRoot, siRecursiveRef
@@ -73,6 +73,11 @@ data ScopeInfo m = ScopeInfo
       _siRecursiveRef :: Maybe (RecursiveRef m)
     }
 Lens.makeLenses ''ScopeInfo
+
+scopeInfoOuterPositions :: Lens.Traversal' (ScopeInfo m) (Maybe (OuterScopeInfo m))
+scopeInfoOuterPositions f s =
+    (,) <$> f (s ^. siExtractPos) <*> f (s ^. siFloatPos) <&>
+    \(ext, float) -> s { _siExtractPos = ext, _siFloatPos = float }
 
 newtype ConvertM m a = ConvertM (ReaderT (Context m) (OnceT (T m)) a)
     deriving newtype (Functor, Applicative, Monad, MonadReader (Context m))
