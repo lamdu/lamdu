@@ -29,7 +29,7 @@ import           Lamdu.Prelude
 type T = Transaction
 
 convertPaneBody ::
-    ( Monad m, Typeable m
+    ( HasCallStack, Monad m, Typeable m
     , Has Debug.Monitors env
     , Has (Sugars Bool) env, Has Cache.Functions env
     , Anchors.HasCodeAnchors env m
@@ -59,7 +59,7 @@ mkPaneEntityId (Anchors.PaneNominal tid) = EntityId.ofNominalPane tid
 mkPaneEntityId (Anchors.PaneTag tag) = EntityId.ofTagPane tag
 
 convertPane ::
-    ( Monad m, Typeable m
+    ( HasCallStack, Monad m, Typeable m
     , Has Debug.Monitors env
     , Has (Sugars Bool) env, Has Cache.Functions env
     , Anchors.HasCodeAnchors env m
@@ -114,7 +114,7 @@ addRemoveOnDelete anchors pane =
                 f w x = Property.modP (w anchors) (Lens.contains x .~ (newState == LiveDefinition))
 
 loadPanes ::
-    ( Monad m, Typeable m
+    ( HasCallStack, Monad m, Typeable m
     , Has Debug.Monitors env
     , Has (Sugars Bool) env, Has Cache.Functions env
     , Anchors.HasCodeAnchors env m
@@ -149,7 +149,7 @@ globals cp =
     }
 
 loadWorkArea ::
-    ( Monad m, Typeable m
+    ( HasCallStack, Monad m, Typeable m
     , Has Debug.Monitors env
     , Has (Sugars Bool) env, Has Cache.Functions env
     , Anchors.HasCodeAnchors env m

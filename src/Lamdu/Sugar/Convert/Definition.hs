@@ -193,7 +193,9 @@ collectHiddenEntityIds top expr =
     & annotation . _1 <>~ goNode top
 
 pane ::
-    (Has Debug.Monitors env, Has Cache.Functions env, Has (Sugars Bool) env, Monad m, Typeable m, Anchors.HasCodeAnchors env m) =>
+    ( HasCallStack, Has Debug.Monitors env, Has Cache.Functions env
+    , Has (Sugars Bool) env, Monad m, Typeable m, Anchors.HasCodeAnchors env m
+    ) =>
     env -> DefI m -> OnceT (T m) (PaneBody EvalPrep InternalName (OnceT (T m)) (T m) ([EntityId], ConvertPayload m))
 pane env defI =
     Definition

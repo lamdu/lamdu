@@ -34,7 +34,7 @@ import           Lamdu.Prelude
 type T = Transaction
 
 convert ::
-    Monad m =>
+    (HasCallStack, Monad m) =>
     Pure # T.Scheme ->
     Definition.Expr (Ann (Input.Payload m) # V.Term) ->
     DefI m ->
