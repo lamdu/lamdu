@@ -69,9 +69,7 @@ convertSimpleApply app@(V.App funcI argI) exprPl =
     do
         argS <-
             ConvertM.convertSubexpression argI
-            & local
-                (ConvertM.scScopeInfo . ConvertM.scopeInfoOuterPositions ?~
-                    ConvertM.scopeInfo (argI ^. hAnn))
+            & local (ConvertM.scScopeInfo %~ setScopeIfLam (argI ^. hAnn))
         protectedSetToVal <- ConvertM.typeProtectedSetToVal
         let dst = argI ^. hAnn . Input.stored . ExprIRef.iref
         let fixDel d
@@ -96,7 +94,11 @@ convertSimpleApply app@(V.App funcI argI) exprPl =
             ( case inlineVar expr of
                 Nothing -> id
                 Just (v, mkInline) -> ConvertM.siLetItems . Lens.at v ?~ mkInline
-            ) . (ConvertM.scopeInfoOuterPositions ?~ ConvertM.scopeInfo exprPl)
+            ) . setScopeIfLam exprPl
+        setScopeIfLam x
+            | Lens.has (hVal . V._BLam) funcI =
+                ConvertM.scopeInfoOuterPositions ?~ ConvertM.scopeInfo x
+            | otherwise = id
         expr = Ann exprPl (V.BApp app)
 
 defParamsMatchArgs ::
