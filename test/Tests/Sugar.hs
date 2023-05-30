@@ -45,6 +45,7 @@ test =
     , testCreateLetInLetVal
     , testFloatToRepl
     , testExtractLetBody
+    , testFloatLetInLam
     , floatLetWithGlobalRef
     , lightConst
     , addParamToLet
@@ -548,8 +549,7 @@ testFloatToRepl =
                 assertEq "Inner let hVal" inner
                     (workArea ^?! innerLet . lValue . assignNumVal)
 
-innerLet ::
-    Lens.Traversal' (WorkArea v name i o a) (Let v name i o # Annotated a)
+innerLet :: Lens.Traversal' (WorkArea v name i o a) (Let v name i o # Annotated a)
 innerLet = replLet . lBody . hVal . bBody . _BinderLet
 
 assignNumVal :: Lens.Traversal' (Ann a # Assignment v name i o) Double
@@ -571,6 +571,24 @@ testExtractLetBody =
                         newWorkArea ^?! innerLet . lValue .
                         hVal . _BodyPlain . apBody . bBody . _BinderLet . lValue . assignNumVal
                 assertEq "Inner inner let hVal" 2 newInnerLet
+
+testFloatLetInLam :: TestTree
+testFloatLetInLam =
+    testCase "float-let-in-lam" $
+    do
+        env <- Env.make
+        res <-
+            testProgram "let-in-lam.json" $
+            do
+                workArea <- convertWorkArea "" env
+                _ <-
+                    workArea ^?!
+                    replBody . _BodyLabeledApply . aMOpArgs . Lens._Just . oaRhs .
+                    hVal . _BodyLam . lamFunc . fBody .
+                    hVal . bBody . _BinderLet . lFloat
+                    & lift
+                convertWorkArea "" env
+        Lens.has (replBinder . _BinderLet) res & assertBool "let floated to top of repl"
 
 testCreateLetInLetVal :: TestTree
 testCreateLetInLetVal =
