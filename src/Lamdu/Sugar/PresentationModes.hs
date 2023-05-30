@@ -61,7 +61,8 @@ makeLabeledApply func args punnedArgs exprPl =
                         maybeWrap ls r
                         maybeWrap rs l
                         pure True
-                        & lift
+                        & ConvertM.typeProtect checkOk & MaybeT & justToLeft
+                    error "no swap action successfully type checked" & lift
                 & runMatcherT
                 -- Work-around red-cursor in some cases when cursor is on record params.
                 <&> (if hasRecordParams then const True else id)
@@ -71,6 +72,7 @@ makeLabeledApply func args punnedArgs exprPl =
                     maybeWrap d s =
                         case s ^. hVal of
                         Sugar.BodyLeaf Sugar.LeafHole{} -> DataOps.replace d i
+                        Sugar.BodyFragment{} -> DataOps.replace d i
                         _ -> DataOps.setToAppliedHole i d
                         & void
                         where
