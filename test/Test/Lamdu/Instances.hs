@@ -128,7 +128,7 @@ makeInstances [''NFData]
     , ''Sugar.CompiledErrorType, ''ShowAnnotation, ''LangId, ''EntityId, ''Sugar.ParamKind
     , ''Name, ''Name.Collision, ''Name.TagName, ''Name.TagText
     , ''Tag.TextsInLang, ''Def.FFIName, ''Tag.DirOp, ''Tag.Symbol, ''Tag.Tag, ''CurAndPrev
-    , ''Sugar.TaggedVarId
+    , ''Sugar.TaggedVarId, ''Sugar.TypeMismatchReason
     ]
 
 deriving instance (Eq name, Eq (o a)) => Eq (Sugar.DefinitionOutdatedType name o a)

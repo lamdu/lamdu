@@ -95,13 +95,12 @@ convert (V.App funcI argI) exprPl =
             Just{} -> local (ConvertM.scPostProcessRoot %~ unfragmentIfTypesAllow unfragment)
         postProcess <- ConvertM.postProcessAssert
         healMis <- healMismatch
-        typeMismatch <-
-            Lens._Just
-            ( const (makeTypeAnnotation
+        let makeTypeMismatch _ =
+                makeTypeAnnotation
                 (EntityId.ofFragmentArg (argS ^. annotation . pEntityId))
-                (argS ^. annotation . pUnsugared . hAnn . Input.inferredType))
-            ) mTypeMismatch
-            <&> Lens._Just %~ Sugar.TypeMismatch
+                (argS ^. annotation . pUnsugared . hAnn . Input.inferredType)
+                <&> (`Sugar.TypeMismatch` Sugar.TypesCannotUnify)
+        typeMismatch <- Lens._Just makeTypeMismatch mTypeMismatch
         tagsProp <- Lens.view Anchors.codeAnchors <&> Anchors.tags
         opts <-
             do

@@ -24,7 +24,8 @@ module Lamdu.Sugar.Types.Parts
     , TaggedVarId(..), TagSuffixes
     , Expr
     , ParenInfo(..), piNeedParens, piMinOpPrec
-    , TypeMismatch(..), tmType
+    , TypeMismatch(..), tmType, tmReason
+    , TypeMismatchReason(..), _TypesCannotUnify
     ) where
 
 import qualified Control.Lens as Lens
@@ -162,9 +163,14 @@ data Query = Query
     , _qSearchTerm :: Text
     }
 
-newtype TypeMismatch name = TypeMismatch
+data TypeMismatchReason
+    = TypesCannotUnify
+    deriving (Eq, Ord, Show, Generic)
+
+data TypeMismatch name = TypeMismatch
     { _tmType :: Annotated EntityId # SugarType.Type name -- Type of fragmented (mismatching) expression
-    } deriving stock Generic
+    , _tmReason :: TypeMismatchReason
+    } deriving Generic
 
 traverse Lens.makeLenses
     [ ''ClosedCompositeActions, ''NodeActions
@@ -173,7 +179,7 @@ traverse Lens.makeLenses
     ] <&> concat
 traverse Lens.makePrisms
     [ ''Annotation, ''Delete, ''DetachAction
-    , ''FuncApplyLimit, ''Literal, ''VarInfo
+    , ''FuncApplyLimit, ''Literal, ''VarInfo, ''TypeMismatchReason
     ] <&> concat
 traverse makeHTraversableAndBases [''NullaryInject, ''PunnedVar] <&> concat
 makeHMorph ''NullaryInject
