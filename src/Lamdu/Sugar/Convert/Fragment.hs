@@ -101,6 +101,7 @@ convert (V.App funcI argI) exprPl =
                 (EntityId.ofFragmentArg (argS ^. annotation . pEntityId))
                 (argS ^. annotation . pUnsugared . hAnn . Input.inferredType))
             ) mTypeMismatch
+            <&> Lens._Just %~ Sugar.TypeMismatch
         tagsProp <- Lens.view Anchors.codeAnchors <&> Anchors.tags
         opts <-
             do

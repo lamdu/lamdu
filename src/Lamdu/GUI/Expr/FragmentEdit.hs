@@ -100,7 +100,7 @@ make (Ann (Const pl) fragment) =
                     spacing <- Lens.view
                         (has . Theme.valAnnotation . ValAnnotation.valAnnotationSpacing)
                     stdFontHeight <- Spacer.stdFontHeight
-                    addAnnotationBackground >>= addInferredType mismatchedType . const
+                    addAnnotationBackground >>= addInferredType (mismatchedType ^. Sugar.tmType) . const
                         <&> (lineBelow color elemId (spacing * stdFontHeight) .)
             & Element.locallyAugmented ("inner type"::Text)
 

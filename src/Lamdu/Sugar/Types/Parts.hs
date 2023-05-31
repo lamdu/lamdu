@@ -24,6 +24,7 @@ module Lamdu.Sugar.Types.Parts
     , TaggedVarId(..), TagSuffixes
     , Expr
     , ParenInfo(..), piNeedParens, piMinOpPrec
+    , TypeMismatch(..), tmType
     ) where
 
 import qualified Control.Lens as Lens
@@ -161,10 +162,14 @@ data Query = Query
     , _qSearchTerm :: Text
     }
 
+newtype TypeMismatch name = TypeMismatch
+    { _tmType :: Annotated EntityId # SugarType.Type name -- Type of fragmented (mismatching) expression
+    } deriving stock Generic
+
 traverse Lens.makeLenses
     [ ''ClosedCompositeActions, ''NodeActions
     , ''NullaryInject, ''Option, ''ParenInfo, ''Payload, ''PunnedVar
-    , ''Query, ''QueryLangInfo
+    , ''Query, ''QueryLangInfo, ''TypeMismatch
     ] <&> concat
 traverse Lens.makePrisms
     [ ''Annotation, ''Delete, ''DetachAction
