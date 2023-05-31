@@ -200,15 +200,14 @@ annotationSpacer =
     >>= Spacer.vspaceLines
 
 addAnnotationH ::
-    _ => m (M.WithTextPos M.View) -> (ShrinkRatio -> M.View -> M.View) -> m (M.Widget f -> M.Widget f)
-addAnnotationH f postProcess =
+    _ => (ShrinkRatio -> M.View -> M.View) -> M.WithTextPos M.View -> m (M.Widget f -> M.Widget f)
+addAnnotationH postProcess annView =
     do
         vspace <- annotationSpacer
-        annotationLayout <- f <&> (^. Align.tValue)
         processAnn <- processAnnotationGui postProcess
         padToSize <- pushToReaderExt (pushToReaderExt pushToReader) Element.padToSize
         let ann w =
-                processAnn (w ^. M.width) annotationLayout
+                processAnn (w ^. M.width) (annView ^. M.tValue)
                 & padToSize (M.Vector2 theMinWidth 0) 0
                 where
                     theMinWidth = w ^. M.width
@@ -219,7 +218,7 @@ addInferredType ::
     _ =>
     Annotated Sugar.EntityId # Sugar.Type Name -> (ShrinkRatio -> M.View -> M.View) ->
     m (M.Widget f -> M.Widget f)
-addInferredType = addAnnotationH . TypeView.make
+addInferredType t s = TypeView.make t >>= addAnnotationH s
 
 addEvaluationResult ::
     _ =>
@@ -230,7 +229,7 @@ addEvaluationResult mNeigh resDisp postProcess =
     case erdVal resDisp ^. hVal of
     Sugar.RRecord [] -> Styled.addBgColor Theme.evaluatedPathBGColor & pushToReader
     Sugar.RFunc _ -> pure id
-    _ -> postProcess ValAnnotation >>= addAnnotationH (makeEvalView mNeigh resDisp)
+    _ -> addAnnotationH <$> postProcess ValAnnotation <*> makeEvalView mNeigh resDisp & join
 
 maybeAddAnnotationPl ::
     _ =>
