@@ -125,7 +125,11 @@ make prependKeywords myId conf (Ann (Const pl) (Sugar.Composite tl punned compos
             , TaggedList._kOrderAfter = has . Config.orderDirKeys . StdKeys.keysDown
             }
         let prependEventMap = addItemWithSearchTermEventMap conf env myId
-        (addNextEventMap, body) <- TaggedList.make (itemDocPrefix conf) keys (pure myId) (pure myId) tl
+        let delDstId =
+                case compositeTail of
+                Sugar.ClosedCompositeTail{} -> myId
+                Sugar.OpenCompositeTail o -> o ^. annotation . Sugar.plEntityId & WidgetIds.fromEntityId
+        (addNextEventMap, body) <- TaggedList.make (itemDocPrefix conf) keys (pure delDstId) (pure delDstId) tl
         let prevs =
                 ( drop 1 body
                     <&> (^. TaggedList.iTag . Sugar.tagRefTag . Sugar.tagInstance)
