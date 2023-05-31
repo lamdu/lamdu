@@ -22,7 +22,7 @@ import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.Config.Theme.ValAnnotation as ValAnnotation
-import           Lamdu.GUI.Annotation (addInferredType, shrinkValAnnotationsIfNeeded)
+import           Lamdu.GUI.Annotation (addInferredType, addAnnotationBackground)
 import qualified Lamdu.GUI.Expr.ApplyEdit as ApplyEdit
 import qualified Lamdu.GUI.Expr.EventMap as ExprEventMap
 import qualified Lamdu.GUI.Expr.GetVarEdit as GetVarEdit
@@ -100,7 +100,7 @@ make (Ann (Const pl) fragment) =
                     spacing <- Lens.view
                         (has . Theme.valAnnotation . ValAnnotation.valAnnotationSpacing)
                     stdFontHeight <- Spacer.stdFontHeight
-                    addInferredType mismatchedType shrinkValAnnotationsIfNeeded
+                    addAnnotationBackground >>= addInferredType mismatchedType . const
                         <&> (lineBelow color elemId (spacing * stdFontHeight) .)
             & Element.locallyAugmented ("inner type"::Text)
 

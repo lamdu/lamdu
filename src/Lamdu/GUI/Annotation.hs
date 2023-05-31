@@ -217,10 +217,9 @@ addAnnotationH f postProcess =
 
 addInferredType ::
     _ =>
-    Annotated Sugar.EntityId # Sugar.Type Name -> PostProcessAnnotation m ->
+    Annotated Sugar.EntityId # Sugar.Type Name -> (ShrinkRatio -> M.View -> M.View) ->
     m (M.Widget f -> M.Widget f)
-addInferredType typ postProcess =
-    postProcess TypeAnnotation >>= addAnnotationH (TypeView.make typ)
+addInferredType = addAnnotationH . TypeView.make
 
 addEvaluationResult ::
     _ =>
@@ -278,7 +277,7 @@ maybeAddAnnotationWith ::
 maybeAddAnnotationWith opt postProcessAnnotation ann =
     case ann of
     Sugar.AnnotationNone -> pure id
-    Sugar.AnnotationType typ -> addInferredType typ postProcessAnnotation
+    Sugar.AnnotationType typ -> postProcessAnnotation TypeAnnotation >>= addInferredType typ
     Sugar.AnnotationVal val -> maybeAddValAnnotationWith opt postProcessAnnotation val
 
 maybeAddValAnnotationWith ::
