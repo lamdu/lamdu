@@ -161,6 +161,7 @@
             "typeOperatorHere": "Type operator here",
             "opaque": "Opaque",
             "gotoNextOutdated": "Go to next outdated definition",
+            "varSkolemEscape": "Type variable escapes its scope",
             "enabledSugars": "Enabled sugars"
         },
         "name": {

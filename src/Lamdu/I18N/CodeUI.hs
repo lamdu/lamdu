@@ -90,6 +90,7 @@ data CodeUI a = CodeUI
     , _opaque :: a
     , _gotoNextOutdated :: a
     , _enabledSugars :: a
+    , _varSkolemEscape :: a
     }
     deriving stock (Generic, Generic1, Eq, Functor, Foldable, Traversable)
     deriving anyclass ElemIds

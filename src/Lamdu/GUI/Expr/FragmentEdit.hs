@@ -22,7 +22,7 @@ import qualified GUI.Momentu.Widgets.Spacer as Spacer
 import qualified Lamdu.Config as Config
 import qualified Lamdu.Config.Theme as Theme
 import qualified Lamdu.Config.Theme.ValAnnotation as ValAnnotation
-import           Lamdu.GUI.Annotation (addInferredType, addAnnotationBackground)
+import           Lamdu.GUI.Annotation (addAnnotationBackground, addAnnotationBelow)
 import qualified Lamdu.GUI.Expr.ApplyEdit as ApplyEdit
 import qualified Lamdu.GUI.Expr.EventMap as ExprEventMap
 import qualified Lamdu.GUI.Expr.GetVarEdit as GetVarEdit
@@ -35,6 +35,7 @@ import           Lamdu.GUI.Monad (GuiM)
 import qualified Lamdu.GUI.Monad as GuiM
 import           Lamdu.GUI.Styled (label, grammar)
 import qualified Lamdu.GUI.TagView as TagView
+import qualified Lamdu.GUI.TypeView as TypeView
 import qualified Lamdu.GUI.Types as ExprGui
 import qualified Lamdu.GUI.WidgetIds as WidgetIds
 import qualified Lamdu.GUI.Wrap as Wrap
@@ -93,14 +94,20 @@ make (Ann (Const pl) fragment) =
         addInnerType <-
             case fragment ^. Sugar.fTypeMismatch of
             Nothing -> pure id
-            Just mismatchedType ->
+            Just mismatch ->
                 do
                     color <- Lens.view (has . Theme.errorColor)
                     elemId <- Element.subElemId "err-line"
                     spacing <- Lens.view
                         (has . Theme.valAnnotation . ValAnnotation.valAnnotationSpacing)
                     stdFontHeight <- Spacer.stdFontHeight
-                    addAnnotationBackground >>= addInferredType (mismatchedType ^. Sugar.tmType) . const
+                    ann <-
+                        TypeView.make (mismatch ^. Sugar.tmType)
+                        M./-/
+                        case mismatch ^. Sugar.tmReason of
+                        Sugar.TypeVarSkolemEscape -> label Texts.varSkolemEscape
+                        _ -> pure M.empty
+                    addAnnotationBackground <&> const >>= (`addAnnotationBelow` ann)
                         <&> (lineBelow color elemId (spacing * stdFontHeight) .)
             & Element.locallyAugmented ("inner type"::Text)
 

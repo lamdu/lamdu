@@ -20,7 +20,7 @@ import           Hyper.Syntax.Nominal (nId, nScheme)
 import           Hyper.Syntax.Row (FlatRowExtends, freExtends)
 import           Hyper.Syntax.Scheme (sTyp)
 import           Hyper.Type.Prune (Prune(..))
-import           Hyper.Unify (UVar, applyBindings, unify)
+import           Hyper.Unify (UVar, applyBindings, unify, UnifyError(..))
 import qualified Lamdu.Builtins.Anchors as Builtins
 import           Lamdu.Calc.Definition (depsNominals)
 import qualified Lamdu.Calc.Infer as Infer
@@ -95,11 +95,16 @@ convert (V.App funcI argI) exprPl =
             Just{} -> local (ConvertM.scPostProcessRoot %~ unfragmentIfTypesAllow unfragment)
         postProcess <- ConvertM.postProcessAssert
         healMis <- healMismatch
-        let makeTypeMismatch _ =
+        let makeTypeMismatch err =
                 makeTypeAnnotation
                 (EntityId.ofFragmentArg (argS ^. annotation . pEntityId))
                 (argS ^. annotation . pUnsugared . hAnn . Input.inferredType)
-                <&> (`Sugar.TypeMismatch` Sugar.TypesCannotUnify)
+                <&> (`Sugar.TypeMismatch` reason)
+                where
+                    reason =
+                        case err ^. _Pure of
+                        T.TypeError SkolemEscape{} -> Sugar.TypeVarSkolemEscape
+                        _ -> Sugar.TypesCannotUnify
         typeMismatch <- Lens._Just makeTypeMismatch mTypeMismatch
         tagsProp <- Lens.view Anchors.codeAnchors <&> Anchors.tags
         opts <-

@@ -165,6 +165,7 @@ data Query = Query
 
 data TypeMismatchReason
     = TypesCannotUnify
+    | TypeVarSkolemEscape
     deriving (Eq, Ord, Show, Generic)
 
 data TypeMismatch name = TypeMismatch

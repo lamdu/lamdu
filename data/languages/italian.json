@@ -161,6 +161,7 @@
             "typeOperatorHere": "Operatore tipo qui",
             "opaque": "opaco",
             "gotoNextOutdated": "Vai alla prossima definizione obsoleta",
+            "varSkolemEscape": "La variable de tipo escapa a su alcance",
             "enabledSugars": "Zuccheri abilitati"
         },
         "name": {

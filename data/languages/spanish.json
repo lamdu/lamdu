@@ -163,6 +163,7 @@
             "typeOperatorHere": "Escriba un operador aquí",
             "opaque": "Opaco",
             "gotoNextOutdated": "Ir a la siguiente definición obsoleta",
+            "varSkolemEscape": "La variabile di tipo sfugge al suo ambito",
             "enabledSugars": "Azúcares habilitados"
         },
         "name": {

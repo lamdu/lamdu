@@ -12,6 +12,7 @@ module Lamdu.GUI.Annotation
 
     , addAnnotationBackground -- used for open holes
     , maybeAddAnnotationPl
+    , addAnnotationBelow
     ) where
 
 import qualified Control.Lens as Lens
@@ -199,9 +200,9 @@ annotationSpacer =
     Lens.view (has . Theme.valAnnotation . ValAnnotation.valAnnotationSpacing)
     >>= Spacer.vspaceLines
 
-addAnnotationH ::
+addAnnotationBelow ::
     _ => (ShrinkRatio -> M.View -> M.View) -> M.WithTextPos M.View -> m (M.Widget f -> M.Widget f)
-addAnnotationH postProcess annView =
+addAnnotationBelow postProcess annView =
     do
         vspace <- annotationSpacer
         processAnn <- processAnnotationGui postProcess
@@ -218,7 +219,7 @@ addInferredType ::
     _ =>
     Annotated Sugar.EntityId # Sugar.Type Name -> (ShrinkRatio -> M.View -> M.View) ->
     m (M.Widget f -> M.Widget f)
-addInferredType t s = TypeView.make t >>= addAnnotationH s
+addInferredType t s = TypeView.make t >>= addAnnotationBelow s
 
 addEvaluationResult ::
     _ =>
@@ -229,7 +230,7 @@ addEvaluationResult mNeigh resDisp postProcess =
     case erdVal resDisp ^. hVal of
     Sugar.RRecord [] -> Styled.addBgColor Theme.evaluatedPathBGColor & pushToReader
     Sugar.RFunc _ -> pure id
-    _ -> addAnnotationH <$> postProcess ValAnnotation <*> makeEvalView mNeigh resDisp & join
+    _ -> addAnnotationBelow <$> postProcess ValAnnotation <*> makeEvalView mNeigh resDisp & join
 
 maybeAddAnnotationPl ::
     _ =>
