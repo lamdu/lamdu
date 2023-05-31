@@ -54,9 +54,9 @@ import           Lamdu.Prelude
 
 type T = Transaction.Transaction
 
-checkTypeMatch :: Monad m => UVar # T.Type -> UVar # T.Type -> ConvertM m Bool
+checkTypeMatch :: Monad m => UVar # T.Type -> UVar # T.Type -> ConvertM m (Maybe (Pure # T.TypeError))
 checkTypeMatch x y =
-    Lens.view ConvertM.scInferContext <&> check <&> Lens.has Lens._Right
+    Lens.view ConvertM.scInferContext <&> check <&> (^? Lens._Left)
     where
         check ctx = unify x y >> applyBindings x & Infer.runPureInfer () ctx
 
@@ -85,23 +85,22 @@ convert ::
     ConvertM m (ExpressionU EvalPrep m)
 convert (V.App funcI argI) exprPl =
     do
-        isTypeMatch <-
+        mTypeMismatch <-
             checkTypeMatch (argI ^. hAnn . Input.inferredTypeUVar)
             (exprPl ^. Input.inferredTypeUVar)
         argS <-
-            ConvertM.convertSubexpression argI
-            & if isTypeMatch
-              then id
-              else local (ConvertM.scPostProcessRoot %~ unfragmentIfTypesAllow unfragment)
+            ConvertM.convertSubexpression argI &
+            case mTypeMismatch of
+            Nothing -> id
+            Just{} -> local (ConvertM.scPostProcessRoot %~ unfragmentIfTypesAllow unfragment)
         postProcess <- ConvertM.postProcessAssert
         healMis <- healMismatch
         typeMismatch <-
-            if isTypeMatch
-            then pure Nothing
-            else
-                makeTypeAnnotation
-                    (EntityId.ofFragmentArg (argS ^. annotation . pEntityId))
-                    (argS ^. annotation . pUnsugared . hAnn . Input.inferredType) <&> Just
+            Lens._Just
+            ( const (makeTypeAnnotation
+                (EntityId.ofFragmentArg (argS ^. annotation . pEntityId))
+                (argS ^. annotation . pUnsugared . hAnn . Input.inferredType))
+            ) mTypeMismatch
         tagsProp <- Lens.view Anchors.codeAnchors <&> Anchors.tags
         opts <-
             do
@@ -180,9 +179,9 @@ convert (V.App funcI argI) exprPl =
                     (DataOps.setToHole stored <* postProcess <&> EntityId.ofValI)
                 & annotation . pActions . Sugar.mApply ?~ apply
             , Sugar._fHeal =
-                ( if isTypeMatch
-                    then unfragment <* postProcess
-                    else argIRef <$ healMis (stored ^. iref)
+                ( case mTypeMismatch of
+                    Nothing -> unfragment <* postProcess
+                    Just{} -> argIRef <$ healMis (stored ^. iref)
                 )
                 <&> EntityId.ofValI
             , Sugar._fTypeMismatch = typeMismatch
