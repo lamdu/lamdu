@@ -90,14 +90,13 @@ hoverWideAnnotation which =
                 & pad 0 (shrunkView ^. View.vSize - wideView ^. View.vSize)
                 & Element.hoverLayeredImage
 
-processAnnotationGui :: _ => m (ShrinkRatio -> M.View -> M.View) -> m (Widget.R -> M.View -> M.View)
-processAnnotationGui postProcessAnnotation =
+processAnnotationGui :: _ => (ShrinkRatio -> M.View -> M.View) -> m (Widget.R -> M.View -> M.View)
+processAnnotationGui postProcess =
     f
     <$> Lens.view (has . Theme.valAnnotation)
     <*> Spacer.getSpaceSize
-    <*> postProcessAnnotation
     where
-        f th stdSpacing postProcess minWidth ann
+        f th stdSpacing minWidth ann
             | annWidth > minWidth + max shrinkAtLeast expansionLimit
             || heightShrinkRatio < 1 =
                 postProcess shrinkRatio ann
@@ -201,7 +200,7 @@ annotationSpacer =
     >>= Spacer.vspaceLines
 
 addAnnotationH ::
-    _ => m (M.WithTextPos M.View) -> m (ShrinkRatio -> M.View -> M.View) -> m (M.Widget f -> M.Widget f)
+    _ => m (M.WithTextPos M.View) -> (ShrinkRatio -> M.View -> M.View) -> m (M.Widget f -> M.Widget f)
 addAnnotationH f postProcess =
     do
         vspace <- annotationSpacer
@@ -221,7 +220,7 @@ addInferredType ::
     Annotated Sugar.EntityId # Sugar.Type Name -> PostProcessAnnotation m ->
     m (M.Widget f -> M.Widget f)
 addInferredType typ postProcess =
-    addAnnotationH (TypeView.make typ) (postProcess TypeAnnotation)
+    postProcess TypeAnnotation >>= addAnnotationH (TypeView.make typ)
 
 addEvaluationResult ::
     _ =>
@@ -232,7 +231,7 @@ addEvaluationResult mNeigh resDisp postProcess =
     case erdVal resDisp ^. hVal of
     Sugar.RRecord [] -> Styled.addBgColor Theme.evaluatedPathBGColor & pushToReader
     Sugar.RFunc _ -> pure id
-    _ -> addAnnotationH (makeEvalView mNeigh resDisp) (postProcess ValAnnotation)
+    _ -> postProcess ValAnnotation >>= addAnnotationH (makeEvalView mNeigh resDisp)
 
 maybeAddAnnotationPl ::
     _ =>
