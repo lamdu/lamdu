@@ -110,10 +110,6 @@ make ::
     ElemId -> Config -> ExprGui.Expr Sugar.Composite i o -> GuiM env i o (Responsive o)
 make prependKeywords myId conf (Ann (Const pl) (Sugar.Composite tl punned compositeTail)) =
     do
-        tailEventMap <-
-            case compositeTail of
-            Sugar.ClosedCompositeTail actions -> closedCompositeEventMap conf actions
-            Sugar.OpenCompositeTail{} -> pure mempty
         env <- Lens.view id
         let goToParentEventMap =
                 WidgetIds.fromExprPayload pl & GuiState.updateCursor & pure & const
@@ -148,6 +144,11 @@ make prependKeywords myId conf (Ann (Const pl) (Sugar.Composite tl punned compos
                     <&> M.weakerEvents addNextEventMap
                     <&> (:[]) . (TaggedItem Nothing ?? Nothing)
                 ]
+        tailEventMap <-
+            case compositeTail of
+            Sugar.ClosedCompositeTail actions
+                | not (null body) || not (null punned) -> closedCompositeEventMap conf actions
+            _ -> pure mempty
         case items of
             [] -> makeUnit prependKeywords myId conf pl
             _ ->

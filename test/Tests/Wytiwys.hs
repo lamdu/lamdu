@@ -45,6 +45,7 @@ charKey '→' = Just GLFW.Key'Right
 charKey '↑' = Just GLFW.Key'Up
 charKey '↓' = Just GLFW.Key'Down
 charKey '←' = Just GLFW.Key'Left
+charKey '`' = Just GLFW.Key'GraveAccent
 charKey _ = Nothing
 
 charEvent :: Char -> Event
@@ -160,4 +161,9 @@ test =
 
     , wytiwys_ "{x["
     , wytiwys_ "{x⌥L"
+
+    -- Opening record key does nothing when adding first field.
+    -- It would had been slightly better if it opened it
+    -- but prior bug of deleting the whole record was much worse.
+    , wytiwys_ "{x`✗"
     ]
