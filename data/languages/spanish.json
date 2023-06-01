@@ -165,6 +165,7 @@
             "gotoNextOutdated": "Ir a la siguiente definición obsoleta",
             "varSkolemEscape": "La variabile di tipo sfugge al suo ambito: ",
             "occursError": "La variable de tipo ocurriría en sí misma: ",
+            "constraintsViolation": "No se puede unificar debido a restricciones de tipo",
             "enabledSugars": "Azúcares habilitados"
         },
         "name": {

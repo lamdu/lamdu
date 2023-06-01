@@ -164,6 +164,7 @@
             "gotoNextOutdated": "עבור להגדרה המוזנחת הבאה",
             "varSkolemEscape": "משתנה טיפוסים יוצא מתחום הגדרתו: ",
             "occursError": "משתנה טיפוסים מכיל את עצמו: ",
+            "constraintsViolation": "טיפוס לא מתאים עקב מגבלות",
             "enabledSugars": "שוגרים דלוקים"
         },
         "statusBar": {

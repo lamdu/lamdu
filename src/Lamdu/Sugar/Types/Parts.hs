@@ -165,6 +165,7 @@ data Query = Query
 
 data TypeMismatchReason name
     = TypesCannotUnify
+    | TypesCannotUnifyDueToConstraints
     | TypeVarSkolemEscape (Annotated EntityId # SugarType.Type name)
     | TypeVarOccursInItself (Annotated EntityId # SugarType.Type name)
     deriving Generic

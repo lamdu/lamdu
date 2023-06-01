@@ -163,6 +163,7 @@
             "gotoNextOutdated": "Vai alla prossima definizione obsoleta",
             "varSkolemEscape": "La variable de tipo escapa a su alcance: ",
             "occursError": "Variabile di tipo si verificherebbe in sé: ",
+            "constraintsViolation": "Impossibile unificare a causa di vincoli di tipo",
             "enabledSugars": "Zuccheri abilitati"
         },
         "name": {

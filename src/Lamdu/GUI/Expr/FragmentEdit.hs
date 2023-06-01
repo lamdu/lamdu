@@ -113,6 +113,8 @@ make (Ann (Const pl) fragment) =
                             label Texts.occursError
                             M./|/
                             TypeView.make t
+                        Sugar.TypesCannotUnifyDueToConstraints ->
+                            label Texts.constraintsViolation
                         _ -> pure M.empty
                     addAnnotationBackground <&> const >>= (`addAnnotationBelow` ann)
                         <&> (lineBelow color elemId (spacing * stdFontHeight) .)

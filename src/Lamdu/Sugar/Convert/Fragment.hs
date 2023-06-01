@@ -114,6 +114,8 @@ convert (V.App funcI argI) exprPl =
                     ^?! Lens._Right . Lens._1
                     & makeTypeAnnotation (EntityId.ofTypeMismatch typeAnnId) . Pure
                     <&> Sugar.TypeVarOccursInItself
+                T.TypeError ConstraintsViolation{} -> pure Sugar.TypesCannotUnifyDueToConstraints
+                T.RowError ConstraintsViolation{} -> pure Sugar.TypesCannotUnifyDueToConstraints
                 _ -> pure Sugar.TypesCannotUnify
                 where
                     typeAnnId = EntityId.ofFragmentArg (argS ^. annotation . pEntityId)

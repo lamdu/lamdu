@@ -163,6 +163,7 @@
             "gotoNextOutdated": "Go to next outdated definition",
             "varSkolemEscape": "Type variable escapes its scope: ",
             "occursError": "Type variable would occur in itself: ",
+            "constraintsViolation": "Cannot unify due to type constraints",
             "enabledSugars": "Enabled sugars"
         },
         "name": {

@@ -309,6 +309,7 @@ instance (a ~ OldName m, b ~ NewName m) => Walk m (TypeMismatch a) (TypeMismatch
 
 instance (a ~ OldName m, b ~ NewName m) => Walk m (TypeMismatchReason a) (TypeMismatchReason b) where
     walk TypesCannotUnify = pure TypesCannotUnify
+    walk TypesCannotUnifyDueToConstraints = pure TypesCannotUnifyDueToConstraints
     walk (TypeVarSkolemEscape x) = walk x <&> TypeVarSkolemEscape
     walk (TypeVarOccursInItself x) = walk x <&> TypeVarOccursInItself
 
