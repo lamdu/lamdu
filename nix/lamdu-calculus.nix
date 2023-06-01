@@ -9,8 +9,8 @@ mkDerivation {
   src = fetchFromGitHub {
     owner = "lamdu";
     repo = "lamdu-calculus";
-    sha256 = "0544ih2342rl2cqsc6rikn69vzlxvw24ncliqyy1ncy60y8iqcj0";
-    rev = "6fe1f9d89d584eb173c10f851a819865824fb5ee";
+    sha256 = "TODO";
+    rev = "93a80fc9c4c36c38a6f055b01f449acc7bc55754";
   };
   libraryHaskellDepends = [
     base base-compat base16-bytestring binary bytestring constraints containers
