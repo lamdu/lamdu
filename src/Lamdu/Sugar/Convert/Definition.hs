@@ -8,11 +8,13 @@ import qualified Control.Lens as Lens
 import           Control.Monad.Once (OnceT, Typeable)
 import           Control.Monad.Reader (ReaderT(..))
 import           Control.Monad.Transaction (MonadTransaction)
+import           Data.Either (fromRight)
 import qualified Data.Map as Map
 import           Data.Property (Property(Property))
 import qualified Data.Property as Property
 import qualified Data.Set as Set
 import           Hyper
+import           Hyper.Unify (UVar)
 import           Hyper.Recurse (Recursive(..))
 import qualified Lamdu.Cache as Cache
 import           Lamdu.Calc.Definition (depsGlobalTypes)
@@ -42,15 +44,13 @@ import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import           Lamdu.Sugar.Types
 import           Revision.Deltum.Transaction (Transaction)
 import qualified Revision.Deltum.Transaction as Transaction
-import           Text.PrettyPrint.HughesPJClass (Pretty(..))
 
 import           Lamdu.Prelude
 
 type T = Transaction
 
-assertInferSuccess :: HasCallStack => Either (Pure # T.TypeError) a -> a
-assertInferSuccess =
-    either (error . ("Type inference failed: " ++) . show . pPrint) id
+assertInferSuccess :: HasCallStack => Either (T.TypeError # UVar) a -> a
+assertInferSuccess = fromRight (error "Type inference failed")
 
 emptyScopeInfo :: Maybe (RecursiveRef m) -> ScopeInfo m
 emptyScopeInfo recursiveRef =
@@ -105,6 +105,7 @@ convertInferDefExpr env defType defExpr defI =
         let context =
                 Context
                 { _scInferContext = newInferContext
+                , _scInferContextAfterBindings = inferCtxPostBindings
                 , _scSugars = env ^. has
                 , _scCodeAnchors = env ^. Anchors.codeAnchors
                 , _scScopeInfo =
@@ -128,7 +129,7 @@ convertInferDefExpr env defType defExpr defI =
             & ConvertM.run context
             <&> _DefinitionBodyExpression . deContent %~ collectHiddenEntityIds valInferred
     where
-        Load.InferOut valInferred newInferContext =
+        Load.InferOut valInferred newInferContext inferCtxPostBindings =
             Load.inferDef cachedInfer (env ^. has) defExpr defVar
             & assertInferSuccess
         cachedInfer = Cache.infer (env ^. has)

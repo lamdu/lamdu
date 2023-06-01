@@ -34,7 +34,6 @@ import           Lamdu.Sugar.Convert.PostProcess (makeScheme)
 import qualified Lamdu.Sugar.Internal.EntityId as EntityId
 import           Lamdu.Sugar.Types
 import           Revision.Deltum.Transaction (Transaction)
-import           Text.PrettyPrint.HughesPJClass (prettyShow)
 
 import           Lamdu.Prelude
 
@@ -55,7 +54,7 @@ moveToGlobalScope =
             <&> (Load.inferDef infer (ctx ^. ConvertM.scDebugMonitors) ?? param)
         scheme <-
             case inferRes >>= makeScheme of
-            Left err -> error ("extract to global scope failed inference: " ++ show (prettyShow err))
+            Left{} -> error "extract to global scope failed inference"
             Right x -> pure x
         let defExprI = defExpr <&> (^. ExprIRef.iref)
         DataOps.newPublicDefinitionToIRef

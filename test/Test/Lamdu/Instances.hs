@@ -111,7 +111,8 @@ instance Eq (Sugar.TagPane f) where
     , ''Sugar.AddParam, ''Sugar.VarForm, ''Sugar.Payload
     , ''Sugar.DefinitionBuiltin, ''Sugar.DefinitionForm, ''Sugar.NominalPane
     , ''Sugar.GetVar, ''Sugar.Leaf, ''Sugar.NameRef, ''Sugar.Var
-    , ''Sugar.Scheme, ''Sugar.TagRef, ''Sugar.TagChoice, ''Sugar.TagOption, ''Sugar.TypeMismatch
+    , ''Sugar.Scheme, ''Sugar.TagRef, ''Sugar.TagChoice, ''Sugar.TagOption
+    , ''Sugar.TypeMismatch, ''Sugar.TypeMismatchReason
     ] & sequenceA <&> concat
 
 makeInstances [''NFData]
@@ -128,7 +129,7 @@ makeInstances [''NFData]
     , ''Sugar.CompiledErrorType, ''ShowAnnotation, ''LangId, ''EntityId, ''Sugar.ParamKind
     , ''Name, ''Name.Collision, ''Name.TagName, ''Name.TagText
     , ''Tag.TextsInLang, ''Def.FFIName, ''Tag.DirOp, ''Tag.Symbol, ''Tag.Tag, ''CurAndPrev
-    , ''Sugar.TaggedVarId, ''Sugar.TypeMismatchReason
+    , ''Sugar.TaggedVarId
     ]
 
 deriving instance (Eq name, Eq (o a)) => Eq (Sugar.DefinitionOutdatedType name o a)

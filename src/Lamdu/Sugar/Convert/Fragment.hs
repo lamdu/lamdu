@@ -1,3 +1,5 @@
+{-# LANGUAGE TypeFamilies #-}
+
 -- | Convert applied holes to Fragments
 
 module Lamdu.Sugar.Convert.Fragment
@@ -54,7 +56,7 @@ import           Lamdu.Prelude
 
 type T = Transaction.Transaction
 
-checkTypeMatch :: Monad m => UVar # T.Type -> UVar # T.Type -> ConvertM m (Maybe (Pure # T.TypeError))
+checkTypeMatch :: Monad m => UVar # T.Type -> UVar # T.Type -> ConvertM m (Maybe (T.TypeError # UVar))
 checkTypeMatch x y =
     Lens.view ConvertM.scInferContext <&> check <&> (^? Lens._Left)
     where
@@ -95,16 +97,20 @@ convert (V.App funcI argI) exprPl =
             Just{} -> local (ConvertM.scPostProcessRoot %~ unfragmentIfTypesAllow unfragment)
         postProcess <- ConvertM.postProcessAssert
         healMis <- healMismatch
+        ctxWithBindings <- Lens.view ConvertM.scInferContextAfterBindings
         let makeTypeMismatch err =
-                makeTypeAnnotation
-                (EntityId.ofFragmentArg (argS ^. annotation . pEntityId))
-                (argS ^. annotation . pUnsugared . hAnn . Input.inferredType)
-                <&> (`Sugar.TypeMismatch` reason)
+                Sugar.TypeMismatch
+                <$> makeTypeAnnotation typeAnnId (argS ^. annotation . pUnsugared . hAnn . Input.inferredType)
+                <*>
+                case err of
+                T.TypeError (SkolemEscape t) ->
+                    Infer.runPureInfer V.emptyScope ctxWithBindings (applyBindings t)
+                    ^?! Lens._Right . Lens._1
+                    & makeTypeAnnotation (EntityId.ofTypeMismatch typeAnnId)
+                    <&> Sugar.TypeVarSkolemEscape
+                _ -> pure Sugar.TypesCannotUnify
                 where
-                    reason =
-                        case err ^. _Pure of
-                        T.TypeError SkolemEscape{} -> Sugar.TypeVarSkolemEscape
-                        _ -> Sugar.TypesCannotUnify
+                    typeAnnId = EntityId.ofFragmentArg (argS ^. annotation . pEntityId)
         typeMismatch <- Lens._Just makeTypeMismatch mTypeMismatch
         tagsProp <- Lens.view Anchors.codeAnchors <&> Anchors.tags
         opts <-

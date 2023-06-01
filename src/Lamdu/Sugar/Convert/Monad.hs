@@ -7,7 +7,8 @@ module Lamdu.Sugar.Convert.Monad
     , scopeInfo, scopeInfoOuterPositions
 
     , Context(..)
-    , scInferContext, scTopLevelExpr, scPostProcessRoot, siRecursiveRef
+    , scInferContext, scInferContextAfterBindings
+    , scTopLevelExpr, scPostProcessRoot, siRecursiveRef
     , scSugars, scScopeInfo, scDebugMonitors, scCacheFunctions
     , scOutdatedDefinitions, scFrozenDeps
 
@@ -42,7 +43,6 @@ import           Lamdu.Sugar.Internal
 import qualified Lamdu.Sugar.Types as Sugar
 import           Revision.Deltum.Transaction (Transaction)
 import qualified Revision.Deltum.Transaction as Transaction
-import           Text.PrettyPrint.HughesPJClass (prettyShow)
 
 import           Lamdu.Prelude
 
@@ -89,6 +89,7 @@ data PositionInfo = TopPos V.Var | BinderPos | ExpressionPos deriving Eq
 
 data Context m = Context
     { _scInferContext :: InferState
+    , _scInferContextAfterBindings :: InferState
     , _scCodeAnchors :: Anchors.CodeAnchors m
     , _scScopeInfo :: ScopeInfo m
     , _scTopLevelExpr :: Ann (Input.Payload m) # V.Term
@@ -137,7 +138,7 @@ typeProtectedSetToVal =
                     _ <- checkOk
                     pure res
 
-postProcessWith :: Monad m => (Pure # T.TypeError -> T m ()) -> ConvertM m (T m ())
+postProcessWith :: Monad m => (T.TypeError # UVar -> T m ()) -> ConvertM m (T m ())
 postProcessWith onError =
     Lens.view scPostProcessRoot <&>
     \postProcess ->
@@ -151,10 +152,10 @@ postProcessWith onError =
             postProcess >>=
                 \case
                 PostProcess.GoodExpr -> pure ()
-                PostProcess.BadExpr e -> error ("postProcessWith onError failed: " <> prettyShow e)
+                PostProcess.BadExpr{} -> error "postProcessWith onError failed"
 
 postProcessAssert :: Monad m => ConvertM m (T m ())
-postProcessAssert = postProcessWith (error . prettyShow)
+postProcessAssert = postProcessWith (const (error "BLAH"))
 
 run :: (HasCallStack, Monad m) => Context m -> ConvertM m a -> OnceT (T m) a
 run ctx (ConvertM action) =

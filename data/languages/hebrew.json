@@ -162,7 +162,7 @@
             "typeOperatorHere": "הזן סימן כאן",
             "opaque": "אטום",
             "gotoNextOutdated": "עבור להגדרה המוזנחת הבאה",
-            "varSkolemEscape": "משתנה טיפוסים יוצא מתחום הגדרתו",
+            "varSkolemEscape": "משתנה טיפוסים יוצא מתחום הגדרתו: ",
             "enabledSugars": "שוגרים דלוקים"
         },
         "statusBar": {

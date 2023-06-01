@@ -287,7 +287,7 @@ instance ToBody LabeledApply where
 instance ToBody Fragment where
     toBody Fragment{_fExpr, _fHeal, _fTypeMismatch, _fOptions, _fOptApply} =
         do
-            newTypeMismatch <- (Lens._Just . tmType) walk _fTypeMismatch
+            newTypeMismatch <- Lens._Just walk _fTypeMismatch
             newExpr <- toExpression _fExpr
             w <- walkOpts
             s <- tagSuffixes
@@ -300,6 +300,12 @@ instance ToBody Fragment where
                 , _fOptApply = _fOptApply >>= run . optionExpr toExpression
                 , _fTagSuffixes = s
                 }
+
+instance (a ~ OldName m, b ~ NewName m) => Walk m (TypeMismatch a) (TypeMismatch b) where
+    walk (TypeMismatch t r) =
+        TypeMismatch
+        <$> walk t
+        <*> _TypeVarSkolemEscape walk r
 
 instance ToBody FragOpt where
     toBody (FragPostfix x) = traverse toExpression x <&> FragPostfix

@@ -56,7 +56,7 @@ mkExtractToDef exprPl =
                 generalize (exprPl ^. Input.inferredTypeUVar)
                 >>= S.saveScheme
                 & runPureInfer @(V.Scope # UVar) V.emptyScope (ctx ^. ConvertM.scInferContext)
-                & Lens._Left %~ (\x -> x :: Pure # T.TypeError)
+                & Lens._Left %~ (\x -> x :: T.TypeError # UVar)
                 & (^?! Lens._Right . _1)
         let deps = ctx ^. ConvertM.scFrozenDeps . Property.pVal
         newDefI <-

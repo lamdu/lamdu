@@ -25,7 +25,7 @@ module Lamdu.Sugar.Types.Parts
     , Expr
     , ParenInfo(..), piNeedParens, piMinOpPrec
     , TypeMismatch(..), tmType, tmReason
-    , TypeMismatchReason(..), _TypesCannotUnify
+    , TypeMismatchReason(..), _TypesCannotUnify, _TypeVarSkolemEscape
     ) where
 
 import qualified Control.Lens as Lens
@@ -163,14 +163,14 @@ data Query = Query
     , _qSearchTerm :: Text
     }
 
-data TypeMismatchReason
+data TypeMismatchReason name
     = TypesCannotUnify
-    | TypeVarSkolemEscape
-    deriving (Eq, Ord, Show, Generic)
+    | TypeVarSkolemEscape (Annotated EntityId # SugarType.Type name)
+    deriving Generic
 
 data TypeMismatch name = TypeMismatch
     { _tmType :: Annotated EntityId # SugarType.Type name -- Type of fragmented (mismatching) expression
-    , _tmReason :: TypeMismatchReason
+    , _tmReason :: TypeMismatchReason name
     } deriving Generic
 
 traverse Lens.makeLenses

@@ -26,12 +26,12 @@ import           Lamdu.Prelude
 
 type T = Transaction
 
-data Result = GoodExpr | BadExpr (Pure # T.TypeError)
+data Result = GoodExpr | BadExpr (T.TypeError # UVar)
 
 makeScheme ::
     Load.InferOut m ->
-    Either (Pure # T.TypeError) (Pure # T.Scheme)
-makeScheme (Load.InferOut inferredVal inferContext) =
+    Either (T.TypeError # UVar) (Pure # T.Scheme)
+makeScheme (Load.InferOut inferredVal inferContext _) =
     generalize (inferredVal ^. hAnn . Input.inferredTypeUVar)
     >>= saveScheme
     & runPureInfer @(V.Scope # UVar) V.emptyScope inferContext

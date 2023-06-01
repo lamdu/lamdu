@@ -105,7 +105,10 @@ make (Ann (Const pl) fragment) =
                         TypeView.make (mismatch ^. Sugar.tmType)
                         M./-/
                         case mismatch ^. Sugar.tmReason of
-                        Sugar.TypeVarSkolemEscape -> label Texts.varSkolemEscape
+                        Sugar.TypeVarSkolemEscape t ->
+                            label Texts.varSkolemEscape
+                            M./|/
+                            TypeView.make t
                         _ -> pure M.empty
                     addAnnotationBackground <&> const >>= (`addAnnotationBelow` ann)
                         <&> (lineBelow color elemId (spacing * stdFontHeight) .)

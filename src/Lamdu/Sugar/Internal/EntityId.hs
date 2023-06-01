@@ -10,6 +10,7 @@ module Lamdu.Sugar.Internal.EntityId
     , ofEvalOf, ofEvalField, ofEvalArrayIdx
     , ofTypeOf, ofRestOfComposite, ofFunParam, ofFunResult, ofTInstParam
     , usedTypeOf, currentTypeOf
+    , ofTypeMismatch
     ) where
 
 import           Data.Binary.Extended (encodeS)
@@ -99,3 +100,6 @@ currentTypeOf = ofTypeOf
 
 usedTypeOf :: EntityId -> EntityId
 usedTypeOf = augment "usedTypeOf"
+
+ofTypeMismatch :: EntityId -> EntityId
+ofTypeMismatch = augment "mismatch"

@@ -32,7 +32,7 @@ type MemoableInferFunc =
     , V.Scope # UVar
     , InferState
     ) ->
-    Either (Pure # T.TypeError)
+    Either (T.TypeError # UVar)
     (Ann (InferResult UVar) # V.Term, V.Scope # UVar, InferState)
 
 newtype Functions = Functions

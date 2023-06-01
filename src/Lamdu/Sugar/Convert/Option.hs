@@ -336,17 +336,17 @@ makeOption dstPl res =
                 , inferResults1 <&> void
                 , scope ^. V.scopeLevel
                 )
-        let ((iExpr, ctx1, i), (inferred, _)) =
+        let ((iExpr, ctx1, i), rNoUnify@(inferred, _)) =
                 inferResults1 ^? traverse . Lens._Right
                 & fromMaybe (error ("inference of all options failed: " <> errInfo))
         let unifyResult =
                 Infer.runPureInfer () ctx1
                 (unify (dstPl ^. Input.inferredTypeUVar) (inferred ^. hAnn . _2 . inferResult . _2)
                     *> inferUVarsApplyBindings iExpr)
-        let inferred1 =
+        let (inferred1, ctxBindings) =
                 case unifyResult of
-                Left _err -> inferred
-                Right (newInferred, _) -> newInferred
+                Left _err -> rNoUnify
+                Right x -> x
         (written, changes) <-
             inferred1 & hflipped %~ hmap (const markToPrune)
             & hAnn . _2 . _1 .~ Const False
@@ -383,7 +383,10 @@ makeOption dstPl res =
                 case recordVarTags of
                 Just t -> const (Sugar.HoleVarsRecord t)
                 Nothing -> Sugar.HoleBinder
-            & local (ConvertM.scInferContext .~ ctx1)
+            & local
+                ( (ConvertM.scInferContext .~ ctx1)
+                . (ConvertM.scInferContextAfterBindings .~ ctxBindings)
+                )
             & -- Updated deps are required to sugar labeled apply
                 Lens.locally (ConvertM.scFrozenDeps . pVal) (<> res ^. rDeps)
             <&> markNodeAnnotations @_ @(Sugar.HoleOpt (ShowAnnotation, EvalPrep) InternalName _ _)

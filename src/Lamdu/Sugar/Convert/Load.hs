@@ -2,7 +2,7 @@
 -- (unify with stored ParamLists, recursion support)
 {-# LANGUAGE TemplateHaskell, TupleSections #-}
 module Lamdu.Sugar.Convert.Load
-    ( InferOut(..), irVal, irCtx
+    ( InferOut(..), irVal, irCtx, irCtxAfterBindings
     , inferDef
     , makeNominalsMap
     , readValAndAddProperties
@@ -101,30 +101,29 @@ readValAndAddProperties prop =
 data InferOut m = InferOut
     { _irVal :: Ann (Input.Payload m) # V.Term
     , _irCtx :: InferState
+    , _irCtxAfterBindings :: InferState
     }
 Lens.makeLenses ''InferOut
 
 runInferResult ::
     Debug.Monitors ->
     PureInfer (V.Scope # UVar) (Ann (HRef m :*: InferResult UVar) # V.Term, V.Scope # UVar) ->
-    Either (Pure # T.TypeError) (InferOut m)
+    Either (T.TypeError # UVar) (InferOut m)
 runInferResult _monitors act =
     -- TODO: use _monitors
     do
         ((inferredTerm, topLevelScope), inferState0) <- runPureInfer V.emptyScope (InferState emptyPureInferState varGen) act
-        (resolvedTerm, _inferState1) <- inferUVarsApplyBindings inferredTerm & runPureInfer () inferState0
+        (resolvedTerm, inferState1) <- inferUVarsApplyBindings inferredTerm & runPureInfer () inferState0
         Right InferOut
             { _irVal = preparePayloads topLevelScope resolvedTerm
-            , _irCtx =
-                -- The state before applyBindings is suitable for additional unifications
-                -- later done when checking options for holes and fragments.
-                inferState0
+            , _irCtx = inferState0
+            , _irCtxAfterBindings = inferState1
             }
 
 inferDef ::
     InferFunc (HRef m) -> Debug.Monitors ->
     Definition.Expr (Ann (HRef m) # V.Term) -> V.Var ->
-    Either (Pure # T.TypeError) (InferOut m)
+    Either (T.TypeError # UVar) (InferOut m)
 inferDef inferFunc monitors defExpr defVar =
     do
         defTv <- newUnbound
