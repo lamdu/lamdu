@@ -163,6 +163,7 @@
             "opaque": "אטום",
             "gotoNextOutdated": "עבור להגדרה המוזנחת הבאה",
             "varSkolemEscape": "משתנה טיפוסים יוצא מתחום הגדרתו: ",
+            "occursError": "משתנה טיפוסים מכיל את עצמו: ",
             "enabledSugars": "שוגרים דלוקים"
         },
         "statusBar": {

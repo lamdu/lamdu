@@ -162,6 +162,7 @@
             "opaque": "Opaque",
             "gotoNextOutdated": "Go to next outdated definition",
             "varSkolemEscape": "Type variable escapes its scope: ",
+            "occursError": "Type variable would occur in itself: ",
             "enabledSugars": "Enabled sugars"
         },
         "name": {

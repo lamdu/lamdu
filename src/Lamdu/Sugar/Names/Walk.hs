@@ -310,6 +310,7 @@ instance (a ~ OldName m, b ~ NewName m) => Walk m (TypeMismatch a) (TypeMismatch
 instance (a ~ OldName m, b ~ NewName m) => Walk m (TypeMismatchReason a) (TypeMismatchReason b) where
     walk TypesCannotUnify = pure TypesCannotUnify
     walk (TypeVarSkolemEscape x) = walk x <&> TypeVarSkolemEscape
+    walk (TypeVarOccursInItself x) = walk x <&> TypeVarOccursInItself
 
 instance ToBody FragOpt where
     toBody (FragPostfix x) = traverse toExpression x <&> FragPostfix

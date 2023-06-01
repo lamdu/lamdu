@@ -1,4 +1,4 @@
-{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeApplications #-}
 
 -- | Convert applied holes to Fragments
 
@@ -22,7 +22,7 @@ import           Hyper.Syntax.Nominal (nId, nScheme)
 import           Hyper.Syntax.Row (FlatRowExtends, freExtends)
 import           Hyper.Syntax.Scheme (sTyp)
 import           Hyper.Type.Prune (Prune(..))
-import           Hyper.Unify (UVar, applyBindings, unify, UnifyError(..))
+import           Hyper.Unify (UVar, applyBindings, unify, UnifyError(..), Unify)
 import qualified Lamdu.Builtins.Anchors as Builtins
 import           Lamdu.Calc.Definition (depsNominals)
 import qualified Lamdu.Calc.Infer as Infer
@@ -104,10 +104,16 @@ convert (V.App funcI argI) exprPl =
                 <*>
                 case err of
                 T.TypeError (SkolemEscape t) ->
-                    Infer.runPureInfer V.emptyScope ctxWithBindings (applyBindings t)
+                    Infer.runPureInfer () ctxWithBindings (applyBindings t)
                     ^?! Lens._Right . Lens._1
                     & makeTypeAnnotation (EntityId.ofTypeMismatch typeAnnId)
                     <&> Sugar.TypeVarSkolemEscape
+                T.TypeError (Occurs v _) ->
+                    Infer.runPureInfer () ctxWithBindings
+                    (v & htraverse (Proxy @(Unify (Infer.PureInfer ())) #> applyBindings))
+                    ^?! Lens._Right . Lens._1
+                    & makeTypeAnnotation (EntityId.ofTypeMismatch typeAnnId) . Pure
+                    <&> Sugar.TypeVarOccursInItself
                 _ -> pure Sugar.TypesCannotUnify
                 where
                     typeAnnId = EntityId.ofFragmentArg (argS ^. annotation . pEntityId)

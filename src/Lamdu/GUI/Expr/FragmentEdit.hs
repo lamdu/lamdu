@@ -109,6 +109,10 @@ make (Ann (Const pl) fragment) =
                             label Texts.varSkolemEscape
                             M./|/
                             TypeView.make t
+                        Sugar.TypeVarOccursInItself t ->
+                            label Texts.occursError
+                            M./|/
+                            TypeView.make t
                         _ -> pure M.empty
                     addAnnotationBackground <&> const >>= (`addAnnotationBelow` ann)
                         <&> (lineBelow color elemId (spacing * stdFontHeight) .)

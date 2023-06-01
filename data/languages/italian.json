@@ -162,6 +162,7 @@
             "opaque": "opaco",
             "gotoNextOutdated": "Vai alla prossima definizione obsoleta",
             "varSkolemEscape": "La variable de tipo escapa a su alcance: ",
+            "occursError": "Variabile di tipo si verificherebbe in sé: ",
             "enabledSugars": "Zuccheri abilitati"
         },
         "name": {

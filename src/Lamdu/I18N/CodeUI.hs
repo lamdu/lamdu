@@ -91,6 +91,7 @@ data CodeUI a = CodeUI
     , _gotoNextOutdated :: a
     , _enabledSugars :: a
     , _varSkolemEscape :: a
+    , _occursError :: a
     }
     deriving stock (Generic, Generic1, Eq, Functor, Foldable, Traversable)
     deriving anyclass ElemIds
