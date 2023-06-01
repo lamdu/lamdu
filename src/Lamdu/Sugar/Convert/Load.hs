@@ -110,16 +110,16 @@ runInferResult ::
     Either (Pure # T.TypeError) (InferOut m)
 runInferResult _monitors act =
     -- TODO: use _monitors
-    case runPureInfer V.emptyScope (InferState emptyPureInferState varGen) act of
-    Left x -> Left x
-    Right ((inferredTerm, topLevelScope), inferState0) ->
-        case inferUVarsApplyBindings inferredTerm & runPureInfer () inferState0 of
-        Left x -> Left x
-        Right (resolvedTerm, _inferState1) ->
-            InferOut
-            ( preparePayloads topLevelScope resolvedTerm
-            ) inferState0
-            & Right
+    do
+        ((inferredTerm, topLevelScope), inferState0) <- runPureInfer V.emptyScope (InferState emptyPureInferState varGen) act
+        (resolvedTerm, _inferState1) <- inferUVarsApplyBindings inferredTerm & runPureInfer () inferState0
+        Right InferOut
+            { _irVal = preparePayloads topLevelScope resolvedTerm
+            , _irCtx =
+                -- The state before applyBindings is suitable for additional unifications
+                -- later done when checking options for holes and fragments.
+                inferState0
+            }
 
 inferDef ::
     InferFunc (HRef m) -> Debug.Monitors ->
