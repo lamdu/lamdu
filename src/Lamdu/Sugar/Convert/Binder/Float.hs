@@ -211,7 +211,7 @@ makeFloatLetToOuterScope setTopLevel lam val =
     <$> processLet newLam val
     <*> Lens.view id
     <*> moveToGlobalScope
-    <*> ConvertM.postProcessWith
+    <*> ConvertM.postProcessWith fixUsages
     <&>
     \(makeNewLet, ctx, floatToGlobal, postProcess) ->
     do
@@ -242,7 +242,7 @@ makeFloatLetToOuterScope setTopLevel lam val =
                     Anchors.assocTag param & Property.getP
                 <&> EntityId.ofTaggedEntity param
                 <&> ExtractToLet
-        r <$ postProcess fixUsages
+        r <$ postProcess
     where
         param = lam ^. V.tlIn
         fixUsages _ =

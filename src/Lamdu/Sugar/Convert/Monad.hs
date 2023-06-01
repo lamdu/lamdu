@@ -137,10 +137,10 @@ typeProtectedSetToVal =
                     _ <- checkOk
                     pure res
 
-postProcessWith :: Monad m => ConvertM m ((Pure # T.TypeError -> T m ()) -> T m ())
-postProcessWith =
-    Lens.view scPostProcessRoot
-    <&> \postProcess onError ->
+postProcessWith :: Monad m => (Pure # T.TypeError -> T m ()) -> ConvertM m (T m ())
+postProcessWith onError =
+    Lens.view scPostProcessRoot <&>
+    \postProcess ->
     postProcess
     >>=
     \case
@@ -154,7 +154,7 @@ postProcessWith =
                 PostProcess.BadExpr e -> error ("postProcessWith onError failed: " <> prettyShow e)
 
 postProcessAssert :: Monad m => ConvertM m (T m ())
-postProcessAssert = postProcessWith ?? error . prettyShow
+postProcessAssert = postProcessWith (error . prettyShow)
 
 run :: (HasCallStack, Monad m) => Context m -> ConvertM m a -> OnceT (T m) a
 run ctx (ConvertM action) =
