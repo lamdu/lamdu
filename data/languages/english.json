@@ -161,9 +161,9 @@
             "typeOperatorHere": "Type operator here",
             "opaque": "Opaque",
             "gotoNextOutdated": "Go to next outdated definition",
-            "varSkolemEscape": "Type variable escapes its scope: ",
-            "occursError": "Type variable would occur in itself: ",
-            "constraintsViolation": "Cannot unify due to type constraints",
+            "varSkolemEscape": "Scoped type variable can't escape: ",
+            "occursError": "Type can't occur in itself: ",
+            "constraintsViolation": "Mismatch due to constraints",
             "enabledSugars": "Enabled sugars"
         },
         "name": {

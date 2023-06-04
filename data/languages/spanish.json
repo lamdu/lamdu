@@ -163,9 +163,9 @@
             "typeOperatorHere": "Escriba un operador aquí",
             "opaque": "Opaco",
             "gotoNextOutdated": "Ir a la siguiente definición obsoleta",
-            "varSkolemEscape": "La variabile di tipo sfugge al suo ambito: ",
-            "occursError": "La variable de tipo ocurriría en sí misma: ",
-            "constraintsViolation": "No se puede unificar debido a restricciones de tipo",
+            "varSkolemEscape": "La variable de tipo con ámbito no puede escapar: ",
+            "occursError": "El tipo no puede ocurrir en sí mismo: ",
+            "constraintsViolation": "Desajuste debido a restricciones",
             "enabledSugars": "Azúcares habilitados"
         },
         "name": {

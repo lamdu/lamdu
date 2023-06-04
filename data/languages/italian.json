@@ -161,9 +161,9 @@
             "typeOperatorHere": "Operatore tipo qui",
             "opaque": "opaco",
             "gotoNextOutdated": "Vai alla prossima definizione obsoleta",
-            "varSkolemEscape": "La variable de tipo escapa a su alcance: ",
-            "occursError": "Variabile di tipo si verificherebbe in sé: ",
-            "constraintsViolation": "Impossibile unificare a causa di vincoli di tipo",
+            "varSkolemEscape": "La variabile di tipo con ambito non può sfuggire: ",
+            "occursError": "Il tipo non può verificarsi di per sé: ",
+            "constraintsViolation": "Mancata corrispondenza a causa di vincoli",
             "enabledSugars": "Zuccheri abilitati"
         },
         "name": {
