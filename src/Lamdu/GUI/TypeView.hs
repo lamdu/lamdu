@@ -173,6 +173,14 @@ makeComposite ::
 makeComposite mkOpener mkCloser mkField composite =
     case composite of
     Sugar.CompositeFields [] Nothing -> makeEmptyComposite
+    Sugar.CompositeFields [] (Just var) ->
+        makeExt var
+        & crPre .~ Styled.grammar mkOpener
+        & crPost .~ Styled.grammar mkCloser
+        & addElemIdPrefix (0 :: Int)
+        & sequenceA
+        >>= gridViewTopLeftAlign . (:[]) . horizSetCompositeRow
+        <&> Align.toWithTextPos
     Sugar.CompositeFields fields extension ->
         traverse mkField fields
         <&> map toRow
@@ -191,12 +199,12 @@ makeComposite mkOpener mkCloser mkField composite =
             addExt =
                 case extension of
                 Nothing -> id
-                Just var ->
-                    (<> [CompositeRow
-                            (pure Element.empty) (Styled.grammar (Styled.label Texts.compositeExtendTail))
-                            (pure Element.empty) (NameView.make var) (pure Element.empty)]) .
-                    (Lens._last . crPost .~ pure Element.empty)
+                Just var -> (<> [makeExt var]) . (Lens._last . crPost .~ pure Element.empty)
     where
+        makeExt var =
+            CompositeRow (pure Element.empty)
+            (Styled.grammar (Styled.label Texts.compositeExtendTail))
+            (pure Element.empty) (NameView.make var) (pure Element.empty)
         addElemIdPrefix i row = row <&> Element.locallyAugmented i
         toRow (t, v) =
             CompositeRow (pure Element.empty) (pure t) space (pure v)
