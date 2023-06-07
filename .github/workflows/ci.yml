@@ -42,6 +42,8 @@ jobs:
     - name: Install Windows dependencies
       if: ${{ matrix.os == 'windows-2022' }}
       run: |
+        stack exec --system-ghc -- pacman -Syyu --noconfirm
+        stack exec --system-ghc -- pacman -Syyu --noconfirm
         stack exec --system-ghc -- pacman -S --noconfirm mingw-w64-x86_64-rocksdb
 
     - uses: actions/cache@v3.3.1
