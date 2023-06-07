@@ -13,6 +13,9 @@ let config = {
                         text-trie = haskell.lib.dontCheck (self.callPackage ./nix/text-trie.nix {});
                         momentu = self.callPackage ./nix/momentu.nix {};
                         lamdu-calculus = self.callPackage ./nix/lamdu-calculus.nix {};
+                        bindings-GLFW = haskell.lib.dontCheck (self.callPackage ./nix/bindings-GLFW.nix {});
+                        GLFW-b = haskell.lib.dontCheck # cannot run X code in a build
+                                 (self.callPackage ./nix/GLFW-b.nix {});
                         inline-js-core = self.callPackage ./nix/inline-js-core.nix {};
                     };
                 };
