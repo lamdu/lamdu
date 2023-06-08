@@ -45,6 +45,7 @@ test :: IO TestTree
 test =
     (:
         [ testOpPrec
+        , testLetFoldFuncAddParam
         , testFragmentSize
         , testLambdaDelete
         , testNewTag
@@ -227,6 +228,23 @@ testOpPrec =
         _ <- baseEnv & cursor .~ holeId & applyEvent dummyVirt (EventChar '&')
         workArea' <- convertWorkArea "" baseEnv
         unless (workAreaEq workArea workArea') (error "bad operator precedence")
+
+-- | Test for issue #200
+-- https://github.com/lamdu/lamdu/issues/200
+testLetFoldFuncAddParam :: HasCallStack => TestTree
+testLetFoldFuncAddParam =
+    testCase "let-fold-func-add-param" $
+    Env.make >>=
+    \baseEnv ->
+    testProgram "let-fold-func.json" $
+    do
+        letVarId <-
+            defExprPlainBodies . Sugar._BinderLet . Sugar.lNames .
+            Sugar._LhsVar . Sugar.vTag . Sugar.oTag . Sugar.tagRefTag . Sugar.tagInstance
+            & fromWorkArea baseEnv
+            <&> WidgetIds.fromEntityId
+        baseEnv & cursor .~ letVarId & applyEvent dummyVirt (simpleKeyEvent (noMods GLFW.Key'Space))
+            >>= convertAndMakeGui "" & void
 
 letBody :: Lens.Traversal' (Sugar.Binder v n i o # h) (h # Sugar.Binder v n i o)
 letBody = Sugar.bBody . Sugar._BinderLet . Sugar.lBody
