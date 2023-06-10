@@ -52,12 +52,13 @@ makeLetEdit item myId =
                     (E.toDoc env [has . MomentuTexts.edit, has . Texts.let_, has . MomentuTexts.delete])
                     . fmap (const bodyId)
                 ) (item ^? Sugar.lNames . Sugar._LhsVar . Sugar.vDelete)
-        (_, nameEdit) <- ParamsEdit.make True (pure Nothing) ParamsEdit.ScopeNavNotFocused myId myId bodyId (item ^. Sugar.lNames)
+        (_, nameEdit) <- ParamsEdit.make True (pure Nothing) ParamsEdit.ScopeNavNotFocused nameId nameId bodyId (item ^. Sugar.lNames)
         grammar (label Texts.let_) M./|/ Spacer.stdHSpace M./|/ pure (nameEdit & M.weakerEvents floatEventMap)
             >>= AssignmentEdit.make myId binder
             <&> M.weakerEvents delEventMap
             <&> M.padAround (env ^. has . Theme.letItemPadding)
     where
+        nameId = myId <> M.ElemId ["name"]
         bodyId = item ^. Sugar.lBody . annotation & WidgetIds.fromExprPayload
         binder = item ^. Sugar.lValue
 
