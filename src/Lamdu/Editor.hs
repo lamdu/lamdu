@@ -16,8 +16,10 @@ import           Control.Monad.Trans.FastWriter (evalWriterT)
 import qualified Data.Aeson.Config as AesonConfig
 import qualified Data.Bitmap as Bitmap
 import qualified Data.Bitmap.Pure.Pixels as BitmapPixels
+import qualified Data.ByteString as BS
+import qualified Data.ByteString.Base16 as Hex
 import           Data.CurAndPrev (current)
-import           Data.List (sortOn)
+import           Data.List (sortOn, intercalate)
 import           Data.IORef (IORef, newIORef, readIORef, writeIORef)
 import           Data.Property (Property(..), MkProperty', mkProperty)
 import qualified Data.Property as Property
@@ -225,7 +227,7 @@ runMainLoop ekg stateStorage subpixel win mainLoop configSampler
                 do
                     sample <- ConfigSampler.getSample configSampler
                     when (sample ^. sConfigData . Config.debug . Config.printCursor)
-                        (putStrLn ("Cursor: " <> show (mainEnv ^. M.cursor)))
+                        (debugCursor (mainEnv ^. M.cursor))
                     fonts <- getFonts (mainEnv ^. MainLoop.eZoom)
                     Cache.fence cache
                     settingsProp <- mkSettingsProp ^. mkProperty
@@ -243,6 +245,16 @@ runMainLoop ekg stateStorage subpixel win mainLoop configSampler
                 mainLoopOptions mkSettingsProp configSampler getFonts
                 stateStorage reportPerfCounters
             }
+
+debugCursor :: Widget.ElemId -> IO ()
+debugCursor cursor =
+    "Cursor: [" <> intercalate ", " (parts <&> showPart) <> "]"
+    & putStrLn
+    where
+        showPart part
+            | BS.length part == 16 = show part <> " (" <> show (Hex.encode part) <> ")"
+            | otherwise = show part
+        Widget.ElemId parts = cursor
 
 makeMainGui ::
     [TitledSelection Folder.Theme] -> [TitledSelection Folder.Language] ->
