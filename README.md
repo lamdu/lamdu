@@ -77,26 +77,21 @@ You do not need to explicitly save - as your Lamdu program is always saved.
 
 To create the function above:
 
-* Navigate to the "New..." button and press **space**.
+* Navigate to the "New..." button and type **`factorial x=`**.
 
-Type **`factorial x=`**.
+  Note: Lamdu spaces your code automatically.
+  When you pressed **space** at the left-hand-side of a definition, Lamdu
+  added a parameter to the function rather than a "space" whitespace character as a normal text editor would.
 
-*Note:* Lamdu spaces your code automatically.
-
-When you press **space** at the left-hand-side of a definition, Lamdu
-adds a parameter to the function and does not add a "space" as it
-would in a normal text editor.
-
-  The equals sign after `factorial` appears without typing it because all definitions have one.
+  The equals sign after `factorial` appeared without typing it because all definitions have one.
   However, after `factorial x`, you may type an equals sign anyways, or skip over it with the right cursor key.
 
-Now type the body of the function: **`if x=0 1 x*fac(x-1)`**
+* Now type the body of the function: **`if x=0`**, **tab**, **`1`**, **tab**, **`x*fac (x-1)`**
 
 We've now written the function. Let's use it.
 
-* Go back up to the REPL, just right of the `⋙` symbol.
-  Like with calculators, we want to clear anything in there before using it.
-  If there is an expression there, press **shift+left** until all is selected, then hit **delete**.
+* Open a REPL by navigating to the "New..." button and pressing **space**.
+* We don't have to name the repl, press **right** or **tab** to go to its body
 * Type "**`fac 5`**" and press **space**.
 
 Lamdu should now display the evaluation of the whole function, as well as its subexpresssions.
