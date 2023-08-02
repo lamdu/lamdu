@@ -7,8 +7,8 @@ mkDerivation {
   src = fetchFromGitHub {
     owner = "lamdu";
     repo = "text-trie";
-    sha256 = "175b35s3ci1vrqcxph4m31angbsiyjxwsw6bpxfyr4bil45wzv5s";
-    rev = "072256fb4884d40536c9a31e15fa60d3330d7c58";
+    sha256 = "TODO";
+    rev = "2b4c94bccaa9c60f59ff06fad04d52b113a53ff2";
   };
   libraryHaskellDepends = [
     base text binary
