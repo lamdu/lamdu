@@ -19,7 +19,7 @@ jobs:
       fail-fast: false
       matrix:
         stack: ["2.11.1"]
-        ghc: ["9.4.5"]
+        ghc: ["9.4.7"]
         os: ["ubuntu-latest", "windows-2022"]
 
     runs-on: ${{ matrix.os }}
