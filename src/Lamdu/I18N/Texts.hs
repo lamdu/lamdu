@@ -54,7 +54,7 @@ data Texts a = Texts
     , _mainLoop :: MainLoop.Texts a
     }
     deriving Eq
-Lens.makeLenses ''Texts
+Lens.makeLensesWith (Lens.lensRules & Lens.generateRecordSyntax .~ True) ''Texts
 JsonTH.derivePrefixed "_" ''Texts
 
 instance Has (Map LangId         Text) (Texts Text) where has = languageNames

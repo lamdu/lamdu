@@ -44,6 +44,6 @@ data Code a = Code
     deriving stock (Generic, Generic1, Eq, Functor, Foldable, Traversable)
     deriving anyclass ElemIds
     deriving Applicative via (Generically1 Code)
-Lens.makeLenses ''Code
+Lens.makeLensesWith (Lens.lensRules & Lens.generateRecordSyntax .~ True) ''Code
 JsonTH.derivePrefixed "_" ''Code
 

@@ -31,4 +31,4 @@ data Sugars a = Sugars
     } deriving stock (Eq, Show, Functor, Foldable, Traversable, Generic, Generic1)
     deriving Applicative via Generically1 Sugars
 JsonTH.derivePrefixed "_" ''Sugars
-Lens.makeLenses ''Sugars
+Lens.makeLensesWith (Lens.lensRules & Lens.generateRecordSyntax .~ True) ''Sugars

@@ -135,7 +135,7 @@ data Config key = Config
     } deriving (Eq, Show, Functor, Foldable, Traversable, Generic)
 JsonTH.derivePrefixed "_" ''Config
 
-Lens.makeLenses ''Config
+Lens.makeLensesWith (Lens.lensRules & Lens.generateRecordSyntax .~ True) ''Config
 
 hasConfig :: Has (Config ModKey) env => Lens' env (Config ModKey)
 hasConfig = has

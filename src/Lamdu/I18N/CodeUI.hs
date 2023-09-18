@@ -1,4 +1,4 @@
--- | CodeUI textxs
+-- | CodeUI texts
 {-# OPTIONS -O0 #-}
 {-# LANGUAGE TemplateHaskell, DerivingVia #-}
 module Lamdu.I18N.CodeUI where
@@ -97,6 +97,6 @@ data CodeUI a = CodeUI
     deriving stock (Generic, Generic1, Eq, Functor, Foldable, Traversable)
     deriving anyclass ElemIds
     deriving Applicative via (Generically1 CodeUI)
-Lens.makeLenses ''CodeUI
+Lens.makeLensesWith (Lens.lensRules & Lens.generateRecordSyntax .~ True) ''CodeUI
 JsonTH.derivePrefixed "_" ''CodeUI
 

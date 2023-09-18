@@ -28,5 +28,5 @@ data StatusBar a = StatusBar
     deriving stock (Generic, Generic1, Eq, Functor, Foldable, Traversable)
     deriving anyclass ElemIds
     deriving Applicative via (Generically1 StatusBar)
-Lens.makeLenses ''StatusBar
+Lens.makeLensesWith (Lens.lensRules & Lens.generateRecordSyntax .~ True) ''StatusBar
 JsonTH.derivePrefixed "_sb" ''StatusBar
