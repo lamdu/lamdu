@@ -208,9 +208,7 @@ parenKeysEvent ::
     MonadReader env m => m ([Lens.ALens' env Text] -> o a -> EventMap (o a))
 parenKeysEvent =
     Lens.view id <&>
-    \env texts act ->
-    E.charGroup (Just "Open Paren")
-    (E.toDoc env texts) "([" (const act)
+    \env texts -> E.charGroup Nothing (E.toDoc env texts) "([?" . const
 
 detachEventMap :: _ => ExprInfo o -> m (EventMap (o Update))
 detachEventMap exprInfo =
