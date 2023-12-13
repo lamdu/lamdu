@@ -27,7 +27,22 @@ stack install
 
 ### ubuntu
 
-Then to install lamdu - requires [stack](https://github.com/commercialhaskell/stack/releases) (version 1.6.1 or above):
+Lamdu requires [stack](https://github.com/commercialhaskell/stack/releases) (version 1.6.1 or above):
+
+To check your version of stack, use:
+
+```shell
+stack --version
+```
+
+and make sure that the version is at least 1.6.1. If stack is older than 1.6.1, you will need to upgrade stack. If you need to upgrade stack, use:
+
+```shell
+stack upgrade
+hash -r
+```
+
+To install lamdu, run the following:
 
 ```shell
 sudo apt-get update -qq
@@ -40,21 +55,29 @@ stack install
 ~/.local/bin/lamdu
 ```
 
-If the above fails at `stack setup` or `stack install`, it may because stack is older than 1.6.1. To upgrade stack, run the following commands:
-
-```shell
-stack upgrade
-hash -r
-```
-
 NOTE: `~/.local/bin` should be in your `$PATH` for the upgraded `stack` to take effect.
+
 
 ### fedora
 
 Optional: Install NodeJS with `sudo dnf insall nodejs`.
 Please see the starred note under "NodeJS & Build Time".
 
-requires [stack](https://github.com/commercialhaskell/stack/releases) (1.6.1 or above)
+Lamdu requires [stack](https://github.com/commercialhaskell/stack/releases) (version 1.6.1 or above):
+
+To check your version of stack, use:
+
+```shell
+stack --version
+```
+
+and make sure that the version is at least 1.6.1. If stack is older than 1.6.1, you will need to upgrade stack. If you need to upgrade stack, use:
+
+```shell
+stack upgrade
+hash -r
+```
+To install lamdu, run the following:
 
 ```shell
 sudo dnf install -y gcc gcc-c++ gmp-devel libXrandr-devel libXi-devel
@@ -65,13 +88,6 @@ cd lamdu
 stack setup
 stack install
 ~/.local/bin/lamdu
-```
-
-If the above fails at `stack setup` or `stack install`, it may because stack is older than 1.6.1. To upgrade stack, run the following commands:
-
-```shell
-stack upgrade
-hash -r
 ```
 
 NOTE: `~/.local/bin` should be in your `$PATH` for the upgraded `stack` to take effect.
@@ -106,9 +122,11 @@ Install:
 
 Then run:
 
-    git clone https://github.com/lamdu/lamdu.git
-    cd lamdu
-    stack exec -- pacman -S mingw-w64-x86_64-rocksdb
-    stack build
+```shell
+git clone https://github.com/lamdu/lamdu.git
+cd lamdu
+stack exec -- pacman -S mingw-w64-x86_64-rocksdb
+stack build
+```
 
 If the installation of RocksDB fails due to signature verification, consider the work-around in https://github.com/msys2/MSYS2-packages/issues/2343#issuecomment-780121556
