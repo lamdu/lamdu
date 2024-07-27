@@ -4,12 +4,16 @@ Lamdu is a complex piece of software.
 
 It is composed of the following components:
 
-* [LamduCalc](#LamduCalc): The Lamdu calculus low-level programming language
-* [Infer](#Infer): Type Inference for LamduCalc
-* [Compiler](#Compiler): LamduCalc Compiler (to Javascript)
-* [Revision.Deltum](#deltum): A version-controlled key/value store
-* [Animation engine](#animation-engine): Animation engine
-* [GUI framework](#momentum): A composable functional widget framework
-* [LamduSugar](#lamdusugar): A higher-level user-facing programming language
-* [LamduSugarConversion](#lamdusugarconversion): Convertor from LamduCalc to LamduSugar
-* [Lamdu UI](#lamdu-ui): The lamdu user interface
+* [Core Language](https://github.com/lamdu/lamdu-calculus): Lamdu's low-level core language, Lamdu Calculus, with type inference and a compiler to JavaScript (a compiler to native code is planned)
+* [Syntax Sugar](#syntax-sugar): Lamdu's surface language which the users edit
+* UI: Lamdu's text-like user interface
+* [Momentu](https://github.com/lamdu/momentu): The UI framework enabling Lamdu's text-like interface, responsive design, and animations
+* [Deltum](#deltum): Lamdu's version-controlled key/value store
+
+## Syntax Sugar
+
+TODO
+
+## Deltum
+
+TODO
