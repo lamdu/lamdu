@@ -45,7 +45,7 @@ To type the calculation above:
   continuing to type the function's name
   reduces the menu options to just those that match.
   Cursor keys allow you to select from the menu.
-  Hit **space** to chose your selected menu option.
+  Hit **space** to choose your selected menu option.
 * Type "**`5`**".
 * Select the whole expression by pressing **shift+left** until the whole REPL expression is selected.
 * Type "**`/2`**".
