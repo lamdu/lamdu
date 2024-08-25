@@ -18,8 +18,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        stack: ["2.11.1"]
-        ghc: ["9.4.7"]
+        stack: ["3.1.1"]
+        ghc: ["9.6.6"]
         os: ["ubuntu-latest", "windows-2022"]
 
     runs-on: ${{ matrix.os }}

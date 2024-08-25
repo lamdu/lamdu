@@ -5,7 +5,6 @@ module Lamdu.GUI.Expr.AssignmentEdit
     , layout, makePlainLhsEventMap
     ) where
 
-import           Control.Applicative (liftA2)
 import qualified Control.Lens as Lens
 import           Data.CurAndPrev (CurAndPrev, fallbackToPrev)
 import qualified Data.Map as Map

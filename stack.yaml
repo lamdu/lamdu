@@ -1,4 +1,4 @@
-resolver: lts-21.12
+resolver: lts-22.33
 
 packages:
 - '.'
@@ -7,15 +7,14 @@ extra-deps:
 - bitmap-opengl-0.0.1.5
 - stb-image-0.2.1
 - unicode-properties-3.2.0.0
-- language-ecmascript-0.19.1.0
 - ekg-core-0.1.1.7
-- aeson-diff-1.1.0.12
-- lens-aeson-1.2
 - inline-c-objc-0.1.0.0
+- github: jswebtools/language-ecmascript
+  commit: a1e47e69e68f6f70f8eca40d28dd8b702262a123
 - github: lamdu/text-trie
   commit: 2b4c94bccaa9c60f59ff06fad04d52b113a53ff2
 - github: lamdu/rocksdb-haskell
-  commit: 5bac865400c67e7bab0c219ec7327284cb87e348
+  commit: c0b13d11784fff618f6a459e1570bb0b369d2551
 - github: lamdu/bindings-freetype-gl
   commit: 8d311d96c5fa7fcfb5b79d057c9c24944d5d234b
 - github: lamdu/lamdu-calculus

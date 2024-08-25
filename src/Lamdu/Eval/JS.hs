@@ -13,11 +13,9 @@ module Lamdu.Eval.JS
     , nodeRepl
     ) where
 
-import           Control.Applicative ((<|>))
 import           Control.Concurrent.Extended (forkIO, killThread, withForkedIO)
 import           Control.Concurrent.MVar
 import qualified Control.Lens as Lens
-import           Control.Monad (msum)
 import           Control.Monad.Cont (ContT(..))
 import           Control.Monad.Trans.State (State, runState)
 import           Data.Aeson (Key)
@@ -166,7 +164,7 @@ obj .:? tag = Json.parseEither (Json..:? tag) obj
 
 parseObj :: Json.Object -> Parse (ER.Val ())
 parseObj obj =
-    msum
+    esum
     [ obj .: "array"
       <&> \(Json.Array arr) ->
             Vec.toList arr & Lens.traversed %%~ parseResult <&> ER.RArray <&> Ann (Const ())
@@ -176,6 +174,11 @@ parseObj obj =
     , obj .: "func" <&> (\(Json.Number x) -> round x & ER.RFunc & Ann (Const ()) & pure)
     ] & fromRight (parseRecord obj)
 
+esum :: [Either String a] -> Either String a
+esum [] = Left "No options!"
+esum (Right x:_) = Right x
+esum (Left _:xs) = esum xs
+
 parseResult :: Json.Value -> Parse (ER.Val ())
 parseResult (Json.Number x) = realToFrac x & fromDouble & pure
 parseResult (Json.Object obj) =
@@ -184,11 +187,15 @@ parseResult (Json.Object obj) =
     Left{} ->
         do
             x <- parseObj obj
-            case obj .: "cacheId" <|> obj .: "func" of
+            case (obj .: "cacheId") <|~> (obj .: "func") of
                 Left{} -> pure ()
                 Right cacheId -> Lens.at cacheId ?= x
             pure x
 parseResult x = "Unsupported encoded JS output: " ++ show x & error
+
+(<|~>) :: Either e a -> Either e a -> Either e a
+Left _ <|~> r = r
+l <|~> _ = l
 
 fromDouble :: Double -> ER.Val ()
 fromDouble = Ann (Const ()) . ER.RPrimVal . PrimVal.fromKnown . PrimVal.Float
