@@ -10,7 +10,7 @@ mkDerivation {
     owner = "lamdu";
     repo = "hypertypes";
     sha256 = "TODO";
-    rev = "3d72e03552f9a0411a9b1f57e06f40487c3e12f9";
+    rev = "06cf48ef9c85c54cbe722a448754cb89931b23e7";
   };
   libraryHaskellDepends = [
     base base-compat binary constraints containers deepseq generic-data lattices lens

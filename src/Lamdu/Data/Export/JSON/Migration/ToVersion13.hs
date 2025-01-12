@@ -19,8 +19,8 @@ type LamParamsMap = Map LamId [TagId]
 
 collectLamParams :: Aeson.Value -> Either Text LamParamsMap
 collectLamParams (Aeson.Object obj) =
-    case (obj ^? Lens.ix "lamId" . _String, obj ^? Lens.ix "lamFieldParams" . _Array) of
-    (Just lamId, Just raw) ->
+    case (obj ^? Lens.ix "lamId", obj ^? Lens.ix "lamFieldParams" . _Array) of
+    (Just (Aeson.String lamId), Just raw) ->
         case traverse (^? _String) raw of
         Nothing -> Left "Malformed 'lamFieldParams'"
         Just params -> mempty & Lens.at lamId ?~ params ^.. Lens.folded & Right
@@ -44,7 +44,7 @@ encodeParamList baseId (Just params) =
             & Lens.at "rowTag" ?~ Aeson.String tagId
             & Aeson.Object
             where
-                addId :: _ -> _ -> _
+                addId :: _ -> Aeson.Object -> _
                 addId t x = x & Lens.at t ?~ Aeson.toJSON (UUIDUtils.augment (encodeS (i, t)) baseId)
 
 migrateExpr :: LamParamsMap -> _ -> Either Text _
@@ -94,7 +94,7 @@ migrateScheme :: Aeson.Value -> Either Text Aeson.Value
 migrateScheme (Aeson.Object obj) = obj & (Lens.ix "schemeType" . _Object) migrateType <&> Aeson.Object
 migrateScheme _ = Left "Malformed scheme"
 
-migrateFrozenDeps :: _ -> Either Text _
+migrateFrozenDeps :: Aeson.Value -> Either Text _
 migrateFrozenDeps obj =
     obj
     & (Lens.ix "defTypes" . _Object . traverse) migrateScheme
@@ -112,9 +112,9 @@ migrateEntity lamsMap (Aeson.Object obj)
     | otherwise =
         obj
         & (Lens.ix "val" . _Object) (migrateExpr lamsMap)
-        >>= (Lens.ix "frozenDeps" . _Object) migrateFrozenDeps
+        >>= (Lens.ix "frozenDeps") migrateFrozenDeps
         >>= (Lens.ix "repl" . _Object . Lens.ix "val" . _Object) (migrateExpr lamsMap)
-        >>= (Lens.ix "repl" . _Object . Lens.ix "frozenDeps" . _Object) migrateFrozenDeps
+        >>= (Lens.ix "repl" . _Object . Lens.ix "frozenDeps") migrateFrozenDeps
         >>= Lens.ix "typ" migrateScheme
         >>= Lens.ix "nomType" migrateScheme
         <&> (:[]) . Aeson.Object

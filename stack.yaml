@@ -1,4 +1,4 @@
-resolver: lts-22.33
+resolver: lts-23.3
 
 packages:
 - '.'
@@ -7,7 +7,6 @@ extra-deps:
 - bitmap-opengl-0.0.1.5
 - stb-image-0.2.1
 - unicode-properties-3.2.0.0
-- ekg-core-0.1.1.7
 - inline-c-objc-0.1.0.0
 - github: jswebtools/language-ecmascript
   commit: a1e47e69e68f6f70f8eca40d28dd8b702262a123
@@ -26,7 +25,7 @@ extra-deps:
 - github: lamdu/bindings-GLFW
   commit: 0f7b821b75cb620ccf8fbdda6f1f4912f049c551
 - github: lamdu/hypertypes
-  commit: 3d72e03552f9a0411a9b1f57e06f40487c3e12f9
+  commit: 06cf48ef9c85c54cbe722a448754cb89931b23e7
 - github: lamdu/graphics-drawingcombinators
   commit: 39500dd189b0676468848d1f452ac31c7f0ec461
 - github: lamdu/freetype2

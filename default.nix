@@ -2,7 +2,7 @@ let config = {
     packageOverrides = pkgs: rec {
         haskell = pkgs.haskell // {
             packages = pkgs.haskell.packages // {
-                ghc966 = pkgs.haskell.packages.ghc966.override {
+                ghc984 = pkgs.haskell.packages.ghc984.override {
                     overrides = self: super: rec {
                         rocksdb-haskell = haskell.lib.dontCheck (self.callPackage ./nix/rocksdb-haskell.nix {});
                         freetype2 = self.callPackage ./nix/freetype2.nix {};
@@ -28,5 +28,5 @@ in with import (builtins.fetchTarball "https://github.com/NixOS/nixpkgs/archive/
 };
 
 {
-lamdu = pkgs.haskell.packages.ghc947.callPackage ./nix/lamdu.nix {};
+lamdu = pkgs.haskell.packages.ghc984.callPackage ./nix/lamdu.nix {};
 }
