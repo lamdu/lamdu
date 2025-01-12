@@ -27,7 +27,7 @@ migrateTerm (Aeson.Object x) =
     <&> Aeson.Object
 migrateTerm x = Right x
 
-migrateObj :: _ -> Either Text _
+migrateObj :: Aeson.Object -> Either Text Aeson.Object
 migrateObj x =
     x
     & Lens.ix "val" migrateTerm

@@ -13,7 +13,7 @@ import           Lamdu.Data.Export.JSON.Migration.Common (migrateToVer)
 
 import           Lamdu.Prelude
 
-collectNominals :: _ -> Either Text (Map _ (Map _ _))
+collectNominals :: Aeson.Object -> Either Text (Map Text (Map Aeson.Key Aeson.Key))
 collectNominals obj =
     case obj ^. Lens.at "nom" of
     Just (Aeson.String nomId) ->
@@ -27,7 +27,7 @@ collectNominals obj =
     Nothing -> Right mempty
 
 migrateNomParams ::
-    Map _ (Map _ _) -> Map _ _ ->
+    Map Text (Map Aeson.Key Aeson.Key) -> Map Aeson.Key Aeson.Key ->
     Aeson.Value -> Either Text Aeson.Value
 migrateNomParams nomsMap nomParams (Aeson.Object obj) =
     obj ^@.. Lens.ifolded
@@ -58,7 +58,7 @@ migrateRowVars mConstraints (Aeson.Array arr) =
 migrateRowVars _ _ = Left "malformed rowVars"
 
 migrateVal ::
-    Map _ (Map _ _) ->
+    Map Text (Map Aeson.Key Aeson.Key) ->
     Aeson.Value -> Either Text Aeson.Value
 migrateVal nomsMap (Aeson.Object obj) =
     case (obj ^. Lens.at "nomId", obj ^. Lens.at "nomParams") of
@@ -107,14 +107,14 @@ fixFrozenDeps =
     Lens.ix "frozenDeps" . _Object . Lens.ix "nominals" . _Object . traverse . _Object
     %~ typeParamsToTypeVars
 
-migrateEntity :: Map _ (Map _ _) -> _ -> Either Text _
+migrateEntity :: Map Text (Map Aeson.Key Aeson.Key) -> Aeson.Object -> Either Text Aeson.Object
 migrateEntity nomsMap obj =
     case obj ^. Lens.at "nom" of
     Just{} -> typeParamsToTypeVars obj
     _ -> fixFrozenDeps obj & Lens.ix "repl" . _Object %~ fixFrozenDeps
     & traverse (migrateVal nomsMap)
 
-extraNoms :: Map _ (Map _ _)
+extraNoms :: Map Text (Map Aeson.Key Aeson.Key)
 extraNoms =
     [ -- Mut (ST)
         ("42493a53540000000000000000000000", [thread, value])
