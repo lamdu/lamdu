@@ -112,7 +112,7 @@ migrateEntity lamsMap (Aeson.Object obj)
     | otherwise =
         obj
         & (Lens.ix "val" . _Object) (migrateExpr lamsMap)
-        >>= (Lens.ix "frozenDeps") migrateFrozenDeps
+        >>= Lens.ix "frozenDeps" migrateFrozenDeps
         >>= (Lens.ix "repl" . _Object . Lens.ix "val" . _Object) (migrateExpr lamsMap)
         >>= (Lens.ix "repl" . _Object . Lens.ix "frozenDeps") migrateFrozenDeps
         >>= Lens.ix "typ" migrateScheme

@@ -149,8 +149,8 @@ neighborPositions ::
 neighborPositions evalView prev next =
     Lens.view has <&>
     \case
-    Dir.LeftToRight -> f (-prev ^. Element.width) rightX
-    Dir.RightToLeft -> f rightX (-next ^. Element.width)
+    Dir.LeftToRight -> f (- (prev ^. Element.width)) rightX
+    Dir.RightToLeft -> f rightX (- (next ^. Element.width))
     where
         f prevX nextX =
             ( M.Vector2 prevX prevY
