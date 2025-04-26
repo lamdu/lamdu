@@ -4,12 +4,12 @@
 }:
 mkDerivation {
   pname = "GLFW-b";
-  version = "3.2.1.2";
+  version = "3.3.9.2";
   src = fetchFromGitHub {
     owner = "lamdu";
     repo = "GLFW-b";
     sha256 = "TODO";
-    rev = "04b0c6c36f351ce629af6bbe76ff440c40b3ff8c";
+    rev = "506abf792cfd98f9a4e6d0bc526b74f848dc413e";
   };
   isLibrary = true;
   isExecutable = true;

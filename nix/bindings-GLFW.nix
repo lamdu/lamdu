@@ -3,12 +3,12 @@
 }:
 mkDerivation {
   pname = "bindings-GLFW";
-  version = "3.2.1.2";
+  version = "3.3.9.3";
   src = fetchFromGitHub {
     owner = "lamdu";
     repo = "bindings-GLFW";
     sha256 = "TODO";
-    rev = "0f7b821b75cb620ccf8fbdda6f1f4912f049c551";
+    rev = "4402c6b6fee81e59f5931fabe1724233cd0ca08c";
   };
   postPatch = ''
     rm Setup.hs

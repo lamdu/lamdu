@@ -1,4 +1,4 @@
-resolver: lts-23.3
+resolver: lts-23.19
 
 packages:
 - '.'
@@ -21,9 +21,9 @@ extra-deps:
 - github: lamdu/momentu
   commit: c844afbfc95fb7391f9b9d1023630fea40a3fc9f
 - github: lamdu/GLFW-b
-  commit: 04b0c6c36f351ce629af6bbe76ff440c40b3ff8c
+  commit: 506abf792cfd98f9a4e6d0bc526b74f848dc413e
 - github: lamdu/bindings-GLFW
-  commit: 0f7b821b75cb620ccf8fbdda6f1f4912f049c551
+  commit: 4402c6b6fee81e59f5931fabe1724233cd0ca08c
 - github: lamdu/hypertypes
   commit: 06cf48ef9c85c54cbe722a448754cb89931b23e7
 - github: lamdu/graphics-drawingcombinators
