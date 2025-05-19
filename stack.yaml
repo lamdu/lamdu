@@ -1,41 +1,54 @@
 resolver: lts-23.19
 
 packages:
-- '.'
+  - '.'
 extra-deps:
-- bitmap-0.0.2
-- bitmap-opengl-0.0.1.5
-- stb-image-0.2.1
-- unicode-properties-3.2.0.0
-- inline-c-objc-0.1.0.0
-- github: jswebtools/language-ecmascript
-  commit: a1e47e69e68f6f70f8eca40d28dd8b702262a123
-- github: lamdu/text-trie
-  commit: 2b4c94bccaa9c60f59ff06fad04d52b113a53ff2
-- github: lamdu/rocksdb-haskell
-  commit: c0b13d11784fff618f6a459e1570bb0b369d2551
-- github: lamdu/bindings-freetype-gl
-  commit: 8d311d96c5fa7fcfb5b79d057c9c24944d5d234b
-- github: lamdu/lamdu-calculus
-  commit: 21332a4c1576ad028bbb693b23e8943089256ef8
-- github: lamdu/momentu
-  commit: c844afbfc95fb7391f9b9d1023630fea40a3fc9f
-- github: lamdu/GLFW-b
-  commit: 506abf792cfd98f9a4e6d0bc526b74f848dc413e
-- github: lamdu/bindings-GLFW
-  commit: 4402c6b6fee81e59f5931fabe1724233cd0ca08c
-- github: lamdu/hypertypes
-  commit: 06cf48ef9c85c54cbe722a448754cb89931b23e7
-- github: lamdu/graphics-drawingcombinators
-  commit: 39500dd189b0676468848d1f452ac31c7f0ec461
-- github: lamdu/freetype2
-  commit: 046328d92312d65638440132c016a3081d9c32a4
-- github: lamdu/FreetypeGL
-  commit: 18ca298d8fd48ad18f75264553b57714bf070c77
-- github: tweag/inline-js
-  commit: 8512b09d2c0533a41d5d2aef182b11a58c420c10
-  subdirs:
-  - inline-js-core
+  - bitmap-0.0.2
+  - bitmap-opengl-0.0.1.5
+  - stb-image-0.2.1
+  - unicode-properties-3.2.0.0
+  - inline-c-objc-0.1.0.0
+  - github: jswebtools/language-ecmascript
+    commit: a1e47e69e68f6f70f8eca40d28dd8b702262a123
+    # nix-sha256: sha256-W9mVrw/1uFBcu9l1Sud73H34OGC7iiChulRLSTwFSnU=
+  - github: lamdu/text-trie
+    commit: 07124aa86ec0edf6685c2f916f812f8ae0261693
+    # nix-sha256: sha256-ax3ehv9qsKJWrDcorG7QTxkzdeKq9h6ExpO354/oLrE=
+  - github: lamdu/rocksdb-haskell
+    commit: c0b13d11784fff618f6a459e1570bb0b369d2551
+    # nix-sha256: sha256-/FY2WksoIH8d6l2PnKR02qMlHI3AG1w96VwhtqwjiAY=
+  - github: lamdu/bindings-freetype-gl
+    commit: 9f08ae2c843190eb7d7b0e1c95e5eac2d3e5e337
+    # nix-sha256: sha256-7X2QVV0N66djBpVTYK+0u5mP19sYAo3EBn4ggZUrMvg=
+  - github: lamdu/lamdu-calculus
+    commit: 21332a4c1576ad028bbb693b23e8943089256ef8
+    # nix-sha256: sha256-jtph3fmpiK/31eOKgmPRD+OMHtKOpvKzbI8iYWeLj84=
+  - github: lamdu/momentu
+    commit: c844afbfc95fb7391f9b9d1023630fea40a3fc9f
+    # nix-sha256: sha256-f7SYcjGn8XCCCglowCLyY3HUuQfswP2Zz78Zst5kc6s=
+  - github: lamdu/GLFW-b
+    commit: 506abf792cfd98f9a4e6d0bc526b74f848dc413e
+    # nix-sha256: sha256-xkL11JjQXG62xTE4sgCIU+kxQCPIJ4/j6aOrXns+oPE=
+  - github: lamdu/bindings-GLFW
+    commit: 4402c6b6fee81e59f5931fabe1724233cd0ca08c
+    # nix-sha256: sha256-+VC2eLVeaxtOrsisOPlgc5wJHN951x17PStwiqDXQnE=
+  - github: lamdu/hypertypes
+    commit: 06cf48ef9c85c54cbe722a448754cb89931b23e7
+    # nix-sha256: sha256-t1iGRLUCv01gDeHjbWP8NyyLgXgaDW26BaCFlQ5R4NQ=
+  - github: lamdu/graphics-drawingcombinators
+    commit: 39500dd189b0676468848d1f452ac31c7f0ec461
+    # nix-sha256: sha256-2IQJQ7wGblnCRgzRFz90vUsqs2YBthNlXEvZ1gkrlgA=
+  - github: lamdu/freetype2
+    commit: 046328d92312d65638440132c016a3081d9c32a4
+    # nix-sha256: sha256-kWtdG2WmGdUp/nOC+b3DAXPGpO2fvpdP3NhMbJNcb5o=
+  - github: lamdu/FreetypeGL
+    commit: 18ca298d8fd48ad18f75264553b57714bf070c77
+    # nix-sha256: sha256-PGcCI21gUUo54PZGi1Ca5M9FbXLZUb4O74Ve0P1dR7A=
+  - github: tweag/inline-js
+    commit: 8512b09d2c0533a41d5d2aef182b11a58c420c10
+    # nix-sha256: sha256-Hgiq8LJKLLpuMwmjlF3IeHTW2qBipMV6Q7up+mVKlVA=
+    subdirs:
+    - inline-js-core
 
 allow-newer: true
 
