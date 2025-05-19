@@ -30,6 +30,7 @@
               name = "Lamdu";
               src = ./.;
               evalSystem = system;
+              compiler-nix-name = "ghc984";
 
               shell.tools = {
                 cabal = { };
