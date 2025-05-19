@@ -104,12 +104,12 @@ stack exec -- lamdu
 
 ### nix (any linux distribution)
 
-requires [Nix](https://nixos.org/nix/)
+Requires [Nix](https://nixos.org/nix/) and [flakes](https://nixos.wiki/wiki/flakes) to be enabled.
 
 ```shell
 git clone --recursive https://github.com/lamdu/lamdu
 cd lamdu
-nix-env -f default.nix -iA lamdu
+nix build .#Lamdu:exe:lamdu
 ```
 
 ### Windows
