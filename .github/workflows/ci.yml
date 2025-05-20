@@ -95,3 +95,16 @@ jobs:
         curl -L https://github.com/ndmitchell/hlint/releases/download/v${HLINT_VERSION}/hlint-${HLINT_VERSION}-x86_64-linux.tar.gz --output hlint.tar.gz
         tar -xvf hlint.tar.gz
         ./hlint-${HLINT_VERSION}/hlint src/ test/
+
+  nix-matrix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v30
+      - uses: nix-community/cache-nix-action@v6
+        with:
+          primary-key: nix-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('**/*.nix', '**/flake.lock') }}
+          restore-prefixes-first-match: nix-${{ runner.os }}-${{ runner.arch }}
+
+      - name: "Build Nix Flake"
+        run: nix build
