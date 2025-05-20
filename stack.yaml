@@ -1,4 +1,4 @@
-resolver: lts-23.19
+resolver: lts-23.23
 
 packages:
   - '.'
@@ -8,6 +8,7 @@ extra-deps:
   - stb-image-0.2.1
   - unicode-properties-3.2.0.0
   - inline-c-objc-0.1.0.0
+  - storable-offset-0.1.0.0
   - github: jswebtools/language-ecmascript
     commit: a1e47e69e68f6f70f8eca40d28dd8b702262a123
     # nix-sha256: sha256-W9mVrw/1uFBcu9l1Sud73H34OGC7iiChulRLSTwFSnU=
@@ -39,8 +40,8 @@ extra-deps:
     commit: 39500dd189b0676468848d1f452ac31c7f0ec461
     # nix-sha256: sha256-2IQJQ7wGblnCRgzRFz90vUsqs2YBthNlXEvZ1gkrlgA=
   - github: lamdu/freetype2
-    commit: 046328d92312d65638440132c016a3081d9c32a4
-    # nix-sha256: sha256-kWtdG2WmGdUp/nOC+b3DAXPGpO2fvpdP3NhMbJNcb5o=
+    commit: f59a2ab94621364db78a50fdd23c2b11e773a503
+    # nix-sha256: sha256-HJzsbDgI+vOHavAyfn+P4g9sAJhynR/8Vg9hkLklRl8=
   - github: lamdu/FreetypeGL
     commit: 18ca298d8fd48ad18f75264553b57714bf070c77
     # nix-sha256: sha256-PGcCI21gUUo54PZGi1Ca5M9FbXLZUb4O74Ve0P1dR7A=
