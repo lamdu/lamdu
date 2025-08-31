@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 module Tests.DataFiles (test) where
 
 import qualified Data.ByteString as BS
@@ -6,6 +7,9 @@ import qualified Distribution.PackageDescription as Cabal
 import qualified Distribution.PackageDescription.Parsec as CabalParse
 import qualified System.Directory as Directory
 import           System.FilePath ((</>))
+#if MIN_VERSION_Cabal(3,14,0)
+import qualified Distribution.Utils.Path as CabalPath
+#endif
 
 import           Test.Lamdu.Prelude
 
@@ -29,7 +33,11 @@ test =
             <&> CabalParse.runParseResult
         actualDataFiles <- recursiveListFiles "" "data" <&> Set.fromList
         let cabalDataFiles =
-                Cabal.packageDescription spec & Cabal.dataFiles & Set.fromList
+                Cabal.packageDescription spec & Cabal.dataFiles
+#if MIN_VERSION_Cabal(3,14,0)
+                & map CabalPath.getSymbolicPath
+#endif
+                & Set.fromList
         let wrongDataFiles = cabalDataFiles `Set.difference` actualDataFiles
         let unlistedDataFiles = actualDataFiles `Set.difference` cabalDataFiles
         assertEqual "wrong data-files" Set.empty wrongDataFiles
