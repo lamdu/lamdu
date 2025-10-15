@@ -1,4 +1,4 @@
-resolver: lts-23.23
+resolver: lts-24.15
 
 packages:
   - '.'
@@ -19,7 +19,7 @@ extra-deps:
     commit: c0b13d11784fff618f6a459e1570bb0b369d2551
     # nix-sha256: sha256-/FY2WksoIH8d6l2PnKR02qMlHI3AG1w96VwhtqwjiAY=
   - github: lamdu/bindings-freetype-gl
-    commit: 4cef7d3f44b088d3d8644bc9acc97951820bd3ba
+    commit: a2088891162ad0d0988a2646c88496d2d28a2304
     # nix-sha256: sha256-EynBysGGKN0X88HQRsE5DgtmGPT0EePRTEoaDhqTspk=
   - github: lamdu/lamdu-calculus
     commit: 21332a4c1576ad028bbb693b23e8943089256ef8
