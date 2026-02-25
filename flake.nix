@@ -25,12 +25,56 @@
       let
         overlays = [
           haskellNix.overlay
+
+          # haskell.nix materialized cabal files often refer to Apple frameworks as
+          # `pkgs."CoreFoundation"`, `pkgs."Cocoa"`, etc. Newer nixpkgs exposes
+          # them under `pkgs.darwin.apple_sdk.frameworks.*`, so we provide aliases.
+          (final: prev:
+            prev.lib.optionalAttrs prev.stdenv.hostPlatform.isDarwin {
+              CoreFoundation = prev.darwin.apple_sdk.frameworks.CoreFoundation;
+              Cocoa = prev.darwin.apple_sdk.frameworks.Cocoa;
+              IOKit = prev.darwin.apple_sdk.frameworks.IOKit;
+              CoreVideo = prev.darwin.apple_sdk.frameworks.CoreVideo;
+              OpenGL = prev.darwin.apple_sdk.frameworks.OpenGL;
+              Security = prev.darwin.apple_sdk.frameworks.Security;
+              Foundation = prev.darwin.apple_sdk.frameworks.Foundation;
+              AppKit = prev.darwin.apple_sdk.frameworks.AppKit;
+              CoreServices = prev.darwin.apple_sdk.frameworks.CoreServices;
+            }
+          )
+
           (final: _prev: {
             Lamdu = final.haskell-nix.hix.project {
               name = "Lamdu";
               src = ./.;
               evalSystem = system;
               compiler-nix-name = "ghc984";
+
+              # On Darwin, nixpkgs no longer provides an `AGL` framework package.
+              # bindings-GLFW's cabal file still references it, so we override the
+              # framework list to drop AGL.
+              #
+              # Also: Lamdu uses GLFW-b which depends on bindings-GLFW. Lamdu needs
+              # `glfwGetCocoaWindow` from the glfw3native API, which bindings-GLFW
+              # only exposes when built with the `ExposeNative` flag.
+              modules = [
+                ({ pkgs, lib, ... }: {
+                  # Cabal flag `ExposeNative` is represented as `exposenative` in
+                  # haskell.nix materialized package definitions.
+                  packages."bindings-GLFW".flags.exposenative = lib.mkForce true;
+
+                  packages."bindings-GLFW".components.library.frameworks = lib.mkForce (
+                    with pkgs.darwin.apple_sdk.frameworks;
+                    [
+                      Cocoa
+                      IOKit
+                      CoreFoundation
+                      CoreVideo
+                      OpenGL
+                    ]
+                  );
+                })
+              ];
 
               shell.tools = {
                 cabal = { };
