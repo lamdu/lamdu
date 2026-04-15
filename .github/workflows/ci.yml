@@ -25,7 +25,7 @@ jobs:
     runs-on: ${{ matrix.os }}
 
     steps:
-    - uses: actions/checkout@v5
+    - uses: actions/checkout@v6
 
     - name: Install Linux dependencies
       if: ${{ matrix.os == 'ubuntu-latest' }}
@@ -33,7 +33,7 @@ jobs:
         sudo apt-get install nodejs zlib1g-dev libglew-dev librocksdb-dev
         sudo apt-get install libxxf86vm-dev libxrandr-dev libxi-dev libxcursor-dev libxinerama-dev
 
-    - uses: haskell-actions/setup@v2.10.3
+    - uses: haskell-actions/setup@v2.11.0
       name: Setup Haskell Stack
       with:
         ghc-version: ${{ matrix.ghc }}
@@ -46,7 +46,7 @@ jobs:
         stack exec --system-ghc -- pacman -Syyu --noconfirm
         stack exec --system-ghc -- pacman -S --noconfirm mingw-w64-x86_64-rocksdb
 
-    - uses: actions/cache@v5.0.1
+    - uses: actions/cache@v5.0.5
       if: ${{ matrix.os == 'ubuntu-latest' }}
       name: Cache ~/.stack
       with:
@@ -75,7 +75,7 @@ jobs:
     - name: Upload release
       if: startsWith(github.ref, 'refs/tags/v')
       id: upload-release-asset
-      uses: softprops/action-gh-release@v2
+      uses: softprops/action-gh-release@v3
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
@@ -86,7 +86,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v5
+    - uses: actions/checkout@v6
 
     - name: Run HLint
       env:
@@ -99,7 +99,7 @@ jobs:
   nix-matrix:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - uses: cachix/install-nix-action@v31
       - uses: nix-community/cache-nix-action@v7
         with:
