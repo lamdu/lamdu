@@ -1,0 +1,7 @@
+[language-server.haskell-language-server]
+command = "haskell-language-server"
+args = ["--lsp"]
+
+[[language]]
+name = "haskell"
+language-servers = [ { name = "haskell-language-server" }]
