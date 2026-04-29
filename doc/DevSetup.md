@@ -8,6 +8,22 @@ You can use any text-editor to edit its code. @Peaker uses Emacs on Linux and @y
 
 Works great with the Haskell extension! (Haskell Language Server)
 
+## Helix
+
+For Helix, you'll need to edit your `languages.toml` either globally or in the project root `.helix/languages.toml`.
+
+```toml
+[language-server.haskell-language-server]
+command = "haskell-language-server"
+args = ["--lsp"]
+
+[[language]]
+name = "haskell"
+language-servers = [ { name = "haskell-language-server" }]
+```
+
+If you get a bunch of errors in your editor. The fix is to run a program called `hpack` to generate a `Lamdu.cabal` file. After that paths should resolve and the language server should work perfectly.
+
 ## macOS
 
 When running a full build, this command shows a notification when it is done:
