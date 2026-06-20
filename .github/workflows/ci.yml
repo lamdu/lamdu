@@ -101,10 +101,16 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: cachix/install-nix-action@v31
+        with:
+          extra_nix_config: |
+            accept-flake-config = true
+            extra-substituters = https://cache.iog.io
+            extra-trusted-public-keys = hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ=
+            allow-import-from-derivation = true
       - uses: nix-community/cache-nix-action@v7
         with:
-          primary-key: nix-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('**/*.nix', '**/flake.lock') }}
-          restore-prefixes-first-match: nix-${{ runner.os }}-${{ runner.arch }}
+          primary-key: nix-v2-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('**/*.nix', '**/flake.lock') }}
+          restore-prefixes-first-match: nix-v2-${{ runner.os }}-${{ runner.arch }}
 
       - name: "Build Nix Flake"
         run: nix build
