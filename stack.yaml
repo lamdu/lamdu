@@ -20,7 +20,7 @@ extra-deps:
     # nix-sha256: sha256-/FY2WksoIH8d6l2PnKR02qMlHI3AG1w96VwhtqwjiAY=
   - github: lamdu/bindings-freetype-gl
     commit: a2088891162ad0d0988a2646c88496d2d28a2304
-    # nix-sha256: sha256-EynBysGGKN0X88HQRsE5DgtmGPT0EePRTEoaDhqTspk=
+    # nix-sha256: sha256-FlFPuLziplhhY//X/1nlIiam+yFty4bCFF2lyqerRhE=
   - github: lamdu/lamdu-calculus
     commit: 21332a4c1576ad028bbb693b23e8943089256ef8
     # nix-sha256: sha256-jtph3fmpiK/31eOKgmPRD+OMHtKOpvKzbI8iYWeLj84=
