@@ -32,6 +32,18 @@
               evalSystem = system;
               compiler-nix-name = "ghc9103";
 
+              # GHC 9.10.3 boots with filepath-1.5.4.0, so the filepath < 1.5 constraint
+              # (from flag(os-string)=False) is unsatisfiable. Explicitly enable os-string
+              # so these packages depend on os-string + filepath >= 1.5.0 instead.
+              modules = [
+                {
+                  packages.unix.components.library.configureFlags = [ "-f os-string" ];
+                  packages.directory.components.library.configureFlags = [ "-f os-string" ];
+                  packages.file-io.components.library.configureFlags = [ "-f os-string" ];
+                  packages.process.components.library.configureFlags = [ "-f os-string" ];
+                }
+              ];
+
               shell.tools = {
                 cabal = { };
                 hlint = { };
