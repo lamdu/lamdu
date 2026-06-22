@@ -41,8 +41,17 @@ jobs:
 
     - name: Install Windows dependencies
       if: ${{ matrix.os == 'windows-2022' }}
+      uses: msys2/setup-msys2@v2
+      with:
+        msystem: MINGW64
+        update: true
+        install: mingw-w64-x86_64-rocksdb
+
+    - name: Set Windows extra stack flags
+      if: ${{ matrix.os == 'windows-2022' }}
+      shell: bash
       run: |
-        choco install rocksdb -y
+        echo "STACK_FLAGS=--extra-lib-dirs=C:/msys64/mingw64/lib --extra-include-dirs=C:/msys64/mingw64/include" >> $GITHUB_ENV
 
     - uses: actions/cache@v5.0.5
       if: ${{ matrix.os == 'ubuntu-latest' }}
@@ -53,11 +62,11 @@ jobs:
 
     - name: Install Haskell dependencies
       run: |
-        stack build --system-ghc --test --bench --no-run-tests --no-run-benchmarks --only-dependencies
+        stack build --system-ghc --test --bench --no-run-tests --no-run-benchmarks --only-dependencies ${{ env.STACK_FLAGS }}
 
     - name: Build
       run: |
-        stack build --system-ghc --test --bench --no-run-tests --no-run-benchmarks
+        stack build --system-ghc --test --bench --no-run-tests --no-run-benchmarks ${{ env.STACK_FLAGS }}
 
     - name: Test
       # Running the tests only on Linux should suffice
