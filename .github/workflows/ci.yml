@@ -53,15 +53,16 @@ jobs:
       if: ${{ matrix.os == 'windows-2022' }}
       shell: msys2 {0}
       run: |
-        cd /clang64/bin
+        cd "$MSYSTEM_PREFIX/bin"
         gendef librocksdb.dll
-        llvm-dlltool -D librocksdb.dll -d librocksdb.def -l /clang64/lib/librocksdb.dll.a
+        llvm-dlltool -D librocksdb.dll -d librocksdb.def -l "$MSYSTEM_PREFIX/lib/librocksdb.dll.a"
 
     - name: Set Windows extra stack flags
       if: ${{ matrix.os == 'windows-2022' }}
-      shell: bash
+      shell: msys2 {0}
       run: |
-        echo "STACK_FLAGS=--extra-lib-dirs=C:/msys64/clang64/lib --extra-lib-dirs=C:/msys64/clang64/bin --extra-include-dirs=C:/msys64/clang64/include" >> $GITHUB_ENV
+        WIN_PREFIX=$(cygpath -m "$MSYSTEM_PREFIX")
+        echo "STACK_FLAGS=--extra-lib-dirs=${WIN_PREFIX}/lib --extra-lib-dirs=${WIN_PREFIX}/bin --extra-include-dirs=${WIN_PREFIX}/include" >> $GITHUB_ENV
 
     - uses: actions/cache@v5.0.5
       if: ${{ matrix.os == 'ubuntu-latest' }}
