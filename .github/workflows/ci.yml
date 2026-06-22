@@ -55,7 +55,7 @@ jobs:
       run: |
         cd "$MSYSTEM_PREFIX/bin"
         gendef librocksdb.dll
-        llvm-dlltool -D librocksdb.dll -d librocksdb.def -l "$MSYSTEM_PREFIX/lib/librocksdb.dll.a"
+        dlltool -D librocksdb.dll -d librocksdb.def -l "$MSYSTEM_PREFIX/lib/librocksdb.dll.a" -m i386:x86-64
 
     - name: Set Windows extra stack flags
       if: ${{ matrix.os == 'windows-2022' }}
