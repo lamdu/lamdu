@@ -42,9 +42,7 @@ jobs:
     - name: Install Windows dependencies
       if: ${{ matrix.os == 'windows-2022' }}
       run: |
-        stack exec --system-ghc -- pacman -Syyu --noconfirm
-        stack exec --system-ghc -- pacman -Syyu --noconfirm
-        stack exec --system-ghc -- pacman -S --noconfirm mingw-w64-x86_64-rocksdb
+        choco install rocksdb -y
 
     - uses: actions/cache@v5.0.5
       if: ${{ matrix.os == 'ubuntu-latest' }}
