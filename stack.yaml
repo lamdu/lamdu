@@ -1,4 +1,4 @@
-resolver: lts-24.15
+resolver: lts-24.46
 
 packages:
   - '.'
@@ -31,10 +31,10 @@ extra-deps:
     commit: 506abf792cfd98f9a4e6d0bc526b74f848dc413e
     # nix-sha256: sha256-xkL11JjQXG62xTE4sgCIU+kxQCPIJ4/j6aOrXns+oPE=
   - github: lamdu/bindings-GLFW
-    commit: 4402c6b6fee81e59f5931fabe1724233cd0ca08c
+    commit: 28c1e5444367dd06f460af6604de96e4d795b019
     # nix-sha256: sha256-+VC2eLVeaxtOrsisOPlgc5wJHN951x17PStwiqDXQnE=
   - github: lamdu/hypertypes
-    commit: 06cf48ef9c85c54cbe722a448754cb89931b23e7
+    commit: 40802d55f5bff9e7f28c936ad762a5edd8252107
     # nix-sha256: sha256-t1iGRLUCv01gDeHjbWP8NyyLgXgaDW26BaCFlQ5R4NQ=
   - github: lamdu/graphics-drawingcombinators
     commit: 39500dd189b0676468848d1f452ac31c7f0ec461
