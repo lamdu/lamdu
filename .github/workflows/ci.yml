@@ -45,7 +45,17 @@ jobs:
       with:
         msystem: CLANG64
         update: true
-        install: mingw-w64-clang-x86_64-rocksdb
+        install: >-
+          mingw-w64-clang-x86_64-rocksdb
+          mingw-w64-clang-x86_64-tools-git
+
+    - name: Generate RocksDB import library for Windows
+      if: ${{ matrix.os == 'windows-2022' }}
+      shell: msys2 {0}
+      run: |
+        cd /clang64/bin
+        gendef librocksdb.dll
+        llvm-dlltool -D librocksdb.dll -d librocksdb.def -l /clang64/lib/librocksdb.dll.a
 
     - name: Set Windows extra stack flags
       if: ${{ matrix.os == 'windows-2022' }}
