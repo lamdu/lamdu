@@ -43,15 +43,15 @@ jobs:
       if: ${{ matrix.os == 'windows-2022' }}
       uses: msys2/setup-msys2@v2
       with:
-        msystem: MINGW64
+        msystem: CLANG64
         update: true
-        install: mingw-w64-x86_64-rocksdb
+        install: mingw-w64-clang-x86_64-rocksdb
 
     - name: Set Windows extra stack flags
       if: ${{ matrix.os == 'windows-2022' }}
       shell: bash
       run: |
-        echo "STACK_FLAGS=--extra-lib-dirs=C:/msys64/mingw64/lib --extra-include-dirs=C:/msys64/mingw64/include" >> $GITHUB_ENV
+        echo "STACK_FLAGS=--extra-lib-dirs=C:/msys64/clang64/lib --extra-lib-dirs=C:/msys64/clang64/bin --extra-include-dirs=C:/msys64/clang64/include" >> $GITHUB_ENV
 
     - uses: actions/cache@v5.0.5
       if: ${{ matrix.os == 'ubuntu-latest' }}
