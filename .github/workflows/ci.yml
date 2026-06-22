@@ -109,8 +109,8 @@ jobs:
             allow-import-from-derivation = true
       - uses: nix-community/cache-nix-action@v7
         with:
-          primary-key: nix-v2-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('**/*.nix', '**/flake.lock') }}
-          restore-prefixes-first-match: nix-v2-${{ runner.os }}-${{ runner.arch }}
+          primary-key: nix-v3-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('**/*.nix', '**/flake.lock') }}
+          restore-prefixes-first-match: nix-v3-${{ runner.os }}-${{ runner.arch }}
 
       - name: "Build Nix Flake"
         run: nix build
