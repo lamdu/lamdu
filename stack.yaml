@@ -35,7 +35,7 @@ extra-deps:
     # nix-sha256: sha256-/sryAaGx949gI4DclhtqRaIu5nGexDmKjHsVrwigCYs=
   - github: lamdu/hypertypes
     commit: 40802d55f5bff9e7f28c936ad762a5edd8252107
-    # nix-sha256: sha256-t1iGRLUCv01gDeHjbWP8NyyLgXgaDW26BaCFlQ5R4NQ=
+    # nix-sha256: sha256-QrKndjKuvpiUDgkaB7thAS6FSpfuR7nAnmUYjTdxNac=
   - github: lamdu/graphics-drawingcombinators
     commit: 39500dd189b0676468848d1f452ac31c7f0ec461
     # nix-sha256: sha256-2IQJQ7wGblnCRgzRFz90vUsqs2YBthNlXEvZ1gkrlgA=
