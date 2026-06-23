@@ -41,10 +41,29 @@ jobs:
 
     - name: Install Windows dependencies
       if: ${{ matrix.os == 'windows-2022' }}
+      uses: msys2/setup-msys2@v2
+      with:
+        msystem: CLANG64
+        update: true
+        install: >-
+          mingw-w64-clang-x86_64-rocksdb
+          mingw-w64-clang-x86_64-tools-git
+          binutils
+
+    - name: Generate RocksDB import library for Windows
+      if: ${{ matrix.os == 'windows-2022' }}
+      shell: msys2 {0}
       run: |
-        stack exec --system-ghc -- pacman -Syyu --noconfirm
-        stack exec --system-ghc -- pacman -Syyu --noconfirm
-        stack exec --system-ghc -- pacman -S --noconfirm mingw-w64-x86_64-rocksdb
+        cd "$MSYSTEM_PREFIX/bin"
+        gendef librocksdb.dll
+        dlltool -D librocksdb.dll -d librocksdb.def -l "$MSYSTEM_PREFIX/lib/librocksdb.dll.a" -m i386:x86-64
+
+    - name: Set Windows extra stack flags
+      if: ${{ matrix.os == 'windows-2022' }}
+      shell: msys2 {0}
+      run: |
+        WIN_PREFIX=$(cygpath -m "$MSYSTEM_PREFIX")
+        echo "STACK_FLAGS=--extra-lib-dirs=${WIN_PREFIX}/lib --extra-lib-dirs=${WIN_PREFIX}/bin --extra-include-dirs=${WIN_PREFIX}/include" >> $GITHUB_ENV
 
     - uses: actions/cache@v5.0.5
       if: ${{ matrix.os == 'ubuntu-latest' }}
@@ -55,11 +74,11 @@ jobs:
 
     - name: Install Haskell dependencies
       run: |
-        stack build --system-ghc --test --bench --no-run-tests --no-run-benchmarks --only-dependencies
+        stack build --system-ghc --test --bench --no-run-tests --no-run-benchmarks --only-dependencies ${{ env.STACK_FLAGS }}
 
     - name: Build
       run: |
-        stack build --system-ghc --test --bench --no-run-tests --no-run-benchmarks
+        stack build --system-ghc --test --bench --no-run-tests --no-run-benchmarks ${{ env.STACK_FLAGS }}
 
     - name: Test
       # Running the tests only on Linux should suffice
