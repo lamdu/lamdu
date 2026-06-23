@@ -32,7 +32,7 @@ extra-deps:
     # nix-sha256: sha256-xkL11JjQXG62xTE4sgCIU+kxQCPIJ4/j6aOrXns+oPE=
   - github: lamdu/bindings-GLFW
     commit: 28c1e5444367dd06f460af6604de96e4d795b019
-    # nix-sha256: sha256-+VC2eLVeaxtOrsisOPlgc5wJHN951x17PStwiqDXQnE=
+    # nix-sha256: sha256-/sryAaGx949gI4DclhtqRaIu5nGexDmKjHsVrwigCYs=
   - github: lamdu/hypertypes
     commit: 40802d55f5bff9e7f28c936ad762a5edd8252107
     # nix-sha256: sha256-t1iGRLUCv01gDeHjbWP8NyyLgXgaDW26BaCFlQ5R4NQ=
