@@ -48,7 +48,7 @@ jobs:
         install: >-
           mingw-w64-clang-x86_64-rocksdb
           mingw-w64-clang-x86_64-tools-git
-          mingw-w64-clang-x86_64-binutils
+          binutils
 
     - name: Generate RocksDB import library for Windows
       if: ${{ matrix.os == 'windows-2022' }}
