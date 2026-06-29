@@ -65,7 +65,7 @@ jobs:
         WIN_PREFIX=$(cygpath -m "$MSYSTEM_PREFIX")
         echo "STACK_FLAGS=--extra-lib-dirs=${WIN_PREFIX}/lib --extra-lib-dirs=${WIN_PREFIX}/bin --extra-include-dirs=${WIN_PREFIX}/include" >> $GITHUB_ENV
 
-    - uses: actions/cache@v6.0.0
+    - uses: actions/cache@v6.1.0
       if: ${{ matrix.os == 'ubuntu-latest' }}
       name: Cache ~/.stack
       with:
