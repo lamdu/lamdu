@@ -22,8 +22,8 @@ extra-deps:
     commit: a2088891162ad0d0988a2646c88496d2d28a2304
     # nix-sha256: sha256-FlFPuLziplhhY//X/1nlIiam+yFty4bCFF2lyqerRhE=
   - github: lamdu/lamdu-calculus
-    commit: 21332a4c1576ad028bbb693b23e8943089256ef8
-    # nix-sha256: sha256-jtph3fmpiK/31eOKgmPRD+OMHtKOpvKzbI8iYWeLj84=
+    commit: c95ecab6bd152f4e28df5062bb6cb7fda034d347
+    # nix-sha256: sha256-jk25Zt3PUCC+AaGEGbr5qBDnFL1QYvUL7mScOKUo/ck=
   - github: lamdu/momentu
     commit: c844afbfc95fb7391f9b9d1023630fea40a3fc9f
     # nix-sha256: sha256-f7SYcjGn8XCCCglowCLyY3HUuQfswP2Zz78Zst5kc6s=
@@ -34,8 +34,10 @@ extra-deps:
     commit: 28c1e5444367dd06f460af6604de96e4d795b019
     # nix-sha256: sha256-/sryAaGx949gI4DclhtqRaIu5nGexDmKjHsVrwigCYs=
   - github: lamdu/hypertypes
-    commit: 40802d55f5bff9e7f28c936ad762a5edd8252107
-    # nix-sha256: sha256-QrKndjKuvpiUDgkaB7thAS6FSpfuR7nAnmUYjTdxNac=
+    commit: d99cf72533f3b5a2b5fe359d60000252655c3fe5
+    # nix-sha256: sha256-Sw2OzRjEsxUsnrdCykXVLRaW9GFA6Dgr5lHDl/PrUCM=
+  - github: lamdu/hypertypes-ast
+    commit: 315caafd5394e53034a5e74cb86832c02e013112
   - github: lamdu/graphics-drawingcombinators
     commit: 39500dd189b0676468848d1f452ac31c7f0ec461
     # nix-sha256: sha256-2IQJQ7wGblnCRgzRFz90vUsqs2YBthNlXEvZ1gkrlgA=
