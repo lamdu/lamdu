@@ -20,7 +20,8 @@ jobs:
       matrix:
         stack: ["3.1.1"]
         ghc: ["9.10.3"]
-        os: ["ubuntu-latest", "windows-2022"]
+        # Keep native dependencies stable when ubuntu-latest moves to a new release.
+        os: ["ubuntu-24.04", "windows-2022"]
 
     runs-on: ${{ matrix.os }}
 
@@ -28,7 +29,7 @@ jobs:
     - uses: actions/checkout@v7
 
     - name: Install Linux dependencies
-      if: ${{ matrix.os == 'ubuntu-latest' }}
+      if: ${{ runner.os == 'Linux' }}
       run: |
         sudo apt-get install nodejs zlib1g-dev libglew-dev librocksdb-dev
         sudo apt-get install libxxf86vm-dev libxrandr-dev libxi-dev libxcursor-dev libxinerama-dev
@@ -66,11 +67,11 @@ jobs:
         echo "STACK_FLAGS=--extra-lib-dirs=${WIN_PREFIX}/lib --extra-lib-dirs=${WIN_PREFIX}/bin --extra-include-dirs=${WIN_PREFIX}/include" >> $GITHUB_ENV
 
     - uses: actions/cache@v6.1.0
-      if: ${{ matrix.os == 'ubuntu-latest' }}
+      if: ${{ runner.os == 'Linux' }}
       name: Cache ~/.stack
       with:
         path: ~/.stack
-        key: ${{ runner.os }}-${{ matrix.ghc }}-stack
+        key: ${{ matrix.os }}-${{ runner.arch }}-${{ matrix.ghc }}-stack-${{ matrix.stack }}-${{ hashFiles('stack.yaml', 'package.yaml') }}
 
     - name: Install Haskell dependencies
       run: |
@@ -82,7 +83,7 @@ jobs:
 
     - name: Test
       # Running the tests only on Linux should suffice
-      if: ${{ matrix.os == 'ubuntu-latest' }}
+      if: ${{ runner.os == 'Linux' }}
       run: |
         stack test --system-ghc
 
@@ -98,7 +99,7 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        files: ${{ matrix.os == 'ubuntu-latest' && 'lamdu-*-linux.tgz' || 'lamdu-*-win-setup.exe' }}
+        files: ${{ runner.os == 'Linux' && 'lamdu-*-linux.tgz' || 'lamdu-*-win-setup.exe' }}
 
   hlint:
     name: hlint
